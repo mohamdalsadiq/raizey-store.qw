@@ -39,6 +39,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   padding: 0 20px;
 }
 
+/* ---------- Header ---------- */
 .site-header {
   position: sticky;
   top: 0;
@@ -91,54 +92,105 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: none;
 }
 
-.hero {
-  padding: 48px 0 32px;
-  text-align: center;
+/* ---------- Hero Slider ---------- */
+.hero-slider {
+  position: relative;
+  overflow: hidden;
+  margin: 14px 20px 0;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.5s ease;
+}
+
+.slide {
+  min-width: 100%;
+  padding: 34px 24px;
   position: relative;
   overflow: hidden;
 }
 
-.hero::before {
+.slide::before {
   content: '';
   position: absolute;
-  top: -120px;
-  right: 50%;
-  transform: translateX(50%);
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(43,237,51,0.18) 0%, rgba(43,237,51,0) 70%);
-  pointer-events: none;
+  top: -80px;
+  left: -60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(43,237,51,0.25) 0%, rgba(43,237,51,0) 70%);
 }
 
-.hero h1 {
-  font-size: 30px;
+.slide-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--primary);
+  letter-spacing: 1px;
+  position: relative;
+}
+
+.slide h2 {
+  font-size: 24px;
   font-weight: 800;
+  margin-top: 8px;
   line-height: 1.4;
   position: relative;
+  max-width: 80%;
 }
-.hero h1 .glow { color: var(--primary); }
 
-.hero p {
+.slide p {
   color: var(--text-muted);
-  margin-top: 10px;
-  font-size: 15px;
+  font-size: 13px;
+  margin-top: 8px;
   position: relative;
+  max-width: 85%;
+}
+
+.slide-1 { background: linear-gradient(135deg, #1a2b1a, #141414); }
+.slide-2 { background: linear-gradient(135deg, #14231f, #141414); }
+.slide-3 { background: linear-gradient(135deg, #1c1c1c, #141414); }
+
+.slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 0;
+  background: var(--bg-card);
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+.dot.active { background: var(--primary); width: 18px; border-radius: 4px; }
+
+.hero-sub {
+  text-align: center;
+  padding: 20px 20px 4px;
+}
+.hero-sub p {
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .hero-rate {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 14px;
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--primary);
-  position: relative;
 }
 
+/* ---------- Category chips ---------- */
 .categories {
   display: flex;
   gap: 10px;
@@ -166,6 +218,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-color: var(--primary);
 }
 
+/* ---------- Voucher Product Cards ---------- */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -220,6 +273,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-weight: 700;
 }
 
+/* perforated divider — the signature element */
 .voucher-divider {
   position: relative;
   border-top: 2px dashed var(--border);
@@ -266,6 +320,52 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-radius: 8px;
 }
 
+/* ---------- Category Sections (home layout) ---------- */
+.category-section {
+  margin-top: 26px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+
+.category-header h2 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.category-header .see-all {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.products-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 20px 6px;
+  scrollbar-width: none;
+}
+.products-row::-webkit-scrollbar { display: none; }
+
+.products-row .voucher-card {
+  min-width: 42%;
+  flex-shrink: 0;
+}
+
+@media (min-width: 480px) {
+  .products-row .voucher-card { min-width: 31%; }
+}
+@media (min-width: 720px) {
+  .products-row .voucher-card { min-width: 22%; }
+}
+
+/* ---------- Empty state ---------- */
 .empty-state {
   grid-column: 1 / -1;
   text-align: center;
@@ -274,6 +374,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .empty-state h3 { color: var(--white); margin-bottom: 8px; font-size: 16px; }
 
+/* ---------- Footer ---------- */
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 24px 20px 90px;
@@ -282,6 +383,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 13px;
 }
 
+/* ---------- Floating WhatsApp ---------- */
 .whatsapp-fab {
   position: fixed;
   bottom: 20px;
@@ -297,6 +399,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   z-index: 60;
 }
 
+/* ---------- Section title ---------- */
 .section-title {
   padding: 0 20px;
   font-size: 15px;
