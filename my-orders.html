@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>طلباتي — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body>
+
+<div class="orders-page">
+  <div class="page-header">
+    <h1>طلباتي</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+  <div id="ordersList">
+    <div style="text-align:center; padding:60px 0; color:var(--text-muted);">جارِ التحميل...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+const statusLabels = {
+  pending_review: 'قيد المراجعة',
+  in_progress: 'قيد التنفيذ',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+  rejected: 'مرفوض'
+};
+
+const paymentLabels = {
+  wallet: 'من المحفظة',
+  bank: 'تحويل بنكك'
+};
+
+let currentUser = null;
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUser = session.user;
+  await loadOrders();
+}
+
+async function loadOrders() {
+  const { data: orders, error } = await supabaseClient
+    .from('orders')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('ordersList');
+
+  if (error || !orders || orders.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+        <h3 style="color:var(--white); margin-bottom:8px;">لا توجد طلبات بعد</h3>
+        <p>ابدأ التسوق من الصفحة الرئيسية</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = orders.map(o => renderOrderCard(o)).join('');
+
+  document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+    btn.addEventListener('click', () => cancelOrder(btn.dataset.orderId));
+  });
+}
+
+function renderOrderCard(o) {
+  const date = new Date(o.created_at).toLocaleDateString('ar-EG', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
+    ? Object.entries(o.field_values).map(([k, v]) => `<div>${v}</div>`).join('')
+    : '';
+
+  return `
+    <div class="order-card">
+      <div class="order-top">
+        <div>
+          <div class="order-product">${o.product_name_snapshot}</div>
+          <div class="order-date">${date}</div>
+        </div>
+        <span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span>
+      </div>
+
+      <div class="order-details">
+        <div><strong>السعر:</strong> ${formatSDG(o.price_sdg_snapshot)} ج.س</div>
+        <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || o.payment_type}</div>
+        ${fieldsHtml}
+        ${o.receipt_url ? `<div><a href="${o.receipt_url}" target="_blank" style="color:var(--primary);">عرض صورة الإيصال</a></div>` : ''}
+      </div>
+
+      ${o.status === 'rejected' && o.rejection_reason ? `
+        <div class="order-rejection">سبب الرفض: ${o.rejection_reason}</div>
+      ` : ''}
+
+      ${o.status === 'pending_review' ? `
+        <button class="cancel-order-btn" data-order-id="${o.id}">إلغاء الطلب</button>
+      ` : ''}
+    </div>
+  `;
+}
+
+async function cancelOrder(orderId) {
+  if (!confirm('متأكد عايز تلغي الطلب؟')) return;
+
+  const { error } = await supabaseClient
+    .from('orders')
+    .update({ status: 'cancelled' })
+    .eq('id', orderId)
+    .eq('user_id', currentUser.id)
+    .eq('status', 'pending_review');
+
+  if (!error) {
+    await loadOrders();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
