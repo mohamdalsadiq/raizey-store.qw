@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">RAIZEY <span>STORE</span></div>
+    <h1 class="auth-title">تسجيل الدخول</h1>
+    <p class="auth-sub">أهلاً بيك تاني في RAIZEY STORE</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="email" required placeholder="example@email.com">
+      </div>
+
+      <div class="field">
+        <label>كلمة السر</label>
+        <input type="password" id="password" required placeholder="كلمة السر">
+      </div>
+
+      <div class="form-error" id="formError"></div>
+
+      <button type="submit" class="auth-btn" id="submitBtn">دخول</button>
+    </form>
+
+    <p class="auth-switch">ما عندك حساب؟ <a href="register.html">أنشئ حساب جديد</a></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+const form = document.getElementById('loginForm');
+const errorBox = document.getElementById('formError');
+const submitBtn = document.getElementById('submitBtn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorBox.textContent = '';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'جارِ الدخول...';
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    if (error.message.includes('Email not confirmed')) {
+      sessionStorage.setItem('pending_email', email);
+      window.location.href = 'verify.html';
+      return;
+    }
+    errorBox.textContent = 'الإيميل أو كلمة السر غير صحيحة';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'دخول';
+    return;
+  }
+
+  window.location.href = 'index.html';
+});
+</script>
+</body>
+</html>
