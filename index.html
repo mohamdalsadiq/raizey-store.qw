@@ -29,24 +29,33 @@
   </div>
 </header>
 
-<section class="hero">
-  <div class="container">
-    <h1>اشحن رصيدك <span class="glow">فوراً</span><br>بأفضل الأسعار</h1>
-    <p>شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والمزيد — تسليم سريع وموثوق</p>
-    <div class="hero-rate" id="rateBox">سعر الدولار: جارِ التحميل...</div>
+<section class="hero-slider">
+  <div class="slider-track" id="sliderTrack">
+    <div class="slide slide-1">
+      <div class="slide-eyebrow">RAIZEY STORE</div>
+      <h2>اشحن رصيدك فوراً بأفضل الأسعار</h2>
+      <p>شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
+    </div>
+    <div class="slide slide-2">
+      <div class="slide-eyebrow">دفع مرن</div>
+      <h2>ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
+      <p>محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
+    </div>
+    <div class="slide slide-3">
+      <div class="slide-eyebrow">دعم فوري</div>
+      <h2>تواصل معانا مباشرة على واتساب</h2>
+      <p>فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
+    </div>
   </div>
+  <div class="slider-dots" id="sliderDots"></div>
 </section>
 
-<div class="section-title">التصنيفات</div>
-<div class="categories" id="categoriesRow">
-  <button class="chip active" data-id="all">الكل</button>
+<div class="hero-sub">
+  <div class="hero-rate" id="rateBox">سعر الدولار: جارِ التحميل...</div>
 </div>
 
-<div class="section-title" id="productsTitle">المنتجات</div>
-<div class="products-grid" id="productsGrid">
-  <div class="empty-state">
-    <h3>جارِ تحميل المنتجات...</h3>
-  </div>
+<div id="homeSections">
+  <div class="section-title">جارِ تحميل التصنيفات...</div>
 </div>
 
 <footer class="site-footer">
@@ -60,94 +69,96 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
-let allProducts = [];
-let currentCategory = 'all';
+// ---------- Slider ----------
+let currentSlide = 0;
+const track = document.getElementById('sliderTrack');
+const dotsBox = document.getElementById('sliderDots');
+const slideCount = track.children.length;
 
+for (let i = 0; i < slideCount; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  dotsBox.appendChild(d);
+}
+
+function goToSlide(i) {
+  currentSlide = i;
+  track.style.transform = `translateX(${currentSlide * 100}%)`;
+  [...dotsBox.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
+}
+
+setInterval(() => {
+  goToSlide((currentSlide + 1) % slideCount);
+}, 4500);
+
+// ---------- Data ----------
 async function init() {
   const rate = await getExchangeRate();
   document.getElementById('rateBox').textContent = rate > 0
     ? `سعر الدولار: ${formatSDG(rate)} ج.س`
     : 'سعر الدولار: لم يتم تحديده بعد';
 
-  await loadCategories();
-  await loadProducts();
-}
-
-async function loadCategories() {
-  const { data, error } = await supabaseClient
+  const { data: categories } = await supabaseClient
     .from('categories')
     .select('*')
     .eq('is_active', true)
     .order('display_order');
 
-  const row = document.getElementById('categoriesRow');
-  if (error || !data || data.length === 0) return;
-
-  data.forEach(cat => {
-    const btn = document.createElement('button');
-    btn.className = 'chip';
-    btn.dataset.id = cat.id;
-    btn.textContent = cat.name;
-    btn.onclick = () => selectCategory(cat.id, btn);
-    row.appendChild(btn);
-  });
-
-  row.querySelector('.chip').onclick = () => selectCategory('all', row.querySelector('.chip'));
-}
-
-function selectCategory(id, btnEl) {
-  currentCategory = id;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  btnEl.classList.add('active');
-  renderProducts();
-}
-
-async function loadProducts() {
-  const rate = await getExchangeRate();
-  const { data, error } = await supabaseClient
+  const { data: products } = await supabaseClient
     .from('products')
     .select('*')
     .eq('is_active', true)
     .order('display_order');
 
-  if (error || !data) {
-    allProducts = [];
-  } else {
-    allProducts = data.map(p => ({ ...p, price_sdg: p.price_usd * rate }));
-  }
-  renderProducts();
+  const productsWithPrice = (products || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
+  renderHome(categories || [], productsWithPrice);
 }
 
-function renderProducts() {
-  const grid = document.getElementById('productsGrid');
-  const filtered = currentCategory === 'all'
-    ? allProducts
-    : allProducts.filter(p => p.category_id === currentCategory);
+function renderHome(categories, products) {
+  const container = document.getElementById('homeSections');
 
-  if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
+  if (categories.length === 0 || products.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:60px 20px;">
         <h3>لا توجد منتجات متاحة حالياً</h3>
         <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
       </div>`;
     return;
   }
 
-  grid.innerHTML = filtered.map(p => `
-    <a href="product.html?id=${p.id}" class="voucher-card">
-      <div class="voucher-top">
-        <div class="voucher-thumb">
-          ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
+  container.innerHTML = categories.map(cat => {
+    const catProducts = products.filter(p => p.category_id === cat.id);
+    if (catProducts.length === 0) return '';
+
+    return `
+      <div class="category-section">
+        <div class="category-header">
+          <h2>${cat.name}</h2>
+          <a class="see-all" href="category.html?id=${cat.id}">عرض الكل</a>
         </div>
-        <div class="voucher-name">${p.name}</div>
-      </div>
-      <div class="voucher-divider"></div>
-      <div class="voucher-bottom">
-        <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
-        <div class="buy-btn">اشترِ</div>
-      </div>
-    </a>
-  `).join('');
+        <div class="products-row">
+          ${catProducts.map(p => `
+            <a href="product.html?id=${p.id}" class="voucher-card">
+              <div class="voucher-top">
+                <div class="voucher-thumb">
+                  ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
+                </div>
+                <div class="voucher-name">${p.name}</div>
+              </div>
+              <div class="voucher-divider"></div>
+              <div class="voucher-bottom">
+                <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
+                <div class="buy-btn">اشترِ</div>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('') || `
+    <div class="empty-state" style="padding:60px 20px;">
+      <h3>لا توجد منتجات متاحة حالياً</h3>
+      <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
+    </div>`;
 }
 
 init();
