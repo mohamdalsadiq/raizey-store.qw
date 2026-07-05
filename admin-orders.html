@@ -107,9 +107,13 @@ document.getElementById('modalCancelBtn').addEventListener('click', closeRejectM
 
 modalConfirmBtn.addEventListener('click', async () => {
   if (!selectedReason || !rejectingOrderId) return;
+  const order = allOrders.find(o => o.id === rejectingOrderId);
   await supabaseClient.from('orders')
     .update({ status: 'rejected', rejection_reason: selectedReason })
     .eq('id', rejectingOrderId);
+  if (order) {
+    await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}`);
+  }
   closeRejectModal();
   await loadOrders();
 });
@@ -238,15 +242,24 @@ function renderOrderCard(o) {
 }
 
 async function handleAction(action, orderId) {
+  const order = allOrders.find(o => o.id === orderId);
+  if (!order) return;
+
   if (action === 'confirm') {
     await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
+    await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
     await loadOrders();
   } else if (action === 'complete') {
     await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
+    await notifyCustomer(order.user_id, 'تم تنفيذ طلبك', `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`);
     await loadOrders();
   } else if (action === 'reject') {
     openRejectModal(orderId);
   }
+}
+
+async function notifyCustomer(userId, title, message) {
+  await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'order' });
 }
 
 init();
