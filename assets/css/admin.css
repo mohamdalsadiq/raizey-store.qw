@@ -107,3 +107,73 @@
   color: var(--text-muted);
   margin-top: 6px;
 }
+
+/* ---------- Reject Modal ---------- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.reason-option {
+  display: block;
+  width: 100%;
+  text-align: right;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--white);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.reason-option.selected {
+  border-color: var(--danger);
+  background: rgba(255,77,79,0.08);
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.reason-custom {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--white);
+  font-size: 13px;
+  font-family: var(--font-display);
+  margin-top: 4px;
+  display: none;
+}
+.reason-custom.show { display: block; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-actions button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+.modal-cancel-btn { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+.modal-confirm-btn { background: var(--danger); color: #fff; }
+.modal-confirm-btn:disabled { opacity: 0.4; }
