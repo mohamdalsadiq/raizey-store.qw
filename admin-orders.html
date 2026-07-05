@@ -41,6 +41,22 @@
   <div id="ordersList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
 
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <div class="modal-title">سبب رفض الطلب</div>
+    <button class="reason-option" data-reason="الإيصال غير واضح">الإيصال غير واضح</button>
+    <button class="reason-option" data-reason="المبلغ المحول غير مطابق">المبلغ المحول غير مطابق</button>
+    <button class="reason-option" data-reason="الإيصال مكرر أو مستخدم من قبل">الإيصال مكرر أو مستخدم من قبل</button>
+    <button class="reason-option" data-reason="التحويل من حساب غير مطابق للاسم">التحويل من حساب غير مطابق للاسم</button>
+    <button class="reason-option" data-reason="custom">سبب آخر...</button>
+    <textarea class="reason-custom" id="customReasonInput" rows="3" placeholder="اكتب السبب هنا"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" id="modalCancelBtn">إلغاء</button>
+      <button class="modal-confirm-btn" id="modalConfirmBtn" disabled>تأكيد الرفض</button>
+    </div>
+  </div>
+</div>
+
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
   <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
@@ -51,6 +67,8 @@
 <script>
 let allOrders = [];
 let currentFilter = 'all';
+let rejectingOrderId = null;
+let selectedReason = null;
 
 const statusLabels = {
   pending_review: 'قيد المراجعة',
@@ -59,6 +77,57 @@ const statusLabels = {
   cancelled: 'ملغي',
   rejected: 'مرفوض'
 };
+
+const rejectModal = document.getElementById('rejectModal');
+const customReasonInput = document.getElementById('customReasonInput');
+const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+document.querySelectorAll('.reason-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.reason-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    if (btn.dataset.reason === 'custom') {
+      customReasonInput.classList.add('show');
+      selectedReason = customReasonInput.value.trim() || null;
+    } else {
+      customReasonInput.classList.remove('show');
+      selectedReason = btn.dataset.reason;
+    }
+    modalConfirmBtn.disabled = !selectedReason;
+  });
+});
+
+customReasonInput.addEventListener('input', () => {
+  selectedReason = customReasonInput.value.trim() || null;
+  modalConfirmBtn.disabled = !selectedReason;
+});
+
+document.getElementById('modalCancelBtn').addEventListener('click', closeRejectModal);
+
+modalConfirmBtn.addEventListener('click', async () => {
+  if (!selectedReason || !rejectingOrderId) return;
+  await supabaseClient.from('orders')
+    .update({ status: 'rejected', rejection_reason: selectedReason })
+    .eq('id', rejectingOrderId);
+  closeRejectModal();
+  await loadOrders();
+});
+
+function openRejectModal(orderId) {
+  rejectingOrderId = orderId;
+  selectedReason = null;
+  customReasonInput.value = '';
+  customReasonInput.classList.remove('show');
+  document.querySelectorAll('.reason-option').forEach(b => b.classList.remove('selected'));
+  modalConfirmBtn.disabled = true;
+  rejectModal.classList.add('show');
+}
+
+function closeRejectModal() {
+  rejectModal.classList.remove('show');
+  rejectingOrderId = null;
+}
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -171,14 +240,13 @@ function renderOrderCard(o) {
 async function handleAction(action, orderId) {
   if (action === 'confirm') {
     await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
+    await loadOrders();
   } else if (action === 'complete') {
     await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
+    await loadOrders();
   } else if (action === 'reject') {
-    const reason = prompt('اكتب سبب الرفض:');
-    if (reason === null) return;
-    await supabaseClient.from('orders').update({ status: 'rejected', rejection_reason: reason }).eq('id', orderId);
+    openRejectModal(orderId);
   }
-  await loadOrders();
 }
 
 init();
