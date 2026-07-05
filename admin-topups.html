@@ -98,9 +98,13 @@ document.getElementById('modalCancelBtn').addEventListener('click', closeRejectM
 
 modalConfirmBtn.addEventListener('click', async () => {
   if (!selectedReason || !rejectingTopupId) return;
+  const topup = allTopups.find(t => t.id === rejectingTopupId);
   await supabaseClient.from('wallet_topups')
     .update({ status: 'rejected', rejection_reason: selectedReason, reviewed_at: new Date().toISOString() })
     .eq('id', rejectingTopupId);
+  if (topup) {
+    await notifyCustomer(topup.user_id, 'تم رفض طلب الشحن', `طلب شحن ${formatSDG(topup.amount)} ج.س رُفض. السبب: ${selectedReason}`);
+  }
   closeRejectModal();
   await loadTopups();
 });
@@ -225,10 +229,16 @@ async function handleAction(action, topupId) {
       .update({ status: 'confirmed', reviewed_at: new Date().toISOString() })
       .eq('id', topupId);
 
+    await notifyCustomer(topup.user_id, 'تم شحن محفظتك', `تم إضافة ${formatSDG(topup.amount)} ج.س لرصيدك.`);
+
     await loadTopups();
   } else if (action === 'reject') {
     openRejectModal(topupId);
   }
+}
+
+async function notifyCustomer(userId, title, message) {
+  await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'wallet' });
 }
 
 init();
