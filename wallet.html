@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محفظتي — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body>
+
+<div class="orders-page">
+  <div class="page-header">
+    <h1>محفظتي</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="wallet-balance-card">
+    <div class="wallet-balance-label">رصيدك الحالي</div>
+    <div class="wallet-balance-amount" id="balanceAmount">...</div>
+  </div>
+
+  <button class="topup-toggle-btn" id="toggleFormBtn">+ اطلب شحن رصيد</button>
+
+  <div class="topup-form" id="topupForm">
+    <div class="field">
+      <label>المبلغ (بالجنيه السوداني)</label>
+      <input type="number" id="amountInput" min="1" placeholder="مثلاً: 5000">
+    </div>
+
+    <div class="field">
+      <label>وسيلة التحويل</label>
+      <select id="methodSelect">
+        <option value="">-- اختر --</option>
+      </select>
+    </div>
+
+    <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:10px;"></div>
+
+    <div class="file-upload" id="fileUploadBox">
+      📎 اضغط لرفع صورة الإيصال
+      <input type="file" id="receiptInput" accept="image/*" style="display:none;">
+    </div>
+
+    <div class="form-error" id="formError" style="margin-top:10px;"></div>
+
+    <button class="auth-btn" id="submitTopupBtn" style="margin-top:10px;">إرسال طلب الشحن</button>
+  </div>
+
+  <div class="section-label">سجل الشحن</div>
+  <div id="topupsList">
+    <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let currentUser = null;
+let paymentMethods = [];
+let receiptFile = null;
+
+const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUser = session.user;
+
+  await loadBalance();
+  await loadPaymentMethods();
+  await loadTopups();
+
+  document.getElementById('toggleFormBtn').addEventListener('click', () => {
+    document.getElementById('topupForm').classList.toggle('show');
+  });
+
+  document.getElementById('methodSelect').addEventListener('change', (e) => {
+    const method = paymentMethods.find(m => m.id === e.target.value);
+    const box = document.getElementById('methodDetails');
+    box.textContent = method ? `${method.account_info}${method.instructions ? ' — ' + method.instructions : ''}` : '';
+  });
+
+  const fileBox = document.getElementById('fileUploadBox');
+  const fileInput = document.getElementById('receiptInput');
+  fileBox.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+      receiptFile = fileInput.files[0];
+      fileBox.textContent = `✅ ${receiptFile.name}`;
+      fileBox.classList.add('has-file');
+    }
+  });
+
+  document.getElementById('submitTopupBtn').addEventListener('click', submitTopup);
+}
+
+async function loadBalance() {
+  const { data } = await supabaseClient
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', currentUser.id)
+    .single();
+  document.getElementById('balanceAmount').innerHTML = `${formatSDG(data ? data.balance : 0)} <small>ج.س</small>`;
+}
+
+async function loadPaymentMethods() {
+  const { data } = await supabaseClient
+    .from('payment_methods')
+    .select('*')
+    .eq('is_active', true);
+  paymentMethods = data || [];
+
+  const select = document.getElementById('methodSelect');
+  paymentMethods.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    select.appendChild(opt);
+  });
+}
+
+async function loadTopups() {
+  const { data: topups, error } = await supabaseClient
+    .from('wallet_topups')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('topupsList');
+
+  if (error || !topups || topups.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا يوجد طلبات شحن بعد</div>`;
+    return;
+  }
+
+  container.innerHTML = topups.map(t => {
+    const date = new Date(t.created_at).toLocaleDateString('ar-EG', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    return `
+      <div class="order-card">
+        <div class="order-top">
+          <div>
+            <div class="order-product">${formatSDG(t.amount)} ج.س</div>
+            <div class="order-date">${date}</div>
+          </div>
+          <span class="status-badge status-${t.status}">${statusLabels[t.status] || t.status}</span>
+        </div>
+        ${t.status === 'rejected' && t.rejection_reason ? `
+          <div class="order-rejection">سبب الرفض: ${t.rejection_reason}</div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function submitTopup() {
+  const errorBox = document.getElementById('formError');
+  errorBox.textContent = '';
+
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const methodId = document.getElementById('methodSelect').value;
+
+  if (!amount || amount <= 0) {
+    errorBox.textContent = 'أدخل مبلغ صحيح';
+    return;
+  }
+  if (!methodId) {
+    errorBox.textContent = 'اختر وسيلة التحويل';
+    return;
+  }
+  if (!receiptFile) {
+    errorBox.textContent = 'ارفع صورة الإيصال';
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitTopupBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'جارِ الإرسال...';
+
+  const fileExt = receiptFile.name.split('.').pop();
+  const filePath = `${currentUser.id}/topup_${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from('receipts')
+    .upload(filePath, receiptFile);
+
+  if (uploadError) {
+    errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
+
+  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
+
+  const { error } = await supabaseClient.from('wallet_topups').insert({
+    user_id: currentUser.id,
+    amount,
+    payment_method_id: methodId,
+    receipt_url: urlData.publicUrl,
+    status: 'pending'
+  });
+
+  if (error) {
+    errorBox.textContent = 'حصل خطأ، حاول تاني';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
+
+  document.getElementById('topupForm').classList.remove('show');
+  document.getElementById('amountInput').value = '';
+  document.getElementById('methodSelect').value = '';
+  document.getElementById('fileUploadBox').textContent = '📎 اضغط لرفع صورة الإيصال';
+  document.getElementById('fileUploadBox').classList.remove('has-file');
+  receiptFile = null;
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'إرسال طلب الشحن';
+
+  await loadTopups();
+}
+
+init();
+</script>
+</body>
+</html>
