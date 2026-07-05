@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حسابي — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body>
+
+<div class="orders-page">
+  <div class="page-header">
+    <h1>حسابي</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="field">
+    <label>الاسم الكامل</label>
+    <input type="text" id="fullNameInput">
+  </div>
+
+  <div class="field">
+    <label>البريد الإلكتروني</label>
+    <input type="email" id="emailInput" disabled style="opacity:0.6;">
+  </div>
+
+  <div class="field">
+    <label>رقم الواتساب</label>
+    <input type="tel" id="whatsappInput">
+  </div>
+
+  <div class="form-error" id="formError"></div>
+  <div class="form-success" id="formSuccess"></div>
+
+  <button class="auth-btn" id="saveBtn">حفظ التعديلات</button>
+
+  <div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
+    <a href="my-orders.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">📦 طلباتي</a>
+    <a href="wallet.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">💰 محفظتي</a>
+    <a href="notifications.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">🔔 الإشعارات</a>
+  </div>
+
+  <button class="auth-btn" id="logoutBtn" style="background:rgba(255,77,79,0.15); color:var(--danger); margin-top:16px;">تسجيل الخروج</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let currentUser = null;
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  document.getElementById('emailInput').value = currentUser.email;
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('*').eq('id', currentUser.id).single();
+
+  if (profile) {
+    document.getElementById('fullNameInput').value = profile.full_name || '';
+    document.getElementById('whatsappInput').value = profile.whatsapp_number || '';
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', saveProfile);
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+}
+
+async function saveProfile() {
+  const errorBox = document.getElementById('formError');
+  const successBox = document.getElementById('formSuccess');
+  errorBox.textContent = '';
+  successBox.textContent = '';
+
+  const fullName = document.getElementById('fullNameInput').value.trim();
+  const whatsapp = document.getElementById('whatsappInput').value.trim();
+
+  if (!fullName) {
+    errorBox.textContent = 'أدخل اسمك';
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ full_name: fullName, whatsapp_number: whatsapp })
+    .eq('id', currentUser.id);
+
+  if (error) {
+    errorBox.textContent = 'حصل خطأ، حاول تاني';
+    return;
+  }
+
+  successBox.textContent = 'تم حفظ التعديلات بنجاح';
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+init();
+</script>
+</body>
+</html>
