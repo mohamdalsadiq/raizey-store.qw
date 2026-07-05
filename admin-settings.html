@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الإعدادات — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+
+<div class="admin-page" id="adminPage" style="display:none;">
+  <div class="page-header">
+    <h1>الإعدادات</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="admin-nav">
+    <a href="admin.html">الرئيسية</a>
+    <a href="admin-orders.html">الطلبات</a>
+    <a href="admin-topups.html">شحن المحافظ</a>
+    <a href="admin-products.html">المنتجات</a>
+    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-customers.html">العملاء</a>
+    <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-settings.html" class="active">الإعدادات</a>
+  </div>
+
+  <div class="admin-section-title" style="margin-top:0;">سعر الصرف</div>
+  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+    هذا السعر يُستخدم لحساب أسعار كل المنتجات بالجنيه السوداني تلقائياً، ولا يظهر للعملاء أبداً.
+  </p>
+
+  <div class="field">
+    <label>سعر الدولار الواحد بالجنيه السوداني</label>
+    <input type="number" id="rateInput" step="1" placeholder="مثلاً: 2500">
+  </div>
+
+  <div class="form-error" id="formError"></div>
+  <div class="form-success" id="formSuccess"></div>
+
+  <button class="auth-btn" id="saveBtn">حفظ السعر</button>
+</div>
+
+<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
+  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('role').eq('id', session.user.id).single();
+
+  if (!profile || profile.role !== 'admin') {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('adminPage').style.display = 'block';
+
+  const rate = await getExchangeRate();
+  document.getElementById('rateInput').value = rate || '';
+
+  document.getElementById('saveBtn').addEventListener('click', saveRate);
+}
+
+async function saveRate() {
+  const errorBox = document.getElementById('formError');
+  const successBox = document.getElementById('formSuccess');
+  errorBox.textContent = '';
+  successBox.textContent = '';
+
+  const rate = parseFloat(document.getElementById('rateInput').value);
+  if (!rate || rate <= 0) {
+    errorBox.textContent = 'أدخل رقم صحيح';
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('settings')
+    .update({ value: String(rate), updated_at: new Date().toISOString() })
+    .eq('key', 'usd_to_sdg_rate');
+
+  if (error) {
+    errorBox.textContent = 'حصل خطأ، حاول تاني';
+    return;
+  }
+
+  successBox.textContent = 'تم حفظ السعر بنجاح';
+}
+
+init();
+</script>
+</body>
+</html>
