@@ -50,10 +50,6 @@
   <div class="slider-dots" id="sliderDots"></div>
 </section>
 
-<div class="hero-sub">
-  <div class="hero-rate" id="rateBox">سعر الدولار: جارِ التحميل...</div>
-</div>
-
 <div id="homeSections">
   <div class="section-title">جارِ تحميل التصنيفات...</div>
 </div>
@@ -69,6 +65,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
+// ---------- Slider ----------
 let currentSlide = 0;
 const track = document.getElementById('sliderTrack');
 const dotsBox = document.getElementById('sliderDots');
@@ -90,11 +87,9 @@ setInterval(() => {
   goToSlide((currentSlide + 1) % slideCount);
 }, 4500);
 
+// ---------- Data ----------
 async function init() {
   const rate = await getExchangeRate();
-  document.getElementById('rateBox').textContent = rate > 0
-    ? `سعر الدولار: ${formatSDG(rate)} ج.س`
-    : 'سعر الدولار: لم يتم تحديده بعد';
 
   const { data: categories } = await supabaseClient
     .from('categories')
@@ -133,33 +128,3 @@ function renderHome(categories, products) {
         <div class="category-header">
           <h2>${cat.name}</h2>
           <a class="see-all" href="category.html?id=${cat.id}">عرض الكل</a>
-        </div>
-        <div class="products-row">
-          ${catProducts.map(p => `
-            <a href="product.html?id=${p.id}" class="voucher-card">
-              <div class="voucher-top">
-                <div class="voucher-thumb">
-                  ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
-                </div>
-                <div class="voucher-name">${p.name}</div>
-              </div>
-              <div class="voucher-divider"></div>
-              <div class="voucher-bottom">
-                <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
-                <div class="buy-btn">اشترِ</div>
-              </div>
-            </a>
-          `).join('')}
-        </div>
-      </div>`;
-  }).join('') || `
-    <div class="empty-state" style="padding:60px 20px;">
-      <h3>لا توجد منتجات متاحة حالياً</h3>
-      <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
-    </div>`;
-}
-
-init();
-</script>
-</body>
-</html>
