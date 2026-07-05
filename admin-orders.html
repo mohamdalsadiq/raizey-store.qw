@@ -27,6 +27,7 @@
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
   <div class="categories" style="padding:0 0 16px;" id="filterRow">
@@ -69,6 +70,7 @@ let allOrders = [];
 let currentFilter = 'all';
 let rejectingOrderId = null;
 let selectedReason = null;
+let currentAdminId = null;
 
 const statusLabels = {
   pending_review: 'قيد المراجعة',
@@ -113,6 +115,7 @@ modalConfirmBtn.addEventListener('click', async () => {
     .eq('id', rejectingOrderId);
   if (order) {
     await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}`);
+    await logAudit('رفض طلب', { order_id: rejectingOrderId, product: order.product_name_snapshot, reason: selectedReason });
   }
   closeRejectModal();
   await loadOrders();
@@ -144,6 +147,8 @@ async function init() {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
+
+  currentAdminId = session.user.id;
 
   document.getElementById('adminPage').style.display = 'block';
 
@@ -248,10 +253,12 @@ async function handleAction(action, orderId) {
   if (action === 'confirm') {
     await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
     await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
+    await logAudit('تأكيد طلب', { order_id: orderId, product: order.product_name_snapshot });
     await loadOrders();
   } else if (action === 'complete') {
     await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
     await notifyCustomer(order.user_id, 'تم تنفيذ طلبك', `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`);
+    await logAudit('إتمام طلب', { order_id: orderId, product: order.product_name_snapshot });
     await loadOrders();
   } else if (action === 'reject') {
     openRejectModal(orderId);
@@ -260,6 +267,10 @@ async function handleAction(action, orderId) {
 
 async function notifyCustomer(userId, title, message) {
   await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'order' });
+}
+
+async function logAudit(action, details) {
+  await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
 }
 
 init();
