@@ -128,3 +128,33 @@ function renderHome(categories, products) {
         <div class="category-header">
           <h2>${cat.name}</h2>
           <a class="see-all" href="category.html?id=${cat.id}">عرض الكل</a>
+        </div>
+        <div class="products-row">
+          ${catProducts.map(p => `
+            <a href="product.html?id=${p.id}" class="voucher-card">
+              <div class="voucher-top">
+                <div class="voucher-thumb">
+                  ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
+                </div>
+                <div class="voucher-name">${p.name}</div>
+              </div>
+              <div class="voucher-divider"></div>
+              <div class="voucher-bottom">
+                <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
+                <div class="buy-btn">اشترِ</div>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('') || `
+    <div class="empty-state" style="padding:60px 20px;">
+      <h3>لا توجد منتجات متاحة حالياً</h3>
+      <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>
