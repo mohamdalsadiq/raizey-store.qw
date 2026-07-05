@@ -91,6 +91,18 @@ setInterval(() => {
 async function init() {
   const rate = await getExchangeRate();
 
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    const { count } = await supabaseClient
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+      .eq('is_read', false);
+    if (count && count > 0) {
+      document.getElementById('notifDot').style.display = 'block';
+    }
+  }
+
   const { data: categories } = await supabaseClient
     .from('categories')
     .select('*')
