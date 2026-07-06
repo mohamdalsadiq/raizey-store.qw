@@ -27,6 +27,7 @@
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html" class="active">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
   <div class="admin-section-title" style="margin-top:0;">سعر الصرف</div>
@@ -53,6 +54,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
+let currentAdminId = null;
+
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
@@ -65,6 +68,7 @@ async function init() {
     return;
   }
 
+  currentAdminId = session.user.id;
   document.getElementById('adminPage').style.display = 'block';
 
   const rate = await getExchangeRate();
@@ -94,6 +98,10 @@ async function saveRate() {
     errorBox.textContent = 'حصل خطأ، حاول تاني';
     return;
   }
+
+  await supabaseClient.from('audit_logs').insert({
+    admin_id: currentAdminId, action: 'تعديل سعر الصرف', details: { new_rate: rate }
+  });
 
   successBox.textContent = 'تم حفظ السعر بنجاح';
 }
