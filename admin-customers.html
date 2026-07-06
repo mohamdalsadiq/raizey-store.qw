@@ -27,6 +27,7 @@
     <a href="admin-customers.html" class="active">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
   <div class="field">
@@ -130,6 +131,9 @@ async function toggleBan(id, currentlyBanned) {
   const action = currentlyBanned ? 'إلغاء حظر' : 'حظر';
   if (!confirm(`متأكد عايز ${action} هذا العميل؟`)) return;
   await supabaseClient.from('profiles').update({ is_banned: !currentlyBanned }).eq('id', id);
+  await supabaseClient.from('audit_logs').insert({
+    admin_id: currentUserId, action: `${action} عميل`, details: { customer_id: id }
+  });
   await loadCustomers();
 }
 
@@ -138,6 +142,11 @@ async function toggleRole(id, currentRole) {
   const msg = newRole === 'admin' ? 'ترقية هذا الحساب لأدمن؟' : 'إلغاء صلاحية الأدمن من هذا الحساب؟';
   if (!confirm(msg)) return;
   await supabaseClient.from('profiles').update({ role: newRole }).eq('id', id);
+  await supabaseClient.from('audit_logs').insert({
+    admin_id: currentUserId,
+    action: newRole === 'admin' ? 'ترقية حساب لأدمن' : 'إلغاء صلاحية أدمن',
+    details: { target_id: id }
+  });
   await loadCustomers();
 }
 
