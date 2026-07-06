@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>البحث — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">RAIZEY <span>STORE</span></div>
+    <a href="index.html" class="back-link" style="margin:0;">→ الرئيسية</a>
+  </div>
+</header>
+
+<div style="padding:16px 20px 0;">
+  <input type="text" id="searchInput" placeholder="ابحث عن منتج..." style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--white); font-family:var(--font-display); font-size:14px;">
+</div>
+
+<div class="section-title" id="resultsTitle">اكتب اسم المنتج اللي تدور عليه</div>
+
+<div class="products-grid" id="productsGrid"></div>
+
+<footer class="site-footer">
+  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let rate = 0;
+let searchTimeout = null;
+
+async function init() {
+  rate = await getExchangeRate();
+
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = params.get('q') || '';
+  document.getElementById('searchInput').value = initialQuery;
+
+  if (initialQuery) await search(initialQuery);
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => search(e.target.value), 400);
+  });
+}
+
+async function search(query) {
+  const grid = document.getElementById('productsGrid');
+  const title = document.getElementById('resultsTitle');
+
+  if (!query.trim()) {
+    title.textContent = 'اكتب اسم المنتج اللي تدور عليه';
+    grid.innerHTML = '';
+    return;
+  }
+
+  title.textContent = 'جارِ البحث...';
+
+  const { data: products } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .ilike('name', `%${query}%`)
+    .order('display_order');
+
+  const results = (products || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
+
+  title.textContent = results.length > 0
+    ? `${results.length} نتيجة`
+    : 'لا توجد نتائج مطابقة';
+
+  grid.innerHTML = results.map(p => `
+    <a href="product.html?id=${p.id}" class="voucher-card">
+      <div class="voucher-top">
+        <div class="voucher-thumb">
+          ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
+        </div>
+        <div class="voucher-name">${p.name}</div>
+      </div>
+      <div class="voucher-divider"></div>
+      <div class="voucher-bottom">
+        <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
+        <div class="buy-btn">اشترِ</div>
+      </div>
+    </a>
+  `).join('');
+}
+
+init();
+</script>
+</body>
+</html>
