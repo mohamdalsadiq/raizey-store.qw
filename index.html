@@ -3,231 +3,170 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة التحكم — RAIZEY STORE</title>
+<title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
+<meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/auth.css">
-<link rel="stylesheet" href="assets/css/admin.css">
 </head>
 <body>
 
-<div class="admin-page" id="adminPage" style="display:none;">
-  <div class="page-header">
-    <h1>لوحة التحكم</h1>
-    <a href="index.html" class="back-link">→ المتجر</a>
-  </div>
-
-  <div class="admin-nav">
-    <a href="admin.html" class="active">الرئيسية</a>
-    <a href="admin-orders.html">الطلبات</a>
-    <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html">المنتجات</a>
-    <a href="admin-categories.html">التصنيفات</a>
-    <a href="admin-customers.html">العملاء</a>
-    <a href="admin-payment-methods.html">وسائل الدفع</a>
-    <a href="admin-settings.html">الإعدادات</a>
-    <a href="admin-audit-log.html">سجل النشاطات</a>
-  </div>
-
-  <div class="stat-grid">
-    <div class="stat-card highlight">
-      <div class="stat-card-label">إجمالي المبيعات</div>
-      <div class="stat-card-value" id="statRevenue">...</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد الطلبات</div>
-      <div class="stat-card-value" id="statOrders">...</div>
-    </div>
-    <div class="stat-card alert">
-      <div class="stat-card-label">طلبات قيد المراجعة</div>
-      <div class="stat-card-value" id="statPending">...</div>
-      <a href="admin-orders.html" class="stat-card-link">مراجعة الآن ←</a>
-    </div>
-    <div class="stat-card alert">
-      <div class="stat-card-label">شحن محفظة معلّق</div>
-      <div class="stat-card-value" id="statPendingTopups">...</div>
-      <a href="admin-topups.html" class="stat-card-link">مراجعة الآن ←</a>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد العملاء</div>
-      <div class="stat-card-value" id="statCustomers">...</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد المنتجات</div>
-      <div class="stat-card-value" id="statProducts">...</div>
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo">RAIZEY <span>STORE</span></div>
+    <div class="header-actions">
+      <a href="search.html" class="icon-btn" title="بحث">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+      </a>
+      <a href="wallet.html" class="icon-btn" title="المحفظة">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+      </a>
+      <a href="notifications.html" class="icon-btn" title="الإشعارات">
+        <span class="badge-dot" id="notifDot"></span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </a>
+      <a href="account.html" class="icon-btn" title="حسابي">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </a>
     </div>
   </div>
+</header>
 
-  <div class="admin-section-title">المبيعات آخر 7 أيام</div>
-  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:24px;">
-    <canvas id="salesChart" height="180"></canvas>
+<section class="hero-slider">
+  <div class="slider-track" id="sliderTrack">
+    <div class="slide slide-1">
+      <div class="slide-eyebrow">RAIZEY STORE</div>
+      <h2>اشحن رصيدك فوراً بأفضل الأسعار</h2>
+      <p>شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
+    </div>
+    <div class="slide slide-2">
+      <div class="slide-eyebrow">دفع مرن</div>
+      <h2>ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
+      <p>محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
+    </div>
+    <div class="slide slide-3">
+      <div class="slide-eyebrow">دعم فوري</div>
+      <h2>تواصل معانا مباشرة على واتساب</h2>
+      <p>فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
+    </div>
   </div>
+  <div class="slider-dots" id="sliderDots"></div>
+</section>
 
-  <div class="admin-section-title">آخر الطلبات</div>
-  <div id="recentOrders"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
-
-  <div class="admin-section-title">آخر العملاء</div>
-  <div id="recentCustomers"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+<div id="homeSections">
+  <div class="section-title">جارِ تحميل التصنيفات...</div>
 </div>
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <p>هذه الصفحة مخصصة للإدارة فقط</p>
-  <a href="index.html" style="color:var(--primary); font-weight:700; display:inline-block; margin-top:14px;">← رجوع للمتجر</a>
-</div>
+<footer class="site-footer">
+  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+</footer>
+
+<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="#0a1a0a"><path d="M20.5 3.5A11 11 0 0 0 3 17.7L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
+</a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
+// ---------- Slider ----------
+let currentSlide = 0;
+const track = document.getElementById('sliderTrack');
+const dotsBox = document.getElementById('sliderDots');
+const slideCount = track.children.length;
+
+for (let i = 0; i < slideCount; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  dotsBox.appendChild(d);
+}
+
+function goToSlide(i) {
+  currentSlide = i;
+  track.style.transform = `translateX(${currentSlide * 100}%)`;
+  [...dotsBox.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
+}
+
+setInterval(() => {
+  goToSlide((currentSlide + 1) % slideCount);
+}, 4500);
+
+// ---------- Data ----------
 async function init() {
+  const rate = await getExchangeRate();
+
   const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
-
-  const { data: profile } = await supabaseClient
-    .from('profiles')
-    .select('role')
-    .eq('id', session.user.id)
-    .single();
-
-  if (!profile || profile.role !== 'admin') {
-    document.getElementById('accessDenied').style.display = 'block';
-    return;
-  }
-
-  document.getElementById('adminPage').style.display = 'block';
-  await loadStats();
-  await loadSalesChart();
-  await loadRecentOrders();
-  await loadRecentCustomers();
-}
-
-async function loadSalesChart() {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-
-  const { data: orders } = await supabaseClient
-    .from('orders')
-    .select('price_sdg_snapshot, created_at')
-    .in('status', ['in_progress', 'completed'])
-    .gte('created_at', sevenDaysAgo.toISOString());
-
-  const labels = [];
-  const totals = [];
-
-  for (let i = 6; i >= 0; i--) {
-    const day = new Date();
-    day.setDate(day.getDate() - i);
-    const dayKey = day.toISOString().slice(0, 10);
-    labels.push(day.toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' }));
-
-    const dayTotal = (orders || [])
-      .filter(o => o.created_at.slice(0, 10) === dayKey)
-      .reduce((sum, o) => sum + Number(o.price_sdg_snapshot), 0);
-
-    totals.push(dayTotal);
-  }
-
-  new Chart(document.getElementById('salesChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'المبيعات (ج.س)',
-        data: totals,
-        borderColor: '#2bed33',
-        backgroundColor: 'rgba(43,237,51,0.1)',
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#9a9a9a' }, grid: { color: '#2a2a2a' } },
-        y: { ticks: { color: '#9a9a9a' }, grid: { color: '#2a2a2a' } }
-      }
+  if (session) {
+    const { count } = await supabaseClient
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+      .eq('is_read', false);
+    if (count && count > 0) {
+      document.getElementById('notifDot').style.display = 'block';
     }
-  });
-}
+  }
 
-async function loadStats() {
-  const { count: ordersCount } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true });
-
-  const { count: customersCount } = await supabaseClient
-    .from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer');
-
-  const { count: productsCount } = await supabaseClient
-    .from('products').select('*', { count: 'exact', head: true });
-
-  const { count: pendingOrders } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_review');
-
-  const { count: pendingTopups } = await supabaseClient
-    .from('wallet_topups').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-
-  const { data: revenueRows } = await supabaseClient
-    .from('orders').select('price_sdg_snapshot').in('status', ['in_progress', 'completed']);
-
-  const revenue = (revenueRows || []).reduce((sum, o) => sum + Number(o.price_sdg_snapshot), 0);
-
-  document.getElementById('statOrders').textContent = ordersCount ?? 0;
-  document.getElementById('statCustomers').textContent = customersCount ?? 0;
-  document.getElementById('statProducts').textContent = productsCount ?? 0;
-  document.getElementById('statPending').textContent = pendingOrders ?? 0;
-  document.getElementById('statPendingTopups').textContent = pendingTopups ?? 0;
-  document.getElementById('statRevenue').textContent = formatSDG(revenue) + ' ج.س';
-}
-
-async function loadRecentOrders() {
-  const { data: orders } = await supabaseClient
-    .from('orders')
+  const { data: categories } = await supabaseClient
+    .from('categories')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5);
+    .eq('is_active', true)
+    .order('display_order');
 
-  const container = document.getElementById('recentOrders');
-  if (!orders || orders.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا توجد طلبات بعد</div>`;
+  const { data: products } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order');
+
+  const productsWithPrice = (products || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
+  renderHome(categories || [], productsWithPrice);
+}
+
+function renderHome(categories, products) {
+  const container = document.getElementById('homeSections');
+
+  if (categories.length === 0 || products.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:60px 20px;">
+        <h3>لا توجد منتجات متاحة حالياً</h3>
+        <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
+      </div>`;
     return;
   }
 
-  container.innerHTML = orders.map(o => `
-    <div class="mini-list-item">
-      <div>
-        <div class="name">${o.product_name_snapshot}</div>
-        <div class="sub">${formatSDG(o.price_sdg_snapshot)} ج.س</div>
-      </div>
-      <span class="status-badge status-${o.status}">${o.status}</span>
-    </div>
-  `).join('');
-}
+  container.innerHTML = categories.map(cat => {
+    const catProducts = products.filter(p => p.category_id === cat.id);
+    if (catProducts.length === 0) return '';
 
-async function loadRecentCustomers() {
-  const { data: customers } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('role', 'customer')
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  const container = document.getElementById('recentCustomers');
-  if (!customers || customers.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا يوجد عملاء بعد</div>`;
-    return;
-  }
-
-  container.innerHTML = customers.map(c => `
-    <div class="mini-list-item">
-      <div>
-        <div class="name">${c.full_name || 'بدون اسم'}</div>
-        <div class="sub">${c.whatsapp_number || '—'}</div>
-      </div>
-    </div>
-  `).join('');
+    return `
+      <div class="category-section">
+        <div class="category-header">
+          <h2>${cat.name}</h2>
+          <a class="see-all" href="category.html?id=${cat.id}">عرض الكل</a>
+        </div>
+        <div class="products-row">
+          ${catProducts.map(p => `
+            <a href="product.html?id=${p.id}" class="voucher-card">
+              <div class="voucher-top">
+                <div class="voucher-thumb">
+                  ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : 'لا توجد صورة'}
+                </div>
+                <div class="voucher-name">${p.name}</div>
+              </div>
+              <div class="voucher-divider"></div>
+              <div class="voucher-bottom">
+                <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
+                <div class="buy-btn">اشترِ</div>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('') || `
+    <div class="empty-state" style="padding:60px 20px;">
+      <h3>لا توجد منتجات متاحة حالياً</h3>
+      <p>تابعنا قريباً — بنجهز أفضل العروض ليك</p>
+    </div>`;
 }
 
 init();
