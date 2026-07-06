@@ -27,6 +27,7 @@
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
   <div class="categories" style="padding:0 0 16px;" id="filterRow">
@@ -67,6 +68,7 @@ let allTopups = [];
 let currentFilter = 'all';
 let rejectingTopupId = null;
 let selectedReason = null;
+let currentAdminId = null;
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
 
@@ -104,6 +106,7 @@ modalConfirmBtn.addEventListener('click', async () => {
     .eq('id', rejectingTopupId);
   if (topup) {
     await notifyCustomer(topup.user_id, 'تم رفض طلب الشحن', `طلب شحن ${formatSDG(topup.amount)} ج.س رُفض. السبب: ${selectedReason}`);
+    await logAudit('رفض شحن محفظة', { topup_id: rejectingTopupId, amount: topup.amount, reason: selectedReason });
   }
   closeRejectModal();
   await loadTopups();
@@ -135,6 +138,8 @@ async function init() {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
+
+  currentAdminId = session.user.id;
 
   document.getElementById('adminPage').style.display = 'block';
 
@@ -230,6 +235,7 @@ async function handleAction(action, topupId) {
       .eq('id', topupId);
 
     await notifyCustomer(topup.user_id, 'تم شحن محفظتك', `تم إضافة ${formatSDG(topup.amount)} ج.س لرصيدك.`);
+    await logAudit('تأكيد شحن محفظة', { topup_id: topupId, amount: topup.amount, user_id: topup.user_id });
 
     await loadTopups();
   } else if (action === 'reject') {
@@ -239,6 +245,10 @@ async function handleAction(action, topupId) {
 
 async function notifyCustomer(userId, title, message) {
   await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'wallet' });
+}
+
+async function logAudit(action, details) {
+  await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
 }
 
 init();
