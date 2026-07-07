@@ -28,8 +28,6 @@
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html" class="active">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
-    <a href="admin-coupons.html">الكوبونات</a>
-<a href="admin-giftcards.html">كروت الهدايا</a>
   </div>
 
   <div class="admin-section-title" style="margin-top:0;">سعر الصرف</div>
@@ -42,10 +40,28 @@
     <input type="number" id="rateInput" step="1" placeholder="مثلاً: 2500">
   </div>
 
+  <div class="admin-section-title">هامش الربح</div>
+  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+    نسبة تُضاف تلقائياً فوق سعر التكلفة لكل المنتجات (مثلاً 10 تعني إضافة 10% فوق السعر الأساسي).
+  </p>
+  <div class="field">
+    <label>نسبة هامش الربح (%)</label>
+    <input type="number" id="marginInput" step="0.1" placeholder="مثلاً: 10">
+  </div>
+
+  <div class="admin-section-title">نظام الإحالة</div>
+  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+    المبلغ اللي يضاف لمحفظة العميل عند أول عملية شحن ناجحة لشخص أحاله.
+  </p>
+  <div class="field">
+    <label>قيمة مكافأة الإحالة (ج.س)</label>
+    <input type="number" id="referralBonusInput" step="1" placeholder="مثلاً: 100">
+  </div>
+
   <div class="form-error" id="formError"></div>
   <div class="form-success" id="formSuccess"></div>
 
-  <button class="auth-btn" id="saveBtn">حفظ السعر</button>
+  <button class="auth-btn" id="saveBtn">حفظ الإعدادات</button>
 </div>
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
@@ -56,8 +72,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
-let currentAdminId = null;
-
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
@@ -73,11 +87,22 @@ async function init() {
   currentAdminId = session.user.id;
   document.getElementById('adminPage').style.display = 'block';
 
-  const rate = await getExchangeRate();
-  document.getElementById('rateInput').value = rate || '';
+  const { data: settingsRows } = await supabaseClient
+    .from('settings')
+    .select('key, value')
+    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'referral_bonus_amount']);
+
+  const map = {};
+  (settingsRows || []).forEach(r => { map[r.key] = r.value; });
+
+  document.getElementById('rateInput').value = map.usd_to_sdg_rate || '';
+  document.getElementById('marginInput').value = map.profit_margin_percent || '0';
+  document.getElementById('referralBonusInput').value = map.referral_bonus_amount || '100';
 
   document.getElementById('saveBtn').addEventListener('click', saveRate);
 }
+
+let currentAdminId = null;
 
 async function saveRate() {
   const errorBox = document.getElementById('formError');
@@ -86,26 +111,23 @@ async function saveRate() {
   successBox.textContent = '';
 
   const rate = parseFloat(document.getElementById('rateInput').value);
+  const margin = parseFloat(document.getElementById('marginInput').value) || 0;
+  const referralBonus = parseFloat(document.getElementById('referralBonusInput').value) || 0;
+
   if (!rate || rate <= 0) {
-    errorBox.textContent = 'أدخل رقم صحيح';
+    errorBox.textContent = 'أدخل سعر صرف صحيح';
     return;
   }
 
-  const { error } = await supabaseClient
-    .from('settings')
-    .update({ value: String(rate), updated_at: new Date().toISOString() })
-    .eq('key', 'usd_to_sdg_rate');
-
-  if (error) {
-    errorBox.textContent = 'حصل خطأ، حاول تاني';
-    return;
-  }
+  await supabaseClient.from('settings').update({ value: String(rate), updated_at: new Date().toISOString() }).eq('key', 'usd_to_sdg_rate');
+  await supabaseClient.from('settings').update({ value: String(margin), updated_at: new Date().toISOString() }).eq('key', 'profit_margin_percent');
+  await supabaseClient.from('settings').update({ value: String(referralBonus), updated_at: new Date().toISOString() }).eq('key', 'referral_bonus_amount');
 
   await supabaseClient.from('audit_logs').insert({
-    admin_id: currentAdminId, action: 'تعديل سعر الصرف', details: { new_rate: rate }
+    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin, referralBonus }
   });
 
-  successBox.textContent = 'تم حفظ السعر بنجاح';
+  successBox.textContent = 'تم حفظ الإعدادات بنجاح';
 }
 
 init();
