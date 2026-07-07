@@ -96,13 +96,31 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
+  // حفظ رقم الواتساب في البروفايل بعد إنشاء الحساب
   if (data.user) {
     await supabaseClient
       .from('profiles')
       .update({ whatsapp_number: whatsapp })
       .eq('id', data.user.id);
+
+    const refCode = new URLSearchParams(window.location.search).get('ref');
+    if (refCode) {
+      const { data: referrer } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', refCode.toUpperCase())
+        .single();
+
+      if (referrer && referrer.id !== data.user.id) {
+        await supabaseClient
+          .from('profiles')
+          .update({ referred_by: referrer.id })
+          .eq('id', data.user.id);
+      }
+    }
   }
 
+  // تخزين الإيميل مؤقتاً عشان نستخدمه في صفحة التحقق
   sessionStorage.setItem('pending_email', email);
   window.location.href = 'verify.html';
 });
