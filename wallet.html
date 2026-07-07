@@ -24,6 +24,15 @@
 
   <button class="topup-toggle-btn" id="toggleFormBtn">+ اطلب شحن رصيد</button>
 
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px;">
+    <div class="section-label" style="margin-top:0;">🎁 عندك كود هدية؟</div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--white); font-family:var(--font-mono); font-size:13px;">
+      <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px;">استبدال</button>
+    </div>
+    <div id="giftMessage" style="font-size:12px; margin-top:8px;"></div>
+  </div>
+
   <div class="topup-form" id="topupForm">
     <div class="field">
       <label>المبلغ (بالجنيه السوداني)</label>
@@ -98,6 +107,34 @@ async function init() {
   });
 
   document.getElementById('submitTopupBtn').addEventListener('click', submitTopup);
+  document.getElementById('redeemGiftBtn').addEventListener('click', redeemGiftCard);
+}
+
+async function redeemGiftCard() {
+  const code = document.getElementById('giftCodeInput').value.trim().toUpperCase();
+  const msgBox = document.getElementById('giftMessage');
+  msgBox.style.color = '';
+
+  if (!code) {
+    msgBox.style.color = 'var(--danger)';
+    msgBox.textContent = 'اكتب الكود الأول';
+    return;
+  }
+
+  const { data, error } = await supabaseClient.rpc('redeem_gift_card', { p_code: code });
+
+  if (error) {
+    msgBox.style.color = 'var(--danger)';
+    msgBox.textContent = error.message.includes('already_redeemed')
+      ? 'الكود ده مستخدم بالفعل'
+      : 'الكود غير صحيح';
+    return;
+  }
+
+  msgBox.style.color = 'var(--primary)';
+  msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك 🎉`;
+  document.getElementById('giftCodeInput').value = '';
+  await loadBalance();
 }
 
 async function loadBalance() {
