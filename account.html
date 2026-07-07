@@ -17,6 +17,17 @@
     <a href="index.html" class="back-link">→ المتجر</a>
   </div>
 
+  <div style="background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:16px; margin-bottom:20px;">
+    <div class="section-label" style="margin-top:0;">🎉 شارك واكسب</div>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+      شارك رابطك مع أصحابك، وكل ما حد يسجل ويشحن رصيده لأول مرة، هتاخد مكافأة في محفظتك تلقائياً.
+    </p>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="referralLinkInput" readonly style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
+      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px;">نسخ</button>
+    </div>
+  </div>
+
   <div class="field">
     <label>الاسم الكامل</label>
     <input type="text" id="fullNameInput">
@@ -64,7 +75,17 @@ async function init() {
   if (profile) {
     document.getElementById('fullNameInput').value = profile.full_name || '';
     document.getElementById('whatsappInput').value = profile.whatsapp_number || '';
+    document.getElementById('referralLinkInput').value = `${window.location.origin}/register.html?ref=${profile.referral_code}`;
   }
+
+  document.getElementById('copyRefBtn').addEventListener('click', () => {
+    const input = document.getElementById('referralLinkInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copyRefBtn');
+    btn.textContent = 'اتنسخ!';
+    setTimeout(() => { btn.textContent = 'نسخ'; }, 2000);
+  });
 
   document.getElementById('saveBtn').addEventListener('click', saveProfile);
   document.getElementById('logoutBtn').addEventListener('click', logout);
