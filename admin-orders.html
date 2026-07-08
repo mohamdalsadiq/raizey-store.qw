@@ -256,6 +256,7 @@ async function handleAction(action, orderId) {
     await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
     await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
     await logAudit('تأكيد طلب', { order_id: orderId, product: order.product_name_snapshot });
+    await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
     await loadOrders();
   } else if (action === 'complete') {
     await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
