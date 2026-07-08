@@ -28,8 +28,6 @@
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
-    <a href="admin-coupons.html">الكوبونات</a>
-<a href="admin-giftcards.html">كروت الهدايا</a>
   </div>
 
   <button class="add-new-btn" id="addNewBtn">+ إضافة تصنيف جديد</button>
@@ -49,6 +47,11 @@
     <div class="field">
       <label>ترتيب العرض</label>
       <input type="number" id="orderInput" placeholder="0">
+    </div>
+
+    <div class="field">
+      <label>نسبة عمولة الإحالة لهذا التصنيف (%)</label>
+      <input type="number" id="commissionInput" step="0.1" placeholder="مثلاً: 3">
     </div>
 
     <div class="field">
@@ -126,7 +129,7 @@ function render() {
           ${c.name}
           ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
         </div>
-        <div class="manage-item-sub">ترتيب: ${c.display_order}</div>
+        <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${c.id}">✏️</button>
@@ -152,11 +155,13 @@ function openForm(id) {
     document.getElementById('formModalTitle').textContent = 'تعديل التصنيف';
     nameInput.value = cat.name;
     orderInput.value = cat.display_order;
+    document.getElementById('commissionInput').value = cat.commission_percent ?? 3;
     activeInput.value = String(cat.is_active);
   } else {
     document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
     nameInput.value = '';
     orderInput.value = categories.length;
+    document.getElementById('commissionInput').value = 3;
     activeInput.value = 'true';
   }
 
@@ -178,7 +183,12 @@ async function saveCategory() {
     return;
   }
 
-  const payload = { name, display_order: order, is_active: isActive };
+  const payload = {
+    name,
+    display_order: order,
+    commission_percent: parseFloat(document.getElementById('commissionInput').value) || 3,
+    is_active: isActive
+  };
 
   const { error } = editingId
     ? await supabaseClient.from('categories').update(payload).eq('id', editingId)
