@@ -652,6 +652,121 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .status-pending { background: rgba(245,166,35,0.15); color: var(--warning); }
 .status-confirmed { background: rgba(43,237,51,0.15); color: var(--primary); }
 
+/* ---------- Cyber-Hex Logo ---------- */
+.hex-logo {
+  filter: drop-shadow(0 0 6px rgba(43,237,51,0.7));
+}
+
+/* ---------- Hamburger + Drawer ---------- */
+.hamburger-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.hamburger-btn span {
+  width: 16px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 2px;
+}
+
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  z-index: 200;
+}
+.drawer-overlay.show { display: block; }
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 82%;
+  max-width: 320px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  padding: 24px 18px;
+}
+.drawer-overlay.show .drawer-panel {
+  transform: translateX(0);
+}
+
+.drawer-greeting {
+  font-size: 16px;
+  font-weight: 800;
+}
+.drawer-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: 18px;
+}
+
+.drawer-wallet-box {
+  background: linear-gradient(135deg, #1a2b1a, var(--bg));
+  border: 1px solid var(--primary);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.drawer-wallet-label { font-size: 11px; color: var(--text-muted); }
+.drawer-wallet-amount {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 4px;
+  text-shadow: 0 0 12px rgba(43,237,51,0.5);
+}
+.drawer-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+.drawer-nav a:active { background: var(--bg); }
+.drawer-nav a svg { flex-shrink: 0; }
+
+.drawer-divider {
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+.drawer-close-btn {
+  position: absolute;
+  top: 20px;
+  left: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 /* ---------- Section title ---------- */
 .section-title {
   padding: 0 20px;
