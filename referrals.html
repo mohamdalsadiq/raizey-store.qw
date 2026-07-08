@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إحالاتي — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body>
+
+<div class="orders-page">
+  <div class="page-header">
+    <h1>إحالاتي</h1>
+    <a href="account.html" class="back-link">→ حسابي</a>
+  </div>
+
+  <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px;">
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px;">
+      <div style="font-size:12px; color:var(--text-muted);">عدد الإحالات الناجحة</div>
+      <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--primary); margin-top:6px;" id="successCount">...</div>
+    </div>
+    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px;">
+      <div style="font-size:12px; color:var(--text-muted);">عدد المسجلين برابطك</div>
+      <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--white); margin-top:6px;" id="totalCount">...</div>
+    </div>
+  </div>
+
+  <div class="section-label">مكافآت الإنجاز</div>
+  <div id="milestonesBox" style="margin-bottom:24px;"></div>
+
+  <div class="section-label">قائمة إحالاتك</div>
+  <div id="referralsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+
+  <div class="section-label">سجل أرباح الإحالة</div>
+  <div id="earningsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let currentUser = null;
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  const { data: myProfile } = await supabaseClient
+    .from('profiles')
+    .select('milestone10_paid, milestone25_paid')
+    .eq('id', currentUser.id)
+    .single();
+
+  const { data: referred } = await supabaseClient
+    .from('profiles')
+    .select('full_name, referral_rewarded, created_at')
+    .eq('referred_by', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  const list = referred || [];
+  const successCount = list.filter(r => r.referral_rewarded).length;
+
+  document.getElementById('totalCount').textContent = list.length;
+  document.getElementById('successCount').textContent = successCount;
+
+  renderMilestones(myProfile, successCount);
+  renderReferrals(list);
+  await loadEarnings();
+}
+
+async function renderMilestones(profile, successCount) {
+  const { data: settingsRows } = await supabaseClient
+    .from('settings').select('key, value')
+    .in('key', ['milestone10_threshold', 'milestone25_threshold']);
+
+  const map = {};
+  (settingsRows || []).forEach(r => { map[r.key] = r.value; });
+  const t10 = parseInt(map.milestone10_threshold) || 10;
+  const t25 = parseInt(map.milestone25_threshold) || 25;
+
+  const box = document.getElementById('milestonesBox');
+  box.innerHTML = `
+    <div class="order-card">
+      <div class="order-top">
+        <div class="order-product">🏆 المستوى الأول (${t10} إحالات)</div>
+        <span class="status-badge ${profile?.milestone10_paid ? 'status-completed' : 'status-pending_review'}">
+          ${profile?.milestone10_paid ? 'تم التحقيق' : `${Math.min(successCount, t10)} / ${t10}`}
+        </span>
+      </div>
+    </div>
+    <div class="order-card">
+      <div class="order-top">
+        <div class="order-product">🏆 المستوى الثاني (${t25} إحالة)</div>
+        <span class="status-badge ${profile?.milestone25_paid ? 'status-completed' : 'status-pending_review'}">
+          ${profile?.milestone25_paid ? 'تم التحقيق' : `${Math.min(successCount, t25)} / ${t25}`}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function renderReferrals(list) {
+  const container = document.getElementById('referralsList');
+  if (list.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px 0;">لسه ما حدش سجل برابطك</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(r => {
+    const date = new Date(r.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+    return `
+      <div class="mini-list-item">
+        <div>
+          <div class="name">${r.full_name || 'مستخدم جديد'}</div>
+          <div class="sub">سجل في ${date}</div>
+        </div>
+        <span class="status-badge ${r.referral_rewarded ? 'status-completed' : 'status-pending_review'}">
+          ${r.referral_rewarded ? 'مكتمل' : 'بانتظار أول شراء'}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadEarnings() {
+  const { data } = await supabaseClient
+    .from('notifications')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('type', 'referral')
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('earningsList');
+  if (!data || data.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px 0;">لسه مفيش أرباح إحالة</div>`;
+    return;
+  }
+
+  container.innerHTML = data.map(n => {
+    const date = new Date(n.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+    return `
+      <div class="mini-list-item">
+        <div>
+          <div class="name">${n.title}</div>
+          <div class="sub">${n.message}</div>
+        </div>
+        <div class="sub">${date}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
