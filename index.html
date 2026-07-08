@@ -13,24 +13,64 @@
 
 <header class="site-header">
   <div class="header-inner">
-    <div class="logo">RAIZEY <span>STORE</span></div>
+    <button class="hamburger-btn" id="openDrawerBtn" title="القائمة">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="logo" style="display:flex; align-items:center; gap:8px;">
+      <svg class="hex-logo" width="30" height="30" viewBox="0 0 100 100">
+        <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#141414" stroke="#2bed33" stroke-width="4"/>
+        <text x="50" y="66" text-anchor="middle" font-family="Tajawal, sans-serif" font-weight="900" font-size="48" fill="#2bed33">R</text>
+      </svg>
+      RAIZEY <span>STORE</span>
+    </div>
     <div class="header-actions">
       <a href="search.html" class="icon-btn" title="بحث">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-      </a>
-      <a href="wallet.html" class="icon-btn" title="المحفظة">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
       </a>
       <a href="notifications.html" class="icon-btn" title="الإشعارات">
         <span class="badge-dot" id="notifDot"></span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       </a>
-      <a href="account.html" class="icon-btn" title="حسابي">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-      </a>
     </div>
   </div>
 </header>
+
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer-panel">
+    <button class="drawer-close-btn" id="closeDrawerBtn">✕</button>
+    <div id="drawerGuestBox" style="display:none;">
+      <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
+      <a href="login.html" class="auth-btn" style="display:block; text-align:center; margin-bottom:10px;">تسجيل الدخول</a>
+      <a href="register.html" style="display:block; text-align:center; font-size:13px; color:var(--primary); font-weight:700;">إنشاء حساب جديد</a>
+    </div>
+    <div id="drawerUserBox" style="display:none;">
+      <div class="drawer-greeting" id="drawerGreeting">مرحباً بك يا لاعب</div>
+      <div class="drawer-email" id="drawerEmail"></div>
+
+      <div class="drawer-wallet-box">
+        <div class="drawer-wallet-label">رصيدك الحالي</div>
+        <div class="drawer-wallet-amount" id="drawerBalance">...</div>
+      </div>
+
+      <nav class="drawer-nav">
+        <a href="index.html">🛒 تصفح المنتجات</a>
+        <a href="wallet.html">📥 شحن الرصيد</a>
+        <a href="my-orders.html">📜 سجل طلباتي</a>
+        <a href="referrals.html">🎁 إحالاتي وأرباحي</a>
+        <a href="notifications.html">🔔 الإشعارات</a>
+        <a href="account.html">🛡️ إعدادات الحساب</a>
+      </nav>
+
+      <div class="drawer-divider" id="adminDividerBox" style="display:none;"></div>
+      <nav class="drawer-nav" id="adminLinkBox" style="display:none;">
+        <a href="admin.html">🎛️ لوحة الأدمن</a>
+      </nav>
+
+      <div class="drawer-divider"></div>
+      <button id="drawerLogoutBtn" style="width:100%; text-align:right; padding:13px 10px; border-radius:10px; font-size:14px; font-weight:600; color:var(--danger); background:none;">🚪 تسجيل الخروج</button>
+    </div>
+  </div>
+</div>
 
 <section class="hero-slider">
   <div class="slider-track" id="sliderTrack">
@@ -89,6 +129,55 @@ function goToSlide(i) {
 setInterval(() => {
   goToSlide((currentSlide + 1) % slideCount);
 }, 4500);
+
+// ---------- Drawer ----------
+const drawerOverlay = document.getElementById('drawerOverlay');
+document.getElementById('openDrawerBtn').addEventListener('click', () => {
+  drawerOverlay.classList.add('show');
+  loadDrawer();
+});
+document.getElementById('closeDrawerBtn').addEventListener('click', () => {
+  drawerOverlay.classList.remove('show');
+});
+drawerOverlay.addEventListener('click', (e) => {
+  if (e.target === drawerOverlay) drawerOverlay.classList.remove('show');
+});
+document.getElementById('drawerLogoutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+async function loadDrawer() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if (!session) {
+    document.getElementById('drawerGuestBox').style.display = 'block';
+    document.getElementById('drawerUserBox').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('drawerGuestBox').style.display = 'none';
+  document.getElementById('drawerUserBox').style.display = 'block';
+  document.getElementById('drawerEmail').textContent = session.user.email;
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('full_name, role').eq('id', session.user.id).single();
+
+  document.getElementById('drawerGreeting').textContent = profile?.full_name
+    ? `مرحباً، ${profile.full_name} 👋`
+    : 'مرحباً بك يا لاعب 👋';
+
+  if (profile?.role === 'admin') {
+    document.getElementById('adminLinkBox').style.display = 'block';
+    document.getElementById('adminDividerBox').style.display = 'block';
+  }
+
+  const { data: wallet } = await supabaseClient
+    .from('wallets').select('balance').eq('user_id', session.user.id).single();
+
+  document.getElementById('drawerBalance').textContent =
+    `${formatSDG(wallet ? wallet.balance : 0)} ج.س`;
+}
 
 // ---------- Data ----------
 async function init() {
