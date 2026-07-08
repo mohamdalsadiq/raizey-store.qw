@@ -51,11 +51,23 @@
 
   <div class="admin-section-title">نظام الإحالة</div>
   <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-    المبلغ اللي يضاف لمحفظة العميل عند أول عملية شحن ناجحة لشخص أحاله.
+    نسبة العمولة تُحدد لكل تصنيف من صفحة "التصنيفات". هنا بس مكافآت الإنجاز التصاعدية.
   </p>
   <div class="field">
-    <label>قيمة مكافأة الإحالة (ج.س)</label>
-    <input type="number" id="referralBonusInput" step="1" placeholder="مثلاً: 100">
+    <label>المستوى الأول: عدد الإحالات المطلوب</label>
+    <input type="number" id="m10ThresholdInput" placeholder="10">
+  </div>
+  <div class="field">
+    <label>المستوى الأول: قيمة المكافأة (ج.س)</label>
+    <input type="number" id="m10BonusInput" placeholder="1500">
+  </div>
+  <div class="field">
+    <label>المستوى الثاني: عدد الإحالات المطلوب</label>
+    <input type="number" id="m25ThresholdInput" placeholder="25">
+  </div>
+  <div class="field">
+    <label>المستوى الثاني: قيمة المكافأة (ج.س)</label>
+    <input type="number" id="m25BonusInput" placeholder="4000">
   </div>
 
   <div class="form-error" id="formError"></div>
@@ -90,14 +102,17 @@ async function init() {
   const { data: settingsRows } = await supabaseClient
     .from('settings')
     .select('key, value')
-    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'referral_bonus_amount']);
+    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'milestone10_threshold', 'milestone10_bonus', 'milestone25_threshold', 'milestone25_bonus']);
 
   const map = {};
   (settingsRows || []).forEach(r => { map[r.key] = r.value; });
 
   document.getElementById('rateInput').value = map.usd_to_sdg_rate || '';
   document.getElementById('marginInput').value = map.profit_margin_percent || '0';
-  document.getElementById('referralBonusInput').value = map.referral_bonus_amount || '100';
+  document.getElementById('m10ThresholdInput').value = map.milestone10_threshold || '10';
+  document.getElementById('m10BonusInput').value = map.milestone10_bonus || '1500';
+  document.getElementById('m25ThresholdInput').value = map.milestone25_threshold || '25';
+  document.getElementById('m25BonusInput').value = map.milestone25_bonus || '4000';
 
   document.getElementById('saveBtn').addEventListener('click', saveRate);
 }
@@ -112,7 +127,10 @@ async function saveRate() {
 
   const rate = parseFloat(document.getElementById('rateInput').value);
   const margin = parseFloat(document.getElementById('marginInput').value) || 0;
-  const referralBonus = parseFloat(document.getElementById('referralBonusInput').value) || 0;
+  const m10Threshold = parseFloat(document.getElementById('m10ThresholdInput').value) || 10;
+  const m10Bonus = parseFloat(document.getElementById('m10BonusInput').value) || 1500;
+  const m25Threshold = parseFloat(document.getElementById('m25ThresholdInput').value) || 25;
+  const m25Bonus = parseFloat(document.getElementById('m25BonusInput').value) || 4000;
 
   if (!rate || rate <= 0) {
     errorBox.textContent = 'أدخل سعر صرف صحيح';
@@ -121,10 +139,13 @@ async function saveRate() {
 
   await supabaseClient.from('settings').update({ value: String(rate), updated_at: new Date().toISOString() }).eq('key', 'usd_to_sdg_rate');
   await supabaseClient.from('settings').update({ value: String(margin), updated_at: new Date().toISOString() }).eq('key', 'profit_margin_percent');
-  await supabaseClient.from('settings').update({ value: String(referralBonus), updated_at: new Date().toISOString() }).eq('key', 'referral_bonus_amount');
+  await supabaseClient.from('settings').update({ value: String(m10Threshold) }).eq('key', 'milestone10_threshold');
+  await supabaseClient.from('settings').update({ value: String(m10Bonus) }).eq('key', 'milestone10_bonus');
+  await supabaseClient.from('settings').update({ value: String(m25Threshold) }).eq('key', 'milestone25_threshold');
+  await supabaseClient.from('settings').update({ value: String(m25Bonus) }).eq('key', 'milestone25_bonus');
 
   await supabaseClient.from('audit_logs').insert({
-    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin, referralBonus }
+    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin }
   });
 
   successBox.textContent = 'تم حفظ الإعدادات بنجاح';
