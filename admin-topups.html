@@ -236,7 +236,6 @@ async function handleAction(action, topupId) {
 
     await notifyCustomer(topup.user_id, 'تم شحن محفظتك', `تم إضافة ${formatSDG(topup.amount)} ج.س لرصيدك.`);
     await logAudit('تأكيد شحن محفظة', { topup_id: topupId, amount: topup.amount, user_id: topup.user_id });
-    await handleReferralReward(topup.user_id);
 
     await loadTopups();
   } else if (action === 'reject') {
@@ -250,35 +249,6 @@ async function notifyCustomer(userId, title, message) {
 
 async function logAudit(action, details) {
   await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
-}
-
-async function handleReferralReward(userId) {
-  const { data: profile } = await supabaseClient
-    .from('profiles')
-    .select('referred_by, referral_rewarded')
-    .eq('id', userId)
-    .single();
-
-  if (!profile || !profile.referred_by || profile.referral_rewarded) return;
-
-  const { data: bonusRow } = await supabaseClient
-    .from('settings').select('value').eq('key', 'referral_bonus_amount').single();
-  const bonus = bonusRow ? parseFloat(bonusRow.value) || 0 : 0;
-  if (bonus <= 0) return;
-
-  const { data: referrerWallet } = await supabaseClient
-    .from('wallets').select('balance').eq('user_id', profile.referred_by).single();
-  const newBalance = (referrerWallet ? Number(referrerWallet.balance) : 0) + bonus;
-
-  await supabaseClient.from('wallets')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_id', profile.referred_by);
-
-  await supabaseClient.from('profiles')
-    .update({ referral_rewarded: true })
-    .eq('id', userId);
-
-  await notifyCustomer(profile.referred_by, 'مكافأة إحالة! 🎉', `حصلت على ${formatSDG(bonus)} ج.س لأن شخص أحلته شحن رصيده لأول مرة.`);
 }
 
 init();
