@@ -13,8 +13,25 @@
 
 <div class="orders-page">
   <div class="page-header">
-    <h1>إحالاتي</h1>
+    <h1>إحالاتي وأرباحي</h1>
     <a href="account.html" class="back-link">→ حسابي</a>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:16px; margin-bottom:20px;">
+    <div class="section-label" style="margin-top:0;">رابط الإحالة الخاص بك</div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="referralLinkInput" readonly style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
+      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px;">نسخ</button>
+    </div>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px; font-size:13px; line-height:1.9;">
+    <div class="section-label" style="margin-top:0;">كيف يشتغل النظام؟</div>
+    <p>• شارك رابطك مع أصحابك عبر الواتساب أو أي مكان.</p>
+    <p>• لما حد يسجل برابطك، بياخد <strong id="welcomeDiscountText" style="color:var(--primary);">خصم ترحيبي</strong> تلقائياً على أول طلب ليه.</p>
+    <p>• وانت تاخد <strong style="color:var(--primary);">عمولة</strong> من قيمة أول طلب فعلي يعمله (النسبة بتفرق حسب نوع الباقة).</p>
+    <p>• العمولة بتنزل في محفظتك تلقائياً <strong>بس بعد ما الأدمن يأكد الدفع فعلياً</strong> — مفيش تلاعب ممكن.</p>
+    <p>• كل ما تجمع عدد إحالات ناجحة أكتر، تفتح مستويات مكافآت إضافية (تفاصيلها تحت).</p>
   </div>
 
   <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px;">
@@ -28,7 +45,7 @@
     </div>
   </div>
 
-  <div class="section-label">مكافآت الإنجاز</div>
+  <div class="section-label">مستويات المكافآت</div>
   <div id="milestonesBox" style="margin-bottom:24px;"></div>
 
   <div class="section-label">قائمة إحالاتك</div>
@@ -50,9 +67,27 @@ async function init() {
 
   const { data: myProfile } = await supabaseClient
     .from('profiles')
-    .select('milestone10_paid, milestone25_paid')
+    .select('referral_code')
     .eq('id', currentUser.id)
     .single();
+
+  if (myProfile) {
+    document.getElementById('referralLinkInput').value = `${window.location.origin}/register.html?ref=${myProfile.referral_code}`;
+  }
+
+  document.getElementById('copyRefBtn').addEventListener('click', () => {
+    const input = document.getElementById('referralLinkInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copyRefBtn');
+    btn.textContent = 'اتنسخ!';
+    setTimeout(() => { btn.textContent = 'نسخ'; }, 2000);
+  });
+
+  const { data: discountRow } = await supabaseClient
+    .from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
+  const discountPercent = discountRow ? discountRow.value : '5';
+  document.getElementById('welcomeDiscountText').textContent = `خصم ترحيبي ${discountPercent}%`;
 
   const { data: referred } = await supabaseClient
     .from('profiles')
@@ -66,40 +101,47 @@ async function init() {
   document.getElementById('totalCount').textContent = list.length;
   document.getElementById('successCount').textContent = successCount;
 
-  renderMilestones(myProfile, successCount);
+  await renderMilestones(successCount);
   renderReferrals(list);
   await loadEarnings();
 }
 
-async function renderMilestones(profile, successCount) {
-  const { data: settingsRows } = await supabaseClient
-    .from('settings').select('key, value')
-    .in('key', ['milestone10_threshold', 'milestone25_threshold']);
+async function renderMilestones(successCount) {
+  const { data: milestones } = await supabaseClient
+    .from('referral_milestones')
+    .select('*')
+    .eq('is_active', true)
+    .order('threshold');
 
-  const map = {};
-  (settingsRows || []).forEach(r => { map[r.key] = r.value; });
-  const t10 = parseInt(map.milestone10_threshold) || 10;
-  const t25 = parseInt(map.milestone25_threshold) || 25;
+  const { data: payouts } = await supabaseClient
+    .from('referral_milestone_payouts')
+    .select('milestone_id')
+    .eq('referrer_id', currentUser.id);
 
+  const paidIds = new Set((payouts || []).map(p => p.milestone_id));
   const box = document.getElementById('milestonesBox');
-  box.innerHTML = `
-    <div class="order-card">
-      <div class="order-top">
-        <div class="order-product">🏆 المستوى الأول (${t10} إحالات)</div>
-        <span class="status-badge ${profile?.milestone10_paid ? 'status-completed' : 'status-pending_review'}">
-          ${profile?.milestone10_paid ? 'تم التحقيق' : `${Math.min(successCount, t10)} / ${t10}`}
-        </span>
+
+  if (!milestones || milestones.length === 0) {
+    box.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا توجد مستويات مكافآت حالياً</div>`;
+    return;
+  }
+
+  box.innerHTML = milestones.map(m => {
+    const achieved = paidIds.has(m.id);
+    return `
+      <div class="order-card">
+        <div class="order-top">
+          <div>
+            <div class="order-product">${m.label || 'مستوى'} (${m.threshold} إحالة)</div>
+            <div class="order-date">مكافأة: ${formatSDG(m.bonus)} ج.س</div>
+          </div>
+          <span class="status-badge ${achieved ? 'status-completed' : 'status-pending_review'}">
+            ${achieved ? 'تم التحقيق' : `${Math.min(successCount, m.threshold)} / ${m.threshold}`}
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="order-card">
-      <div class="order-top">
-        <div class="order-product">🏆 المستوى الثاني (${t25} إحالة)</div>
-        <span class="status-badge ${profile?.milestone25_paid ? 'status-completed' : 'status-pending_review'}">
-          ${profile?.milestone25_paid ? 'تم التحقيق' : `${Math.min(successCount, t25)} / ${t25}`}
-        </span>
-      </div>
-    </div>
-  `;
+    `;
+  }).join('');
 }
 
 function renderReferrals(list) {
