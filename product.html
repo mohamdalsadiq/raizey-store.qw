@@ -30,6 +30,7 @@ let selectedPayment = null;
 let selectedMethodId = null;
 let receiptFile = null;
 let appliedCoupon = null;
+let welcomeDiscount = null;
 
 async function init() {
   if (!productId) { window.location.href = 'index.html'; return; }
@@ -62,6 +63,18 @@ async function init() {
     .eq('user_id', currentUser.id)
     .single();
   walletBalance = wallet ? wallet.balance : 0;
+
+  const { data: myProfile } = await supabaseClient
+    .from('profiles')
+    .select('referred_by, referral_discount_used')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (myProfile && myProfile.referred_by && !myProfile.referral_discount_used) {
+    const { data: discountRow } = await supabaseClient
+      .from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
+    welcomeDiscount = discountRow ? parseFloat(discountRow.value) : 0;
+  }
 
   const { data: methods } = await supabaseClient
     .from('payment_methods')
@@ -143,6 +156,12 @@ function render() {
       </div>
     </div>
 
+    ${welcomeDiscount ? `
+      <div style="background:rgba(43,237,51,0.1); border:1px solid var(--primary); border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:13px; color:var(--primary); font-weight:700;">
+        خصم ترحيبي ${welcomeDiscount}% مطبق تلقائياً على أول طلب ليك
+      </div>
+    ` : ''}
+
     <div class="section-label">هل لديك كود خصم؟</div>
     <div style="display:flex; gap:8px; margin-bottom:6px;">
       <input type="text" id="couponInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--white); font-family:var(--font-display); font-size:14px;">
@@ -152,7 +171,7 @@ function render() {
 
     <div class="summary-box">
       <span>الإجمالي</span>
-      <span class="total" id="summaryTotal">${formatSDG(product.price_sdg)} ج.س</span>
+      <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
     </div>
 
     <div class="form-error" id="formError"></div>
@@ -207,8 +226,13 @@ function attachEvents(canUseWallet) {
 }
 
 function currentPrice() {
-  if (!appliedCoupon) return product.price_sdg;
-  return product.price_sdg - (product.price_sdg * appliedCoupon.discount_percent / 100);
+  if (appliedCoupon) {
+    return product.price_sdg - (product.price_sdg * appliedCoupon.discount_percent / 100);
+  }
+  if (welcomeDiscount) {
+    return product.price_sdg - (product.price_sdg * welcomeDiscount / 100);
+  }
+  return product.price_sdg;
 }
 
 function updateSummary() {
@@ -340,6 +364,8 @@ async function submitOrder(errorBox, submitBtn) {
 
   if (appliedCoupon) {
     await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
+  } else if (welcomeDiscount) {
+    await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
   }
 
   window.location.href = 'my-orders.html';
