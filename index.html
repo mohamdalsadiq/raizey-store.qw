@@ -16,7 +16,7 @@
     <button class="hamburger-btn" id="openDrawerBtn" title="القائمة">
       <span></span><span></span><span></span>
     </button>
-<div class="logo" style="display:flex; align-items:center; gap:8px;">
+    <div class="logo" style="display:flex; align-items:center; gap:8px;">
       <svg class="hex-logo" width="34" height="34" viewBox="0 0 100 100">
         <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#141414" stroke="#2bed33" stroke-width="4"/>
         <path d="M28 32 L28 68 M28 32 L50 32 Q60 32 60 42 Q60 50 50 50 L28 50 M46 50 L62 68" 
@@ -56,21 +56,21 @@
       </div>
 
       <nav class="drawer-nav">
-        <a href="index.html"> تصفح المنتجات</a>
-        <a href="wallet.html"> شحن الرصيد</a>
-        <a href="my-orders.html"> سجل طلباتي</a>
-        <a href="referrals.html"> إحالاتي وأرباحي</a>
-        <a href="notifications.html"> الإشعارات</a>
-        <a href="account.html"> إعدادات الحساب</a>
+        <a href="index.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> تصفح المنتجات</a>
+        <a href="wallet.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg> شحن الرصيد</a>
+        <a href="my-orders.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h6"/></svg> سجل طلباتي</a>
+        <a href="referrals.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M12 8a3 3 0 1 0-3-3c0 1.5 1 2.5 3 3ZM12 8a3 3 0 1 1 3-3c0 1.5-1 2.5-3 3Z"/></svg> إحالاتي وأرباحي</a>
+        <a href="notifications.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> الإشعارات</a>
+        <a href="account.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg> إعدادات الحساب</a>
       </nav>
 
       <div class="drawer-divider" id="adminDividerBox" style="display:none;"></div>
       <nav class="drawer-nav" id="adminLinkBox" style="display:none;">
-        <a href="admin.html"> لوحة الأدمن</a>
+        <a href="admin.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> لوحة الأدمن</a>
       </nav>
 
       <div class="drawer-divider"></div>
-      <button id="drawerLogoutBtn" style="width:100%; text-align:right; padding:13px 10px; border-radius:10px; font-size:14px; font-weight:600; color:var(--danger); background:none;"> تسجيل الخروج</button>
+      <button id="drawerLogoutBtn" style="width:100%; text-align:right; padding:13px 10px; border-radius:10px; font-size:14px; font-weight:600; color:var(--danger); background:none; display:flex; align-items:center; gap:12px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> تسجيل الخروج</button>
     </div>
   </div>
 </div>
@@ -167,8 +167,8 @@ async function loadDrawer() {
     .from('profiles').select('full_name, role').eq('id', session.user.id).single();
 
   document.getElementById('drawerGreeting').textContent = profile?.full_name
-    ? `مرحباً، ${profile.full_name} 👋`
-    : 'مرحباً بك يا لاعب 👋';
+    ? `مرحباً، ${profile.full_name}`
+    : 'مرحباً بك يا لاعب';
 
   if (profile?.role === 'admin') {
     document.getElementById('adminLinkBox').style.display = 'block';
