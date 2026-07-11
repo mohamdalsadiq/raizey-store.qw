@@ -271,10 +271,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   height: 100%;
   object-fit: cover;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
 }
-.voucher-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .voucher-name {
   font-size: 14px;
@@ -446,10 +443,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   height: 100%;
   object-fit: cover;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
 }
-.product-hero-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .product-hero-info {
   padding: 16px;
@@ -751,6 +745,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   margin-top: 4px;
   text-shadow: 0 0 12px rgba(43,237,51,0.5);
 }
+
 .drawer-nav a {
   display: flex;
   align-items: center;
@@ -784,6 +779,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   align-items: center;
   justify-content: center;
 }
+
 /* ---------- Marquee Strip ---------- */
 .marquee-strip {
   overflow: hidden;
@@ -825,6 +821,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* ---------- Manage Item Thumb (admin lists) ---------- */
 .manage-item-thumb {
   width: 48px;
   height: 48px;
@@ -843,9 +841,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   height: 100%;
   object-fit: cover;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-} 
+}
+
 /* ---------- Section title ---------- */
 .section-title {
   padding: 0 20px;
