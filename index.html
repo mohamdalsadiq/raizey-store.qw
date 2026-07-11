@@ -96,6 +96,21 @@
   <div class="slider-dots" id="sliderDots"></div>
 </section>
 
+<div class="marquee-strip">
+  <div class="marquee-track" id="marqueeTrack">
+    <span class="marquee-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg> تسليم فوري</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg> دفع آمن 100%</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> دعم على مدار الساعة</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7Z"/></svg> أسعار تنافسية</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg> عروض ومكافآت إحالة</span>
+    <span class="marquee-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg> تسليم فوري</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg> دفع آمن 100%</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> دعم على مدار الساعة</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7Z"/></svg> أسعار تنافسية</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg> عروض ومكافآت إحالة</span>
+  </div>
+</div>
+
 <div id="homeSections">
   <div class="section-title">جارِ تحميل التصنيفات...</div>
 </div>
@@ -167,8 +182,8 @@ async function loadDrawer() {
     .from('profiles').select('full_name, role').eq('id', session.user.id).single();
 
   document.getElementById('drawerGreeting').textContent = profile?.full_name
-    ? `مرحباً، ${profile.full_name}`
-    : 'مرحباً بك يا لاعب';
+    ? `مرحباً، ${profile.full_name} 👋`
+    : 'مرحباً بك يا لاعب 👋';
 
   if (profile?.role === 'admin') {
     document.getElementById('adminLinkBox').style.display = 'block';
