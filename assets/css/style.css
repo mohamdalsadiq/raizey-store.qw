@@ -266,6 +266,14 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 12px;
   overflow: hidden;
 }
+.voucher-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
 .voucher-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .voucher-name {
@@ -431,6 +439,15 @@ button { font-family: inherit; cursor: pointer; border: none; }
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  overflow: hidden;
+}
+.product-hero-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
 }
 .product-hero-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -808,6 +825,27 @@ button { font-family: inherit; cursor: pointer; border: none; }
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+.manage-item-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1f1f1f, #262626);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.manage-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+} 
 /* ---------- Section title ---------- */
 .section-title {
   padding: 0 20px;
