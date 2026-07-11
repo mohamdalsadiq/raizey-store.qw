@@ -28,8 +28,7 @@
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
-    <a href="admin-coupons.html">الكوبونات</a>
-<a href="admin-giftcards.html">كروت الهدايا</a>
+    <a href="admin-referral-milestones.html">مستويات الإحالة</a>
   </div>
 
   <button class="add-new-btn" id="addNewBtn">+ إضافة منتج جديد</button>
@@ -57,8 +56,12 @@
     </div>
 
     <div class="field">
-      <label>رابط الصورة (اختياري)</label>
-      <input type="text" id="imageInput" placeholder="https://...">
+      <label>صورة المنتج</label>
+      <div class="file-upload" id="fileUploadBox">
+        📎 اضغط لرفع صورة
+        <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+      </div>
+      <input type="hidden" id="imageInput">
     </div>
 
     <div class="field">
@@ -135,6 +138,29 @@ async function init() {
   document.getElementById('formSaveBtn').addEventListener('click', saveProduct);
   document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', ''));
 
+  const fileBox = document.getElementById('fileUploadBox');
+  const fileInput = document.getElementById('imageFileInput');
+  fileBox.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    fileBox.textContent = '⏳ جارِ الرفع...';
+
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+    const { error } = await supabaseClient.storage.from('product-images').upload(filePath, file);
+    if (error) {
+      fileBox.textContent = '📎 فشل الرفع، اضغط للمحاولة تاني';
+      return;
+    }
+
+    const { data: urlData } = supabaseClient.storage.from('product-images').getPublicUrl(filePath);
+    document.getElementById('imageInput').value = urlData.publicUrl;
+    fileBox.textContent = `✅ ${file.name}`;
+    fileBox.classList.add('has-file');
+  });
+
   await loadCategories();
   await loadProducts();
 }
@@ -203,13 +229,17 @@ function openForm(id) {
   formError.textContent = '';
   fieldsBuilder.innerHTML = '';
 
+  const fileBox = document.getElementById('fileUploadBox');
+
   if (id) {
     const p = products.find(x => x.id === id);
     document.getElementById('formModalTitle').textContent = 'تعديل المنتج';
     categoryInput.value = p.category_id || '';
     nameInput.value = p.name;
     descInput.value = p.description || '';
-    imageInput.value = p.image_url || '';
+    document.getElementById('imageInput').value = p.image_url || '';
+    fileBox.textContent = p.image_url ? '✅ يوجد صورة مرفوعة (اضغط للتغيير)' : '📎 اضغط لرفع صورة';
+    fileBox.classList.toggle('has-file', !!p.image_url);
     priceInput.value = p.price_usd;
     orderInput.value = p.display_order;
     activeInput.value = String(p.is_active);
@@ -218,7 +248,9 @@ function openForm(id) {
     document.getElementById('formModalTitle').textContent = 'منتج جديد';
     nameInput.value = '';
     descInput.value = '';
-    imageInput.value = '';
+    document.getElementById('imageInput').value = '';
+    fileBox.textContent = '📎 اضغط لرفع صورة';
+    fileBox.classList.remove('has-file');
     priceInput.value = '';
     orderInput.value = products.length;
     activeInput.value = 'true';
