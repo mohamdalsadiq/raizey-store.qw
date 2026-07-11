@@ -2,17 +2,82 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>تفاصيل المنتج — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+
+<style>
+  /* تنسيقات إضافية لزر السلة الجديد */
+  .product-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+  .cart-badge-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #141414;
+    border: 1px solid #222;
+    padding: 8px 14px;
+    border-radius: 20px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    transition: 0.2s;
+  }
+  .cart-badge-link:hover {
+    border-color: #2bed33;
+  }
+  .cart-badge-link span {
+    background: #2bed33;
+    color: #000;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .btn-secondary-cart {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Tajawal', sans-serif;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 25px;
+    background: #141414;
+    border: 1px solid #2bed33;
+    color: #2bed33;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-secondary-cart:active {
+    transform: scale(0.98);
+    background: rgba(43, 237, 51, 0.1);
+  }
+</style>
 </head>
 <body>
 
 <div class="product-page" id="productPage">
-  <a href="index.html" class="back-link">→ رجوع للمتجر</a>
+  <!-- رأس الصفحة المطور مع أيقونة السلة -->
+  <div class="product-header-actions">
+    <a href="index.html" class="back-link" style="margin-bottom: 0;">→ رجوع للمتجر</a>
+    <a href="cart.html" class="cart-badge-link">
+      🛒 السلة <span id="globalCartCount">0</span>
+    </a>
+  </div>
+
   <div id="loadingBox" style="text-align:center; padding:60px 0; color:var(--text-muted);">جارِ التحميل...</div>
   <div id="content" style="display:none;"></div>
 </div>
@@ -32,7 +97,14 @@ let receiptFile = null;
 let appliedCoupon = null;
 let welcomeDiscount = null;
 
+// تحديث عداد السلة العلوي في الصفحة
+function updateCartBadgeGlobal() {
+  const cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  document.getElementById('globalCartCount').textContent = cart.length;
+}
+
 async function init() {
+  updateCartBadgeGlobal();
   if (!productId) { window.location.href = 'index.html'; return; }
 
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -105,7 +177,7 @@ function render() {
     </div>
 
     ${fields.length > 0 ? `
-      <div class="section-label">بيانات الطلب</div>
+      <div class="section-label">بيانات الطلب (مثل الـ ID)</div>
       ${fields.map(f => `
         <div class="field">
           <label>${f.label}</label>
@@ -114,7 +186,14 @@ function render() {
       `).join('')}
     ` : ''}
 
-    <div class="section-label">طريقة الدفع</div>
+    <!-- زر إضافة للسلة الجديد يظهر هنا مباشرة بعد كتابة البيانات -->
+    <button class="btn-secondary-cart" id="addToCartBtn">
+      🛒 إضافة إلى سلة المشتريات
+    </button>
+
+    <div style="border-top: 1px dashed #222; margin: 25px 0;"></div>
+
+    <div class="section-label">أو شراء مباشر الآن</div>
 
     <div class="payment-option ${!canUseWallet ? 'disabled' : ''}" id="walletOption">
       <div class="payment-option-info">
@@ -170,13 +249,13 @@ function render() {
     <div id="couponMessage" style="font-size:12px; margin-bottom:16px;"></div>
 
     <div class="summary-box">
-      <span>الإجمالي</span>
+      <span>الإجمالي للشراء المباشر</span>
       <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
     </div>
 
     <div class="form-error" id="formError"></div>
 
-    <button class="auth-btn" id="submitBtn">تأكيد الطلب</button>
+    <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
   `;
 
   attachEvents(canUseWallet);
@@ -190,6 +269,50 @@ function attachEvents(canUseWallet) {
   const fileInput = document.getElementById('receiptInput');
   const errorBox = document.getElementById('formError');
   const submitBtn = document.getElementById('submitBtn');
+  const addToCartBtn = document.getElementById('addToCartBtn');
+
+  // حدث إضافة المنتج إلى السلة
+  addToCartBtn.addEventListener('click', () => {
+    errorBox.textContent = '';
+    const fieldValues = collectFieldValues();
+    
+    if (fieldValues === null) {
+      errorBox.style.color = 'var(--danger)';
+      errorBox.textContent = 'من فضلك أكتب الـ ID أو البيانات المطلوبة أولاً!';
+      return;
+    }
+
+    // جلب السلة الحالية أو إنشاء واحدة جديدة
+    let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+
+    // تجهيز عنصر السلة
+    const cartItem = {
+      cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // معرف فريد وحصري للعنصر
+      product_id: product.id,
+      name: product.name,
+      price_sdg: product.price_sdg,
+      image_url: product.image_url,
+      field_values: fieldValues
+    };
+
+    cart.push(cartItem);
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+    
+    // تحديث العداد العلوي
+    updateCartBadgeGlobal();
+
+    // إشعار نجاح مؤقت للعميل
+    errorBox.style.color = 'var(--primary)';
+    errorBox.textContent = '✅ تم إضافة المنتج بنجاح إلى السلة!';
+    addToCartBtn.innerHTML = '✅ تم الإضافة بنجاح!';
+    addToCartBtn.style.borderColor = '#2bed33';
+    
+    setTimeout(() => {
+      addToCartBtn.innerHTML = '🛒 إضافة إلى سلة المشتريات';
+      addToCartBtn.style.borderColor = '#2bed33';
+      errorBox.textContent = '';
+    }, 2500);
+  });
 
   if (canUseWallet) {
     walletOption.addEventListener('click', () => {
@@ -269,6 +392,7 @@ async function applyCoupon() {
 function collectFieldValues() {
   const inputs = document.querySelectorAll('[data-field-key]');
   const values = {};
+  if (inputs.length === 0) return {}; // لو مافيش حقول مطلوبة
   for (const input of inputs) {
     if (!input.value.trim()) return null;
     values[input.dataset.fieldKey] = input.value.trim();
@@ -278,6 +402,7 @@ function collectFieldValues() {
 
 async function submitOrder(errorBox, submitBtn) {
   errorBox.textContent = '';
+  errorBox.style.color = 'var(--danger)';
 
   const fieldValues = collectFieldValues();
   if (fieldValues === null) {
@@ -305,7 +430,7 @@ async function submitOrder(errorBox, submitBtn) {
         ? 'رصيدك غير كافٍ'
         : 'حصل خطأ، حاول تاني';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'تأكيد الطلب';
+      submitBtn.textContent = 'تأكيد الطلب المباشر';
       return;
     }
 
@@ -317,13 +442,13 @@ async function submitOrder(errorBox, submitBtn) {
   if (!selectedMethodId) {
     errorBox.textContent = 'اختر وسيلة التحويل';
     submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب';
+    submitBtn.textContent = 'تأكيد الطلب المباشر';
     return;
   }
   if (!receiptFile) {
     errorBox.textContent = 'ارفع صورة الإيصال';
     submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب';
+    submitBtn.textContent = 'تأكيد الطلب المباشر';
     return;
   }
 
@@ -337,7 +462,7 @@ async function submitOrder(errorBox, submitBtn) {
   if (uploadError) {
     errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
     submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب';
+    submitBtn.textContent = 'تأكيد الطلب المباشر';
     return;
   }
 
@@ -358,7 +483,7 @@ async function submitOrder(errorBox, submitBtn) {
   if (orderError) {
     errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني';
     submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب';
+    submitBtn.textContent = 'تأكيد الطلب المباشر';
     return;
   }
 
