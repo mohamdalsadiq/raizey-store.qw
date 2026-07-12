@@ -64,7 +64,12 @@
     transform: scale(0.98);
     background: rgba(43, 237, 51, 0.1);
   }
-  /* ستايل مخصص لجعل رابط الشحن الأخضر بارز بوضوح */
+  
+  /* 🛠️ حل سحري لكسر حظر الكليكات داخل خيار المحفظة المعطل */
+  .payment-option.disabled {
+    pointer-events: auto !important; 
+    cursor: pointer !important;
+  }
   .recharge-highlight-link {
     color: #2bed33 !important;
     font-weight: 800 !important;
@@ -184,7 +189,6 @@ function render() {
     ${fields.length > 0 ? `
       <div class="section-label">بيانات الطلب</div>
       ${fields.map(f => {
-        // فحص نوع الحقل لوضع مثال داخل الصندوق بطريقة ذكية
         let placeholderExample = "اكتب البيانات المطلوبة هنا...";
         const labelText = f.label.toLowerCase();
         if (labelText.includes("id") || labelText.includes("آيدي") || labelText.includes("ايدي")) {
@@ -322,12 +326,18 @@ function attachEvents(canUseWallet) {
     }, 2500);
   });
 
+  // ⚡ تعديل ذكي لمعالجة الضغط على خيار المحفظة
   if (canUseWallet) {
     walletOption.addEventListener('click', () => {
       selectedPayment = 'wallet';
       walletOption.classList.add('selected');
       bankOption.classList.remove('selected');
       bankDetails.classList.remove('show');
+    });
+  } else {
+    // إذا الرصيد ما كافي، أي ضغطة على الكارت بالكامل تحول العميل لصفحة الشحن فوراً دون تجميد
+    walletOption.addEventListener('click', () => {
+      window.location.href = 'wallet.html';
     });
   }
 
