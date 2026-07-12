@@ -33,6 +33,23 @@
     display: flex;
     gap: 8px;
   }
+  /* ستايل مخصص لعرض صور التصنيفات الاحترافية في القائمة */
+  .category-thumb {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-left: 12px;
+  }
+  .manage-item-info {
+    display: flex;
+    align-items: center;
+  }
+  .category-meta-text {
+    display: flex;
+    flex-direction: column;
+  }
 </style>
 </head>
 <body>
@@ -67,6 +84,18 @@
     <div class="field">
       <label>اسم التصنيف</label>
       <input type="text" id="nameInput" placeholder="مثلاً: PUBG Mobile">
+    </div>
+
+    <div class="field">
+      <label>وصف التصنيف</label>
+      <textarea id="descriptionInput" placeholder="اكتب وصفاً مختصراً وفخماً يظهر للعملاء في صفحة الباقات..." rows="3" style="width:100%; background:#111; border:1px solid #333; padding:10px; border-radius:8px; color:#fff; font-family:inherit; resize:vertical;"></textarea>
+    </div>
+
+    <div class="field">
+      <label>صورة التصنيف (أيقونة اللعبة)</label>
+      <input type="file" id="imageFileInput" accept="image/*" style="background:#111; border:1px solid #333; padding:8px; border-radius:8px; width:100%; color:#fff;">
+      <input type="hidden" id="imageUrlInput">
+      <div id="imageUploadStatus" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
     </div>
 
     <div class="field">
@@ -109,6 +138,10 @@ let editingId = null;
 
 const formModal = document.getElementById('formModal');
 const nameInput = document.getElementById('nameInput');
+const descriptionInput = document.getElementById('descriptionInput');
+const imageFileInput = document.getElementById('imageFileInput');
+const imageUrlInput = document.getElementById('imageUrlInput');
+const imageUploadStatus = document.getElementById('imageUploadStatus');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
@@ -147,26 +180,34 @@ function render() {
     return;
   }
 
-  container.innerHTML = categories.map(c => `
-    <div class="manage-item">
-      <div class="manage-item-info">
-        <div class="manage-item-name">
-          ${c.name}
-          ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
+  container.innerHTML = categories.map(c => {
+    const imgHtml = c.image_url 
+      ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
+      : `<div class="category-thumb" style="background:#222; display:flex; align-items:center; justify-content:center; color:#555;"><i class="fas fa-gamepad"></i></div>`;
+
+    return `
+      <div class="manage-item">
+        <div class="manage-item-info">
+          ${imgHtml}
+          <div class="category-meta-text">
+            <div class="manage-item-name">
+              ${c.name}
+              ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
+            </div>
+            <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
+          </div>
         </div>
-        <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
+        <div class="manage-item-actions">
+          <button data-action="edit" data-id="${c.id}" class="admin-action-btn" title="تعديل">
+            <i class="fas fa-pen" style="color:#e0e0e0;"></i>
+          </button>
+          <button data-action="delete" data-id="${c.id}" class="admin-action-btn" title="حذف">
+            <i class="fas fa-trash-can" style="color:#ff3b30;"></i>
+          </button>
+        </div>
       </div>
-      <div class="manage-item-actions">
-        <!-- 🛠️ تم إصلاح السمات البرمجية لتفعيل الأيقونات الاحترافية بنجاح -->
-        <button data-action="edit" data-id="${c.id}" class="admin-action-btn" title="تعديل">
-          <i class="fas fa-pen" style="color:#e0e0e0;"></i>
-        </button>
-        <button data-action="delete" data-id="${c.id}" class="admin-action-btn" title="حذف">
-          <i class="fas fa-trash-can" style="color:#ff3b30;"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.querySelectorAll('[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => openForm(btn.dataset.id));
@@ -179,17 +220,26 @@ function render() {
 function openForm(id) {
   editingId = id;
   formError.textContent = '';
+  imageFileInput.value = '';
+  imageUploadStatus.textContent = '';
 
   if (id) {
     const cat = categories.find(c => c.id === id);
     document.getElementById('formModalTitle').textContent = 'تعديل التصنيف';
     nameInput.value = cat.name;
+    descriptionInput.value = cat.description || '';
+    imageUrlInput.value = cat.image_url || '';
+    if (cat.image_url) {
+      imageUploadStatus.textContent = 'توجد صورة مرفوعة بالفعل. اختر ملفاً جديداً لاستبدالها.';
+    }
     orderInput.value = cat.display_order;
     document.getElementById('commissionInput').value = cat.commission_percent ?? 3;
     activeInput.value = String(cat.is_active);
   } else {
     document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
     nameInput.value = '';
+    descriptionInput.value = '';
+    imageUrlInput.value = '';
     orderInput.value = categories.length;
     document.getElementById('commissionInput').value = 3;
     activeInput.value = 'true';
@@ -203,8 +253,29 @@ function closeForm() {
   editingId = null;
 }
 
+async function uploadCategoryImageFile(file) {
+  imageUploadStatus.textContent = 'جاري رفع الصورة...';
+  const fileExt = file.name.split('.').pop();
+  const fileName = `categories/${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabaseClient.storage
+    .from('product-images')
+    .upload(fileName, file);
+
+  if (error) {
+    throw error;
+  }
+
+  const { data: publicUrlData } = supabaseClient.storage
+    .from('product-images')
+    .getPublicUrl(fileName);
+
+  return publicUrlData.publicUrl;
+}
+
 async function saveCategory() {
   const name = nameInput.value.trim();
+  const description = descriptionInput.value.trim();
   const order = parseInt(orderInput.value) || 0;
   const isActive = activeInput.value === 'true';
 
@@ -213,24 +284,44 @@ async function saveCategory() {
     return;
   }
 
-  const payload = {
-    name,
-    display_order: order,
-    commission_percent: parseFloat(document.getElementById('commissionInput').value) || 3,
-    is_active: isActive
-  };
+  document.getElementById('formSaveBtn').disabled = true;
+  document.getElementById('formSaveBtn').textContent = 'جاري الحفظ...';
 
-  const { error } = editingId
-    ? await supabaseClient.from('categories').update(payload).eq('id', editingId)
-    : await supabaseClient.from('categories').insert(payload);
+  try {
+    let finalImageUrl = imageUrlInput.value;
 
-  if (error) {
-    formError.textContent = 'حصل خطأ، حاول تاني';
-    return;
+    if (imageFileInput.files.length > 0) {
+      finalImageUrl = await uploadCategoryImageFile(imageFileInput.files[0]);
+    }
+
+    const payload = {
+      name,
+      description,
+      image_url: finalImageUrl,
+      display_order: order,
+      commission_percent: parseFloat(document.getElementById('commissionInput').value) || 3,
+      is_active: isActive
+    };
+
+    const { error } = editingId
+      ? await supabaseClient.from('categories').update(payload).eq('id', editingId)
+      : await supabaseClient.from('categories').insert(payload);
+
+    if (error) {
+      formError.textContent = 'حصل خطأ أثناء حفظ التصنيف، حاول تاني';
+      return;
+    }
+
+    closeForm();
+    await loadCategories();
+  } catch (err) {
+    console.error(err);
+    formError.textContent = 'خطأ في رفع الصورة: ' + err.message;
+  } finally {
+    document.getElementById('formSaveBtn').disabled = false;
+    document.getElementById('formSaveBtn').textContent = 'حفظ';
+    document.getElementById('formSaveBtn').style.background = 'var(--primary)';
   }
-
-  closeForm();
-  await loadCategories();
 }
 
 async function deleteCategory(id) {
