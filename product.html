@@ -76,6 +76,20 @@
     margin-right: 4px;
     display: inline-block;
   }
+
+  /* ✨ ستايل صندوق الشرح والتنبيهات المخصص الجديد */
+  .product-instructions-box {
+    background: #141414; 
+    border: 1px solid #222; 
+    border-left: 4px solid #2bed33; 
+    padding: 16px; 
+    border-radius: 10px; 
+    margin-bottom: 25px; 
+    font-size: 14px; 
+    line-height: 1.6; 
+    color: #e0e0e0; 
+    white-space: pre-line; /* لضمان نزول الأسطر كما كتبتها في لوحة التحكم */
+  }
 </style>
 </head>
 <body>
@@ -185,10 +199,18 @@ function render() {
       </div>
     </div>
 
+    <!-- 🌟 عرض شرح المنتج والتنبيهات وطريقة الاستلام إن وجدت -->
+    ${product.instructions ? `
+      <div class="product-instructions-box">
+        <strong style="color: #2bed33; display: block; margin-bottom: 6px; font-size: 15px;">📝 تفاصيل وطريقة استلام المنتج:</strong>
+        ${product.instructions}
+      </div>
+    ` : ''}
+
     ${fields.length > 0 ? `
       <div class="section-label">بيانات الطلب</div>
       ${fields.map(f => {
-        // هنا التعديل الخرافي: يقرأ f.placeholder المكتوب في لوحة التحكم، ولو فارغ يضع نص تلقائي احتياطي
+        // قراءة الـ placeholder المخصص الذي قمت بكتابته بنفسك من لوحة التحكم
         const placeholderText = f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`;
         
         return `
@@ -357,7 +379,6 @@ function attachEvents(canUseWallet) {
   submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
 }
 
-// باقي الدوال الحسابية والرفع كما هي بدون تغييرات لضمان ثبات الكود
 function currentPrice() {
   if (appliedCoupon) return product.price_sdg - (product.price_sdg * appliedCoupon.discount_percent / 100);
   if (welcomeDiscount) return product.price_sdg - (product.price_sdg * welcomeDiscount / 100);
@@ -397,7 +418,7 @@ async function submitOrder(errorBox, submitBtn) {
   }
   if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const fileExt = receiptFile.name.split('.').pop(); const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
-  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
+  const { error: uploadError } = await supabaseClient.from('receipts').upload(filePath, receiptFile);
   if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
   const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, status: 'pending_review' });
