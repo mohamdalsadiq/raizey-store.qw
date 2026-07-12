@@ -6,6 +6,8 @@
 <title>تفاصيل المنتج — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- 🌐 إضافة مكتبة الأيقونات الاحترافية -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
@@ -20,7 +22,7 @@
   .cart-badge-link {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: #141414;
     border: 1px solid #222;
     padding: 8px 14px;
@@ -33,6 +35,10 @@
   }
   .cart-badge-link:hover {
     border-color: #2bed33;
+  }
+  .cart-badge-link i {
+    color: #2bed33;
+    font-size: 14px;
   }
   .cart-badge-link span {
     background: #2bed33;
@@ -60,6 +66,9 @@
     gap: 8px;
     transition: all 0.2s ease;
   }
+  .btn-secondary-cart i {
+    font-size: 16px;
+  }
   .btn-secondary-cart:active {
     transform: scale(0.98);
     background: rgba(43, 237, 51, 0.1);
@@ -77,7 +86,7 @@
     display: inline-block;
   }
 
-  /* ✨ ستايل صندوق الشرح والتنبيهات المخصص الجديد */
+  /* ستايل صندوق الشرح والتنبيهات المخصص الجديد */
   .product-instructions-box {
     background: #141414; 
     border: 1px solid #222; 
@@ -88,7 +97,20 @@
     font-size: 14px; 
     line-height: 1.6; 
     color: #e0e0e0; 
-    white-space: pre-line; /* لضمان نزول الأسطر كما كتبتها في لوحة التحكم */
+    white-space: pre-line;
+  }
+  .product-instructions-title {
+    color: #2bed33; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-bottom: 8px; 
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .file-upload i {
+    font-size: 16px;
+    margin-left: 6px;
   }
 </style>
 </head>
@@ -96,9 +118,9 @@
 
 <div class="product-page" id="productPage">
   <div class="product-header-actions">
-    <a href="index.html" class="back-link" style="margin-bottom: 0;">→ رجوع للمتجر</a>
+    <a href="index.html" class="back-link" style="margin-bottom: 0;"><i class="fas fa-arrow-right"></i> رجوع للمتجر</a>
     <a href="cart.html" class="cart-badge-link">
-      🛒 السلة <span id="globalCartCount">0</span>
+      <i class="fas fa-shopping-cart"></i> السلة <span id="globalCartCount">0</span>
     </a>
   </div>
 
@@ -199,10 +221,12 @@ function render() {
       </div>
     </div>
 
-    <!-- 🌟 عرض شرح المنتج والتنبيهات وطريقة الاستلام إن وجدت -->
+    <!-- عرض شرح المنتج والتنبيهات وطريقة الاستلام بالأيقونة الاحترافية -->
     ${product.instructions ? `
       <div class="product-instructions-box">
-        <strong style="color: #2bed33; display: block; margin-bottom: 6px; font-size: 15px;">📝 تفاصيل وطريقة استلام المنتج:</strong>
+        <div class="product-instructions-title">
+          <i class="fas fa-circle-info"></i> تفاصيل وطريقة استلام المنتج:
+        </div>
         ${product.instructions}
       </div>
     ` : ''}
@@ -210,9 +234,7 @@ function render() {
     ${fields.length > 0 ? `
       <div class="section-label">بيانات الطلب</div>
       ${fields.map(f => {
-        // قراءة الـ placeholder المخصص الذي قمت بكتابته بنفسك من لوحة التحكم
         const placeholderText = f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`;
-        
         return `
           <div class="field">
             <label>${f.label}</label>
@@ -223,7 +245,7 @@ function render() {
     ` : ''}
 
     <button class="btn-secondary-cart" id="addToCartBtn">
-      🛒 إضافة إلى سلة المشتريات
+      <i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات
     </button>
 
     <div style="border-top: 1px dashed #222; margin: 25px 0;"></div>
@@ -252,7 +274,7 @@ function render() {
       ${paymentMethods.map(m => `
         <div style="margin-bottom:10px;">
           <strong>${m.name}:</strong> ${m.account_info}
-          ${m.instructions ? `<br><span>${m.instructions}</span>` : ''}
+          ${m.instructions ? `<br><span style="color:var(--text-muted);">${m.instructions}</span>` : ''}
         </div>
       `).join('')}
 
@@ -265,7 +287,7 @@ function render() {
       </div>
 
       <div class="file-upload" id="fileUploadBox">
-        📎 اضغط لرفع صورة الإيصال
+        <i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال
         <input type="file" id="receiptInput" accept="image/*" style="display:none;">
       </div>
     </div>
@@ -333,11 +355,11 @@ function attachEvents(canUseWallet) {
     updateCartBadgeGlobal();
 
     errorBox.style.color = 'var(--primary)';
-    errorBox.textContent = '✅ تم إضافة المنتج بنجاح إلى السلة!';
-    addToCartBtn.innerHTML = '✅ تم الإضافة بنجاح!';
+    errorBox.textContent = 'تم إضافة المنتج بنجاح إلى السلة!';
+    addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإضافة بنجاح!';
     
     setTimeout(() => {
-      addToCartBtn.innerHTML = '🛒 إضافة إلى سلة المشتريات';
+      addToCartBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات';
       errorBox.textContent = '';
     }, 2500);
   });
@@ -366,7 +388,7 @@ function attachEvents(canUseWallet) {
   fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
       receiptFile = fileInput.files[0];
-      fileBox.textContent = `✅ ${receiptFile.name}`;
+      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:#2bed33;"></i> ${receiptFile.name}`;
       fileBox.classList.add('has-file');
     }
   });
