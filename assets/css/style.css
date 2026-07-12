@@ -495,6 +495,47 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 14px;
 }
 
+/* ستايل حقل إدخال معرف اللاعب (ID) والتوهج المتناسق عند التركيز */
+.field input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field input[type="text"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(43, 237, 51, 0.15);
+  outline: none;
+}
+
+/* ستايل شبكة باقات الشحن داخل صفحة تفاصيل المنتج */
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.variant-btn {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  color: var(--white);
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+.variant-btn.active {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(43, 237, 51, 0.15);
+}
+
 .payment-option {
   display: flex;
   align-items: center;
