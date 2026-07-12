@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>إتمام الشراء — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+
+<style>
+  .checkout-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+  .checkout-item {
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    position: relative;
+  }
+  .checkout-item-thumb {
+    width: 65px;
+    height: 65px;
+    border-radius: 8px;
+    background: #1a1a1a;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #222;
+  }
+  .checkout-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .checkout-item-info {
+    flex: 1;
+  }
+  .checkout-item-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .checkout-item-price {
+    font-size: 13px;
+    color: #2bed33;
+    font-weight: 700;
+  }
+  .checkout-item-fields {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #222;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .checkout-item-fields div {
+    margin-bottom: 2px;
+  }
+  .checkout-item-fields strong {
+    color: #fff;
+  }
+  .remove-item-btn {
+    background: none;
+    border: none;
+    color: #ff3b30;
+    font-size: 16px;
+    cursor: pointer;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+  }
+  .payment-option.disabled {
+    pointer-events: auto !important; 
+    cursor: pointer !important;
+  }
+  .recharge-highlight-link {
+    color: #2bed33 !important;
+    font-weight: 800 !important;
+    text-decoration: underline !important;
+  }
+</style>
+</head>
+<body>
+
+<div class="checkout-page">
+  <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h1 style="font-size:20px;">🛒 مراجعة وإتمام الطلب</h1>
+    <a href="cart.html" class="back-link" style="margin-bottom:0;">← رجوع للسلة</a>
+  </div>
+
+  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تجهيز البيانات...</div>
+  
+  <div id="checkoutContent" style="display:none;">
+    <div class="section-label">المنتجات المطلوبة</div>
+    <div id="checkoutItemsList"></div>
+
+    <div style="border-top: 1px dashed #222; margin: 25px 0;"></div>
+
+    <div class="section-label">اختر طريقة الدفع للمجموعة كاملة</div>
+
+    <div class="payment-option" id="walletOption">
+      <div class="payment-option-info">
+        <div class="payment-option-title">الدفع من المحفظة</div>
+        <div class="payment-option-sub" id="walletBalanceText">جارِ حساب الرصيد...</div>
+      </div>
+    </div>
+
+    <div class="payment-option" id="bankOption">
+      <div class="payment-option-info">
+        <div class="payment-option-title">تحويل بنكك ورفع الإيصال</div>
+        <div class="payment-option-sub">حول إجمالي المبلغ وارفع صورة إيصال واحدة لكل المنتجات</div>
+      </div>
+    </div>
+
+    <div class="bank-details" id="bankDetails">
+      <div id="bankAccountsContainer"></div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>اختر وسيلة التحويل التي استخدمتها</label>
+        <select id="methodSelect">
+          <option value="">-- اختر وسيلة الدفع --</option>
+        </select>
+      </div>
+
+      <div class="file-upload" id="fileUploadBox">
+        📎 اضغط هنا لرفع صورة إيصال التحويل
+        <input type="file" id="receiptInput" accept="image/*" style="display:none;">
+      </div>
+    </div>
+
+    <div class="summary-box" style="margin-top:25px;">
+      <span>الإجمالي الكلي للمشتريات</span>
+      <span class="total" id="checkoutTotal">0 ج.س</span>
+    </div>
+
+    <div class="form-error" id="formError" style="margin-top:15px;"></div>
+
+    <button class="auth-btn" id="placeOrderBtn" style="margin-top:15px;">تأكيد الدفع وإرسال الطلبات</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let cart = [];
+let currentUser = null;
+let walletBalance = 0;
+let paymentMethods = [];
+let selectedPayment = null;
+let selectedMethodId = null;
+let receiptFile = null;
+let totalCartPriceSDG = 0;
+
+async function init() {
+  // 1. التحقق من السلة
+  cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  if (cart.length === 0) {
+    document.getElementById('loadingBox').innerHTML = `
+      <div style="text-align:center; padding:40px 0;">
+        <p style="color:var(--text-muted); margin-bottom:15px;">سلة المشتريات فارغة حسي!</p>
+        <a href="index.html" class="auth-btn" style="text-decoration:none; display:inline-block; padding:10px 20px;">تصفح المنتجات</a>
+      </div>
+    `;
+    return;
+  }
+
+  // 2. التحقق من تسجيل الدخول
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    sessionStorage.setItem('redirect_after_login', window.location.href);
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUser = session.user;
+
+  // 3. جلب بيانات رصيد المحفظة
+  const { data: wallet } = await supabaseClient
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', currentUser.id)
+    .single();
+  walletBalance = wallet ? wallet.balance : 0;
+
+  // 4. جلب وسائل الدفع البنكية النشطة
+  const { data: methods } = await supabaseClient
+    .from('payment_methods')
+    .select('*')
+    .eq('is_active', true);
+  paymentMethods = methods || [];
+
+  renderCheckout();
+}
+
+function renderCheckout() {
+  document.getElementById('loadingBox').style.display = 'none';
+  document.getElementById('checkoutContent').style.display = 'block';
+
+  // حساب الإجمالي الكلي لجميع العناصر بالسلة
+  totalCartPriceSDG = cart.reduce((sum, item) => sum + item.price_sdg, 0);
+  document.getElementById('checkoutTotal').textContent = formatSDG(totalCartPriceSDG) + ' ج.س';
+
+  // عرض المنتجات
+  const listContainer = document.getElementById('checkoutItemsList');
+  listContainer.innerHTML = cart.map(item => {
+    // تجهيز حقول البيانات المخصصة لعرضها بشكل جميل
+    let fieldsHtml = '';
+    if (item.field_values && Object.keys(item.field_values).length > 0) {
+      fieldsHtml = `<div class="checkout-item-fields">`;
+      for (const [key, value] of Object.entries(item.field_values)) {
+        fieldsHtml += `<div>• <strong>${key}:</strong> ${value}</div>`;
+      }
+      fieldsHtml += `</div>`;
+    }
+
+    return `
+      <div class="checkout-item" id="item_${item.cart_item_id}">
+        <button class="remove-item-btn" onclick="removeItemFromCheckout('${item.cart_item_id}')">🗑️</button>
+        <div class="checkout-item-thumb">
+          ${item.image_url ? `<img src="${item.image_url}" alt="">` : '📦'}
+        </div>
+        <div class="checkout-item-info">
+          <div class="checkout-item-name">${item.name}</div>
+          <div class="checkout-item-price">${formatSDG(item.price_sdg)} ج.س</div>
+          ${fieldsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // إعداد وضع المحفظة
+  const walletOption = document.getElementById('walletOption');
+  const walletText = document.getElementById('walletBalanceText');
+  const canUseWallet = walletBalance >= totalCartPriceSDG;
+
+  if (canUseWallet) {
+    walletOption.classList.remove('disabled');
+    walletText.innerHTML = `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س (يكفي للدفع)`;
+  } else {
+    walletOption.classList.add('disabled');
+    walletText.innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن هنا</a>`;
+  }
+
+  // شحن الحسابات البنكية في القائمة والـ Select
+  const bankAccountsContainer = document.getElementById('bankAccountsContainer');
+  bankAccountsContainer.innerHTML = paymentMethods.map(m => `
+    <div style="margin-bottom:10px; background:#1a1a1a; padding:10px; border-radius:8px; font-size:13px;">
+      <strong>${m.name}:</strong> ${m.account_info}
+      ${m.instructions ? `<br><span style="color:var(--text-muted);">${m.instructions}</span>` : ''}
+    </div>
+  `).join('');
+
+  const methodSelect = document.getElementById('methodSelect');
+  methodSelect.innerHTML = '<option value="">-- اختر وسيلة الدفع --</option>' + 
+    paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+  attachCheckoutEvents(canUseWallet);
+}
+
+function attachCheckoutEvents(canUseWallet) {
+  const walletOption = document.getElementById('walletOption');
+  const bankOption = document.getElementById('bankOption');
+  const bankDetails = document.getElementById('bankDetails');
+  const fileBox = document.getElementById('fileUploadBox');
+  const fileInput = document.getElementById('receiptInput');
+  const placeOrderBtn = document.getElementById('placeOrderBtn');
+  const errorBox = document.getElementById('formError');
+
+  if (canUseWallet) {
+    walletOption.onclick = () => {
+      selectedPayment = 'wallet';
+      walletOption.classList.add('selected');
+      bankOption.classList.remove('selected');
+      bankDetails.classList.remove('show');
+    };
+  } else {
+    walletOption.onclick = () => { window.location.href = 'wallet.html'; };
+  }
+
+  bankOption.onclick = () => {
+    selectedPayment = 'bank';
+    bankOption.classList.add('selected');
+    walletOption.classList.remove('selected');
+    bankDetails.classList.add('show');
+  };
+
+  fileBox.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    if (fileInput.files.length > 0) {
+      receiptFile = fileInput.files[0];
+      fileBox.textContent = `✅ تم اختيار: ${receiptFile.name}`;
+      fileBox.classList.add('has-file');
+    }
+  };
+
+  document.getElementById('methodSelect').onchange = (e) => {
+    selectedMethodId = e.target.value;
+  };
+
+  placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
+}
+
+// دالة حذف عنصر مباشرة من مراجعة الدفع
+window.removeItemFromCheckout = function(cartItemId) {
+  cart = cart.filter(item => item.cart_item_id !== cartItemId);
+  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  if (cart.length === 0) {
+    window.location.reload();
+  } else {
+    renderCheckout();
+  }
+};
+
+async function handlePlaceOrder(errorBox, placeOrderBtn) {
+  errorBox.textContent = '';
+  if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
+
+  placeOrderBtn.disabled = true;
+  placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+
+  // 1️⃣ حالة الدفع عبر المحفظة
+  if (selectedPayment === 'wallet') {
+    try {
+      // نرسل المنتجات واحد تلو الآخر لقاعدة البيانات لإنشاء طلب لكل منتج
+      for (const item of cart) {
+        const { error } = await supabaseClient.rpc('create_wallet_order', {
+          p_product_id: item.product_id,
+          p_field_values: item.field_values,
+          p_coupon_code: null // السلة تدفع مباشرة بدون كود مخصص حالياً
+        });
+        if (error) throw error;
+      }
+
+      // إفراغ السلة بعد نجاح العملية بالكامل
+      localStorage.removeItem('raizey_store_cart');
+      window.location.href = 'my-orders.html';
+    } catch (err) {
+      errorBox.textContent = 'حدث خطأ أثناء الخصم من المحفظة: ' + (err.message || err);
+      placeOrderBtn.disabled = false;
+      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    }
+    return;
+  }
+
+  // 2️⃣ حالة الدفع بالتحويل البنكي ورفع الإيصال
+  if (!selectedMethodId || !receiptFile) {
+    errorBox.textContent = !selectedMethodId ? 'الرجاء اختيار وسيلة التحويل البنكي!' : 'الرجاء رفع صورة الإيصال لتأكيد التحويل!';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  // رفع ملف الإيصال الفردي لـ Storage السوبابيز
+  const fileExt = receiptFile.name.split('.').pop();
+  const filePath = `${currentUser.id}/cart-${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
+  if (uploadError) {
+    errorBox.textContent = 'فشل رفع صورة الإيصال، يرجى المحاولة مرة أخرى.';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
+
+  try {
+    // إدخال كل منتج في السلة كطلب منفصل بجدول الـ orders وبنفس رابط الإيصال المرفوع
+    for (const item of cart) {
+      const { error: orderError } = await supabaseClient.from('orders').insert({
+        user_id: currentUser.id,
+        product_id: item.product_id,
+        product_name_snapshot: item.name,
+        price_sdg_snapshot: item.price_sdg,
+        field_values: item.field_values,
+        payment_type: 'bank',
+        payment_method_id: selectedMethodId,
+        receipt_url: urlData.publicUrl,
+        status: 'pending_review'
+      });
+      if (orderError) throw orderError;
+    }
+
+    // تفريغ السلة بنجاح التوجيه لصفحة الطلبات
+    localStorage.removeItem('raizey_store_cart');
+    window.location.href = 'my-orders.html';
+
+  } catch (err) {
+    errorBox.textContent = 'حصل خطأ أثناء تسجيل طلبات السلة: ' + (err.message || err);
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+  }
+}
+
+// دالة مساعدة لتنسيق الأرقام
+function formatSDG(amount) {
+  return parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+init();
+</script>
+</body>
+</html>
