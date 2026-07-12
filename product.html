@@ -12,6 +12,30 @@
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
+  /* 🎨 تفعيل لوحة الألوان الملكية المعتمدة لـ RAIZEY STORE */
+  :root {
+    --bg-main: #111622;         /* فحمي ملكي داكن جداً للعمق والفخامة */
+    --bg-card: #1b2336;         /* فحمي متوسط لفصل العناصر والبطاقات مريح للعين */
+    --accent-gold: #FFD700;     /* أصفر ذهبي مضيء وساطع للتفاعل وجذب الانتباه */
+    --border-color: #26314d;    /* لون الحدود المتناسق */
+    --text-light: #FFFFFF;      /* أبيض ناصع عالي التباين للنصوص */
+    --text-muted: #8fa0c2;      /* نصوص ثانوية مريحة */
+    --danger: #ff4a4a;
+  }
+
+  body {
+    background-color: var(--bg-main) !important;
+    color: var(--text-light) !important;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  .product-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
   .product-header-actions {
     display: flex;
     justify-content: space-between;
@@ -19,88 +43,104 @@
     margin-bottom: 20px;
     padding: 0 4px;
   }
+  
+  .back-link {
+    color: var(--text-light);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    transition: color 0.2s;
+  }
+  .back-link:hover {
+    color: var(--accent-gold);
+  }
+
   .cart-badge-link {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #141414;
-    border: 1px solid #222;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     padding: 8px 14px;
     border-radius: 20px;
-    color: #ffffff;
+    color: var(--text-light);
     text-decoration: none;
     font-size: 13px;
     font-weight: 700;
     transition: 0.2s;
   }
   .cart-badge-link:hover {
-    border-color: #2bed33;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
   }
   .cart-badge-link i {
-    color: #2bed33;
+    color: var(--accent-gold);
     font-size: 14px;
   }
   .cart-badge-link span {
-    background: #2bed33;
-    color: #000;
+    background: var(--accent-gold);
+    color: #111622;
     padding: 2px 7px;
     border-radius: 10px;
     font-size: 11px;
+    font-weight: 800;
   }
-  .btn-secondary-cart {
-    width: 100%;
-    padding: 14px;
+
+  /* هيرو المنتج الفخم */
+  .product-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+  .product-hero-thumb {
+    width: 90px;
+    height: 90px;
     border-radius: 12px;
-    font-size: 15px;
-    font-weight: 700;
-    font-family: 'Tajawal', sans-serif;
-    cursor: pointer;
-    margin-top: 10px;
-    margin-bottom: 25px;
-    background: #141414;
-    border: 1px solid #2bed33;
-    color: #2bed33;
+    overflow: hidden;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: all 0.2s ease;
   }
-  .btn-secondary-cart i {
-    font-size: 16px;
+  .product-hero-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
-  .btn-secondary-cart:active {
-    transform: scale(0.98);
-    background: rgba(43, 237, 51, 0.1);
+  .product-hero-info h1 {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    color: var(--text-light);
   }
-  
-  .payment-option.disabled {
-    pointer-events: auto !important; 
-    cursor: pointer !important;
-  }
-  .recharge-highlight-link {
-    color: #2bed33 !important;
-    font-weight: 800 !important;
-    text-decoration: underline !important;
-    margin-right: 4px;
-    display: inline-block;
+  .product-hero-price {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent-gold);
   }
 
   /* ستايل صندوق الشرح والتنبيهات المخصص الجديد */
   .product-instructions-box {
-    background: #141414; 
-    border: 1px solid #222; 
-    border-left: 4px solid #2bed33; 
+    background: var(--bg-card); 
+    border: 1px solid var(--border-color); 
+    border-right: 4px solid var(--accent-gold); /* جهة اليمين لتناسب التنسيق العربي */
     padding: 16px; 
     border-radius: 10px; 
     margin-bottom: 25px; 
     font-size: 14px; 
     line-height: 1.6; 
-    color: #e0e0e0; 
+    color: #e2e8f0; 
     white-space: pre-line;
   }
   .product-instructions-title {
-    color: #2bed33; 
+    color: var(--accent-gold); 
     display: flex; 
     align-items: center; 
     gap: 8px; 
@@ -108,9 +148,222 @@
     font-size: 15px;
     font-weight: 700;
   }
+
+  /* حقول إدخال البيانات المضيئة والذكية */
+  .section-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-light);
+    margin-bottom: 8px;
+  }
+  .field input[type="text"], .field select {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px;
+    box-sizing: border-box;
+    color: var(--text-light);
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .field input[type="text"]:focus, .field select:focus {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+    outline: none;
+  }
+
+  /* زر السلة التفاعلي */
+  .btn-secondary-cart {
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 800;
+    font-family: 'Tajawal', sans-serif;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 25px;
+    background: transparent;
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+  .btn-secondary-cart i {
+    font-size: 16px;
+  }
+  .btn-secondary-cart:hover {
+    background: rgba(255, 215, 0, 0.04);
+  }
+  .btn-secondary-cart:active {
+    transform: scale(0.98);
+  }
+  
+  /* خيارات الدفع التفاعلية */
+  .payment-option {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .payment-option:hover {
+    border-color: rgba(255, 215, 0, 0.2);
+  }
+  .payment-option.selected {
+    border-color: var(--accent-gold);
+    background: rgba(255, 215, 0, 0.03);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.1);
+  }
+  .payment-option.disabled {
+    pointer-events: auto !important; 
+    cursor: pointer !important;
+    opacity: 0.75;
+  }
+  .payment-option-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-light);
+    margin-bottom: 4px;
+  }
+  .payment-option-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .recharge-highlight-link {
+    color: var(--accent-gold) !important;
+    font-weight: 800 !important;
+    text-decoration: underline !important;
+    margin-right: 4px;
+    display: inline-block;
+  }
+
+  /* تفاصيل الحسابات البنكية وصندوق الرفع */
+  .bank-details {
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .bank-details.show {
+    display: block !important;
+  }
+  .file-upload {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 14px;
+  }
+  .file-upload:hover, .file-upload.has-file {
+    border-color: var(--accent-gold);
+    color: var(--text-light);
+  }
   .file-upload i {
     font-size: 16px;
     margin-left: 6px;
+    color: var(--accent-gold);
+  }
+
+  /* كود الخصم وصندوق الملخص السعري */
+  #couponInput {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-light);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    transition: border-color 0.2s;
+  }
+  #couponInput:focus {
+    border-color: var(--accent-gold);
+    outline: none;
+  }
+  #applyCouponBtn {
+    padding: 0 20px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #applyCouponBtn:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+  }
+
+  .summary-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 24px 0 16px 0;
+  }
+  .summary-box span {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .summary-box .total {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent-gold);
+  }
+
+  /* زر التأكيد الرئيسي المضيء */
+  .auth-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent-gold) !important;
+    color: #111622 !important;
+    font-size: 16px;
+    font-weight: 900;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    box-sizing: border-box;
+  }
+  .auth-btn:active {
+    transform: scale(0.98);
   }
 </style>
 </head>
@@ -118,7 +371,7 @@
 
 <div class="product-page" id="productPage">
   <div class="product-header-actions">
-    <a href="index.html" class="back-link" style="margin-bottom: 0;"><i class="fas fa-arrow-right"></i> رجوع للمتجر</a>
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-right"></i> رجوع للمتجر</a>
     <a href="cart.html" class="cart-badge-link">
       <i class="fas fa-shopping-cart"></i> السلة <span id="globalCartCount">0</span>
     </a>
@@ -221,7 +474,6 @@ function render() {
       </div>
     </div>
 
-    <!-- عرض شرح المنتج والتنبيهات وطريقة الاستلام بالأيقونة الاحترافية -->
     ${product.instructions ? `
       <div class="product-instructions-box">
         <div class="product-instructions-title">
@@ -248,7 +500,7 @@ function render() {
       <i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات
     </button>
 
-    <div style="border-top: 1px dashed #222; margin: 25px 0;"></div>
+    <div style="border-top: 1px dashed var(--border-color); margin: 25px 0;"></div>
 
     <div class="section-label">أو شراء مباشر الآن</div>
 
@@ -272,13 +524,13 @@ function render() {
 
     <div class="bank-details" id="bankDetails">
       ${paymentMethods.map(m => `
-        <div style="margin-bottom:10px;">
-          <strong>${m.name}:</strong> ${m.account_info}
-          ${m.instructions ? `<br><span style="color:var(--text-muted);">${m.instructions}</span>` : ''}
+        <div style="margin-bottom:12px; font-size:14px; line-height:1.5;">
+          <strong style="color:var(--accent-gold);">${m.name}:</strong> ${m.account_info}
+          ${m.instructions ? `<br><span style="color:var(--text-muted); font-size:13px;">${m.instructions}</span>` : ''}
         </div>
       `).join('')}
 
-      <div class="field" style="margin-top:12px;">
+      <div class="field" style="margin-top:14px;">
         <label>اختر وسيلة التحويل</label>
         <select id="methodSelect">
           <option value="">-- اختر --</option>
@@ -293,24 +545,24 @@ function render() {
     </div>
 
     ${welcomeDiscount ? `
-      <div style="background:rgba(43,237,51,0.1); border:1px solid var(--primary); border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:13px; color:var(--primary); font-weight:700;">
+      <div style="background:rgba(255,215,0,0.06); border:1px solid var(--accent-gold); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--accent-gold); font-weight:700;">
         خصم ترحيبي ${welcomeDiscount}% مطبق تلقائياً على أول طلب ليك
       </div>
     ` : ''}
 
     <div class="section-label">هل لديك كود خصم؟</div>
     <div style="display:flex; gap:8px; margin-bottom:6px;">
-      <input type="text" id="couponInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--white); font-family:var(--font-display); font-size:14px;">
-      <button id="applyCouponBtn" style="padding:0 18px; border-radius:10px; background:var(--bg-card); border:1px solid var(--border); color:var(--white); font-weight:700; font-size:13px;">تطبيق</button>
+      <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
+      <button id="applyCouponBtn">تطبيق</button>
     </div>
-    <div id="couponMessage" style="font-size:12px; margin-bottom:16px;"></div>
+    <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
 
     <div class="summary-box">
       <span>الإجمالي للشراء المباشر</span>
       <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
     </div>
 
-    <div class="form-error" id="formError"></div>
+    <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700;"></div>
 
     <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
   `;
@@ -354,7 +606,7 @@ function attachEvents(canUseWallet) {
     
     updateCartBadgeGlobal();
 
-    errorBox.style.color = 'var(--primary)';
+    errorBox.style.color = 'var(--accent-gold)';
     errorBox.textContent = 'تم إضافة المنتج بنجاح إلى السلة!';
     addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإضافة بنجاح!';
     
@@ -388,7 +640,7 @@ function attachEvents(canUseWallet) {
   fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
       receiptFile = fileInput.files[0];
-      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:#2bed33;"></i> ${receiptFile.name}`;
+      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);"></i> ${receiptFile.name}`;
       fileBox.classList.add('has-file');
     }
   });
@@ -415,7 +667,7 @@ async function applyCoupon() {
   const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
   if (error || !data || data.length === 0) { appliedCoupon = null; msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي'; updateSummary(); return; }
   appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
-  msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
+  msgBox.style.color = 'var(--accent-gold)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
 }
 function collectFieldValues() {
   const inputs = document.querySelectorAll('[data-field-key]');
