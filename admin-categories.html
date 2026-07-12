@@ -132,8 +132,8 @@ function render() {
         <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${c.id}">✏️</button>
-        <button class="icon-action-btn" data-action="delete" data-id="${c.id}">🗑️</button>
+        <button onclick="editCategory(...)" class="admin-action-btn"><i class="fas fa-pen" style="color:#e0e0e0;"></i></button>
+<button onclick="deleteCategory(...)" class="admin-action-btn"><i class="fas fa-trash-can" style="color:#ff3b30;"></i></button>
       </div>
     </div>
   `).join('');
