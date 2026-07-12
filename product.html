@@ -65,7 +65,6 @@
     background: rgba(43, 237, 51, 0.1);
   }
   
-  /* 🛠️ حل سحري لكسر حظر الكليكات داخل خيار المحفظة المعطل */
   .payment-option.disabled {
     pointer-events: auto !important; 
     cursor: pointer !important;
@@ -189,18 +188,13 @@ function render() {
     ${fields.length > 0 ? `
       <div class="section-label">بيانات الطلب</div>
       ${fields.map(f => {
-        let placeholderExample = "اكتب البيانات المطلوبة هنا...";
-        const labelText = f.label.toLowerCase();
-        if (labelText.includes("id") || labelText.includes("آيدي") || labelText.includes("ايدي")) {
-          placeholderExample = "مثال (123456789)";
-        } else if (labelText.includes("اسم") || labelText.includes("name")) {
-          placeholderExample = "مثال (RAIZEY_PLAYER)";
-        }
+        // هنا التعديل الخرافي: يقرأ f.placeholder المكتوب في لوحة التحكم، ولو فارغ يضع نص تلقائي احتياطي
+        const placeholderText = f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`;
         
         return `
           <div class="field">
             <label>${f.label}</label>
-            <input type="text" data-field-key="${f.key}" required placeholder="${placeholderExample}">
+            <input type="text" data-field-key="${f.key}" required placeholder="${placeholderText}">
           </div>
         `;
       }).join('')}
@@ -326,7 +320,6 @@ function attachEvents(canUseWallet) {
     }, 2500);
   });
 
-  // ⚡ تعديل ذكي لمعالجة الضغط على خيار المحفظة
   if (canUseWallet) {
     walletOption.addEventListener('click', () => {
       selectedPayment = 'wallet';
@@ -335,7 +328,6 @@ function attachEvents(canUseWallet) {
       bankDetails.classList.remove('show');
     });
   } else {
-    // إذا الرصيد ما كافي، أي ضغطة على الكارت بالكامل تحول العميل لصفحة الشحن فوراً دون تجميد
     walletOption.addEventListener('click', () => {
       window.location.href = 'wallet.html';
     });
@@ -365,47 +357,23 @@ function attachEvents(canUseWallet) {
   submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
 }
 
+// باقي الدوال الحسابية والرفع كما هي بدون تغييرات لضمان ثبات الكود
 function currentPrice() {
-  if (appliedCoupon) {
-    return product.price_sdg - (product.price_sdg * appliedCoupon.discount_percent / 100);
-  }
-  if (welcomeDiscount) {
-    return product.price_sdg - (product.price_sdg * welcomeDiscount / 100);
-  }
+  if (appliedCoupon) return product.price_sdg - (product.price_sdg * appliedCoupon.discount_percent / 100);
+  if (welcomeDiscount) return product.price_sdg - (product.price_sdg * welcomeDiscount / 100);
   return product.price_sdg;
 }
-
-function updateSummary() {
-  document.getElementById('summaryTotal').textContent = formatSDG(currentPrice()) + ' ج.س';
-}
-
+function updateSummary() { document.getElementById('summaryTotal').textContent = formatSDG(currentPrice()) + ' ج.س'; }
 async function applyCoupon() {
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
   const msgBox = document.getElementById('couponMessage');
   msgBox.style.color = '';
-
-  if (!code) {
-    msgBox.style.color = 'var(--danger)';
-    msgBox.textContent = 'اكتب الكود الأول';
-    return;
-  }
-
+  if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'اكتب الكود الأول'; return; }
   const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
-
-  if (error || !data || data.length === 0) {
-    appliedCoupon = null;
-    msgBox.style.color = 'var(--danger)';
-    msgBox.textContent = 'الكود غير صالح أو منتهي';
-    updateSummary();
-    return;
-  }
-
+  if (error || !data || data.length === 0) { appliedCoupon = null; msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي'; updateSummary(); return; }
   appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
-  msgBox.style.color = 'var(--primary)';
-  msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`;
-  updateSummary();
+  msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
 }
-
 function collectFieldValues() {
   const inputs = document.querySelectorAll('[data-field-key]');
   const values = {};
@@ -416,102 +384,28 @@ function collectFieldValues() {
   }
   return values;
 }
-
 async function submitOrder(errorBox, submitBtn) {
-  errorBox.textContent = '';
-  errorBox.style.color = 'var(--danger)';
-
+  errorBox.textContent = ''; errorBox.style.color = 'var(--danger)';
   const fieldValues = collectFieldValues();
-  if (fieldValues === null) {
-    errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة';
-    return;
-  }
-
-  if (!selectedPayment) {
-    errorBox.textContent = 'اختر طريقة الدفع';
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'جارِ التنفيذ...';
-
+  if (fieldValues === null) { errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة'; return; }
+  if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
+  submitBtn.disabled = true; submitBtn.textContent = 'جارِ التنفيذ...';
   if (selectedPayment === 'wallet') {
-    const { data, error } = await supabaseClient.rpc('create_wallet_order', {
-      p_product_id: productId,
-      p_field_values: fieldValues,
-      p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
-    });
-
-    if (error) {
-      errorBox.textContent = error.message.includes('insufficient_balance')
-        ? 'رصيدك غير كافٍ'
-        : 'حصل خطأ، حاول تاني';
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'تأكيد الطلب المباشر';
-      return;
-    }
-
-    window.location.href = 'my-orders.html';
-    return;
+    const { data, error } = await supabaseClient.rpc('create_wallet_order', { p_product_id: productId, p_field_values: fieldValues, p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null });
+    if (error) { errorBox.textContent = error.message.includes('insufficient_balance') ? 'رصيدك غير كافٍ' : 'حصل خطأ، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+    window.location.href = 'my-orders.html'; return;
   }
-
-  if (!selectedMethodId) {
-    errorBox.textContent = 'اختر وسيلة التحويل';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب المباشر';
-    return;
-  }
-  if (!receiptFile) {
-    errorBox.textContent = 'ارفع صورة الإيصال';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب المباشر';
-    return;
-  }
-
-  const fileExt = receiptFile.name.split('.').pop();
-  const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from('receipts')
-    .upload(filePath, receiptFile);
-
-  if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب المباشر';
-    return;
-  }
-
+  if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  const fileExt = receiptFile.name.split('.').pop(); const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
+  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
+  if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-
-  const { error: orderError } = await supabaseClient.from('orders').insert({
-    user_id: currentUser.id,
-    product_id: productId,
-    product_name_snapshot: product.name,
-    price_sdg_snapshot: currentPrice(),
-    field_values: fieldValues,
-    payment_type: 'bank',
-    payment_method_id: selectedMethodId,
-    receipt_url: urlData.publicUrl,
-    status: 'pending_review'
-  });
-
-  if (orderError) {
-    errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد الطلب المباشر';
-    return;
-  }
-
-  if (appliedCoupon) {
-    await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
-  } else if (welcomeDiscount) {
-    await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
-  }
-
+  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, status: 'pending_review' });
+  if (orderError) { errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
+  else if (welcomeDiscount) { await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id); }
   window.location.href = 'my-orders.html';
 }
-
 init();
 </script>
 </body>
