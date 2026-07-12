@@ -325,8 +325,9 @@ async function saveProduct() {
     ? await supabaseClient.from('products').update(payload).eq('id', editingId)
     : await supabaseClient.from('products').insert(payload);
 
-  if (error) {
-    formError.textContent = 'حصل خطأ، حاول تاني';
+    if (error) {
+    // هيطبع ليك سبب المشكلة الحقيقي عشان نعرفه فوراً
+    formError.textContent = 'خطأ من قاعدة البيانات: ' + error.message;
     return;
   }
 
