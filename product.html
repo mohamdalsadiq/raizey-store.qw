@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  /* تنسيقات إضافية لزر السلة الجديد */
   .product-header-actions {
     display: flex;
     justify-content: space-between;
@@ -65,12 +64,19 @@
     transform: scale(0.98);
     background: rgba(43, 237, 51, 0.1);
   }
+  /* ستايل مخصص لجعل رابط الشحن الأخضر بارز بوضوح */
+  .recharge-highlight-link {
+    color: #2bed33 !important;
+    font-weight: 800 !important;
+    text-decoration: underline !important;
+    margin-right: 4px;
+    display: inline-block;
+  }
 </style>
 </head>
 <body>
 
 <div class="product-page" id="productPage">
-  <!-- رأس الصفحة المطور مع أيقونة السلة -->
   <div class="product-header-actions">
     <a href="index.html" class="back-link" style="margin-bottom: 0;">→ رجوع للمتجر</a>
     <a href="cart.html" class="cart-badge-link">
@@ -97,7 +103,6 @@ let receiptFile = null;
 let appliedCoupon = null;
 let welcomeDiscount = null;
 
-// تحديث عداد السلة العلوي في الصفحة
 function updateCartBadgeGlobal() {
   const cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
   document.getElementById('globalCartCount').textContent = cart.length;
@@ -177,16 +182,26 @@ function render() {
     </div>
 
     ${fields.length > 0 ? `
-      <div class="section-label">بيانات الطلب (مثل الـ ID)</div>
-      ${fields.map(f => `
-        <div class="field">
-          <label>${f.label}</label>
-          <input type="text" data-field-key="${f.key}" required placeholder="${f.label}">
-        </div>
-      `).join('')}
+      <div class="section-label">بيانات الطلب</div>
+      ${fields.map(f => {
+        // فحص نوع الحقل لوضع مثال داخل الصندوق بطريقة ذكية
+        let placeholderExample = "اكتب البيانات المطلوبة هنا...";
+        const labelText = f.label.toLowerCase();
+        if (labelText.includes("id") || labelText.includes("آيدي") || labelText.includes("ايدي")) {
+          placeholderExample = "مثال (123456789)";
+        } else if (labelText.includes("اسم") || labelText.includes("name")) {
+          placeholderExample = "مثال (RAIZEY_PLAYER)";
+        }
+        
+        return `
+          <div class="field">
+            <label>${f.label}</label>
+            <input type="text" data-field-key="${f.key}" required placeholder="${placeholderExample}">
+          </div>
+        `;
+      }).join('')}
     ` : ''}
 
-    <!-- زر إضافة للسلة الجديد يظهر هنا مباشرة بعد كتابة البيانات -->
     <button class="btn-secondary-cart" id="addToCartBtn">
       🛒 إضافة إلى سلة المشتريات
     </button>
@@ -201,7 +216,7 @@ function render() {
         <div class="payment-option-sub">
           ${canUseWallet
             ? `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س`
-            : `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" style="color:var(--primary);">اشحن المحفظة</a>`}
+            : `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`}
         </div>
       </div>
     </div>
@@ -271,23 +286,20 @@ function attachEvents(canUseWallet) {
   const submitBtn = document.getElementById('submitBtn');
   const addToCartBtn = document.getElementById('addToCartBtn');
 
-  // حدث إضافة المنتج إلى السلة
   addToCartBtn.addEventListener('click', () => {
     errorBox.textContent = '';
     const fieldValues = collectFieldValues();
     
     if (fieldValues === null) {
       errorBox.style.color = 'var(--danger)';
-      errorBox.textContent = 'من فضلك أكتب الـ ID أو البيانات المطلوبة أولاً!';
+      errorBox.textContent = 'من فضلك املأ الحقول المطلوبة أولاً!';
       return;
     }
 
-    // جلب السلة الحالية أو إنشاء واحدة جديدة
     let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
 
-    // تجهيز عنصر السلة
     const cartItem = {
-      cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // معرف فريد وحصري للعنصر
+      cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       product_id: product.id,
       name: product.name,
       price_sdg: product.price_sdg,
@@ -298,18 +310,14 @@ function attachEvents(canUseWallet) {
     cart.push(cartItem);
     localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
     
-    // تحديث العداد العلوي
     updateCartBadgeGlobal();
 
-    // إشعار نجاح مؤقت للعميل
     errorBox.style.color = 'var(--primary)';
     errorBox.textContent = '✅ تم إضافة المنتج بنجاح إلى السلة!';
     addToCartBtn.innerHTML = '✅ تم الإضافة بنجاح!';
-    addToCartBtn.style.borderColor = '#2bed33';
     
     setTimeout(() => {
       addToCartBtn.innerHTML = '🛒 إضافة إلى سلة المشتريات';
-      addToCartBtn.style.borderColor = '#2bed33';
       errorBox.textContent = '';
     }, 2500);
   });
@@ -344,7 +352,6 @@ function attachEvents(canUseWallet) {
   });
 
   document.getElementById('applyCouponBtn').addEventListener('click', applyCoupon);
-
   submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
 }
 
@@ -392,7 +399,7 @@ async function applyCoupon() {
 function collectFieldValues() {
   const inputs = document.querySelectorAll('[data-field-key]');
   const values = {};
-  if (inputs.length === 0) return {}; // لو مافيش حقول مطلوبة
+  if (inputs.length === 0) return {};
   for (const input of inputs) {
     if (!input.value.trim()) return null;
     values[input.dataset.fieldKey] = input.value.trim();
@@ -438,7 +445,6 @@ async function submitOrder(errorBox, submitBtn) {
     return;
   }
 
-  // bank payment
   if (!selectedMethodId) {
     errorBox.textContent = 'اختر وسيلة التحويل';
     submitBtn.disabled = false;
