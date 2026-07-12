@@ -27,7 +27,7 @@
 }
 .admin-nav a.active {
   background: var(--primary);
-  color: #0a1a0a;
+  color: #12181f; /* متوافق مع الخلفية الفحمية الداكنة */
   border-color: var(--primary);
 }
 
@@ -98,9 +98,9 @@
   font-size: 13px;
   font-weight: 700;
 }
-.btn-confirm { background: var(--primary); color: #0a1a0a; }
+.btn-confirm { background: var(--primary); color: #12181f; }
 .btn-reject { background: rgba(255,77,79,0.15); color: var(--danger); }
-.btn-complete { background: var(--primary); color: #0a1a0a; }
+.btn-complete { background: var(--primary); color: #12181f; }
 
 .customer-info {
   font-size: 12px;
@@ -184,7 +184,7 @@
   padding: 12px;
   border-radius: 10px;
   background: var(--primary);
-  color: #0a1a0a;
+  color: #12181f; /* متوافق مع الخلفية الفحمية الداكنة */
   font-weight: 800;
   font-size: 14px;
   margin-bottom: 18px;
