@@ -6,26 +6,62 @@
 <title>حسابي — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- 🌐 إضافة مكتبة الأيقونات الاحترافية الفخمة -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+
+<style>
+  /* تحسين تنسيق القائمة السفلية لتبدو متناسقة مع الأيقونات */
+  .account-link-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+    transition: 0.2s ease;
+  }
+  .account-link-item:hover {
+    border-color: var(--primary);
+    background: rgba(43, 237, 51, 0.03);
+  }
+  .account-link-item i {
+    color: var(--primary);
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+  }
+  .section-label i {
+    margin-left: 6px;
+  }
+</style>
 </head>
 <body>
 
 <div class="orders-page">
-  <div class="page-header">
-    <h1>حسابي</h1>
-    <a href="index.html" class="back-link">→ المتجر</a>
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; font-size: 22px;">حسابي</h1>
+    <a href="index.html" class="back-link" style="margin: 0;"><i class="fas fa-arrow-right" style="margin-left: 4px;"></i> المتجر</a>
   </div>
 
   <div style="background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;">🎉 شارك واكسب</div>
-    <a href="referrals.html" style="display:block; margin-top:10px; font-size:12px; color:var(--primary); font-weight:700; text-align:center;">عرض تفاصيل إحالاتي وأرباحي ←</a>
-    <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+    <div class="section-label" style="margin-top:0; display: flex; align-items: center;">
+      <i class="fas fa-gift" style="color: var(--primary); margin-left: 8px;"></i> شارك واكسب
+    </div>
+    <a href="referrals.html" style="display:block; margin-top:10px; font-size:12px; color:var(--primary); font-weight:700; text-align:center; text-decoration: none;">عرض تفاصيل إحالاتي وأرباحي ←</a>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; margin-top: 8px; line-height: 1.5;">
       شارك رابطك مع أصحابك، وكل ما حد يسجل ويشحن رصيده لأول مرة، هتاخد مكافأة في محفظتك تلقائياً.
     </p>
     <div style="display:flex; gap:8px;">
       <input type="text" id="referralLinkInput" readonly style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
-      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px;">نسخ</button>
+      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px; cursor: pointer;">نسخ</button>
     </div>
   </div>
 
@@ -36,7 +72,7 @@
 
   <div class="field">
     <label>البريد الإلكتروني</label>
-    <input type="email" id="emailInput" disabled style="opacity:0.6;">
+    <input type="email" id="emailInput" disabled style="opacity:0.6; cursor: not-allowed;">
   </div>
 
   <div class="field">
@@ -47,15 +83,29 @@
   <div class="form-error" id="formError"></div>
   <div class="form-success" id="formSuccess"></div>
 
-  <button class="auth-btn" id="saveBtn">حفظ التعديلات</button>
+  <button class="auth-btn" id="saveBtn">
+    <i class="fas fa-floppy-disk" style="margin-left: 6px;"></i> حفظ التعديلات
+  </button>
 
+  <!-- القائمة السفلية الاحترافية بالأيقونات الموحدة -->
   <div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
-    <a href="my-orders.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">📦 طلباتي</a>
-    <a href="wallet.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">💰 محفظتي</a>
-    <a href="notifications.html" style="display:block; padding:14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; font-weight:700; font-size:14px;">🔔 الإشعارات</a>
+    <a href="my-orders.html" class="account-link-item">
+      <i class="fas fa-box"></i>
+      <span>طلباتي</span>
+    </a>
+    <a href="wallet.html" class="account-link-item">
+      <i class="fas fa-wallet"></i>
+      <span>محفظتي</span>
+    </a>
+    <a href="notifications.html" class="account-link-item">
+      <i class="fas fa-bell"></i>
+      <span>الإشعارات</span>
+    </a>
   </div>
 
-  <button class="auth-btn" id="logoutBtn" style="background:rgba(255,77,79,0.15); color:var(--danger); margin-top:16px;">تسجيل الخروج</button>
+  <button class="auth-btn" id="logoutBtn" style="background:rgba(255,77,79,0.15); color:var(--danger); margin-top:16px;">
+    <i class="fas fa-right-from-bracket" style="margin-left: 6px;"></i> تسجيل الخروج
+  </button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -116,7 +166,8 @@ async function saveProfile() {
     return;
   }
 
-  successBox.textContent = 'تم حفظ التعديلات بنجاح';
+  successBox.textContent = '✅ تم حفظ التعديلات بنجاح';
+  setTimeout(() => { successBox.textContent = ''; }, 3000);
 }
 
 async function logout() {
