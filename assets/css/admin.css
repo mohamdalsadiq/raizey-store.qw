@@ -27,7 +27,7 @@
 }
 .admin-nav a.active {
   background: var(--primary);
-  color: #12181f; /* متوافق مع الخلفية الفحمية الداكنة */
+  color: var(--ink); /* متوافق مع الخلفية الفحمية الداكنة */
   border-color: var(--primary);
 }
 
@@ -53,7 +53,7 @@
   font-size: 24px;
   font-weight: 700;
   margin-top: 6px;
-  color: var(--white);
+  color: var(--ink);
 }
 .stat-card.highlight .stat-card-value { color: var(--primary); }
 .stat-card.alert .stat-card-value { color: var(--warning); }
@@ -98,9 +98,9 @@
   font-size: 13px;
   font-weight: 700;
 }
-.btn-confirm { background: var(--primary); color: #12181f; }
-.btn-reject { background: rgba(255,77,79,0.15); color: var(--danger); }
-.btn-complete { background: var(--primary); color: #12181f; }
+.btn-confirm { background: var(--primary); color: var(--ink); }
+.btn-reject { background: rgba(229, 72, 77,0.15); color: var(--danger); }
+.btn-complete { background: var(--primary); color: var(--ink); }
 
 .customer-info {
   font-size: 12px;
@@ -143,13 +143,13 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
-  color: var(--white);
+  color: var(--ink);
   font-size: 13px;
   margin-bottom: 8px;
 }
 .reason-option.selected {
   border-color: var(--danger);
-  background: rgba(255,77,79,0.08);
+  background: rgba(229, 72, 77,0.08);
   color: var(--danger);
   font-weight: 700;
 }
@@ -160,7 +160,7 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
-  color: var(--white);
+  color: var(--ink);
   font-size: 13px;
   font-family: var(--font-display);
   margin-top: 4px;
@@ -184,7 +184,7 @@
   padding: 12px;
   border-radius: 10px;
   background: var(--primary);
-  color: #12181f; /* متوافق مع الخلفية الفحمية الداكنة */
+  color: var(--ink); /* متوافق مع الخلفية الفحمية الداكنة */
   font-weight: 800;
   font-size: 14px;
   margin-bottom: 18px;
@@ -205,7 +205,7 @@
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #1f1f1f, #262626);
+  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -258,14 +258,14 @@
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
-  color: var(--white);
+  color: var(--ink);
   font-size: 13px;
   font-family: var(--font-display);
 }
 .field-row button {
   width: 36px;
   border-radius: 8px;
-  background: rgba(255,77,79,0.15);
+  background: rgba(229, 72, 77,0.15);
   color: var(--danger);
 }
 
