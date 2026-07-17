@@ -59,13 +59,13 @@
 
     <div class="modal-actions">
       <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:#0a1a0a;">حفظ</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">حفظ</button>
     </div>
   </div>
 </div>
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
 </div>
 
@@ -129,8 +129,8 @@ function render() {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${c.id}">✏️</button>
-        <button class="icon-action-btn" data-action="delete" data-id="${c.id}">🗑️</button>
+        <button class="icon-action-btn" data-action="edit" data-id="${c.id}"><i class="fas fa-pen"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${c.id}"><i class="fas fa-trash-can"></i></button>
       </div>
     </div>
   `).join('');

@@ -55,16 +55,16 @@
       <input type="text" id="descInput" placeholder="وصف مختصر يظهر في القائمة">
     </div>
 
-    <!-- 🌟 الحقل الجديد الفاخر: شرح المنتج والتعليمات والتنبيهات للعميل -->
+    <!-- الحقل الجديد الفاخر: شرح المنتج والتعليمات والتنبيهات للعميل -->
     <div class="field">
       <label>شرح المنتج / طريقة الاستلام والتنبيهات (يظهر للعميل في صفحة المنتج)</label>
-      <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--white); font-family: 'Tajawal', sans-serif; font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
+      <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal', sans-serif; font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
     </div>
 
     <div class="field">
       <label>صورة المنتج</label>
       <div class="file-upload" id="fileUploadBox">
-        📎 اضغط لرفع صورة
+        اضغط لرفع صورة
         <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
       </div>
       <input type="hidden" id="imageInput">
@@ -98,13 +98,13 @@
 
     <div class="modal-actions">
       <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:#0a1a0a;">حفظ</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">حفظ</button>
     </div>
   </div>
 </div>
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
 </div>
 
@@ -151,20 +151,20 @@ async function init() {
   fileInput.addEventListener('change', async () => {
     if (fileInput.files.length === 0) return;
     const file = fileInput.files[0];
-    fileBox.textContent = '⏳ جارِ الرفع...';
+    fileBox.textContent = 'جارِ الرفع...';
 
     const fileExt = file.name.split('.').pop();
     const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     const { error } = await supabaseClient.storage.from('product-images').upload(filePath, file);
     if (error) {
-      fileBox.textContent = '📎 فشل الرفع، اضغط للمحاولة تاني';
+      fileBox.textContent = 'فشل الرفع، اضغط للمحاولة تاني';
       return;
     }
 
     const { data: urlData } = supabaseClient.storage.from('product-images').getPublicUrl(filePath);
     document.getElementById('imageInput').value = urlData.publicUrl;
-    fileBox.textContent = `✅ ${file.name}`;
+    fileBox.textContent = `${file.name}`;
     fileBox.classList.add('has-file');
   });
 
@@ -205,8 +205,8 @@ function render() {
         <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${p.id}">✏️</button>
-        <button class="icon-action-btn" data-action="delete" data-id="${p.id}">🗑️</button>
+        <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${p.id}"><i class="fas fa-trash-can"></i></button>
       </div>
     </div>
   `).join('');
@@ -219,7 +219,7 @@ function render() {
   });
 }
 
-// 🛠️ دالة بناء الأسطر المحدثة: تدعم ترتيب (العنوان يمين) و (النص الداخلي شمال) مع توليد مفتاح برمجى مخفي ذكي تلقائياً
+// دالة بناء الأسطر المحدثة: تدعم ترتيب (العنوان يمين) و (النص الداخلي شمال) مع توليد مفتاح برمجى مخفي ذكي تلقائياً
 function addFieldRow(key, label, placeholder = '') {
   const row = document.createElement('div');
   row.className = 'field-row';
@@ -232,10 +232,10 @@ function addFieldRow(key, label, placeholder = '') {
   const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
 
   row.innerHTML = `
-    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--white); font-family: 'Tajawal'; font-size: 13px;">
-    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--white); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
     <input type="hidden" class="field-key" value="${safeKey}">
-    <button type="button" style="background: #ff3b30; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;">✕</button>
+    <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
   fieldsBuilder.appendChild(row);
@@ -256,7 +256,7 @@ function openForm(id) {
     descInput.value = p.description || '';
     instructionsInput.value = p.instructions || ''; // تعبئة حقل التعليمات عند التعديل
     document.getElementById('imageInput').value = p.image_url || '';
-    fileBox.textContent = p.image_url ? '✅ يوجد صورة مرفوعة (اضغط للتغيير)' : '📎 اضغط لرفع صورة';
+    fileBox.textContent = p.image_url ? 'يوجد صورة مرفوعة (اضغط للتغيير)' : 'اضغط لرفع صورة';
     fileBox.classList.toggle('has-file', !!p.image_url);
     priceInput.value = p.price_usd;
     orderInput.value = p.display_order;
@@ -270,7 +270,7 @@ function openForm(id) {
     descInput.value = '';
     instructionsInput.value = ''; // تصفير حقل التعليمات للمنتج الجديد
     document.getElementById('imageInput').value = '';
-    fileBox.textContent = '📎 اضغط لرفع صورة';
+    fileBox.textContent = 'اضغط لرفع صورة';
     fileBox.classList.remove('has-file');
     priceInput.value = '';
     orderInput.value = products.length;

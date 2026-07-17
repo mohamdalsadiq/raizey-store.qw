@@ -6,7 +6,7 @@
 <title>إدارة التصنيفات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<!-- 🌐 إضافة مكتبة الأيقونات الاحترافية الفخمة للوحة التحكم -->
+<!-- إضافة مكتبة الأيقونات الاحترافية الفخمة للوحة التحكم -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -15,8 +15,8 @@
 <style>
   /* تحسينات بسيطة لأزرار التحكم لتظهر بشكل فخم ومريح للعين */
   .admin-action-btn {
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     padding: 8px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -27,7 +27,7 @@
   }
   .admin-action-btn:hover {
     border-color: var(--primary);
-    background: #222;
+    background: var(--bg-card);
   }
   .manage-item-actions {
     display: flex;
@@ -39,7 +39,7 @@
     height: 50px;
     object-fit: cover;
     border-radius: 8px;
-    border: 1px solid #333;
+    border: 1px solid var(--border);
     margin-left: 12px;
   }
   .manage-item-info {
@@ -88,12 +88,12 @@
 
     <div class="field">
       <label>وصف التصنيف</label>
-      <textarea id="descriptionInput" placeholder="اكتب وصفاً مختصراً وفخماً يظهر للعملاء في صفحة الباقات..." rows="3" style="width:100%; background:#111; border:1px solid #333; padding:10px; border-radius:8px; color:#fff; font-family:inherit; resize:vertical;"></textarea>
+      <textarea id="descriptionInput" placeholder="اكتب وصفاً مختصراً وفخماً يظهر للعملاء في صفحة الباقات..." rows="3" style="width:100%; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:8px; color:var(--ink); font-family:inherit; resize:vertical;"></textarea>
     </div>
 
     <div class="field">
       <label>صورة التصنيف (أيقونة اللعبة)</label>
-      <input type="file" id="imageFileInput" accept="image/*" style="background:#111; border:1px solid #333; padding:8px; border-radius:8px; width:100%; color:#fff;">
+      <input type="file" id="imageFileInput" accept="image/*" style="background:var(--bg); border:1px solid var(--border); padding:8px; border-radius:8px; width:100%; color:var(--ink);">
       <input type="hidden" id="imageUrlInput">
       <div id="imageUploadStatus" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
     </div>
@@ -120,13 +120,13 @@
 
     <div class="modal-actions">
       <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:#0a1a0a;">حفظ</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">حفظ</button>
     </div>
   </div>
 </div>
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
 </div>
 
@@ -183,7 +183,7 @@ function render() {
   container.innerHTML = categories.map(c => {
     const imgHtml = c.image_url 
       ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
-      : `<div class="category-thumb" style="background:#222; display:flex; align-items:center; justify-content:center; color:#555;"><i class="fas fa-gamepad"></i></div>`;
+      : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad"></i></div>`;
 
     return `
       <div class="manage-item">
@@ -199,10 +199,10 @@ function render() {
         </div>
         <div class="manage-item-actions">
           <button data-action="edit" data-id="${c.id}" class="admin-action-btn" title="تعديل">
-            <i class="fas fa-pen" style="color:#e0e0e0;"></i>
+            <i class="fas fa-pen" style="color:var(--text-muted);"></i>
           </button>
           <button data-action="delete" data-id="${c.id}" class="admin-action-btn" title="حذف">
-            <i class="fas fa-trash-can" style="color:#ff3b30;"></i>
+            <i class="fas fa-trash-can" style="color:var(--danger);"></i>
           </button>
         </div>
       </div>

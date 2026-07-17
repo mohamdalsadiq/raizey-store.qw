@@ -6,21 +6,21 @@
 <title>تفاصيل المنتج — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<!-- 🌐 إضافة مكتبة الأيقونات الاحترافية -->
+<!-- إضافة مكتبة الأيقونات الاحترافية -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  /* 🎨 تفعيل لوحة الألوان الملكية المعتمدة لـ RAIZEY STORE */
+  /* تفعيل لوحة الألوان الملكية المعتمدة لـ RAIZEY STORE */
   :root {
-    --bg-main: #111622;         /* فحمي ملكي داكن جداً للعمق والفخامة */
-    --bg-card: #1b2336;         /* فحمي متوسط لفصل العناصر والبطاقات مريح للعين */
-    --accent-gold: #FFD700;     /* أصفر ذهبي مضيء وساطع للتفاعل وجذب الانتباه */
-    --border-color: #26314d;    /* لون الحدود المتناسق */
-    --text-light: #FFFFFF;      /* أبيض ناصع عالي التباين للنصوص */
-    --text-muted: #8fa0c2;      /* نصوص ثانوية مريحة */
-    --danger: #ff4a4a;
+    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
+    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
+    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+    --danger: #e5484d;
   }
 
   body {
@@ -71,7 +71,7 @@
   }
   .cart-badge-link:hover {
     border-color: var(--accent-gold);
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 106, 26, 0.1);
   }
   .cart-badge-link i {
     color: var(--accent-gold);
@@ -79,7 +79,7 @@
   }
   .cart-badge-link span {
     background: var(--accent-gold);
-    color: #111622;
+    color: #1a1d29;
     padding: 2px 7px;
     border-radius: 10px;
     font-size: 11px;
@@ -136,7 +136,7 @@
     margin-bottom: 25px; 
     font-size: 14px; 
     line-height: 1.6; 
-    color: #e2e8f0; 
+    color: #1a1d29; 
     white-space: pre-line;
   }
   .product-instructions-title {
@@ -182,7 +182,7 @@
   }
   .field input[type="text"]:focus, .field select:focus {
     border-color: var(--accent-gold);
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 10px rgba(255, 106, 26, 0.1);
     outline: none;
   }
 
@@ -211,7 +211,7 @@
     font-size: 16px;
   }
   .btn-secondary-cart:hover {
-    background: rgba(255, 215, 0, 0.04);
+    background: rgba(255, 106, 26, 0.04);
   }
   .btn-secondary-cart:active {
     transform: scale(0.98);
@@ -228,12 +228,12 @@
     transition: all 0.2s ease;
   }
   .payment-option:hover {
-    border-color: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 106, 26, 0.2);
   }
   .payment-option.selected {
     border-color: var(--accent-gold);
-    background: rgba(255, 215, 0, 0.03);
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.1);
+    background: rgba(255, 106, 26, 0.03);
+    box-shadow: 0 0 12px rgba(255, 106, 26, 0.1);
   }
   .payment-option.disabled {
     pointer-events: auto !important; 
@@ -353,7 +353,7 @@
     width: 100%;
     padding: 16px;
     background: var(--accent-gold) !important;
-    color: #111622 !important;
+    color: #1a1d29 !important;
     font-size: 16px;
     font-weight: 900;
     border: none;
@@ -545,7 +545,7 @@ function render() {
     </div>
 
     ${welcomeDiscount ? `
-      <div style="background:rgba(255,215,0,0.06); border:1px solid var(--accent-gold); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--accent-gold); font-weight:700;">
+      <div style="background:rgba(255, 106, 26,0.06); border:1px solid var(--accent-gold); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--accent-gold); font-weight:700;">
         خصم ترحيبي ${welcomeDiscount}% مطبق تلقائياً على أول طلب ليك
       </div>
     ` : ''}

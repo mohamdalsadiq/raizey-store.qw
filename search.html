@@ -6,19 +6,19 @@
 <title>البحث — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<!-- 🌐 مكتبة الأيقونات الاحترافية للوحة التحكم والمتجر -->
+<!-- مكتبة الأيقونات الاحترافية للوحة التحكم والمتجر -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 
 <style>
-  /* 🎨 لوحة الألوان الملكية المتوافقة مع الهوية الجديدة للمتجر */
+  /* لوحة الألوان الملكية المتوافقة مع الهوية الجديدة للمتجر */
   :root {
-    --bg-main: #111622;         /* فحمي ملكي داكن جداً */
-    --bg-card: #1b2336;         /* فحمي متوسط للبطاقات */
-    --accent-gold: #FFD700;     /* أصفر ذهبي مضيء */
-    --border-color: #26314d;    /* لون الحدود المتناسق */
-    --text-light: #FFFFFF;      /* أبيض ناصع */
-    --text-muted: #8fa0c2;      /* نصوص ثانوية مريحة */
+    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
+    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
+    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
   }
 
   body {
@@ -32,7 +32,7 @@
     border-bottom: 1px solid var(--border-color) !important;
   }
 
-  /* 📂 شبكة عرض كروت التصنيفات والألعاب */
+  /* شبكة عرض كروت التصنيفات والألعاب */
   .categories-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
@@ -56,7 +56,7 @@
   }
   .game-card:hover, .game-card:active {
     border-color: var(--accent-gold) !important;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.12) !important;
+    box-shadow: 0 0 15px rgba(255, 106, 26, 0.12) !important;
     transform: translateY(-2px) !important;
   }
   .game-thumb {
@@ -102,9 +102,9 @@
   }
   .game-btn {
     width: 100% !important;
-    background: rgba(255, 215, 0, 0.06) !important;
+    background: rgba(255, 106, 26, 0.06) !important;
     color: var(--accent-gold) !important;
-    border: 1px solid rgba(255, 215, 0, 0.3) !important;
+    border: 1px solid rgba(255, 106, 26, 0.3) !important;
     border-radius: 8px !important;
     text-align: center !important;
     padding: 8px 0 !important;
@@ -118,11 +118,11 @@
   }
   .game-card:hover .game-btn {
     background: var(--accent-gold) !important;
-    color: #111622 !important;
+    color: #1a1d29 !important;
     border-color: var(--accent-gold) !important;
   }
 
-  /* 🛠️ كروت باقات الشحن الفردية */
+  /* كروت باقات الشحن الفردية */
   .products-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
@@ -144,7 +144,7 @@
   .products-grid .voucher-card:hover, 
   .products-grid .voucher-card:active {
     border-color: var(--accent-gold) !important;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.15) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 26, 0.15) !important;
   }
   .voucher-thumb {
     width: 100% !important;
@@ -190,7 +190,7 @@
   }
   .buy-btn {
     width: 100% !important;
-    background: rgba(255, 215, 0, 0.08) !important;
+    background: rgba(255, 106, 26, 0.08) !important;
     color: var(--accent-gold) !important;
     border: 1px solid var(--accent-gold) !important;
     border-radius: 8px !important;
@@ -202,7 +202,7 @@
   }
   .voucher-card:hover .buy-btn {
     background: var(--accent-gold) !important;
-    color: #111622 !important;
+    color: #1a1d29 !important;
   }
 
   .section-title {
@@ -219,11 +219,11 @@
   <div class="header-inner">
     <div class="logo" style="display:flex; align-items:center; gap:8px;">
       <svg class="hex-logo" width="34" height="34" viewBox="0 0 100 100">
-        <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#1b2336" stroke="#FFD700" stroke-width="4"/>
+        <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#f5f1ea" stroke="#ff6a1a" stroke-width="4"/>
         <path d="M28 32 L28 68 M28 32 L50 32 Q60 32 60 42 Q60 50 50 50 L28 50 M46 50 L62 68" 
-              stroke="#FFD700" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              stroke="#ff6a1a" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M62 32 L82 32 L62 62 L82 62" 
-              stroke="#FFD700" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+              stroke="#ff6a1a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
       </svg>
       <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color:var(--accent-gold);">STORE</span></span>
     </div>
@@ -235,11 +235,11 @@
   <input type="text" id="searchInput" placeholder="ابحث عن لعبة، تصنيف، أو باقة شحن معينة..." style="width:100%; padding:14px 16px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-light); font-size:14px; outline: none; transition: border-color 0.2s;">
 </div>
 
-<!-- 📦 نتائج الألعاب والتصنيفات الموحدة -->
+<!-- نتائج الألعاب والتصنيفات الموحدة -->
 <div class="section-title" id="categoriesTitle" style="display: none;">الألعاب والخدمات المطابقة</div>
 <div id="categoriesGrid" class="categories-grid"></div>
 
-<!-- 💎 نتائج باقات الشحن الفردية -->
+<!-- نتائج باقات الشحن الفردية -->
 <div class="section-title" id="resultsTitle">اكتب اسم اللعبة أو الباقة اللي تدور عليها</div>
 <div class="products-grid" id="productsGrid"></div>
 
@@ -290,7 +290,7 @@ async function search(query) {
   categoriesGrid.innerHTML = '';
 
   try {
-    // 1️⃣ البحث الفوري في جدول التصنيفات (الألعاب)
+    // 1⃣ البحث الفوري في جدول التصنيفات (الألعاب)
     const { data: categories } = await supabaseClient
       .from('categories')
       .select('*')
@@ -298,7 +298,7 @@ async function search(query) {
       .ilike('name', `%${query}%`)
       .order('display_order');
 
-    // 2️⃣ البحث الفوري في جدول المنتجات الفردية
+    // 2⃣ البحث الفوري في جدول المنتجات الفردية
     const { data: products } = await supabaseClient
       .from('products')
       .select('*')
@@ -324,7 +324,7 @@ async function search(query) {
       categoriesGrid.innerHTML = categoryResults.map(cat => {
         const imgHtml = cat.image_url 
           ? `<img src="${cat.image_url}" alt="${cat.name}" loading="lazy">`
-          : `<div style="color:#4a5d85; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
+          : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
         const descText = cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً';
 
         return `
@@ -350,7 +350,7 @@ async function search(query) {
         <a href="product.html?id=${p.id}" class="voucher-card">
           <div class="voucher-top">
             <div class="voucher-thumb">
-              ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '<div style="color:#4a5d85; font-size:24px;"><i class="fas fa-box"></i></div>'}
+              ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
             </div>
             <div class="voucher-name">${p.name}</div>
           </div>

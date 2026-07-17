@@ -61,7 +61,7 @@ async function loadOrders() {
   if (error || !orders || orders.length === 0) {
     container.innerHTML = `
       <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-        <h3 style="color:var(--white); margin-bottom:8px;">لا توجد طلبات بعد</h3>
+        <h3 style="color:var(--ink); margin-bottom:8px;">لا توجد طلبات بعد</h3>
         <p>ابدأ التسوق من الصفحة الرئيسية</p>
       </div>`;
     return;

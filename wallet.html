@@ -25,10 +25,10 @@
   <button class="topup-toggle-btn" id="toggleFormBtn">+ اطلب شحن رصيد</button>
 
   <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;">🎁 عندك كود هدية؟</div>
+    <div class="section-label" style="margin-top:0;">عندك كود هدية؟</div>
     <div style="display:flex; gap:8px;">
-      <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--white); font-family:var(--font-mono); font-size:13px;">
-      <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:#0a1a0a; font-weight:800; font-size:13px;">استبدال</button>
+      <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--ink); font-family:var(--font-mono); font-size:13px;">
+      <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px;">استبدال</button>
     </div>
     <div id="giftMessage" style="font-size:12px; margin-top:8px;"></div>
   </div>
@@ -49,7 +49,7 @@
     <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:10px;"></div>
 
     <div class="file-upload" id="fileUploadBox">
-      📎 اضغط لرفع صورة الإيصال
+      اضغط لرفع صورة الإيصال
       <input type="file" id="receiptInput" accept="image/*" style="display:none;">
     </div>
 
@@ -101,7 +101,7 @@ async function init() {
   fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
       receiptFile = fileInput.files[0];
-      fileBox.textContent = `✅ ${receiptFile.name}`;
+      fileBox.textContent = `${receiptFile.name}`;
       fileBox.classList.add('has-file');
     }
   });
@@ -132,7 +132,7 @@ async function redeemGiftCard() {
   }
 
   msgBox.style.color = 'var(--primary)';
-  msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك 🎉`;
+  msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك`;
   document.getElementById('giftCodeInput').value = '';
   await loadBalance();
 }
@@ -255,7 +255,7 @@ async function submitTopup() {
   document.getElementById('topupForm').classList.remove('show');
   document.getElementById('amountInput').value = '';
   document.getElementById('methodSelect').value = '';
-  document.getElementById('fileUploadBox').textContent = '📎 اضغط لرفع صورة الإيصال';
+  document.getElementById('fileUploadBox').textContent = 'اضغط لرفع صورة الإيصال';
   document.getElementById('fileUploadBox').classList.remove('has-file');
   receiptFile = null;
   submitBtn.disabled = false;

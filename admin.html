@@ -74,7 +74,7 @@
 </div>
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--white); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <p>هذه الصفحة مخصصة للإدارة فقط</p>
   <a href="index.html" style="color:var(--primary); font-weight:700; display:inline-block; margin-top:14px;">← رجوع للمتجر</a>
 </div>
@@ -139,7 +139,7 @@ async function loadSalesChart() {
       datasets: [{
         label: 'المبيعات (ج.س)',
         data: totals,
-        borderColor: '#2bed33',
+        borderColor: '#ff6a1a',
         backgroundColor: 'rgba(43,237,51,0.1)',
         tension: 0.3,
         fill: true
@@ -148,8 +148,8 @@ async function loadSalesChart() {
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#9a9a9a' }, grid: { color: '#2a2a2a' } },
-        y: { ticks: { color: '#9a9a9a' }, grid: { color: '#2a2a2a' } }
+        x: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } },
+        y: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } }
       }
     }
   });
