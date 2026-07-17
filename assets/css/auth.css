@@ -55,7 +55,7 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
-  color: var(--white);
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: 14px;
   direction: ltr;
@@ -89,7 +89,7 @@
   padding: 14px;
   border-radius: 10px;
   background: var(--primary);
-  color: #12181f; /* متوافق مع الخلفية الفحمية الداكنة */
+  color: var(--ink); /* متوافق مع الخلفية الفحمية الداكنة */
   font-weight: 800;
   font-size: 15px;
   transition: opacity 0.2s ease;
@@ -125,7 +125,7 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
-  color: var(--white);
+  color: var(--ink);
 }
 .otp-inputs input:focus {
   outline: none;
