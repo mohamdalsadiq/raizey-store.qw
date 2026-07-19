@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -48,6 +49,13 @@
     </div>
 
     <p class="auth-switch">ما عندك حساب؟ <a href="register.html">أنشئ حساب جديد</a></p>
+
+    <div class="auth-divider">أو</div>
+    <div class="social-login-row">
+      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()"><i class="fab fa-facebook-f"></i> فيسبوك</button>
+      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()"><i class="fab fa-google"></i> جوجل</button>
+    </div>
+    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;"></p>
   </div>
 </div>
 
@@ -113,6 +121,12 @@ document.getElementById('forgotBtn').addEventListener('click', async () => {
 
   forgotSuccess.textContent = 'تم إرسال رابط إعادة التعيين لإيميلك، افتحه من نفس الجهاز';
 });
+
+function showSocialSoon() {
+  const msg = document.getElementById('socialSoonMsg');
+  msg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً';
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+}
 </script>
 </body>
 </html>

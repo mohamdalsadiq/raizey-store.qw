@@ -116,7 +116,18 @@ modalConfirmBtn.addEventListener('click', async () => {
     .update({ status: 'rejected', rejection_reason: selectedReason })
     .eq('id', rejectingOrderId);
   if (order) {
-    await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}`);
+    let refundNote = '';
+    if (order.payment_type === 'wallet') {
+      const { data: wallet } = await supabaseClient
+        .from('wallets').select('balance').eq('user_id', order.user_id).single();
+      const newBalance = (wallet ? Number(wallet.balance) : 0) + Number(order.price_sdg_snapshot);
+      await supabaseClient.from('wallets')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', order.user_id);
+      refundNote = ` وتم إرجاع ${formatSDG(order.price_sdg_snapshot)} ج.س إلى محفظتك تلقائياً.`;
+      await logAudit('استرجاع رصيد بعد رفض طلب', { order_id: rejectingOrderId, amount: order.price_sdg_snapshot, user_id: order.user_id });
+    }
+    await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}${refundNote}`);
     await logAudit('رفض طلب', { order_id: rejectingOrderId, product: order.product_name_snapshot, reason: selectedReason });
   }
   closeRejectModal();

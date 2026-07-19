@@ -692,11 +692,18 @@ async function submitOrder(errorBox, submitBtn) {
   }
   if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const fileExt = receiptFile.name.split('.').pop(); const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
-  const { error: uploadError } = await supabaseClient.from('receipts').upload(filePath, receiptFile);
+  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
   if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, status: 'pending_review' });
+  const receiptHash = await hashFile(receiptFile);
+  const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
+  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, receipt_hash: receiptHash, is_duplicate_receipt: isDuplicate, status: isDuplicate ? 'rejected' : 'pending_review', rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null });
   if (orderError) { errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  if (isDuplicate) {
+    await supabaseClient.from('audit_logs').insert({ admin_id: null, action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً', details: { user_id: currentUser.id, receipt_hash: receiptHash } });
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
   if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
   else if (welcomeDiscount) { await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id); }
   window.location.href = 'my-orders.html';

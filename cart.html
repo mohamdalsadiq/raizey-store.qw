@@ -376,6 +376,8 @@ async function submitCartOrder() {
   }
 
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
+  const receiptHash = await hashFile(receiptFile);
+  const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
 
   // تحضير مصفوفة الطلبات لإدخالها دفعة واحدة (Batch Insert)
   const ordersToInsert = cart.map(item => ({
@@ -387,13 +389,29 @@ async function submitCartOrder() {
     payment_type: 'bank',
     payment_method_id: selectedMethodId,
     receipt_url: urlData.publicUrl,
-    status: 'pending_review'
+    receipt_hash: receiptHash,
+    is_duplicate_receipt: isDuplicate,
+    status: isDuplicate ? 'rejected' : 'pending_review',
+    rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
   }));
 
   const { error: orderError } = await supabaseClient.from('orders').insert(ordersToInsert);
 
   if (orderError) {
     errorBox.textContent = 'حصل خطأ أثناء إرسال الطلبات، حاول مجدداً.';
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
+    return;
+  }
+
+  if (isDuplicate) {
+    await supabaseClient.from('audit_logs').insert({
+      admin_id: null,
+      action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً',
+      details: { user_id: currentUser.id, receipt_hash: receiptHash }
+    });
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
     checkoutBtn.disabled = false;
     checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
     return;
