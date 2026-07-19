@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>البحث — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- مكتبة الأيقونات الاحترافية للوحة التحكم والمتجر -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<style>
+  /* لوحة الألوان الملكية المتوافقة مع الهوية الجديدة للمتجر */
+  :root {
+    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
+    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
+    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+  }
+
+  body {
+    background-color: var(--bg-main) !important;
+    color: var(--text-light) !important;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  .site-header {
+    background: var(--bg-card) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  /* شبكة عرض كروت التصنيفات والألعاب */
+  .categories-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 10px 20px !important;
+    margin-bottom: 30px;
+  }
+
+  /* كارت اللعبة الموحد */
+  .game-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    padding: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: all 0.25s ease-in-out !important;
+    text-decoration: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .game-card:hover, .game-card:active {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 15px rgba(255, 106, 26, 0.12) !important;
+    transform: translateY(-2px) !important;
+  }
+  .game-thumb {
+    width: 100% !important;
+    height: 125px !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--bg-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  .game-thumb img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .game-info {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-grow: 1 !important;
+    margin-top: 10px !important;
+  }
+  .game-name {
+    color: var(--text-light) !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    text-align: right !important;
+    margin-bottom: 4px !important;
+  }
+  .game-desc {
+    color: var(--text-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    text-align: right !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    height: 30px !important;
+    margin-bottom: 10px !important;
+  }
+  .game-btn {
+    width: 100% !important;
+    background: rgba(255, 106, 26, 0.06) !important;
+    color: var(--accent-gold) !important;
+    border: 1px solid rgba(255, 106, 26, 0.3) !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    padding: 8px 0 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    transition: all 0.2s !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+  .game-card:hover .game-btn {
+    background: var(--accent-gold) !important;
+    color: #1a1d29 !important;
+    border-color: var(--accent-gold) !important;
+  }
+
+  /* كروت باقات الشحن الفردية */
+  .products-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 14px !important;
+    padding: 10px 20px !important;
+  }
+  .products-grid .voucher-card {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    padding: 10px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    text-decoration: none !important;
+  }
+  .products-grid .voucher-card:hover, 
+  .products-grid .voucher-card:active {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 12px rgba(255, 106, 26, 0.15) !important;
+  }
+  .voucher-thumb {
+    width: 100% !important;
+    height: 105px !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--bg-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  .voucher-thumb img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .voucher-name {
+    color: var(--text-light) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    margin-top: 8px !important;
+    text-align: center !important;
+  }
+  .voucher-divider {
+    border-top: 1px dashed var(--border-color) !important;
+    margin: 8px 0 !important;
+  }
+  .voucher-bottom {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+  .voucher-price {
+    color: var(--accent-gold) !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+  }
+  .voucher-price small {
+    font-size: 10px !important;
+    color: var(--text-muted) !important;
+  }
+  .buy-btn {
+    width: 100% !important;
+    background: rgba(255, 106, 26, 0.08) !important;
+    color: var(--accent-gold) !important;
+    border: 1px solid var(--accent-gold) !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    padding: 6px 0 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    transition: all 0.2s !important;
+  }
+  .voucher-card:hover .buy-btn {
+    background: var(--accent-gold) !important;
+    color: #1a1d29 !important;
+  }
+
+  .section-title {
+    color: var(--text-muted);
+    padding: 20px 20px 5px 20px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo" style="display:flex; align-items:center; gap:8px;">
+      <svg class="hex-logo" width="34" height="34" viewBox="0 0 100 100">
+        <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#f5f1ea" stroke="#ff6a1a" stroke-width="4"/>
+        <path d="M28 32 L28 68 M28 32 L50 32 Q60 32 60 42 Q60 50 50 50 L28 50 M46 50 L62 68" 
+              stroke="#ff6a1a" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M62 32 L82 32 L62 62 L82 62" 
+              stroke="#ff6a1a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+      </svg>
+      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color:var(--accent-gold);">STORE</span></span>
+    </div>
+    <a href="index.html" class="back-link" style="margin:0; color: var(--accent-gold); text-decoration: none; font-weight: 700;">← الرئيسية</a>
+  </div>
+</header>
+
+<div style="padding:20px 20px 0;">
+  <input type="text" id="searchInput" placeholder="ابحث عن لعبة، تصنيف، أو باقة شحن معينة..." style="width:100%; padding:14px 16px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-light); font-size:14px; outline: none; transition: border-color 0.2s;">
+</div>
+
+<!-- نتائج الألعاب والتصنيفات الموحدة -->
+<div class="section-title" id="categoriesTitle" style="display: none;">الألعاب والخدمات المطابقة</div>
+<div id="categoriesGrid" class="categories-grid"></div>
+
+<!-- نتائج باقات الشحن الفردية -->
+<div class="section-title" id="resultsTitle">اكتب اسم اللعبة أو الباقة اللي تدور عليها</div>
+<div class="products-grid" id="productsGrid"></div>
+
+<footer class="site-footer" style="background: var(--bg-card); border-top: 1px solid var(--border-color); color: var(--text-muted); padding: 20px 10px; margin-top: 60px;">
+  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let rate = 0;
+let searchTimeout = null;
+
+async function init() {
+  rate = await getExchangeRate();
+
+  const params = new URLSearchParams(window.location.search);
+  const initialQuery = params.get('q') || '';
+  document.getElementById('searchInput').value = initialQuery;
+
+  if (initialQuery) await search(initialQuery);
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    // تركيز وتأثير إضاءة الحدود
+    e.target.style.borderColor = e.target.value ? 'var(--accent-gold)' : 'var(--border-color)';
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => search(e.target.value), 400);
+  });
+}
+
+async function search(query) {
+  const productsGrid = document.getElementById('productsGrid');
+  const categoriesGrid = document.getElementById('categoriesGrid');
+  const resultsTitle = document.getElementById('resultsTitle');
+  const categoriesTitle = document.getElementById('categoriesTitle');
+
+  if (!query.trim()) {
+    resultsTitle.textContent = 'اكتب اسم اللعبة أو الباقة اللي تدور عليها';
+    categoriesTitle.style.display = 'none';
+    productsGrid.innerHTML = '';
+    categoriesGrid.innerHTML = '';
+    return;
+  }
+
+  resultsTitle.textContent = 'جارِ البحث الفوري...';
+  categoriesTitle.style.display = 'none';
+  categoriesGrid.innerHTML = '';
+
+  try {
+    // 1⃣ البحث الفوري في جدول التصنيفات (الألعاب)
+    const { data: categories } = await supabaseClient
+      .from('categories')
+      .select('*')
+      .eq('is_active', true)
+      .ilike('name', `%${query}%`)
+      .order('display_order');
+
+    // 2⃣ البحث الفوري في جدول المنتجات الفردية
+    const { data: products } = await supabaseClient
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .ilike('name', `%${query}%`)
+      .order('display_order');
+
+    const productResults = (products || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
+    const categoryResults = categories || [];
+
+    // إعداد وضبط عناوين النتائج والمجاميع
+    if (categoryResults.length === 0 && productResults.length === 0) {
+      resultsTitle.textContent = 'لا توجد نتائج مطابقة، تأكد من كتابة الاسم الصحيح';
+      productsGrid.innerHTML = '';
+      return;
+    }
+
+    // عرض الألعاب/التصنيفات الموحدة إذا وُجدت
+    if (categoryResults.length > 0) {
+      categoriesTitle.style.display = 'block';
+      categoriesTitle.textContent = `الألعاب والخدمات المطابقة (${categoryResults.length})`;
+      
+      categoriesGrid.innerHTML = categoryResults.map(cat => {
+        const imgHtml = cat.image_url 
+          ? `<img src="${cat.image_url}" alt="${cat.name}" loading="lazy">`
+          : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
+        const descText = cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً';
+
+        return `
+          <a href="category.html?id=${cat.id}" class="game-card">
+            <div class="game-thumb">${imgHtml}</div>
+            <div class="game-info">
+              <div class="game-name">${cat.name}</div>
+              <div class="game-desc" title="${descText}">${descText}</div>
+              <div class="game-btn">
+                <span>عرض الباقات</span>
+                <i class="fas fa-chevron-left" style="font-size:10px;"></i>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    // عرض باقات الشحن المباشرة المطابقة
+    if (productResults.length > 0) {
+      resultsTitle.textContent = `باقات الشحن المباشرة المطابقة (${productResults.length})`;
+      productsGrid.innerHTML = productResults.map(p => `
+        <a href="category.html?id=${p.category_id}" class="voucher-card">
+          <div class="voucher-top">
+            <div class="voucher-thumb">
+              ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
+            </div>
+            <div class="voucher-name">${p.name}</div>
+          </div>
+          <div class="voucher-divider"></div>
+          <div class="voucher-bottom">
+            <div class="voucher-price">${formatSDG(p.price_sdg)} <small>ج.س</small></div>
+            <div class="buy-btn">اشترِ</div>
+          </div>
+        </a>
+      `).join('');
+    } else {
+      resultsTitle.textContent = categoryResults.length > 0 ? 'نتائج باقات الشحن الفردية' : '';
+      productsGrid.innerHTML = categoryResults.length > 0 ? `<div style="color:var(--text-muted); font-size:13px; padding:10px 20px;">اضغط على اللعبة في الأعلى لعرض كافة باقاتها المتوفرة.</div>` : '';
+    }
+
+  } catch (err) {
+    console.error(err);
+    resultsTitle.textContent = 'حدث خطأ غير متوقع أثناء البحث.';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

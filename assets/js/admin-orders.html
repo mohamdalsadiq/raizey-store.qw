@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة الطلبات — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+
+<div class="admin-page" id="adminPage" style="display:none;">
+  <div class="page-header">
+    <h1>إدارة الطلبات</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="admin-nav">
+    <a href="admin.html">الرئيسية</a>
+    <a href="admin-orders.html" class="active">الطلبات</a>
+    <a href="admin-topups.html">شحن المحافظ</a>
+    <a href="admin-products.html">المنتجات</a>
+    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-customers.html">العملاء</a>
+    <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
+    <a href="admin-coupons.html">الكوبونات</a>
+<a href="admin-giftcards.html">كروت الهدايا</a>
+  </div>
+
+  <div class="categories" style="padding:0 0 16px;" id="filterRow">
+    <button class="chip active" data-filter="all">الكل</button>
+    <button class="chip" data-filter="pending_review">قيد المراجعة</button>
+    <button class="chip" data-filter="in_progress">قيد التنفيذ</button>
+    <button class="chip" data-filter="completed">مكتمل</button>
+    <button class="chip" data-filter="cancelled">ملغي</button>
+    <button class="chip" data-filter="rejected">مرفوض</button>
+  </div>
+
+  <div id="ordersList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+</div>
+
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <div class="modal-title">سبب رفض الطلب</div>
+    <button class="reason-option" data-reason="الإيصال غير واضح">الإيصال غير واضح</button>
+    <button class="reason-option" data-reason="المبلغ المحول غير مطابق">المبلغ المحول غير مطابق</button>
+    <button class="reason-option" data-reason="الإيصال مكرر أو مستخدم من قبل">الإيصال مكرر أو مستخدم من قبل</button>
+    <button class="reason-option" data-reason="التحويل من حساب غير مطابق للاسم">التحويل من حساب غير مطابق للاسم</button>
+    <button class="reason-option" data-reason="custom">سبب آخر...</button>
+    <textarea class="reason-custom" id="customReasonInput" rows="3" placeholder="اكتب السبب هنا"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" id="modalCancelBtn">إلغاء</button>
+      <button class="modal-confirm-btn" id="modalConfirmBtn" disabled>تأكيد الرفض</button>
+    </div>
+  </div>
+</div>
+
+<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let allOrders = [];
+let currentFilter = 'all';
+let rejectingOrderId = null;
+let selectedReason = null;
+let currentAdminId = null;
+
+const statusLabels = {
+  pending_review: 'قيد المراجعة',
+  in_progress: 'قيد التنفيذ',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+  rejected: 'مرفوض'
+};
+
+const rejectModal = document.getElementById('rejectModal');
+const customReasonInput = document.getElementById('customReasonInput');
+const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+document.querySelectorAll('.reason-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.reason-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    if (btn.dataset.reason === 'custom') {
+      customReasonInput.classList.add('show');
+      selectedReason = customReasonInput.value.trim() || null;
+    } else {
+      customReasonInput.classList.remove('show');
+      selectedReason = btn.dataset.reason;
+    }
+    modalConfirmBtn.disabled = !selectedReason;
+  });
+});
+
+customReasonInput.addEventListener('input', () => {
+  selectedReason = customReasonInput.value.trim() || null;
+  modalConfirmBtn.disabled = !selectedReason;
+});
+
+document.getElementById('modalCancelBtn').addEventListener('click', closeRejectModal);
+
+modalConfirmBtn.addEventListener('click', async () => {
+  if (!selectedReason || !rejectingOrderId) return;
+  const order = allOrders.find(o => o.id === rejectingOrderId);
+  await supabaseClient.from('orders')
+    .update({ status: 'rejected', rejection_reason: selectedReason })
+    .eq('id', rejectingOrderId);
+  if (order) {
+    let refundNote = '';
+    if (order.payment_type === 'wallet') {
+      const { data: wallet } = await supabaseClient
+        .from('wallets').select('balance').eq('user_id', order.user_id).single();
+      const newBalance = (wallet ? Number(wallet.balance) : 0) + Number(order.price_sdg_snapshot);
+      await supabaseClient.from('wallets')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', order.user_id);
+      refundNote = ` وتم إرجاع ${formatSDG(order.price_sdg_snapshot)} ج.س إلى محفظتك تلقائياً.`;
+      await logAudit('استرجاع رصيد بعد رفض طلب', { order_id: rejectingOrderId, amount: order.price_sdg_snapshot, user_id: order.user_id });
+    }
+    await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}${refundNote}`);
+    await logAudit('رفض طلب', { order_id: rejectingOrderId, product: order.product_name_snapshot, reason: selectedReason });
+  }
+  closeRejectModal();
+  await loadOrders();
+});
+
+function openRejectModal(orderId) {
+  rejectingOrderId = orderId;
+  selectedReason = null;
+  customReasonInput.value = '';
+  customReasonInput.classList.remove('show');
+  document.querySelectorAll('.reason-option').forEach(b => b.classList.remove('selected'));
+  modalConfirmBtn.disabled = true;
+  rejectModal.classList.add('show');
+}
+
+function closeRejectModal() {
+  rejectModal.classList.remove('show');
+  rejectingOrderId = null;
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('role').eq('id', session.user.id).single();
+
+  if (!profile || profile.role !== 'admin') {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  currentAdminId = session.user.id;
+
+  document.getElementById('adminPage').style.display = 'block';
+
+  document.querySelectorAll('#filterRow .chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#filterRow .chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  await loadOrders();
+}
+
+async function loadOrders() {
+  const { data, error } = await supabaseClient
+    .from('orders')
+    .select('*, profiles(full_name, whatsapp_number)')
+    .order('created_at', { ascending: false });
+
+  allOrders = data || [];
+  render();
+}
+
+function render() {
+  const container = document.getElementById('ordersList');
+  const filtered = currentFilter === 'all'
+    ? allOrders
+    : allOrders.filter(o => o.status === currentFilter);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد طلبات في هذا التصنيف</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(o => renderOrderCard(o)).join('');
+
+  container.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.orderId));
+  });
+}
+
+function renderOrderCard(o) {
+  const date = new Date(o.created_at).toLocaleDateString('ar-EG', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
+    ? Object.entries(o.field_values).map(([k, v]) => `<div>${v}</div>`).join('')
+    : '';
+
+  const customerName = o.profiles?.full_name || 'بدون اسم';
+  const customerWhatsapp = o.profiles?.whatsapp_number || '—';
+
+  let actions = '';
+  if (o.status === 'pending_review') {
+    actions = `
+      <div class="admin-order-actions">
+        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${o.id}">تأكيد</button>
+        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${o.id}">رفض</button>
+      </div>`;
+  } else if (o.status === 'in_progress') {
+    actions = `
+      <div class="admin-order-actions">
+        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${o.id}">تم التنفيذ</button>
+      </div>`;
+  }
+
+  return `
+    <div class="order-card">
+      <div class="order-top">
+        <div>
+          <div class="order-product">${o.product_name_snapshot}</div>
+          <div class="order-date">${date}</div>
+        </div>
+        <span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span>
+      </div>
+
+      <div class="customer-info">${customerName} — ${customerWhatsapp}</div>
+
+      <div class="order-details">
+        <div><strong>السعر:</strong> ${formatSDG(o.price_sdg_snapshot)} ج.س</div>
+        <div><strong>الدفع:</strong> ${o.payment_type === 'wallet' ? 'من المحفظة' : 'تحويل بنكك'}</div>
+        ${fieldsHtml}
+        ${o.receipt_url ? `<div><a href="${o.receipt_url}" target="_blank" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
+      </div>
+
+      ${o.status === 'rejected' && o.rejection_reason ? `
+        <div class="order-rejection">سبب الرفض: ${o.rejection_reason}</div>
+      ` : ''}
+
+      ${actions}
+    </div>
+  `;
+}
+
+async function handleAction(action, orderId) {
+  const order = allOrders.find(o => o.id === orderId);
+  if (!order) return;
+
+  if (action === 'confirm') {
+    await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
+    await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
+    await logAudit('تأكيد طلب', { order_id: orderId, product: order.product_name_snapshot });
+    await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
+    await loadOrders();
+  } else if (action === 'complete') {
+    await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
+    await notifyCustomer(order.user_id, 'تم تنفيذ طلبك', `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`);
+    await logAudit('إتمام طلب', { order_id: orderId, product: order.product_name_snapshot });
+    await loadOrders();
+  } else if (action === 'reject') {
+    openRejectModal(orderId);
+  }
+}
+
+async function notifyCustomer(userId, title, message) {
+  await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'order' });
+}
+
+async function logAudit(action, details) {
+  await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
+}
+
+init();
+</script>
+</body>
+</html>

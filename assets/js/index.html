@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
+<meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- إضافة مكتبة الأيقونات الاحترافية لتطابق صفحة المنتج -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+
+<style>
+  /* تفعيل لوحة الألوان الملكية الفخمة لـ RAIZEY STORE */
+  :root {
+    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
+    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
+    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+    --danger: #e5484d;
+  }
+
+  body {
+    background-color: var(--bg-main) !important;
+    color: var(--text-light) !important;
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
+  .categories-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 10px 20px !important;
+  }
+
+  /* كارت اللعبة الموحد */
+  .game-card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    padding: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: all 0.25s ease-in-out !important;
+    text-decoration: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  
+  /* تأثير التوهج الذهبي المضيء الفخم عند التفاعل مع الكارت */
+  .game-card:hover, 
+  .game-card:active {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 15px rgba(255, 106, 26, 0.12) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  /* غلاف/أيقونة اللعبة */
+  .game-thumb {
+    width: 100% !important;
+    height: 125px !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--bg-main) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  .game-thumb img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .game-info {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-grow: 1 !important;
+    margin-top: 10px !important;
+  }
+
+  .game-name {
+    color: var(--text-light) !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    text-align: right !important;
+    margin-bottom: 4px !important;
+  }
+
+  .game-desc {
+    color: var(--text-muted) !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    text-align: right !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    height: 30px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .game-btn {
+    width: 100% !important;
+    background: rgba(255, 106, 26, 0.06) !important;
+    color: var(--accent-gold) !important;
+    border: 1px solid rgba(255, 106, 26, 0.3) !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    padding: 8px 0 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    transition: all 0.2s !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+  .game-card:hover .game-btn {
+    background: var(--accent-gold) !important;
+    color: #1a1d29 !important;
+    border-color: var(--accent-gold) !important;
+  }
+
+  /* ستايل الهيدر اللامع واللوجو السداسي الذهبي */
+  .site-header {
+    background: var(--bg-card) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+  .hamburger-btn span {
+    background: var(--text-light) !important;
+  }
+
+  /* شريط الإعلانات اللانهائي المحدث باللون الذهبي الملكي */
+  .marquee-strip {
+    overflow: hidden !important;
+    width: 100% !important;
+    background: var(--bg-card) !important;
+    border-top: 1px solid var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 12px 0 !important;
+    direction: ltr !important;
+  }
+  .marquee-track {
+    display: flex !important;
+    width: max-content !important;
+    gap: 40px !important;
+    animation: seamless-marquee 25s linear infinite !important;
+  }
+  .marquee-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: var(--text-light) !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    direction: rtl !important;
+  }
+  .marquee-item svg {
+    color: var(--accent-gold) !important;
+    flex-shrink: 0 !important;
+  }
+
+  @keyframes seamless-marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ستايل الدروار الجانبي الفخم وملخص المحفظة */
+  .drawer-panel {
+    background: var(--bg-main) !important;
+    border-left: 1px solid var(--border-color) !important;
+  }
+  .drawer-wallet-box {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    padding: 14px !important;
+  }
+  .drawer-wallet-amount {
+    color: var(--accent-gold) !important;
+    font-weight: 900 !important;
+  }
+  .drawer-nav a {
+    color: var(--text-light) !important;
+  }
+  .drawer-nav a:hover {
+    color: var(--accent-gold) !important;
+    background: rgba(255, 106, 26, 0.04) !important;
+  }
+  .drawer-nav a svg {
+    color: var(--text-muted) !important;
+  }
+  .drawer-nav a:hover svg {
+    color: var(--accent-gold) !important;
+  }
+  .drawer-divider {
+    border-top: 1px solid var(--border-color) !important;
+  }
+
+  /* زر تسجيل الدخول داخل الدروار */
+  .auth-btn {
+    background: var(--accent-gold) !important;
+    color: #1a1d29 !important;
+    font-weight: 900 !important;
+    padding: 12px;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+
+  /* زر العوامة الخاص بالواتساب */
+  .whatsapp-fab {
+    background: #25D366 !important; /* لون واتساب الرسمي الأصلي للاعتمادية */
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <button class="hamburger-btn" id="openDrawerBtn" title="القائمة">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="logo" style="display:flex; align-items:center; gap:8px;">
+      <!-- التحديث الذهبي للوجو السداسي الفخم لـ RAIZEY STORE -->
+      <svg class="hex-logo" width="34" height="34" viewBox="0 0 100 100">
+        <polygon points="50,3 93,25 93,75 50,97 7,75 7,25" fill="#f5f1ea" stroke="#ff6a1a" stroke-width="4"/>
+        <path d="M28 32 L28 68 M28 32 L50 32 Q60 32 60 42 Q60 50 50 50 L28 50 M46 50 L62 68" 
+              stroke="#ff6a1a" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M62 32 L82 32 L62 62 L82 62" 
+              stroke="#ff6a1a" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+      </svg>
+      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color:var(--accent-gold);">STORE</span></span>
+    </div>
+    <div class="header-actions">
+      <a href="search.html" class="icon-btn" title="بحث" style="color: var(--text-light);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+      </a>
+      <a href="notifications.html" class="icon-btn" title="الإشعارات" style="color: var(--text-light);">
+        <span class="badge-dot" id="notifDot" style="background: var(--accent-gold); display:none;"></span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer-panel">
+    <button class="drawer-close-btn" id="closeDrawerBtn" style="color: var(--text-light);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div id="drawerGuestBox" style="display:none; padding: 20px 10px;">
+      <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
+      <a href="login.html" class="auth-btn" style="display:block; text-align:center; margin-bottom:14px;">تسجيل الدخول</a>
+      <a href="register.html" style="display:block; text-align:center; font-size:13px; color:var(--accent-gold); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
+    </div>
+    <div id="drawerUserBox" style="display:none;">
+      <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
+      <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted);"></div>
+
+      <div class="drawer-wallet-box">
+        <div class="drawer-wallet-label" style="color:var(--text-muted);">رصيدك الحالي</div>
+        <div class="drawer-wallet-amount" id="drawerBalance">...</div>
+      </div>
+
+      <nav class="drawer-nav">
+        <a href="index.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> تصفح المنتجات</a>
+        <a href="cart.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> سلة المشتريات</a>
+        <a href="wallet.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg> شحن الرصيد</a>
+        <a href="my-orders.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h6"/></svg> سجل طلباتي</a>
+        <a href="referrals.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M12 8a3 3 0 1 0-3-3c0 1.5 1 2.5 3 3ZM12 8a3 3 0 1 1 3-3c0 1.5-1 2.5-3 3Z"/></svg> إحالاتي وأرباحي</a>
+        <a href="notifications.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> الإشعارات</a>
+        <a href="account.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> إعدادات الحساب</a>
+      </nav>
+
+      <div class="drawer-divider" id="adminDividerBox" style="display:none;"></div>
+      <nav class="drawer-nav" id="adminLinkBox" style="display:none;">
+        <a href="admin.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> لوحة الأدمن</a>
+      </nav>
+
+      <div class="drawer-divider"></div>
+      <button id="drawerLogoutBtn" style="width:100%; text-align:right; padding:13px 10px; border-radius:10px; font-size:14px; font-weight:600; color:var(--danger); background:none; display:flex; align-items:center; gap:12px; border:none; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> تسجيل الخروج</button>
+    </div>
+  </div>
+</div>
+
+<section class="hero-slider">
+  <div class="slider-track" id="sliderTrack">
+    <div class="slide slide-1" style="background: linear-gradient(135deg, #FFF4EA 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">RAIZEY STORE</div>
+      <h2 style="color: var(--text-light);">اشحن رصيدك فوراً بأفضل الأسعار</h2>
+      <p style="color: var(--text-muted);">شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
+    </div>
+    <div class="slide slide-2" style="background: linear-gradient(135deg, #FFEFE0 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">دفع مرن</div>
+      <h2 style="color: var(--text-light);">ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
+      <p style="color: var(--text-muted);">محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
+    </div>
+    <div class="slide slide-3" style="background: linear-gradient(135deg, #FFF8F2 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">دعم فوري</div>
+      <h2 style="color: var(--text-light);">تواصل معانا مباشرة على واتساب</h2>
+      <p style="color: var(--text-muted);">فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
+    </div>
+  </div>
+  <div class="slider-dots" id="sliderDots"></div>
+</section>
+
+<div class="marquee-strip">
+  <div class="marquee-track" id="marqueeTrack">
+    <!-- المجموعة الأولى -->
+    <span class="marquee-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg> تسليم فوري</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg> دفع آمن 100%</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> دعم على مدار الساعة</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7Z"/></svg> أسعار تنافسية</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg> عروض ومكافآت إحالة</span>
+    <!-- المجموعة الثانية التكرارية -->
+    <span class="marquee-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg> تسليم فوري</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6z"/></svg> دفع آمن 100%</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> دعم على مدار الساعة</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7Z"/></svg> أسعار تنافسية</span>
+    <span class="marquee-item"><span class="dot"></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg> عروض ومكافآت إحالة</span>
+  </div>
+</div>
+
+<!-- حاوية عرض كروت الألعاب الموحدة -->
+<div style="padding: 20px 20px 0 20px;">
+  <h2 style="font-size: 18px; font-weight: 800; color: var(--text-light); margin: 0;">تصفح الألعاب والخدمات</h2>
+</div>
+<div id="categoriesContainer" class="categories-grid">
+  <div style="color:var(--text-muted); font-size:13px; padding:20px;">جاري تحميل الألعاب...</div>
+</div>
+
+<footer class="site-footer" style="background: var(--bg-card); border-top: 1px solid var(--border-color); color: var(--text-muted); padding: 20px 10px;">
+  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+</footer>
+
+<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="#1a1d29"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
+</a>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+// ---------- Slider ----------
+let currentSlide = 0;
+const track = document.getElementById('sliderTrack');
+const dotsBox = document.getElementById('sliderDots');
+const slideCount = track.children.length;
+
+for (let i = 0; i < slideCount; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  dotsBox.appendChild(d);
+}
+
+function goToSlide(i) {
+  currentSlide = i;
+  track.style.transform = `translateX(${currentSlide * 100}%)`;
+  [...dotsBox.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
+}
+
+setInterval(() => {
+  goToSlide((currentSlide + 1) % slideCount);
+}, 4500);
+
+// ---------- Drawer ----------
+const drawerOverlay = document.getElementById('drawerOverlay');
+document.getElementById('openDrawerBtn').addEventListener('click', () => {
+  drawerOverlay.classList.add('show');
+  loadDrawer();
+});
+document.getElementById('closeDrawerBtn').addEventListener('click', () => {
+  drawerOverlay.classList.remove('show');
+});
+drawerOverlay.addEventListener('click', (e) => {
+  if (e.target === drawerOverlay) drawerOverlay.classList.remove('show');
+});
+document.getElementById('drawerLogoutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+async function loadDrawer() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if (!session) {
+    document.getElementById('drawerGuestBox').style.display = 'block';
+    document.getElementById('drawerUserBox').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('drawerGuestBox').style.display = 'none';
+  document.getElementById('drawerUserBox').style.display = 'block';
+  document.getElementById('drawerEmail').textContent = session.user.email;
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('full_name, role').eq('id', session.user.id).single();
+
+  document.getElementById('drawerGreeting').textContent = profile?.full_name
+    ? `مرحباً، ${profile.full_name}`
+    : 'مرحباً بك يا لاعب';
+
+  if (profile?.role === 'admin') {
+    document.getElementById('adminLinkBox').style.display = 'block';
+    document.getElementById('adminDividerBox').style.display = 'block';
+  }
+
+  const { data: wallet } = await supabaseClient
+    .from('wallets').select('balance').eq('user_id', session.user.id).single();
+
+  document.getElementById('drawerBalance').textContent =
+    `${formatSDG(wallet ? wallet.balance : 0)} ج.س`;
+}
+
+// ---------- جلب وعرض كروت الألعاب الموحدة ----------
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    const { count } = await supabaseClient
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+      .eq('is_read', false);
+    if (count && count > 0) {
+      document.getElementById('notifDot').style.display = 'block';
+    }
+  }
+
+  // جلب التصنيفات النشطة فقط مرتبة حسب اختيارك
+  const { data: categories } = await supabaseClient
+    .from('categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order');
+
+  renderCategories(categories || []);
+}
+
+function renderCategories(categories) {
+  const container = document.getElementById('categoriesContainer');
+
+  if (categories.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px; text-align:center; grid-column: 1 / -1;">
+        <h3>لا توجد ألعاب أو تصنيفات متاحة حالياً</h3>
+        <p style="color:var(--text-muted);">تابعنا قريباً — بنجهز عروض فخمة ليك</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = categories.map(cat => {
+    // تجهيز الصورة أو الأيقونة الافتراضية
+    const imgHtml = cat.image_url 
+      ? `<img src="${cat.image_url}" alt="${cat.name}" loading="lazy">`
+      : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
+
+    // عرض حقل الوصف المحدث وإخفاء الفراغ إذا لم يكتب الأدمن وصفاً
+    const descText = cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً';
+
+    return `
+      <a href="category.html?id=${cat.id}" class="game-card">
+        <div class="game-thumb">
+          ${imgHtml}
+        </div>
+        <div class="game-info">
+          <div class="game-name">${cat.name}</div>
+          <div class="game-desc" title="${descText}">${descText}</div>
+          <div class="game-btn">
+            <span>عرض الباقات</span>
+            <i class="fas fa-chevron-left" style="font-size:10px;"></i>
+          </div>
+        </div>
+      </a>
+    `;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+  </html>

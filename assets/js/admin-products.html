@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المنتجات — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+
+<div class="admin-page" id="adminPage" style="display:none;">
+  <div class="page-header">
+    <h1>إدارة المنتجات</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="admin-nav">
+    <a href="admin.html">الرئيسية</a>
+    <a href="admin-orders.html">الطلبات</a>
+    <a href="admin-topups.html">شحن المحافظ</a>
+    <a href="admin-products.html" class="active">المنتجات</a>
+    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-customers.html">العملاء</a>
+    <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
+    <a href="admin-referral-milestones.html">مستويات الإحالة</a>
+  </div>
+
+  <button class="add-new-btn" id="addNewBtn">+ إضافة منتج جديد</button>
+
+  <div id="productsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+</div>
+
+<div class="modal-overlay" id="formModal">
+  <div class="modal-box" style="max-height:85vh; overflow-y:auto;">
+    <div class="modal-title" id="formModalTitle">منتج جديد</div>
+
+    <div class="field">
+      <label>التصنيف</label>
+      <select id="categoryInput"></select>
+    </div>
+
+    <div class="field">
+      <label>اسم المنتج</label>
+      <input type="text" id="nameInput" placeholder="مثلاً: 60 UC">
+    </div>
+
+    <div class="field">
+      <label>الوصف المختصر (اختياري)</label>
+      <input type="text" id="descInput" placeholder="وصف مختصر يظهر في القائمة">
+    </div>
+
+    <!-- الحقل الجديد الفاخر: شرح المنتج والتعليمات والتنبيهات للعميل -->
+    <div class="field">
+      <label>شرح المنتج / طريقة الاستلام والتنبيهات (يظهر للعميل في صفحة المنتج)</label>
+      <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal', sans-serif; font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
+    </div>
+
+    <div class="field">
+      <label>صورة المنتج</label>
+      <div class="file-upload" id="fileUploadBox">
+        اضغط لرفع صورة
+        <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+      </div>
+      <input type="hidden" id="imageInput">
+    </div>
+
+    <div class="field">
+      <label>السعر (بالدولار)</label>
+      <input type="number" id="priceInput" step="0.01" placeholder="1.00">
+    </div>
+
+    <div class="field">
+      <label>ترتيب العرض</label>
+      <input type="number" id="orderInput" placeholder="0">
+    </div>
+
+    <div class="field">
+      <label>الحالة</label>
+      <select id="activeInput">
+        <option value="true">فعّال (يظهر للعملاء)</option>
+        <option value="false">غير فعّال (مخفي)</option>
+      </select>
+    </div>
+
+    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:8px; color:var(--text-muted);">
+      البيانات المطلوبة من العميل عند الشراء (يتم تحديد العنوان والنص الداخلي)
+    </label>
+    <div id="fieldsBuilder"></div>
+    <button class="add-field-btn" id="addFieldBtn" type="button">+ إضافة حقل مطلوب</button>
+
+    <div class="form-error" id="formError"></div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let products = [];
+let categories = [];
+let editingId = null;
+
+const formModal = document.getElementById('formModal');
+const categoryInput = document.getElementById('categoryInput');
+const nameInput = document.getElementById('nameInput');
+const descInput = document.getElementById('descInput');
+const instructionsInput = document.getElementById('instructionsInput'); // ربط الحقل الجديد
+const imageInput = document.getElementById('imageInput');
+const priceInput = document.getElementById('priceInput');
+const orderInput = document.getElementById('orderInput');
+const activeInput = document.getElementById('activeInput');
+const formError = document.getElementById('formError');
+const fieldsBuilder = document.getElementById('fieldsBuilder');
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('role').eq('id', session.user.id).single();
+
+  if (!profile || profile.role !== 'admin') {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('adminPage').style.display = 'block';
+  document.getElementById('addNewBtn').addEventListener('click', () => openForm(null));
+  document.getElementById('formCancelBtn').addEventListener('click', closeForm);
+  document.getElementById('formSaveBtn').addEventListener('click', saveProduct);
+  document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', '', ''));
+
+  const fileBox = document.getElementById('fileUploadBox');
+  const fileInput = document.getElementById('imageFileInput');
+  fileBox.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    fileBox.textContent = 'جارِ الرفع...';
+
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+    const { error } = await supabaseClient.storage.from('product-images').upload(filePath, file);
+    if (error) {
+      fileBox.textContent = 'فشل الرفع، اضغط للمحاولة تاني';
+      return;
+    }
+
+    const { data: urlData } = supabaseClient.storage.from('product-images').getPublicUrl(filePath);
+    document.getElementById('imageInput').value = urlData.publicUrl;
+    fileBox.textContent = `${file.name}`;
+    fileBox.classList.add('has-file');
+  });
+
+  await loadCategories();
+  await loadProducts();
+}
+
+async function loadCategories() {
+  const { data } = await supabaseClient.from('categories').select('*').order('display_order');
+  categories = data || [];
+  categoryInput.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function loadProducts() {
+  const { data } = await supabaseClient
+    .from('products').select('*, categories(name)').order('display_order');
+  products = data || [];
+  render();
+}
+
+function render() {
+  const container = document.getElementById('productsList');
+  if (products.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد منتجات بعد</div>`;
+    return;
+  }
+
+  container.innerHTML = products.map(p => `
+    <div class="manage-item">
+      <div class="manage-item-thumb">
+        ${p.image_url ? `<img src="${p.image_url}" alt="">` : 'لا صورة'}
+      </div>
+      <div class="manage-item-info">
+        <div class="manage-item-name">
+          ${p.name}
+          ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
+        </div>
+        <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
+      </div>
+      <div class="manage-item-actions">
+        <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${p.id}"><i class="fas fa-trash-can"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+    btn.addEventListener('click', () => openForm(btn.dataset.id));
+  });
+  container.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => deleteProduct(btn.dataset.id));
+  });
+}
+
+// دالة بناء الأسطر المحدثة: تدعم ترتيب (العنوان يمين) و (النص الداخلي شمال) مع توليد مفتاح برمجى مخفي ذكي تلقائياً
+function addFieldRow(key, label, placeholder = '') {
+  const row = document.createElement('div');
+  row.className = 'field-row';
+  row.style.display = 'flex';
+  row.style.gap = '10px';
+  row.style.marginBottom = '12px';
+  row.style.alignItems = 'center';
+  
+  // توليد مفتاح برمجى فريد في الخلفية عشان السوبابيز يحفظ القيم بشكل منظم
+  const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
+
+  row.innerHTML = `
+    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="hidden" class="field-key" value="${safeKey}">
+    <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  `;
+  row.querySelector('button').addEventListener('click', () => row.remove());
+  fieldsBuilder.appendChild(row);
+}
+
+function openForm(id) {
+  editingId = id;
+  formError.textContent = '';
+  fieldsBuilder.innerHTML = '';
+
+  const fileBox = document.getElementById('fileUploadBox');
+
+  if (id) {
+    const p = products.find(x => x.id === id);
+    document.getElementById('formModalTitle').textContent = 'تعديل المنتج';
+    categoryInput.value = p.category_id || '';
+    nameInput.value = p.name;
+    descInput.value = p.description || '';
+    instructionsInput.value = p.instructions || ''; // تعبئة حقل التعليمات عند التعديل
+    document.getElementById('imageInput').value = p.image_url || '';
+    fileBox.textContent = p.image_url ? 'يوجد صورة مرفوعة (اضغط للتغيير)' : 'اضغط لرفع صورة';
+    fileBox.classList.toggle('has-file', !!p.image_url);
+    priceInput.value = p.price_usd;
+    orderInput.value = p.display_order;
+    activeInput.value = String(p.is_active);
+    
+    // تمرير الـ placeholder للحقول المخزنة سابقاً
+    (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
+  } else {
+    document.getElementById('formModalTitle').textContent = 'منتج جديد';
+    nameInput.value = '';
+    descInput.value = '';
+    instructionsInput.value = ''; // تصفير حقل التعليمات للمنتج الجديد
+    document.getElementById('imageInput').value = '';
+    fileBox.textContent = 'اضغط لرفع صورة';
+    fileBox.classList.remove('has-file');
+    priceInput.value = '';
+    orderInput.value = products.length;
+    activeInput.value = 'true';
+  }
+
+  formModal.classList.add('show');
+}
+
+function closeForm() {
+  formModal.classList.remove('show');
+  editingId = null;
+}
+
+// تجميع الحقول مع النص التوضيحي المكتوب
+function collectFields() {
+  const rows = fieldsBuilder.querySelectorAll('.field-row');
+  const fields = [];
+  for (const row of rows) {
+    const key = row.querySelector('.field-key').value.trim();
+    const label = row.querySelector('.field-label').value.trim();
+    const placeholder = row.querySelector('.field-placeholder').value.trim();
+    if (label) {
+      fields.push({ key, label, placeholder });
+    }
+  }
+  return fields;
+}
+
+async function saveProduct() {
+  const name = nameInput.value.trim();
+  const price = parseFloat(priceInput.value);
+  const categoryId = categoryInput.value;
+
+  if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
+  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح'; return; }
+  if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
+
+  const payload = {
+    name,
+    description: descInput.value.trim() || null,
+    instructions: instructionsInput.value.trim() || null, // حفظ حقل التعليمات الجديد في قاعدة البيانات
+    image_url: imageInput.value.trim() || null,
+    price_usd: price,
+    category_id: categoryId,
+    display_order: parseInt(orderInput.value) || 0,
+    is_active: activeInput.value === 'true',
+    required_fields: collectFields()
+  };
+
+  const { error } = editingId
+    ? await supabaseClient.from('products').update(payload).eq('id', editingId)
+    : await supabaseClient.from('products').insert(payload);
+
+    if (error) {
+    // هيطبع ليك سبب المشكلة الحقيقي عشان نعرفه فوراً
+    formError.textContent = 'خطأ من قاعدة البيانات: ' + error.message;
+    return;
+  }
+
+  closeForm();
+  await loadProducts();
+}
+
+async function deleteProduct(id) {
+  if (!confirm('متأكد عايز تحذف المنتج ده؟')) return;
+  await supabaseClient.from('products').delete().eq('id', id);
+  await loadProducts();
+}
+
+init();
+</script>
+</body>
+</html>
