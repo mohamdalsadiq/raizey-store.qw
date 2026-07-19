@@ -37,11 +37,9 @@
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 12px; }
 
   .variant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .variant-pill { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; }
-  .variant-pill i { display: block; font-size: 20px; color: var(--primary); margin-bottom: 8px; }
+  .variant-pill { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 22px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; display: flex; align-items: center; justify-content: center; min-height: 60px; }
   .variant-pill .v-name { font-size: 14px; font-weight: 800; color: var(--ink); }
   .variant-pill.active { background: var(--primary); border-color: var(--primary); }
-  .variant-pill.active i { color: var(--ink); }
   .variant-pill.active .v-name { color: var(--ink); }
 
   .price-display { font-size: 28px; font-weight: 900; color: var(--primary); text-align: center; margin: 6px 0 22px; }
@@ -196,7 +194,6 @@ function render() {
     <div class="variant-grid" id="variantGrid">
       ${variants.map((v, i) => `
         <div class="variant-pill ${i === selectedIndex ? 'active' : ''}" data-idx="${i}">
-          <i class="fas fa-gem"></i>
           <div class="v-name">${v.name}</div>
         </div>
       `).join('')}
@@ -238,9 +235,16 @@ function render() {
 
     <div class="bank-details" id="bankDetails">
       ${paymentMethods.map(m => `
-        <div class="bank-account-row">
-          <span><strong style="color:var(--primary);">${m.name}:</strong> <span class="acc-info-text">${m.account_info}</span>${m.instructions ? `<br><span style="color:var(--text-muted); font-size:13px;">${m.instructions}</span>` : ''}</span>
-          <button type="button" class="copy-account-btn" data-copy="${m.account_info}">نسخ</button>
+        <div style="margin-bottom:14px;">
+          <div class="bank-account-row">
+            <span><strong style="color:var(--primary);">${m.name}</strong> — اسم الحساب: <span class="acc-info-text">${m.account_name || ''}</span></span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+          </div>
+          <div class="bank-account-row">
+            <span>رقم الحساب: <span class="acc-info-text">${m.account_number || ''}</span></span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+          </div>
+          ${m.instructions ? `<div style="color:var(--text-muted); font-size:13px;">${m.instructions}</div>` : ''}
         </div>
       `).join('')}
 
@@ -250,6 +254,11 @@ function render() {
           <option value="">-- اختر --</option>
           ${paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
         </select>
+      </div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>رقم العملية (من رسالة التحويل) *</label>
+        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
       </div>
 
       <div class="file-upload" id="fileUploadBox">
@@ -424,6 +433,8 @@ async function submitOrder(errorBox, submitBtn) {
   }
 
   if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  if (!transactionRef) { errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const fileExt = receiptFile.name.split('.').pop();
   const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
@@ -431,7 +442,7 @@ async function submitOrder(errorBox, submitBtn) {
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
-  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: p.id, product_name_snapshot: p.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, receipt_hash: receiptHash, is_duplicate_receipt: isDuplicate, status: isDuplicate ? 'rejected' : 'pending_review', rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null });
+  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: p.id, product_name_snapshot: p.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, receipt_hash: receiptHash, transaction_reference: transactionRef, is_duplicate_receipt: isDuplicate, status: isDuplicate ? 'rejected' : 'pending_review', rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null });
   if (orderError) { errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   if (isDuplicate) {
     await supabaseClient.from('audit_logs').insert({ admin_id: null, action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً', details: { user_id: currentUser.id, receipt_hash: receiptHash } });

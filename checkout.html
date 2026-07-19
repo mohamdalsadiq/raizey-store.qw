@@ -198,6 +198,11 @@
         </select>
       </div>
 
+      <div class="field" style="margin-top:12px;">
+        <label>رقم العملية (من رسالة التحويل) *</label>
+        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+      </div>
+
       <div class="file-upload" id="fileUploadBox">
         <i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل
         <input type="file" id="receiptInput" accept="image/*" style="display:none;">
@@ -313,10 +318,16 @@ function renderCheckout() {
 
   const bankAccountsContainer = document.getElementById('bankAccountsContainer');
   bankAccountsContainer.innerHTML = paymentMethods.map(m => `
-    <div style="margin-bottom:10px; background:var(--bg-card); padding:10px; border-radius:8px; font-size:13px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
-      <span><strong>${m.name}:</strong> ${m.account_info}
-      ${m.instructions ? `<br><span style="color:var(--text-muted);">${m.instructions}</span>` : ''}</span>
-      <button type="button" class="copy-account-btn" data-copy="${m.account_info}">نسخ</button>
+    <div style="margin-bottom:14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; margin-bottom:6px;">
+        <span><strong>${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px;">
+        <span>رقم الحساب: ${m.account_number || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+      </div>
+      ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:4px;">${m.instructions}</div>` : ''}
     </div>
   `).join('');
   bankAccountsContainer.querySelectorAll('.copy-account-btn').forEach(btn => {
@@ -448,6 +459,14 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
+  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  if (!transactionRef) {
+    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
   const fileExt = receiptFile.name.split('.').pop();
   const filePath = `${currentUser.id}/cart-${Date.now()}.${fileExt}`;
 
@@ -476,6 +495,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         payment_method_id: selectedMethodId,
         receipt_url: urlData.publicUrl,
         receipt_hash: receiptHash,
+        transaction_reference: transactionRef,
         is_duplicate_receipt: isDuplicate,
         status: isDuplicate ? 'rejected' : 'pending_review',
         rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null

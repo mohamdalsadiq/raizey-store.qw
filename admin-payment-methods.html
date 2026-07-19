@@ -47,8 +47,13 @@
     </div>
 
     <div class="field">
-      <label>بيانات الحساب</label>
-      <input type="text" id="accountInput" placeholder="اسم الحساب ورقمه">
+      <label>اسم صاحب الحساب</label>
+      <input type="text" id="accountNameInput" placeholder="مثلاً: محمد أحمد">
+    </div>
+
+    <div class="field">
+      <label>رقم الحساب</label>
+      <input type="text" id="accountNumberInput" placeholder="مثلاً: 1126857804">
     </div>
 
     <div class="field">
@@ -91,7 +96,8 @@ let editingId = null;
 
 const formModal = document.getElementById('formModal');
 const nameInput = document.getElementById('nameInput');
-const accountInput = document.getElementById('accountInput');
+const accountNameInput = document.getElementById('accountNameInput');
+const accountNumberInput = document.getElementById('accountNumberInput');
 const instructionsInput = document.getElementById('instructionsInput');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
@@ -137,7 +143,7 @@ function render() {
           ${m.name}
           ${!m.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
         </div>
-        <div class="manage-item-sub">${m.account_info}</div>
+        <div class="manage-item-sub">${m.account_name || ''} — ${m.account_number || ''}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><i class="fas fa-pen"></i></button>
@@ -162,14 +168,16 @@ function openForm(id) {
     const m = methods.find(x => x.id === id);
     document.getElementById('formModalTitle').textContent = 'تعديل وسيلة الدفع';
     nameInput.value = m.name;
-    accountInput.value = m.account_info;
+    accountNameInput.value = m.account_name || '';
+    accountNumberInput.value = m.account_number || '';
     instructionsInput.value = m.instructions || '';
     orderInput.value = m.display_order;
     activeInput.value = String(m.is_active);
   } else {
     document.getElementById('formModalTitle').textContent = 'وسيلة دفع جديدة';
     nameInput.value = '';
-    accountInput.value = '';
+    accountNameInput.value = '';
+    accountNumberInput.value = '';
     instructionsInput.value = '';
     orderInput.value = methods.length;
     activeInput.value = 'true';
@@ -185,14 +193,17 @@ function closeForm() {
 
 async function saveMethod() {
   const name = nameInput.value.trim();
-  const account = accountInput.value.trim();
+  const accountName = accountNameInput.value.trim();
+  const accountNumber = accountNumberInput.value.trim();
 
   if (!name) { formError.textContent = 'أدخل اسم الوسيلة'; return; }
-  if (!account) { formError.textContent = 'أدخل بيانات الحساب'; return; }
+  if (!accountName) { formError.textContent = 'أدخل اسم صاحب الحساب'; return; }
+  if (!accountNumber) { formError.textContent = 'أدخل رقم الحساب'; return; }
 
   const payload = {
     name,
-    account_info: account,
+    account_name: accountName,
+    account_number: accountNumber,
     instructions: instructionsInput.value.trim() || null,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true'

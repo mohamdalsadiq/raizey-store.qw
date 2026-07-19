@@ -268,6 +268,18 @@
     margin-bottom: 20px;
     display: none;
   }
+  .copy-account-btn {
+    flex-shrink: 0;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    cursor: pointer;
+  }
+  .copy-account-btn.copied { color: #16a34a; border-color: #16a34a; }
   .bank-details.show {
     display: block !important;
   }
@@ -524,11 +536,23 @@ function render() {
 
     <div class="bank-details" id="bankDetails">
       ${paymentMethods.map(m => `
-        <div style="margin-bottom:12px; font-size:14px; line-height:1.5;">
-          <strong style="color:var(--accent-gold);">${m.name}:</strong> ${m.account_info}
-          ${m.instructions ? `<br><span style="color:var(--text-muted); font-size:13px;">${m.instructions}</span>` : ''}
+        <div style="margin-bottom:14px; font-size:14px; line-height:1.5;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+            <span><strong style="color:var(--accent-gold);">${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span>رقم الحساب: ${m.account_number || ''}</span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+          </div>
+          ${m.instructions ? `<span style="color:var(--text-muted); font-size:13px;">${m.instructions}</span>` : ''}
         </div>
       `).join('')}
+
+      <div class="field" style="margin-top:14px;">
+        <label>رقم العملية (من رسالة التحويل) *</label>
+        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+      </div>
 
       <div class="field" style="margin-top:14px;">
         <label>اختر وسيلة التحويل</label>
@@ -636,6 +660,17 @@ function attachEvents(canUseWallet) {
     bankDetails.classList.add('show');
   });
 
+  document.querySelectorAll('.copy-account-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = 'تم النسخ'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+      } catch (e) {}
+    });
+  });
+
   fileBox.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
@@ -691,13 +726,15 @@ async function submitOrder(errorBox, submitBtn) {
     window.location.href = 'my-orders.html'; return;
   }
   if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  if (!transactionRef) { errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const fileExt = receiptFile.name.split('.').pop(); const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
   if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
-  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, receipt_hash: receiptHash, is_duplicate_receipt: isDuplicate, status: isDuplicate ? 'rejected' : 'pending_review', rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null });
+  const { error: orderError } = await supabaseClient.from('orders').insert({ user_id: currentUser.id, product_id: productId, product_name_snapshot: product.name, price_sdg_snapshot: currentPrice(), field_values: fieldValues, payment_type: 'bank', payment_method_id: selectedMethodId, receipt_url: urlData.publicUrl, receipt_hash: receiptHash, transaction_reference: transactionRef, is_duplicate_receipt: isDuplicate, status: isDuplicate ? 'rejected' : 'pending_review', rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null });
   if (orderError) { errorBox.textContent = 'حصل خطأ في إنشاء الطلب، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
   if (isDuplicate) {
     await supabaseClient.from('audit_logs').insert({ admin_id: null, action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً', details: { user_id: currentUser.id, receipt_hash: receiptHash } });

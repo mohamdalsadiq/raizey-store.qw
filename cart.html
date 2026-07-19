@@ -10,6 +10,18 @@
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
+  .copy-account-btn {
+    flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    cursor: pointer;
+  }
+  .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
   .cart-container {
     padding: 20px;
     max-width: 600px;
@@ -116,6 +128,11 @@
         <select id="methodSelect">
           <option value="">-- اختر --</option>
         </select>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>رقم العملية (من رسالة التحويل) *</label>
+        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
       </div>
 
       <div class="file-upload" id="fileUploadBox">
@@ -238,11 +255,29 @@ function renderCart() {
   const methodSelect = document.getElementById('methodSelect');
   
   bankContainer.innerHTML = paymentMethods.map(m => `
-    <div style="margin-bottom:10px; font-size:13px; color:var(--text-muted);">
-      <strong style="color:var(--ink);">${m.name}:</strong> ${m.account_info}
-      ${m.instructions ? `<br><span style="font-size:11px; color:var(--primary);">${m.instructions}</span>` : ''}
+    <div style="margin-bottom:14px; font-size:13px; color:var(--text-muted);">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+        <span><strong style="color:var(--ink);">${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span>رقم الحساب: ${m.account_number || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+      </div>
+      ${m.instructions ? `<span style="font-size:11px; color:var(--primary);">${m.instructions}</span>` : ''}
     </div>
   `).join('');
+
+  bankContainer.querySelectorAll('.copy-account-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = 'تم النسخ'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+      } catch (e) {}
+    });
+  });
 
   methodSelect.innerHTML = '<option value="">-- اختر --</option>' + paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 
@@ -360,6 +395,14 @@ async function submitCartOrder() {
     return;
   }
 
+  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  if (!transactionRef) {
+    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
+    return;
+  }
+
   // رفع الإيصال مرة واحدة فقط واستخدامه لكل عناصر السلة
   const fileExt = receiptFile.name.split('.').pop();
   const filePath = `${currentUser.id}/cart_${Date.now()}.${fileExt}`;
@@ -390,6 +433,7 @@ async function submitCartOrder() {
     payment_method_id: selectedMethodId,
     receipt_url: urlData.publicUrl,
     receipt_hash: receiptHash,
+    transaction_reference: transactionRef,
     is_duplicate_receipt: isDuplicate,
     status: isDuplicate ? 'rejected' : 'pending_review',
     rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null

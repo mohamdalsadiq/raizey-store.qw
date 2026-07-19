@@ -46,7 +46,12 @@
       </select>
     </div>
 
-    <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:10px;"></div>
+    <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:14px;"></div>
+
+    <div class="field">
+      <label>رقم العملية (من رسالة التحويل) *</label>
+      <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+    </div>
 
     <div class="file-upload" id="fileUploadBox">
       اضغط لرفع صورة الإيصال
@@ -92,7 +97,28 @@ async function init() {
   document.getElementById('methodSelect').addEventListener('change', (e) => {
     const method = paymentMethods.find(m => m.id === e.target.value);
     const box = document.getElementById('methodDetails');
-    box.textContent = method ? `${method.account_info}${method.instructions ? ' — ' + method.instructions : ''}` : '';
+    if (!method) { box.innerHTML = ''; return; }
+    box.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+        <span>اسم الحساب: ${method.account_name || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${method.account_name || ''}">نسخ</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span>رقم الحساب: ${method.account_number || ''}</span>
+        <button type="button" class="copy-account-btn" data-copy="${method.account_number || ''}">نسخ</button>
+      </div>
+      ${method.instructions ? `<div style="margin-top:6px;">${method.instructions}</div>` : ''}
+    `;
+    box.querySelectorAll('.copy-account-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copy);
+          const original = btn.textContent;
+          btn.textContent = 'تم النسخ'; btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+        } catch (err) {}
+      });
+    });
   });
 
   const fileBox = document.getElementById('fileUploadBox');
@@ -216,6 +242,11 @@ async function submitTopup() {
     errorBox.textContent = 'ارفع صورة الإيصال';
     return;
   }
+  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  if (!transactionRef) {
+    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
+    return;
+  }
 
   const submitBtn = document.getElementById('submitTopupBtn');
   submitBtn.disabled = true;
@@ -245,6 +276,7 @@ async function submitTopup() {
     payment_method_id: methodId,
     receipt_url: urlData.publicUrl,
     receipt_hash: receiptHash,
+    transaction_reference: transactionRef,
     is_duplicate_receipt: isDuplicate,
     status: isDuplicate ? 'rejected' : 'pending',
     rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
@@ -273,6 +305,8 @@ async function submitTopup() {
   document.getElementById('topupForm').classList.remove('show');
   document.getElementById('amountInput').value = '';
   document.getElementById('methodSelect').value = '';
+  document.getElementById('transactionRefInput').value = '';
+  document.getElementById('methodDetails').innerHTML = '';
   document.getElementById('fileUploadBox').textContent = 'اضغط لرفع صورة الإيصال';
   document.getElementById('fileUploadBox').classList.remove('has-file');
   receiptFile = null;
