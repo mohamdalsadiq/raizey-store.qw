@@ -9,10 +9,20 @@
 .auth-card {
   width: 100%;
   max-width: 400px;
-  background: var(--bg-card);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 30px 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 34px rgba(26, 29, 41, 0.08);
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-dim), var(--primary), #ffc98a, var(--primary));
 }
 
 .auth-logo {
@@ -107,6 +117,65 @@
 .auth-switch a {
   color: var(--primary);
   font-weight: 700;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.social-login-row {
+  display: flex;
+  gap: 10px;
+}
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.2s ease;
+}
+.social-btn:active { transform: scale(0.98); }
+.social-btn i { font-size: 15px; }
+.social-btn.fb-btn i { color: #1877F2; }
+.social-btn.google-btn i { color: #EA4335; }
+
+.pw-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.pw-strength-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  transition: width 0.25s ease, background 0.25s ease;
+  background: var(--danger);
+}
+.pw-strength-label {
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--text-muted);
 }
 
 .otp-inputs {

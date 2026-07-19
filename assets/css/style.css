@@ -12,6 +12,7 @@
   --text-muted: #7a7468;      /* نصوص فرعية دافئة مريحة للعين */
   --danger: #e5484d;
   --warning: #f59e0b;
+  --success: #16a34a;
   --font-display: 'Tajawal', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 14px;
@@ -641,8 +642,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   white-space: nowrap;
 }
 .status-pending_review { background: rgba(245, 158, 11,0.15); color: var(--warning); }
-.status-in_progress { background: rgba(255, 106, 26,0.15); color: var(--primary); }
-.status-completed { background: rgba(255, 106, 26,0.2); color: var(--primary); }
+.status-in_progress { background: rgba(245, 158, 11,0.15); color: var(--warning); }
+.status-completed { background: rgba(22, 163, 74,0.15); color: var(--success); }
 .status-cancelled { background: rgba(122, 116, 104,0.15); color: var(--text-muted); }
 .status-rejected { background: rgba(229, 72, 77,0.15); color: var(--danger); }
 
