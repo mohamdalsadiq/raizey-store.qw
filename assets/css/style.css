@@ -634,6 +634,19 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .order-product { font-weight: 700; font-size: 15px; }
 .order-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
+.copy-account-btn {
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+.copy-account-btn.copied { color: var(--success); border-color: var(--success); }
+
 .status-badge {
   font-size: 11px;
   font-weight: 700;
