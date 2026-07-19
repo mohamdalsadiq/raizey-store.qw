@@ -142,6 +142,12 @@
     margin-right: 8px;
   }
   .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
+  .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin: 16px 0 12px; }
+  .method-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .method-pill { background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); transition: 0.15s ease; }
+  .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
+  .selected-method-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
+  .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -189,14 +195,9 @@
     </div>
 
     <div class="bank-details" id="bankDetails">
-      <div id="bankAccountsContainer"></div>
-
-      <div class="field" style="margin-top:12px;">
-        <label>اختر وسيلة التحويل التي استخدمتها</label>
-        <select id="methodSelect">
-          <option value="">-- اختر وسيلة الدفع --</option>
-        </select>
-      </div>
+      <div class="section-label" style="margin-top:0;">اختر وسيلة التحويل التي استخدمتها</div>
+      <div class="method-picker-grid" id="methodPickerGrid"></div>
+      <div id="selectedMethodDetails"></div>
 
       <div class="field" style="margin-top:12px;">
         <label>رقم العملية (من رسالة التحويل) *</label>
@@ -253,17 +254,11 @@ async function init() {
   }
   currentUser = session.user;
 
-  const { data: wallet } = await supabaseClient
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', currentUser.id)
-    .single();
+  const [{ data: wallet }, { data: methods }] = await Promise.all([
+    supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
+    supabaseClient.from('payment_methods').select('*').eq('is_active', true)
+  ]);
   walletBalance = wallet ? wallet.balance : 0;
-
-  const { data: methods } = await supabaseClient
-    .from('payment_methods')
-    .select('*')
-    .eq('is_active', true);
   paymentMethods = methods || [];
 
   renderCheckout();
@@ -316,34 +311,40 @@ function renderCheckout() {
     walletText.innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن هنا</a>`;
   }
 
-  const bankAccountsContainer = document.getElementById('bankAccountsContainer');
-  bankAccountsContainer.innerHTML = paymentMethods.map(m => `
-    <div style="margin-bottom:14px;">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; margin-bottom:6px;">
-        <span><strong>${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
-      </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px;">
-        <span>رقم الحساب: ${m.account_number || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
-      </div>
-      ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:4px;">${m.instructions}</div>` : ''}
-    </div>
-  `).join('');
-  bankAccountsContainer.querySelectorAll('.copy-account-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(btn.dataset.copy);
-        const original = btn.textContent;
-        btn.textContent = 'تم النسخ'; btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
-      } catch (e) {}
+  const methodPickerGrid = document.getElementById('methodPickerGrid');
+  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${m.id}">${m.name}</div>`).join('');
+  methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      methodPickerGrid.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selectedMethodId = pill.dataset.methodId;
+      const m = paymentMethods.find(x => x.id === selectedMethodId);
+      const box = document.getElementById('selectedMethodDetails');
+      box.innerHTML = `
+        <div class="selected-method-box">
+          <div class="bank-account-row">
+            <span>اسم الحساب: ${m.account_name || ''}</span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+          </div>
+          <div class="bank-account-row" style="margin-bottom:0;">
+            <span>رقم الحساب: ${m.account_number || ''}</span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+          </div>
+          ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${m.instructions}</div>` : ''}
+        </div>
+      `;
+      box.querySelectorAll('.copy-account-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(btn.dataset.copy);
+            const original = btn.textContent;
+            btn.textContent = 'تم النسخ'; btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+          } catch (e) {}
+        });
+      });
     });
   });
-
-  const methodSelect = document.getElementById('methodSelect');
-  methodSelect.innerHTML = '<option value="">-- اختر وسيلة الدفع --</option>' + 
-    paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 
   attachCheckoutEvents(canUseWallet);
 }
@@ -405,10 +406,6 @@ function attachCheckoutEvents(canUseWallet) {
       fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${receiptFile.name}`;
       fileBox.classList.add('has-file');
     }
-  };
-
-  document.getElementById('methodSelect').onchange = (e) => {
-    selectedMethodId = e.target.value;
   };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);

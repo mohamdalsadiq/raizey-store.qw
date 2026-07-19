@@ -181,6 +181,17 @@ function render() {
   container.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.topupId));
   });
+
+  container.querySelectorAll('.mini-copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = 'تم'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+      } catch (e) {}
+    });
+  });
 }
 
 function renderTopupCard(t) {
@@ -206,8 +217,17 @@ function renderTopupCard(t) {
         </div>
         <span class="status-badge status-${t.status}">${statusLabels[t.status] || t.status}</span>
       </div>
-      <div class="customer-info">${customerName} — ${customerWhatsapp}</div>
+      <div class="customer-info">
+        <span>${customerName} — ${customerWhatsapp}</span>
+        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsapp}">نسخ الرقم</button>
+      </div>
       <div class="order-details">
+        ${t.transaction_reference ? `
+          <div class="copyable-row">
+            <span>رقم العملية: ${t.transaction_reference}</span>
+            <button type="button" class="mini-copy-btn" data-copy="${t.transaction_reference}">نسخ</button>
+          </div>
+        ` : ''}
         ${t.receipt_url ? `<div><a href="${t.receipt_url}" target="_blank" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
       ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${t.rejection_reason}</div>` : ''}

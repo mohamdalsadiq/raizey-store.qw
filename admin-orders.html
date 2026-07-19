@@ -203,6 +203,17 @@ function render() {
   container.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.orderId));
   });
+
+  container.querySelectorAll('.mini-copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const original = btn.textContent;
+        btn.textContent = 'تم'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+      } catch (e) {}
+    });
+  });
 }
 
 function renderOrderCard(o) {
@@ -211,8 +222,20 @@ function renderOrderCard(o) {
   });
 
   const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
-    ? Object.entries(o.field_values).map(([k, v]) => `<div>${v}</div>`).join('')
+    ? Object.entries(o.field_values).map(([k, v]) => `
+        <div class="copyable-row">
+          <span>${v}</span>
+          <button type="button" class="mini-copy-btn" data-copy="${v}">نسخ</button>
+        </div>
+      `).join('')
     : '';
+
+  const refHtml = o.transaction_reference ? `
+    <div class="copyable-row">
+      <span>رقم العملية: ${o.transaction_reference}</span>
+      <button type="button" class="mini-copy-btn" data-copy="${o.transaction_reference}">نسخ</button>
+    </div>
+  ` : '';
 
   const customerName = o.profiles?.full_name || 'بدون اسم';
   const customerWhatsapp = o.profiles?.whatsapp_number || '—';
@@ -241,12 +264,16 @@ function renderOrderCard(o) {
         <span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span>
       </div>
 
-      <div class="customer-info">${customerName} — ${customerWhatsapp}</div>
+      <div class="customer-info">
+        <span>${customerName} — ${customerWhatsapp}</span>
+        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsapp}">نسخ الرقم</button>
+      </div>
 
       <div class="order-details">
         <div><strong>السعر:</strong> ${formatSDG(o.price_sdg_snapshot)} ج.س</div>
         <div><strong>الدفع:</strong> ${o.payment_type === 'wallet' ? 'من المحفظة' : 'تحويل بنكك'}</div>
         ${fieldsHtml}
+        ${refHtml}
         ${o.receipt_url ? `<div><a href="${o.receipt_url}" target="_blank" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
 

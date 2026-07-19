@@ -65,6 +65,11 @@
   .file-upload i { font-size: 16px; margin-left: 6px; color: var(--primary); }
 
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+
+  .method-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .method-pill { background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); transition: 0.15s ease; }
+  .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
+  .selected-method-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .copy-account-btn { flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; color: var(--primary); cursor: pointer; }
   .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
 
@@ -128,7 +133,10 @@ async function init() {
   updateCartBadgeGlobal();
   if (!categoryId) { window.location.href = 'index.html'; return; }
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const [{ data: { session } }, rate] = await Promise.all([
+    supabaseClient.auth.getSession(),
+    getExchangeRate()
+  ]);
   if (!session) {
     sessionStorage.setItem('redirect_after_login', window.location.href);
     window.location.href = 'login.html';
@@ -136,13 +144,23 @@ async function init() {
   }
   currentUser = session.user;
 
-  const rate = await getExchangeRate();
+  const [
+    { data: cat },
+    { data: products },
+    { data: wallet },
+    { data: myProfile },
+    { data: methods },
+    { data: related }
+  ] = await Promise.all([
+    supabaseClient.from('categories').select('*').eq('id', categoryId).single(),
+    supabaseClient.from('products').select('*').eq('category_id', categoryId).eq('is_active', true).order('display_order'),
+    supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
+    supabaseClient.from('profiles').select('referred_by, referral_discount_used').eq('id', currentUser.id).single(),
+    supabaseClient.from('payment_methods').select('*').eq('is_active', true),
+    supabaseClient.from('products').select('*').eq('is_active', true).neq('category_id', categoryId).limit(6)
+  ]);
 
-  const { data: cat } = await supabaseClient.from('categories').select('*').eq('id', categoryId).single();
   category = cat;
-
-  const { data: products } = await supabaseClient
-    .from('products').select('*').eq('category_id', categoryId).eq('is_active', true).order('display_order');
 
   if (!products || products.length === 0) {
     document.getElementById('loadingBox').textContent = 'لا توجد باقات متاحة في هذا القسم حالياً';
@@ -150,20 +168,14 @@ async function init() {
   }
   variants = products.map(p => ({ ...p, price_sdg: p.price_usd * rate }));
 
-  const { data: wallet } = await supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single();
   walletBalance = wallet ? wallet.balance : 0;
 
-  const { data: myProfile } = await supabaseClient.from('profiles').select('referred_by, referral_discount_used').eq('id', currentUser.id).single();
   if (myProfile && myProfile.referred_by && !myProfile.referral_discount_used) {
     const { data: discountRow } = await supabaseClient.from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
     welcomeDiscount = discountRow ? parseFloat(discountRow.value) : 0;
   }
 
-  const { data: methods } = await supabaseClient.from('payment_methods').select('*').eq('is_active', true);
   paymentMethods = methods || [];
-
-  const { data: related } = await supabaseClient
-    .from('products').select('*').eq('is_active', true).neq('category_id', categoryId).limit(6);
   relatedProducts = (related || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
 
   render();
@@ -234,27 +246,14 @@ function render() {
     </div>
 
     <div class="bank-details" id="bankDetails">
-      ${paymentMethods.map(m => `
-        <div style="margin-bottom:14px;">
-          <div class="bank-account-row">
-            <span><strong style="color:var(--primary);">${m.name}</strong> — اسم الحساب: <span class="acc-info-text">${m.account_name || ''}</span></span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
-          </div>
-          <div class="bank-account-row">
-            <span>رقم الحساب: <span class="acc-info-text">${m.account_number || ''}</span></span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
-          </div>
-          ${m.instructions ? `<div style="color:var(--text-muted); font-size:13px;">${m.instructions}</div>` : ''}
-        </div>
-      `).join('')}
-
-      <div class="field" style="margin-top:14px;">
-        <label>اختر وسيلة التحويل</label>
-        <select id="methodSelect">
-          <option value="">-- اختر --</option>
-          ${paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
-        </select>
+      <div class="section-label" style="margin-top:0;">اختر وسيلة التحويل</div>
+      <div class="method-picker-grid" id="methodPickerGrid">
+        ${paymentMethods.map(m => `
+          <div class="method-pill" data-method-id="${m.id}">${m.name}</div>
+        `).join('')}
       </div>
+
+      <div id="selectedMethodDetails"></div>
 
       <div class="field" style="margin-top:14px;">
         <label>رقم العملية (من رسالة التحويل) *</label>
@@ -370,19 +369,38 @@ function attachEvents(canUseWallet) {
     }
   });
 
-  document.querySelectorAll('.copy-account-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(btn.dataset.copy);
-        const original = btn.textContent;
-        btn.textContent = 'تم النسخ'; btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
-      } catch (e) {}
+  document.querySelectorAll('.method-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selectedMethodId = pill.dataset.methodId;
+      const m = paymentMethods.find(x => x.id === selectedMethodId);
+      const box = document.getElementById('selectedMethodDetails');
+      box.innerHTML = `
+        <div class="selected-method-box">
+          <div class="bank-account-row">
+            <span>اسم الحساب: <span class="acc-info-text">${m.account_name || ''}</span></span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+          </div>
+          <div class="bank-account-row" style="margin-bottom:0;">
+            <span>رقم الحساب: <span class="acc-info-text">${m.account_number || ''}</span></span>
+            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+          </div>
+          ${m.instructions ? `<div style="color:var(--text-muted); font-size:13px; margin-top:8px;">${m.instructions}</div>` : ''}
+        </div>
+      `;
+      box.querySelectorAll('.copy-account-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(btn.dataset.copy);
+            const original = btn.textContent;
+            btn.textContent = 'تم النسخ'; btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+          } catch (e) {}
+        });
+      });
     });
   });
-
-  const methodSelect = document.getElementById('methodSelect');
-  if (methodSelect) methodSelect.addEventListener('change', (e) => { selectedMethodId = e.target.value; });
 
   document.getElementById('applyCouponBtn').addEventListener('click', applyCoupon);
   submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
