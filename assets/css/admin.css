@@ -106,7 +106,33 @@
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
+
+.copyable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.mini-copy-btn {
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+.mini-copy-btn.copied { color: var(--success); border-color: var(--success); }
 
 /* ---------- Reject Modal ---------- */
 .modal-overlay {
