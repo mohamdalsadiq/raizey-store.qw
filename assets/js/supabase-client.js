@@ -46,3 +46,98 @@ async function checkDuplicateReceipt(table, hash) {
     .maybeSingle();
   return !!data;
 }
+
+// =========================================================
+// تنظيف HTML لمنع هجمات XSS
+// =========================================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+// =========================================================
+// التحقق من صلاحية صورة الإيصال (نوع + حجم + صحة الملف)
+// =========================================================
+async function validateReceiptImage(file) {
+  // 1. فحص نوع MIME + الامتداد
+  const allowedMime = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+
+  if (!allowedMime.includes(file.type.toLowerCase()) || !allowedExts.includes(fileExt)) {
+    return { valid: false, message: 'نوع الملف غير مدعوم. استخدم JPG أو PNG أو WEBP فقط.' };
+  }
+
+  // 2. فحص الحجم (أقل من 5 ميجابايت)
+  if (file.size > 5 * 1024 * 1024) {
+    return { valid: false, message: 'حجم الصورة كبير جداً. الحد الأقصى المسموح 5 ميجابايت.' };
+  }
+
+  // 3. الحجم الأدنى (أكبر من 10 كيلوبايت — لمنع الصور المجردة أو الفارغة)
+  if (file.size < 10 * 1024) {
+    return { valid: false, message: 'الصورة صغيرة جداً. تأكد من رفع صورة واضحة للإيصال.' };
+  }
+
+  // 4. تحقق من أن الملف صورة حقيقية قابلة للتحميل
+  const isValidImage = await new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload  = () => { URL.revokeObjectURL(url); resolve(true);  };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
+    img.src = url;
+  });
+
+  if (!isValidImage) {
+    return { valid: false, message: 'الملف المرفوع ليس صورة صالحة. يرجى التحقق من الملف وإعادة المحاولة.' };
+  }
+
+  return { valid: true };
+}
+
+// =========================================================
+// فحص محتوى الإيصال بـ OCR (Tesseract.js) مع مهلة آمنة
+// تُفعَّل فقط إذا كانت مكتبة Tesseract محمّلة في الصفحة
+// =========================================================
+async function verifyReceiptContent(file, statusCallback) {
+  // كلمات مفتاحية مالية تُشير إلى وثيقة تحويل/إيصال حقيقية
+  const keywords = [
+    'تحويل', 'بنكك', 'أوكاش', 'ذهب', 'رقم العملية', 'رقم التحويل',
+    'تاريخ', 'المبلغ', 'SDG', 'ج.س', 'رصيد', 'مرسل', 'مستلم',
+    'Amount', 'Transfer', 'Receipt', 'Transaction', 'Balance',
+    'مدفوع', 'دفع', 'شحن', 'محفظة'
+  ];
+
+  if (typeof Tesseract === 'undefined') {
+    return { passed: true, skipped: true, reason: 'tesseract_not_loaded' };
+  }
+
+  return new Promise(async (resolve) => {
+    // مهلة 30 ثانية — بعدها نسمح بالرفع مع تحذير
+    const timeout = setTimeout(() => {
+      resolve({ passed: true, skipped: true, reason: 'timeout' });
+    }, 30000);
+
+    try {
+      if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
+
+      const result = await Tesseract.recognize(file, 'ara+eng', {
+        logger: () => {}  // إخفاء سجلات التشخيص
+      });
+
+      clearTimeout(timeout);
+      const text = (result.data.text || '').trim();
+      const found = keywords.some(kw => text.includes(kw));
+
+      resolve({ passed: found, text, skipped: false });
+    } catch (e) {
+      clearTimeout(timeout);
+      // في حالة أي خطأ غير متوقع نسمح بالرفع
+      resolve({ passed: true, skipped: true, reason: e.message });
+    }
+  });
+}
