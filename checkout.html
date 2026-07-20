@@ -510,10 +510,13 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
   placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/cart-${Date.now()}.${fileExt}`;
+  const filePath = `${currentUser.id}/cart_${Date.now()}_receipt.${fileExt}`;
 
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
   if (uploadError) {
+    const errMsg = uploadError.message || JSON.stringify(uploadError);
+    console.error('[RAIZEY] Storage upload error:', uploadError);
+    alert('فشل رفع صورة الإيصال:\n' + errMsg);
     errorBox.textContent = 'فشل رفع صورة الإيصال، يرجى المحاولة مرة أخرى.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
@@ -528,26 +531,30 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     let lastInsertedOrderId = null;
     for (const item of cart) {
       const itemPrice = appliedCoupon ? item.price_sdg - (item.price_sdg * appliedCoupon.discount_percent / 100) : item.price_sdg;
+      // ── إنشاء الطلب — الأعمدة الأساسية فقط حسب schema الجدول ──
+      const orderPayload = {
+        user_id:               currentUser.id,
+        product_id:            item.product_id,
+        product_name_snapshot: item.name,
+        price_sdg_snapshot:    itemPrice,
+        field_values:          item.field_values,
+        payment_type:          'bank',
+        status:                isDuplicate ? 'rejected' : 'pending_review',
+        receipt_hash:          receiptHash,
+        receipt_url:           urlData.publicUrl   // مسار صورة الإيصال في Storage
+      };
+      console.log('[RAIZEY] Inserting order payload:', orderPayload);
       const { data: insertedOrder, error: orderError } = await supabaseClient
         .from('orders')
-        .insert({
-          user_id: currentUser.id,
-          product_id: item.product_id,
-          product_name_snapshot: item.name,
-          price_sdg_snapshot: itemPrice,
-          field_values: item.field_values,
-          payment_type: 'bank',
-          payment_method_id: selectedMethodId,
-          receipt_url: urlData.publicUrl,
-          receipt_hash: receiptHash,
-          transaction_reference: transactionRef,
-          is_duplicate_receipt: isDuplicate,
-          status: isDuplicate ? 'rejected' : 'pending_review',
-          rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
-        })
+        .insert(orderPayload)
         .select('id')
         .single();
-      if (orderError) throw orderError;
+      if (orderError) {
+        const errDetail = orderError.message || JSON.stringify(orderError);
+        console.error('[RAIZEY] Order insert error:', orderError);
+        alert('حصل خطأ في إنشاء الطلب:\n' + errDetail + '\n\nتحقق من console للتفاصيل.');
+        throw orderError;
+      }
       lastInsertedOrderId = insertedOrder?.id;
     }
     if (isDuplicate) {
@@ -564,15 +571,20 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     }
     localStorage.removeItem('raizey_store_cart');
     if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
+    // التوجيه الصريح لصفحة الإيصال دائماً
     window.location.href = lastInsertedOrderId
       ? `receipt.html?order_id=${lastInsertedOrderId}`
       : 'my-orders.html';
   } catch (err) {
     const errMsg = err.message || String(err);
+    console.error('[RAIZEY] handlePlaceOrder error:', err);
+    // رسالة alert فقط إذا لم يُعرض alert قبلها من كتلة الـ insert
+    if (!errMsg.includes('duplicate') && !errMsg.includes('الطلب')) {
+      alert('خطأ غير متوقع:\n' + errMsg);
+    }
     errorBox.textContent = errMsg.includes('duplicate')
       ? 'هذا الإيصال مستخدم من قبل. يرجى رفع إيصال جديد.'
-      : 'حصل خطأ أثناء تسجيل الطلب. تحقق من اتصالك وحاول مجدداً.';
-    console.error('Order insert error:', err);
+      : 'حصل خطأ أثناء تسجيل الطلب. تحقق من console للتفاصيل.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
   }

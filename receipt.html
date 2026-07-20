@@ -235,7 +235,7 @@ const paymentLabels = {
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const orderId = params.get('order_id');
+  const orderId = params.get('order_id') || params.get('id');
 
   if (!orderId || !/^[0-9a-f-]{36}$/i.test(orderId)) {
     showError();

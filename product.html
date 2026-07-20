@@ -764,35 +764,41 @@ async function submitOrder(errorBox, submitBtn) {
   }
   submitBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
+  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
-  if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، حاول تاني'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+  if (uploadError) {
+    const errMsg = uploadError.message || JSON.stringify(uploadError);
+    console.error('[RAIZEY] Storage upload error:', uploadError);
+    alert('فشل رفع الإيصال:\n' + errMsg);
+    errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
+  // ── إنشاء الطلب — الأعمدة الأساسية فقط حسب schema الجدول ──
+  const orderPayload = {
+    user_id:               currentUser.id,
+    product_id:            productId,
+    product_name_snapshot: product.name,
+    price_sdg_snapshot:    currentPrice(),
+    field_values:          fieldValues,
+    payment_type:          'bank',
+    status:                isDuplicate ? 'rejected' : 'pending_review',
+    receipt_hash:          receiptHash,
+    receipt_url:           urlData.publicUrl   // مسار صورة الإيصال في Storage
+  };
+  console.log('[RAIZEY] Inserting order payload:', orderPayload);
   const { data: insertedOrder, error: orderError } = await supabaseClient
     .from('orders')
-    .insert({
-      user_id: currentUser.id,
-      product_id: productId,
-      product_name_snapshot: product.name,
-      price_sdg_snapshot: currentPrice(),
-      field_values: fieldValues,
-      payment_type: 'bank',
-      payment_method_id: selectedMethodId,
-      receipt_url: urlData.publicUrl,
-      receipt_hash: receiptHash,
-      transaction_reference: transactionRef,
-      is_duplicate_receipt: isDuplicate,
-      status: isDuplicate ? 'rejected' : 'pending_review',
-      rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
-    })
+    .insert(orderPayload)
     .select('id')
     .single();
   if (orderError) {
-    const em = orderError.message || '';
-    errorBox.textContent = em.includes('duplicate') ? 'هذا الإيصال مستخدم من قبل.' : 'حصل خطأ في إنشاء الطلب، حاول تاني';
-    console.error('Order error:', orderError);
+    const errDetail = orderError.message || JSON.stringify(orderError);
+    console.error('[RAIZEY] Order insert error:', orderError);
+    alert('حصل خطأ في إنشاء الطلب:\n' + errDetail + '\n\nتحقق من console للتفاصيل.');
+    errorBox.textContent = 'حصل خطأ في إنشاء الطلب — تم طباعة التفاصيل في console.';
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
   if (isDuplicate) {
@@ -802,7 +808,8 @@ async function submitOrder(errorBox, submitBtn) {
   }
   if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
   else if (welcomeDiscount) { await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id); }
-  window.location.href = insertedOrder?.id
+  // التوجيه الصريح لصفحة الإيصال دائماً
+  window.location.href = insertedOrder && insertedOrder.id
     ? `receipt.html?order_id=${insertedOrder.id}`
     : 'my-orders.html';
 }
