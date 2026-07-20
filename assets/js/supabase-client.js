@@ -18,7 +18,7 @@ async function getExchangeRate() {
   const map = {};
   data.forEach(row => { map[row.key] = parseFloat(row.value) || 0; });
 
-  const rate = map.usd_to_sdg_rate || 0;
+  const rate   = map.usd_to_sdg_rate      || 0;
   const margin = map.profit_margin_percent || 0;
 
   return rate * (1 + margin / 100);
@@ -31,9 +31,10 @@ function formatSDG(amount) {
 
 // بصمة رقمية SHA-256 لملف الإيصال — تُستخدم لكشف الإيصالات المكررة
 async function hashFile(file) {
-  const buffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const buffer      = await file.arrayBuffer();
+  const hashBuffer  = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // فحص إذا كانت بصمة الإيصال مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
@@ -53,11 +54,11 @@ async function checkDuplicateReceipt(table, hash) {
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#x27;');
 }
 
 // =========================================================
@@ -67,7 +68,7 @@ async function validateReceiptImage(file) {
   // 1. فحص نوع MIME + الامتداد
   const allowedMime = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
-  const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+  const fileExt     = (file.name.split('.').pop() || '').toLowerCase();
 
   if (!allowedMime.includes(file.type.toLowerCase()) || !allowedExts.includes(fileExt)) {
     return { valid: false, message: 'نوع الملف غير مدعوم. استخدم JPG أو PNG أو WEBP فقط.' };
@@ -78,7 +79,7 @@ async function validateReceiptImage(file) {
     return { valid: false, message: 'حجم الصورة كبير جداً. الحد الأقصى المسموح 5 ميجابايت.' };
   }
 
-  // 3. الحجم الأدنى (أكبر من 10 كيلوبايت — لمنع الصور المجردة أو الفارغة)
+  // 3. الحجم الأدنى (أكبر من 10 كيلوبايت — لمنع الصور الفارغة)
   if (file.size < 10 * 1024) {
     return { valid: false, message: 'الصورة صغيرة جداً. تأكد من رفع صورة واضحة للإيصال.' };
   }
@@ -101,42 +102,65 @@ async function validateReceiptImage(file) {
 
 // =========================================================
 // فحص محتوى الإيصال بـ OCR (Tesseract.js) مع مهلة آمنة
-// تُفعَّل فقط إذا كانت مكتبة Tesseract محمّلة في الصفحة
+// ملاحظة: الفحص متساهل — أي شك يُمرَّر لصالح المستخدم
 // =========================================================
 async function verifyReceiptContent(file, statusCallback) {
-  // كلمات مفتاحية مالية تُشير إلى وثيقة تحويل/إيصال حقيقية
+  // قائمة موسّعة من الكلمات المفتاحية المالية (عربي + إنجليزي)
   const keywords = [
-    'تحويل', 'بنكك', 'أوكاش', 'ذهب', 'رقم العملية', 'رقم التحويل',
-    'تاريخ', 'المبلغ', 'SDG', 'ج.س', 'رصيد', 'مرسل', 'مستلم',
+    // عربي — بنوك وتحويلات
+    'تحويل', 'حوالة', 'إيصال', 'وصل', 'بنكك', 'أوكاش', 'ذهب', 'سداد',
+    'رقم العملية', 'رقم التحويل', 'رقم المعاملة', 'رقم الطلب',
+    'تاريخ', 'المبلغ', 'الرصيد', 'مرسل', 'مستلم', 'دافع',
+    'ج.س', 'SDG', 'جنيه', 'ريال', 'دولار',
+    'مدفوع', 'دفع', 'شحن', 'محفظة', 'بنك', 'حساب',
+    'سريع', 'موبايل', 'فوري', 'ناجح', 'مكتمل', 'تم',
+    // إنجليزي
     'Amount', 'Transfer', 'Receipt', 'Transaction', 'Balance',
-    'مدفوع', 'دفع', 'شحن', 'محفظة'
+    'Payment', 'Paid', 'Success', 'Completed', 'Ref', 'Reference',
+    'Bank', 'Mobile', 'Wallet', 'Date', 'Total', 'Debit', 'Credit',
+    'SDG', 'SAR', 'USD', 'EGP',
+    // أرقام مالية شائعة في الإيصالات
+    'FT', 'TXN', 'ORD', 'REF'
   ];
 
+  // إذا لم تُحمَّل Tesseract — نسمح بالمرور مباشرة
   if (typeof Tesseract === 'undefined') {
+    console.log('[RAIZEY OCR] Tesseract not loaded — skipping check');
     return { passed: true, skipped: true, reason: 'tesseract_not_loaded' };
   }
 
   return new Promise(async (resolve) => {
-    // مهلة 30 ثانية — بعدها نسمح بالرفع مع تحذير
+    // مهلة 20 ثانية — بعدها نسمح بالرفع تلقائياً
     const timeout = setTimeout(() => {
+      console.log('[RAIZEY OCR] Timeout — skipping check');
       resolve({ passed: true, skipped: true, reason: 'timeout' });
-    }, 30000);
+    }, 20000);
 
     try {
       if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
 
       const result = await Tesseract.recognize(file, 'ara+eng', {
-        logger: () => {}  // إخفاء سجلات التشخيص
+        logger: () => {}
       });
 
       clearTimeout(timeout);
-      const text = (result.data.text || '').trim();
-      const found = keywords.some(kw => text.includes(kw));
+      const text  = (result.data.text || '').trim();
+      const found = keywords.some(kw => text.toLowerCase().includes(kw.toLowerCase()));
+
+      console.log('[RAIZEY OCR] Text length:', text.length, '| Keywords found:', found);
+
+      // متساهل: إذا كان النص قصيراً جداً (أقل من 10 حروف) → نسمح بالمرور
+      // لأن بعض الإيصالات صور ملتقطة بجودة منخفضة لا يقرأها OCR بشكل صحيح
+      if (text.length < 10) {
+        resolve({ passed: true, skipped: true, reason: 'low_text_content' });
+        return;
+      }
 
       resolve({ passed: found, text, skipped: false });
     } catch (e) {
       clearTimeout(timeout);
-      // في حالة أي خطأ غير متوقع نسمح بالرفع
+      console.warn('[RAIZEY OCR] Error — skipping check:', e.message);
+      // أي خطأ في OCR → نسمح بالرفع
       resolve({ passed: true, skipped: true, reason: e.message });
     }
   });
