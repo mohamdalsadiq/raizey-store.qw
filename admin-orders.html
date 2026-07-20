@@ -118,12 +118,12 @@ modalConfirmBtn.addEventListener('click', async () => {
   if (order) {
     let refundNote = '';
     if (order.payment_type === 'wallet') {
-      const { data: wallet } = await supabaseClient
-        .from('wallets').select('balance').eq('user_id', order.user_id).single();
-      const newBalance = (wallet ? Number(wallet.balance) : 0) + Number(order.price_sdg_snapshot);
-      await supabaseClient.from('wallets')
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq('user_id', order.user_id);
+      // استخدام RPC آمنة لإعادة الرصيد بدلاً من التعديل المباشر
+      await supabaseClient.rpc('admin_refund_wallet', {
+        p_user_id: order.user_id,
+        p_amount: Number(order.price_sdg_snapshot),
+        p_order_id: rejectingOrderId
+      });
       refundNote = ` وتم إرجاع ${formatSDG(order.price_sdg_snapshot)} ج.س إلى محفظتك تلقائياً.`;
       await logAudit('استرجاع رصيد بعد رفض طلب', { order_id: rejectingOrderId, amount: order.price_sdg_snapshot, user_id: order.user_id });
     }
@@ -224,33 +224,35 @@ function renderOrderCard(o) {
   const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
     ? Object.entries(o.field_values).map(([k, v]) => `
         <div class="copyable-row">
-          <span>${v}</span>
-          <button type="button" class="mini-copy-btn" data-copy="${v}">نسخ</button>
+          <span>${escapeHtml(v)}</span>
+          <button type="button" class="mini-copy-btn" data-copy="${escapeHtml(v)}">نسخ</button>
         </div>
       `).join('')
     : '';
 
   const refHtml = o.transaction_reference ? `
     <div class="copyable-row">
-      <span>رقم العملية: ${o.transaction_reference}</span>
-      <button type="button" class="mini-copy-btn" data-copy="${o.transaction_reference}">نسخ</button>
+      <span>رقم العملية: ${escapeHtml(o.transaction_reference)}</span>
+      <button type="button" class="mini-copy-btn" data-copy="${escapeHtml(o.transaction_reference)}">نسخ</button>
     </div>
   ` : '';
 
-  const customerName = o.profiles?.full_name || 'بدون اسم';
-  const customerWhatsapp = o.profiles?.whatsapp_number || '—';
+  const customerName = escapeHtml(o.profiles?.full_name || 'بدون اسم');
+  const customerWhatsapp = escapeHtml(o.profiles?.whatsapp_number || '—');
+  const safeOrderId = escapeHtml(o.id);
+  const safeStatus = escapeHtml(o.status);
 
   let actions = '';
   if (o.status === 'pending_review') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${o.id}">تأكيد</button>
-        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${o.id}">رفض</button>
+        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${safeOrderId}">تأكيد</button>
+        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${safeOrderId}">رفض</button>
       </div>`;
   } else if (o.status === 'in_progress') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${o.id}">تم التنفيذ</button>
+        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${safeOrderId}">تم التنفيذ</button>
       </div>`;
   }
 
@@ -258,10 +260,10 @@ function renderOrderCard(o) {
     <div class="order-card">
       <div class="order-top">
         <div>
-          <div class="order-product">${o.product_name_snapshot}</div>
+          <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
           <div class="order-date">${date}</div>
         </div>
-        <span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span>
+        <span class="status-badge status-${safeStatus}">${statusLabels[o.status] || safeStatus}</span>
       </div>
 
       <div class="customer-info">
@@ -274,11 +276,11 @@ function renderOrderCard(o) {
         <div><strong>الدفع:</strong> ${o.payment_type === 'wallet' ? 'من المحفظة' : 'تحويل بنكك'}</div>
         ${fieldsHtml}
         ${refHtml}
-        ${o.receipt_url ? `<div><a href="${o.receipt_url}" target="_blank" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
+        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
 
       ${o.status === 'rejected' && o.rejection_reason ? `
-        <div class="order-rejection">سبب الرفض: ${o.rejection_reason}</div>
+        <div class="order-rejection">سبب الرفض: ${escapeHtml(o.rejection_reason)}</div>
       ` : ''}
 
       ${actions}

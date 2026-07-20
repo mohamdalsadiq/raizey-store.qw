@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>إيصال الطلب — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<style>
+  .receipt-page {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+  .receipt-success-icon {
+    text-align: center;
+    padding: 28px 0 18px;
+  }
+  .receipt-success-icon .icon-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    border: 2px solid rgba(34, 197, 94, 0.3);
+  }
+  .receipt-success-icon .icon-circle i {
+    font-size: 32px;
+    color: #22c55e;
+  }
+  .receipt-success-icon.rejected .icon-circle {
+    background: rgba(229, 72, 77, 0.12);
+    border-color: rgba(229, 72, 77, 0.3);
+  }
+  .receipt-success-icon.rejected .icon-circle i { color: var(--danger, #e5484d); }
+  .receipt-success-icon.pending .icon-circle {
+    background: rgba(255, 106, 26, 0.12);
+    border-color: rgba(255, 106, 26, 0.3);
+  }
+  .receipt-success-icon.pending .icon-circle i { color: var(--primary, #ff6a1a); }
+
+  .receipt-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    margin: 0 0 4px;
+  }
+  .receipt-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .receipt-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-top: 20px;
+  }
+  .receipt-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  .receipt-row:last-child { margin-bottom: 0; }
+  .receipt-row .label { color: var(--text-muted); flex-shrink: 0; }
+  .receipt-row .value {
+    color: var(--ink);
+    font-weight: 700;
+    text-align: left;
+    word-break: break-all;
+  }
+  .receipt-row .value.price {
+    font-size: 16px;
+    color: var(--primary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .receipt-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+  .receipt-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .receipt-status-badge.pending_review { background: rgba(255,106,26,0.12); color: #ff6a1a; }
+  .receipt-status-badge.in_progress    { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+  .receipt-status-badge.completed      { background: rgba(34,197,94,0.12);   color: #22c55e; }
+  .receipt-status-badge.rejected       { background: rgba(229,72,77,0.12);   color: #e5484d; }
+  .receipt-status-badge.cancelled      { background: rgba(120,120,120,0.12); color: #888;    }
+
+  .receipt-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .receipt-btn-primary {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .receipt-btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .receipt-fields-list {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .receipt-fields-list div {
+    font-size: 13px;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+  .receipt-fields-list div span.fkey {
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+  .receipt-receipt-img-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .receipt-receipt-img-link:hover { text-decoration: underline; }
+  #loadingBox {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  #errorBox {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  #errorBox h3 { color: var(--ink); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="receipt-page">
+  <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-receipt" style="color:var(--primary); font-size:18px;"></i>
+      <h1 style="font-size:18px; margin:0;">إيصال الطلب</h1>
+    </div>
+    <a href="index.html" class="back-link" style="margin-bottom:0;"><i class="fas fa-home"></i></a>
+  </div>
+
+  <div id="loadingBox">
+    <i class="fas fa-circle-notch fa-spin" style="font-size:28px; margin-bottom:12px; color:var(--primary);"></i>
+    <div>جارِ تحميل بيانات الطلب...</div>
+  </div>
+
+  <div id="errorBox" style="display:none;">
+    <h3>تعذّر تحميل الطلب</h3>
+    <p>تأكد من الرابط أو ادخل إلى صفحة طلباتي</p>
+    <a href="my-orders.html" class="receipt-btn-primary" style="display:inline-block; margin-top:14px; width:auto; padding:12px 24px;">
+      <i class="fas fa-box-open"></i> طلباتي
+    </a>
+  </div>
+
+  <div id="receiptContent" style="display:none;"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+const statusLabels = {
+  pending_review: 'قيد المراجعة',
+  in_progress: 'قيد التنفيذ',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
+  rejected: 'مرفوض'
+};
+const paymentLabels = {
+  wallet: 'من المحفظة',
+  bank: 'تحويل بنكك'
+};
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order_id');
+
+  if (!orderId || !/^[0-9a-f-]{36}$/i.test(orderId)) {
+    showError();
+    return;
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    sessionStorage.setItem('redirect_after_login', window.location.href);
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const { data: order, error } = await supabaseClient
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .eq('user_id', session.user.id)   // ← مهم: المستخدم يشوف طلبه فقط
+    .single();
+
+  if (error || !order) {
+    showError();
+    return;
+  }
+
+  renderReceipt(order);
+}
+
+function showError() {
+  document.getElementById('loadingBox').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'block';
+}
+
+function renderReceipt(o) {
+  document.getElementById('loadingBox').style.display = 'none';
+
+  const date = new Date(o.created_at).toLocaleDateString('ar-EG', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  // حالة الأيقونة
+  let iconClass = 'pending';
+  let iconName  = 'fa-clock';
+  let titleText = 'تم إرسال طلبك بنجاح!';
+  let subText   = 'طلبك قيد المراجعة، سيتم تنفيذه في أقرب وقت.';
+
+  if (o.status === 'completed') {
+    iconClass = ''; iconName = 'fa-circle-check';
+    titleText = 'تم تنفيذ طلبك!';
+    subText = 'طلبك اكتمل بنجاح. شكراً لثقتك بـ RAIZEY STORE.';
+  } else if (o.status === 'in_progress') {
+    iconClass = ''; iconName = 'fa-circle-check';
+    titleText = 'جارِ تنفيذ طلبك';
+    subText = 'فريقنا يعمل على طلبك الآن.';
+  } else if (o.status === 'rejected') {
+    iconClass = 'rejected'; iconName = 'fa-circle-xmark';
+    titleText = 'تم رفض الطلب';
+    subText = o.rejection_reason ? `السبب: ${escapeHtml(o.rejection_reason)}` : 'تواصل مع الدعم لمزيد من التفاصيل.';
+  } else if (o.status === 'cancelled') {
+    iconClass = 'rejected'; iconName = 'fa-ban';
+    titleText = 'تم إلغاء الطلب';
+    subText = 'قمت بإلغاء هذا الطلب.';
+  }
+
+  // بيانات الحقول المطلوبة
+  let fieldsHtml = '';
+  if (o.field_values && Object.keys(o.field_values).length > 0) {
+    fieldsHtml = `
+      <div class="receipt-row">
+        <span class="label">بيانات الطلب</span>
+        <div class="receipt-fields-list">
+          ${Object.entries(o.field_values).map(([k, v]) =>
+            `<div><span class="fkey">${escapeHtml(k)}:</span> ${escapeHtml(v)}</div>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // رابط الإيصال البنكي
+  const receiptLinkHtml = o.receipt_url ? `
+    <div class="receipt-row">
+      <span class="label">صورة الإيصال</span>
+      <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
+        <i class="fas fa-image"></i> عرض الإيصال
+      </a>
+    </div>
+  ` : '';
+
+  const transactionHtml = o.transaction_reference ? `
+    <div class="receipt-row">
+      <span class="label">رقم العملية</span>
+      <span class="value">${escapeHtml(o.transaction_reference)}</span>
+    </div>
+  ` : '';
+
+  const rejectionHtml = (o.status === 'rejected' && o.rejection_reason) ? `
+    <div style="background:rgba(229,72,77,0.08); border:1px solid rgba(229,72,77,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:13px; color:#e5484d;">
+      <strong>سبب الرفض:</strong> ${escapeHtml(o.rejection_reason)}
+    </div>
+  ` : '';
+
+  document.getElementById('receiptContent').innerHTML = `
+    <div class="receipt-success-icon ${iconClass}">
+      <div class="icon-circle"><i class="fas ${iconName}"></i></div>
+      <p class="receipt-title">${titleText}</p>
+      <p class="receipt-sub">${subText}</p>
+    </div>
+
+    <div class="receipt-card">
+      <div class="receipt-card-title"><i class="fas fa-box"></i> تفاصيل المنتج</div>
+
+      <div class="receipt-row">
+        <span class="label">المنتج</span>
+        <span class="value">${escapeHtml(o.product_name_snapshot)}</span>
+      </div>
+
+      <div class="receipt-row">
+        <span class="label">المبلغ</span>
+        <span class="value price">${formatSDG(o.price_sdg_snapshot)} ج.س</span>
+      </div>
+
+      <div class="receipt-row">
+        <span class="label">طريقة الدفع</span>
+        <span class="value">${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</span>
+      </div>
+
+      <div class="receipt-row">
+        <span class="label">الحالة</span>
+        <span class="receipt-status-badge ${o.status}">
+          ${statusLabels[o.status] || escapeHtml(o.status)}
+        </span>
+      </div>
+
+      ${fieldsHtml}
+      ${transactionHtml}
+      ${receiptLinkHtml}
+
+      <div class="receipt-row" style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border);">
+        <span class="label">رقم الطلب</span>
+        <span class="receipt-id">${escapeHtml(o.id)}</span>
+      </div>
+
+      <div class="receipt-row">
+        <span class="label">التاريخ</span>
+        <span class="value" style="font-size:12px;">${date}</span>
+      </div>
+    </div>
+
+    ${rejectionHtml}
+
+    <div class="receipt-actions">
+      <a href="my-orders.html" class="receipt-btn-primary">
+        <i class="fas fa-box-open"></i> عرض جميع طلباتي
+      </a>
+      <a href="index.html" class="receipt-btn-secondary">
+        <i class="fas fa-store"></i> متابعة التسوق
+      </a>
+    </div>
+  `;
+
+  document.getElementById('receiptContent').style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>

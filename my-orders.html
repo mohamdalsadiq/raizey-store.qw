@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body>
@@ -80,32 +81,38 @@ function renderOrderCard(o) {
   });
 
   const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
-    ? Object.entries(o.field_values).map(([k, v]) => `<div>${v}</div>`).join('')
+    ? Object.entries(o.field_values).map(([k, v]) => `<div>${escapeHtml(v)}</div>`).join('')
     : '';
 
   return `
     <div class="order-card">
       <div class="order-top">
         <div>
-          <div class="order-product">${o.product_name_snapshot}</div>
+          <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
           <div class="order-date">${date}</div>
         </div>
-        <span class="status-badge status-${o.status}">${statusLabels[o.status] || o.status}</span>
+        <span class="status-badge status-${escapeHtml(o.status)}">${statusLabels[o.status] || escapeHtml(o.status)}</span>
       </div>
 
       <div class="order-details">
         <div><strong>السعر:</strong> ${formatSDG(o.price_sdg_snapshot)} ج.س</div>
-        <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || o.payment_type}</div>
+        <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</div>
         ${fieldsHtml}
-        ${o.receipt_url ? `<div><a href="${o.receipt_url}" target="_blank" style="color:var(--primary);">عرض صورة الإيصال</a></div>` : ''}
+        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض صورة الإيصال</a></div>` : ''}
+      </div>
+
+      <div style="margin-top:8px;">
+        <a href="receipt.html?order_id=${escapeHtml(o.id)}" style="color:var(--primary); font-size:13px; font-weight:700;">
+          <i class="fas fa-receipt"></i> عرض إيصال الطلب
+        </a>
       </div>
 
       ${o.status === 'rejected' && o.rejection_reason ? `
-        <div class="order-rejection">سبب الرفض: ${o.rejection_reason}</div>
+        <div class="order-rejection">سبب الرفض: ${escapeHtml(o.rejection_reason)}</div>
       ` : ''}
 
       ${o.status === 'pending_review' ? `
-        <button class="cancel-order-btn" data-order-id="${o.id}">إلغاء الطلب</button>
+        <button class="cancel-order-btn" data-order-id="${escapeHtml(o.id)}">إلغاء الطلب</button>
       ` : ''}
     </div>
   `;

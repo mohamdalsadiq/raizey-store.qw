@@ -223,6 +223,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<!-- Tesseract.js OCR — فحص محتوى الإيصال -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let cart = [];
 let currentUser = null;
@@ -400,10 +402,21 @@ function attachCheckoutEvents(canUseWallet) {
   };
 
   fileBox.onclick = () => fileInput.click();
-  fileInput.onchange = () => {
+  fileInput.onchange = async () => {
     if (fileInput.files.length > 0) {
-      receiptFile = fileInput.files[0];
-      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${receiptFile.name}`;
+      const file = fileInput.files[0];
+      const validation = await validateReceiptImage(file);
+      if (!validation.valid) {
+        fileInput.value = '';
+        receiptFile = null;
+        fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
+        fileBox.classList.remove('has-file');
+        document.getElementById('formError').textContent = validation.message;
+        return;
+      }
+      receiptFile = file;
+      document.getElementById('formError').textContent = '';
+      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(receiptFile.name)}`;
       fileBox.classList.add('has-file');
     }
   };
@@ -431,18 +444,30 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
   if (selectedPayment === 'wallet') {
     try {
+      let lastOrderId = null;
       for (const item of cart) {
-        const { error } = await supabaseClient.rpc('create_wallet_order', {
+        const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
           p_product_id: item.product_id,
           p_field_values: item.field_values,
           p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
         });
         if (error) throw error;
+        // RPC returns [{id, status, price_sdg_snapshot}]
+        if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
       }
       localStorage.removeItem('raizey_store_cart');
-      window.location.href = 'my-orders.html';
+      window.location.href = lastOrderId
+        ? `receipt.html?order_id=${lastOrderId}`
+        : 'my-orders.html';
     } catch (err) {
-      errorBox.textContent = 'حدث خطأ أثناء الخصم من المحفظة: ' + (err.message || err);
+      const msg = err.message || String(err);
+      if (msg.includes('insufficient_balance')) {
+        errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
+      } else if (msg.includes('product_not_found')) {
+        errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
+      } else {
+        errorBox.textContent = 'حصل خطأ أثناء الخصم من المحفظة، حاول مرة أخرى.';
+      }
       placeOrderBtn.disabled = false;
       placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     }
@@ -464,7 +489,27 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  const fileExt = receiptFile.name.split('.').pop();
+  // ── فحص الإيصال نهائياً قبل الرفع ──
+  const preUploadCheck = await validateReceiptImage(receiptFile);
+  if (!preUploadCheck.valid) {
+    errorBox.textContent = preUploadCheck.message;
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  // ── فحص OCR (اختياري، مع مهلة 30 ثانية) ──
+  placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
+  const ocrResult = await verifyReceiptContent(receiptFile);
+  if (!ocrResult.skipped && !ocrResult.passed) {
+    errorBox.textContent = 'الصورة المرفوعة لا تبدو إيصال تحويل مالي. يرجى رفع صورة واضحة لإيصال التحويل البنكي.';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
+  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/cart-${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
@@ -480,24 +525,30 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
 
   try {
+    let lastInsertedOrderId = null;
     for (const item of cart) {
       const itemPrice = appliedCoupon ? item.price_sdg - (item.price_sdg * appliedCoupon.discount_percent / 100) : item.price_sdg;
-      const { error: orderError } = await supabaseClient.from('orders').insert({
-        user_id: currentUser.id,
-        product_id: item.product_id,
-        product_name_snapshot: item.name,
-        price_sdg_snapshot: itemPrice,
-        field_values: item.field_values,
-        payment_type: 'bank',
-        payment_method_id: selectedMethodId,
-        receipt_url: urlData.publicUrl,
-        receipt_hash: receiptHash,
-        transaction_reference: transactionRef,
-        is_duplicate_receipt: isDuplicate,
-        status: isDuplicate ? 'rejected' : 'pending_review',
-        rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
-      });
+      const { data: insertedOrder, error: orderError } = await supabaseClient
+        .from('orders')
+        .insert({
+          user_id: currentUser.id,
+          product_id: item.product_id,
+          product_name_snapshot: item.name,
+          price_sdg_snapshot: itemPrice,
+          field_values: item.field_values,
+          payment_type: 'bank',
+          payment_method_id: selectedMethodId,
+          receipt_url: urlData.publicUrl,
+          receipt_hash: receiptHash,
+          transaction_reference: transactionRef,
+          is_duplicate_receipt: isDuplicate,
+          status: isDuplicate ? 'rejected' : 'pending_review',
+          rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
+        })
+        .select('id')
+        .single();
       if (orderError) throw orderError;
+      lastInsertedOrderId = insertedOrder?.id;
     }
     if (isDuplicate) {
       await supabaseClient.from('audit_logs').insert({
@@ -513,9 +564,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     }
     localStorage.removeItem('raizey_store_cart');
     if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
-    window.location.href = 'my-orders.html';
+    window.location.href = lastInsertedOrderId
+      ? `receipt.html?order_id=${lastInsertedOrderId}`
+      : 'my-orders.html';
   } catch (err) {
-    errorBox.textContent = 'حصل خطأ أثناء تسجيل طلبات السلة: ' + (err.message || err);
+    const errMsg = err.message || String(err);
+    errorBox.textContent = errMsg.includes('duplicate')
+      ? 'هذا الإيصال مستخدم من قبل. يرجى رفع إيصال جديد.'
+      : 'حصل خطأ أثناء تسجيل الطلب. تحقق من اتصالك وحاول مجدداً.';
+    console.error('Order insert error:', err);
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
   }

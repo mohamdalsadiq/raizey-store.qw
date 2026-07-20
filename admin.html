@@ -165,8 +165,10 @@ async function loadStats() {
   const { count: productsCount } = await supabaseClient
     .from('products').select('*', { count: 'exact', head: true });
 
+  // عدد الطلبات قيد المراجعة (جميع وسائل الدفع بما فيها المحفظة)
   const { count: pendingOrders } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_review');
+    .from('orders').select('*', { count: 'exact', head: true })
+    .eq('status', 'pending_review');
 
   const { count: pendingTopups } = await supabaseClient
     .from('wallet_topups').select('*', { count: 'exact', head: true }).eq('status', 'pending');
@@ -200,10 +202,10 @@ async function loadRecentOrders() {
   container.innerHTML = orders.map(o => `
     <div class="mini-list-item">
       <div>
-        <div class="name">${o.product_name_snapshot}</div>
-        <div class="sub">${formatSDG(o.price_sdg_snapshot)} ج.س</div>
+        <div class="name">${escapeHtml(o.product_name_snapshot)}</div>
+        <div class="sub">${formatSDG(o.price_sdg_snapshot)} ج.س — ${o.payment_type === 'wallet' ? 'محفظة' : 'تحويل'}</div>
       </div>
-      <span class="status-badge status-${o.status}">${o.status}</span>
+      <span class="status-badge status-${escapeHtml(o.status)}">${{'pending_review':'قيد المراجعة','in_progress':'قيد التنفيذ','completed':'مكتمل','cancelled':'ملغي','rejected':'مرفوض'}[o.status] || escapeHtml(o.status)}</span>
     </div>
   `).join('');
 }
@@ -225,8 +227,8 @@ async function loadRecentCustomers() {
   container.innerHTML = customers.map(c => `
     <div class="mini-list-item">
       <div>
-        <div class="name">${c.full_name || 'بدون اسم'}</div>
-        <div class="sub">${c.whatsapp_number || '—'}</div>
+        <div class="name">${escapeHtml(c.full_name || 'بدون اسم')}</div>
+        <div class="sub">${escapeHtml(c.whatsapp_number || '—')}</div>
       </div>
     </div>
   `).join('');
