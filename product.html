@@ -588,7 +588,7 @@ function render() {
       <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
     </div>
 
-    <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700;"></div>
+    <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700; color:var(--danger);"></div>
 
     <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
   `;
@@ -726,12 +726,17 @@ function collectFieldValues() {
   }
   return values;
 }
+
 async function submitOrder(errorBox, submitBtn) {
   errorBox.textContent = ''; errorBox.style.color = 'var(--danger)';
   const fieldValues = collectFieldValues();
   if (fieldValues === null) { errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة'; return; }
   if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
   submitBtn.disabled = true; submitBtn.textContent = 'جارِ التنفيذ...';
+
+  // ══════════════════════════════════════════════════
+  // الدفع من المحفظة
+  // ══════════════════════════════════════════════════
   if (selectedPayment === 'wallet') {
     const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
       p_product_id: productId,
@@ -747,21 +752,28 @@ async function submitOrder(errorBox, submitBtn) {
     window.location.href = orderId ? `receipt.html?order_id=${orderId}` : 'my-orders.html';
     return;
   }
-  if (!selectedMethodId || !receiptFile) { errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
+
+  // ══════════════════════════════════════════════════
+  // الدفع بالتحويل البنكي
+  // ══════════════════════════════════════════════════
+  if (!selectedMethodId || !receiptFile) {
+    errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال';
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
   const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) { errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return; }
-  // فحص الإيصال قبل الرفع
+  if (!transactionRef) {
+    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
+
+  // ── 1. فحص صلاحية الملف المحلي (قبل أي رفع) ──
   const preCheck = await validateReceiptImage(receiptFile);
   if (!preCheck.valid) {
     errorBox.textContent = preCheck.message;
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
-  submitBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptFile);
-  if (!ocrResult.skipped && !ocrResult.passed) {
-    errorBox.textContent = 'الصورة المرفوعة لا تبدو إيصال تحويل مالي. يرجى رفع صورة واضحة للإيصال.';
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
+
+  // ── 2. رفع الإيصال إلى Storage أولاً ──
   submitBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
@@ -769,14 +781,51 @@ async function submitOrder(errorBox, submitBtn) {
   if (uploadError) {
     const errMsg = uploadError.message || JSON.stringify(uploadError);
     console.error('[RAIZEY] Storage upload error:', uploadError);
+    errorBox.textContent = 'فشل رفع الإيصال — ' + errMsg;
     alert('فشل رفع الإيصال:\n' + errMsg);
-    errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
-  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
+
+  // ── 3. بناء الرابط العام المباشر للصورة بالشكل الصحيح المضمون ──
+  const publicReceiptUrl = `${SUPABASE_URL}/storage/v1/object/public/receipts/${filePath}`;
+  console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
+
+  // ── 4. بصمة الملف + فحص التكرار (قبل إنشاء الطلب) ──
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
-  // ── إنشاء الطلب — الأعمدة الأساسية فقط حسب schema الجدول ──
+  if (isDuplicate) {
+    // تسجيل تنبيه الاحتيال في سجل المراجعة
+    await supabaseClient.from('audit_logs').insert({
+      admin_id: null,
+      action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً',
+      details: { user_id: currentUser.id, receipt_hash: receiptHash }
+    });
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = 'هذا الإشعار تم استخدامه من قبل في طلب آخر!';
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
+
+  // ── 5. الفحص الذكي للإيصال باستخدام الرابط العام + رقم العملية ──
+  submitBtn.textContent = 'جارِ فحص صورة الإيصال...';
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
+
+  if (!ocrResult.skipped && !ocrResult.passed) {
+    // تحديد رسالة الرفض بناءً على سبب الفشل
+    let smartErrMsg;
+    if (ocrResult.reason === 'ref_mismatch') {
+      smartErrMsg = 'رقم العملية المدخل غير مطابق للرقم الموجود في صورة الإيصال!';
+    } else if (ocrResult.reason === 'unclear') {
+      smartErrMsg = 'صورة الإيصال غير واضحة أو البيانات غير مطابقة للطلب!';
+    } else {
+      smartErrMsg = ocrResult.reason || ocrResult.message || 'فشل فحص الإيصال — يرجى رفع صورة أوضح.';
+    }
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = smartErrMsg;
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+  }
+
+  // ── 6. إنشاء الطلب في قاعدة البيانات ──
   const orderPayload = {
     user_id:               currentUser.id,
     product_id:            productId,
@@ -784,9 +833,9 @@ async function submitOrder(errorBox, submitBtn) {
     price_sdg_snapshot:    currentPrice(),
     field_values:          fieldValues,
     payment_type:          'bank',
-    status:                isDuplicate ? 'rejected' : 'pending_review',
+    status:                'pending_review',
     receipt_hash:          receiptHash,
-    receipt_url:           urlData.publicUrl   // مسار صورة الإيصال في Storage
+    receipt_url:           publicReceiptUrl
   };
   console.log('[RAIZEY] Inserting order payload:', orderPayload);
   const { data: insertedOrder, error: orderError } = await supabaseClient
@@ -797,22 +846,25 @@ async function submitOrder(errorBox, submitBtn) {
   if (orderError) {
     const errDetail = orderError.message || JSON.stringify(orderError);
     console.error('[RAIZEY] Order insert error:', orderError);
-    alert('حصل خطأ في إنشاء الطلب:\n' + errDetail + '\n\nتحقق من console للتفاصيل.');
-    errorBox.textContent = 'حصل خطأ في إنشاء الطلب — تم طباعة التفاصيل في console.';
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
+    alert(`فشل إنشاء الطلب:\n${errDetail}`);
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
-  if (isDuplicate) {
-    await supabaseClient.from('audit_logs').insert({ admin_id: null, action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً', details: { user_id: currentUser.id, receipt_hash: receiptHash } });
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
+
+  // ── 7. تطبيق الكوبون أو خصم الإحالة ──
+  if (appliedCoupon) {
+    await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
+  } else if (welcomeDiscount) {
+    await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
   }
-  if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
-  else if (welcomeDiscount) { await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id); }
-  // التوجيه الصريح لصفحة الإيصال دائماً
+
+  // ── 8. التوجيه لصفحة الإيصال ──
   window.location.href = insertedOrder && insertedOrder.id
     ? `receipt.html?order_id=${insertedOrder.id}`
     : 'my-orders.html';
 }
+
 init();
 </script>
 </body>

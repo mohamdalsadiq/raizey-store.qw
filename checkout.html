@@ -169,8 +169,6 @@
 
     <div style="border-top: 1px dashed var(--border); margin: 25px 0;"></div>
 
-    <div style="border-top: 1px dashed var(--border); margin: 25px 0;"></div>
-
     <div class="section-label">هل لديك كود خصم؟</div>
     <div style="display:flex; gap:8px; margin-bottom:6px;">
       <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
@@ -206,7 +204,7 @@
 
       <div class="file-upload" id="fileUploadBox">
         <i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل
-        <input type="file" id="receiptInput" accept="image/*" style="display:none;">
+        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
       </div>
     </div>
 
@@ -215,7 +213,7 @@
       <span class="total" id="checkoutTotal">0 ج.س</span>
     </div>
 
-    <div class="form-error" id="formError" style="margin-top:15px;"></div>
+    <div class="form-error" id="formError" style="margin-top:15px; color:var(--danger);"></div>
 
     <button class="auth-btn" id="placeOrderBtn" style="margin-top:15px;">تأكيد الدفع وإرسال الطلبات</button>
   </div>
@@ -237,7 +235,12 @@ let totalCartPriceSDG = 0;
 let appliedCoupon = null;
 
 async function init() {
-  cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  try {
+    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  } catch (e) {
+    cart = [];
+  }
+
   if (cart.length === 0) {
     document.getElementById('loadingBox').innerHTML = `
       <div style="text-align:center; padding:40px 0;">
@@ -248,20 +251,31 @@ async function init() {
     return;
   }
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) {
-    sessionStorage.setItem('redirect_after_login', window.location.href);
-    window.location.href = 'login.html';
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      sessionStorage.setItem('redirect_after_login', window.location.href);
+      window.location.href = 'login.html';
+      return;
+    }
+    currentUser = session.user;
+  } catch (e) {
+    document.getElementById('loadingBox').textContent = 'خطأ في التحقق من الجلسة، يرجى تحديث الصفحة.';
     return;
   }
-  currentUser = session.user;
 
-  const [{ data: wallet }, { data: methods }] = await Promise.all([
-    supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
-    supabaseClient.from('payment_methods').select('*').eq('is_active', true)
-  ]);
-  walletBalance = wallet ? wallet.balance : 0;
-  paymentMethods = methods || [];
+  try {
+    const [{ data: wallet, error: walletErr }, { data: methods, error: methodsErr }] = await Promise.all([
+      supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
+      supabaseClient.from('payment_methods').select('*').eq('is_active', true)
+    ]);
+    if (walletErr) console.warn('[RAIZEY] Wallet fetch error:', walletErr.message);
+    if (methodsErr) console.warn('[RAIZEY] Methods fetch error:', methodsErr.message);
+    walletBalance = wallet ? wallet.balance : 0;
+    paymentMethods = methods || [];
+  } catch (e) {
+    console.error('[RAIZEY] init data fetch error:', e);
+  }
 
   renderCheckout();
 }
@@ -270,7 +284,7 @@ function renderCheckout() {
   document.getElementById('loadingBox').style.display = 'none';
   document.getElementById('checkoutContent').style.display = 'block';
 
-  totalCartPriceSDG = cart.reduce((sum, item) => sum + item.price_sdg, 0);
+  totalCartPriceSDG = cart.reduce((sum, item) => sum + (parseFloat(item.price_sdg) || 0), 0);
   document.getElementById('checkoutTotal').textContent = formatSDG(currentTotal()) + ' ج.س';
 
   const listContainer = document.getElementById('checkoutItemsList');
@@ -279,21 +293,21 @@ function renderCheckout() {
     if (item.field_values && Object.keys(item.field_values).length > 0) {
       fieldsHtml = `<div class="checkout-item-fields">`;
       for (const [key, value] of Object.entries(item.field_values)) {
-        fieldsHtml += `<div>• <strong>${key}:</strong> ${value}</div>`;
+        fieldsHtml += `<div>• <strong>${escapeHtml(key)}:</strong> ${escapeHtml(value)}</div>`;
       }
       fieldsHtml += `</div>`;
     }
 
     return `
-      <div class="checkout-item" id="item_${item.cart_item_id}">
-        <button class="remove-item-btn" onclick="removeItemFromCheckout('${item.cart_item_id}')">
+      <div class="checkout-item" id="item_${escapeHtml(item.cart_item_id)}">
+        <button class="remove-item-btn" onclick="removeItemFromCheckout('${escapeHtml(item.cart_item_id)}')">
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${item.image_url}" alt="">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
+          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
         </div>
         <div class="checkout-item-info">
-          <div class="checkout-item-name">${item.name}</div>
+          <div class="checkout-item-name">${escapeHtml(item.name)}</div>
           <div class="checkout-item-price">${formatSDG(item.price_sdg)} ج.س</div>
           ${fieldsHtml}
         </div>
@@ -314,7 +328,7 @@ function renderCheckout() {
   }
 
   const methodPickerGrid = document.getElementById('methodPickerGrid');
-  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${m.id}">${m.name}</div>`).join('');
+  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeHtml(m.id)}">${escapeHtml(m.name)}</div>`).join('');
   methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       methodPickerGrid.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
@@ -325,14 +339,14 @@ function renderCheckout() {
       box.innerHTML = `
         <div class="selected-method-box">
           <div class="bank-account-row">
-            <span>اسم الحساب: ${m.account_name || ''}</span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+            <span>اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
+            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_name || '')}">نسخ</button>
           </div>
           <div class="bank-account-row" style="margin-bottom:0;">
-            <span>رقم الحساب: ${m.account_number || ''}</span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+            <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
+            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_number || '')}">نسخ</button>
           </div>
-          ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${m.instructions}</div>` : ''}
+          ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${escapeHtml(m.instructions)}</div>` : ''}
         </div>
       `;
       box.querySelectorAll('.copy-account-btn').forEach(btn => {
@@ -352,7 +366,7 @@ function renderCheckout() {
 }
 
 function currentTotal() {
-  const raw = cart.reduce((sum, item) => sum + item.price_sdg, 0);
+  const raw = cart.reduce((sum, item) => sum + (parseFloat(item.price_sdg) || 0), 0);
   if (appliedCoupon) return raw - (raw * appliedCoupon.discount_percent / 100);
   return raw;
 }
@@ -362,16 +376,21 @@ async function applyCoupon() {
   const msgBox = document.getElementById('couponMessage');
   msgBox.style.color = '';
   if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'اكتب الكود الأول'; return; }
-  const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
-  if (error || !data || data.length === 0) {
-    appliedCoupon = null;
-    msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي';
+  try {
+    const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
+    if (error || !data || data.length === 0) {
+      appliedCoupon = null;
+      msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي';
+      document.getElementById('checkoutTotal').textContent = formatSDG(currentTotal()) + ' ج.س';
+      return;
+    }
+    appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
+    msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}% على إجمالي السلة`;
     document.getElementById('checkoutTotal').textContent = formatSDG(currentTotal()) + ' ج.س';
-    return;
+  } catch (e) {
+    msgBox.style.color = 'var(--danger)';
+    msgBox.textContent = 'حصل خطأ أثناء التحقق من الكود، حاول مرة أخرى.';
   }
-  appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
-  msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}% على إجمالي السلة`;
-  document.getElementById('checkoutTotal').textContent = formatSDG(currentTotal()) + ' ج.س';
 }
 
 function attachCheckoutEvents(canUseWallet) {
@@ -442,6 +461,9 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   placeOrderBtn.disabled = true;
   placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
 
+  // ══════════════════════════════════════════════════
+  // الدفع من المحفظة — السعر يُحسب بالكامل من الـ RPC (SECURITY DEFINER)
+  // ══════════════════════════════════════════════════
   if (selectedPayment === 'wallet') {
     try {
       let lastOrderId = null;
@@ -465,6 +487,8 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
       } else if (msg.includes('product_not_found')) {
         errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
+      } else if (msg.includes('price_calculation_error')) {
+        errorBox.textContent = 'خطأ في حساب السعر، يرجى تحديث الصفحة والمحاولة مجدداً.';
       } else {
         errorBox.textContent = 'حصل خطأ أثناء الخصم من المحفظة، حاول مرة أخرى.';
       }
@@ -474,6 +498,9 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
+  // ══════════════════════════════════════════════════
+  // الدفع بالتحويل البنكي
+  // ══════════════════════════════════════════════════
   if (!selectedMethodId || !receiptFile) {
     errorBox.textContent = !selectedMethodId ? 'الرجاء اختيار وسيلة التحويل البنكي!' : 'الرجاء رفع صورة الإيصال لتأكيد التحويل!';
     placeOrderBtn.disabled = false;
@@ -489,7 +516,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── فحص الإيصال نهائياً قبل الرفع ──
+  // ── 1. فحص صلاحية الملف المحلي (قبل أي رفع) ──
   const preUploadCheck = await validateReceiptImage(receiptFile);
   if (!preUploadCheck.valid) {
     errorBox.textContent = preUploadCheck.message;
@@ -498,50 +525,105 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── فحص OCR (اختياري، مع مهلة 30 ثانية) ──
-  placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptFile);
-  if (!ocrResult.skipped && !ocrResult.passed) {
-    errorBox.textContent = 'الصورة المرفوعة لا تبدو إيصال تحويل مالي. يرجى رفع صورة واضحة لإيصال التحويل البنكي.';
+  // ── 2. بصمة الملف + فحص التكرار (بصمة الملف ورقم العملية معاً) ──
+  placeOrderBtn.textContent = 'جارِ التحقق من الإيصال...';
+  let receiptHash = null;
+  try {
+    receiptHash = await hashFile(receiptFile);
+  } catch (e) {
+    errorBox.textContent = 'فشل حساب بصمة الملف، يرجى المحاولة مجدداً.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
 
+  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
+    checkDuplicateReceipt('orders', receiptHash),
+    checkDuplicateTransactionRef('orders', transactionRef)
+  ]);
+
+  if (isDuplicateHash || isDuplicateRef) {
+    // تسجيل تنبيه الاحتيال في سجل المراجعة
+    try {
+      await supabaseClient.from('audit_logs').insert({
+        admin_id: null,
+        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر مكتشف تلقائياً (checkout)',
+        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
+      });
+    } catch (e) {}
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = isDuplicateRef
+      ? 'رقم العملية هذا تم استخدامه في طلب آخر من قبل!'
+      : 'هذا الإشعار تم استخدامه من قبل في طلب آخر!';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  // ── 3. رفع الإيصال إلى Storage ──
   placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/cart_${Date.now()}_receipt.${fileExt}`;
+  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
 
-  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
+  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
+    contentType: receiptFile.type,
+    upsert: false
+  });
   if (uploadError) {
     const errMsg = uploadError.message || JSON.stringify(uploadError);
     console.error('[RAIZEY] Storage upload error:', uploadError);
-    alert('فشل رفع صورة الإيصال:\n' + errMsg);
-    errorBox.textContent = 'فشل رفع صورة الإيصال، يرجى المحاولة مرة أخرى.';
+    errorBox.textContent = 'فشل رفع صورة الإيصال — ' + errMsg;
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
 
-  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const receiptHash = await hashFile(receiptFile);
-  const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
+  // ── 4. بناء الرابط العام المباشر للصورة ──
+  const publicReceiptUrl = `${SUPABASE_URL}/storage/v1/object/public/receipts/${filePath}`;
+  console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
 
+  // ── 5. الفحص الذكي للإيصال باستخدام الرابط العام + رقم العملية ──
+  placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
+
+  if (!ocrResult.skipped && !ocrResult.passed) {
+    let smartErrMsg;
+    if (ocrResult.reason === 'ref_mismatch') {
+      smartErrMsg = 'رقم العملية المدخل غير مطابق للرقم الموجود في صورة الإيصال!';
+    } else if (ocrResult.reason === 'unclear') {
+      smartErrMsg = 'صورة الإيصال غير واضحة أو البيانات غير مطابقة للطلب!';
+    } else {
+      smartErrMsg = ocrResult.reason || ocrResult.message || 'فشل فحص الإيصال — يرجى رفع صورة أوضح.';
+    }
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = smartErrMsg;
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+
+  // ── 6. إنشاء الطلبات في قاعدة البيانات (حلقة عناصر السلة) ──
   try {
     let lastInsertedOrderId = null;
     for (const item of cart) {
-      const itemPrice = appliedCoupon ? item.price_sdg - (item.price_sdg * appliedCoupon.discount_percent / 100) : item.price_sdg;
-      // ── إنشاء الطلب — الأعمدة الأساسية فقط حسب schema الجدول ──
+      // السعر المطبَّق بعد الكوبون — snapshot للعرض فقط؛ الدفع الفعلي تتحكم فيه الـ RPC للمحفظة
+      const itemPrice = appliedCoupon
+        ? (parseFloat(item.price_sdg) || 0) - ((parseFloat(item.price_sdg) || 0) * appliedCoupon.discount_percent / 100)
+        : (parseFloat(item.price_sdg) || 0);
+
       const orderPayload = {
         user_id:               currentUser.id,
         product_id:            item.product_id,
         product_name_snapshot: item.name,
-        price_sdg_snapshot:    itemPrice,
+        price_sdg_snapshot:    Math.round(itemPrice),
         field_values:          item.field_values,
         payment_type:          'bank',
-        status:                isDuplicate ? 'rejected' : 'pending_review',
+        payment_method_id:     selectedMethodId,      // ← مُضاف: مطلوب لمعرفة وسيلة الدفع
+        transaction_reference: transactionRef,         // ← مُضاف: كان مفقوداً في النسخة الأصلية
+        status:                'pending_review',
         receipt_hash:          receiptHash,
-        receipt_url:           urlData.publicUrl   // مسار صورة الإيصال في Storage
+        receipt_url:           publicReceiptUrl
       };
       console.log('[RAIZEY] Inserting order payload:', orderPayload);
       const { data: insertedOrder, error: orderError } = await supabaseClient
@@ -552,25 +634,23 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       if (orderError) {
         const errDetail = orderError.message || JSON.stringify(orderError);
         console.error('[RAIZEY] Order insert error:', orderError);
-        alert('حصل خطأ في إنشاء الطلب:\n' + errDetail + '\n\nتحقق من console للتفاصيل.');
-        throw orderError;
+        errorBox.style.color = 'var(--danger)';
+        errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+        return;
       }
       lastInsertedOrderId = insertedOrder?.id;
     }
-    if (isDuplicate) {
-      await supabaseClient.from('audit_logs').insert({
-        admin_id: null,
-        action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً',
-        details: { user_id: currentUser.id, receipt_hash: receiptHash }
-      });
-      errorBox.style.color = 'var(--danger)';
-      errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-      return;
-    }
+
     localStorage.removeItem('raizey_store_cart');
-    if (appliedCoupon) { await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id }); }
+    if (appliedCoupon) {
+      try {
+        await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
+      } catch (e) {
+        console.warn('[RAIZEY] increment_coupon_usage error:', e);
+      }
+    }
     // التوجيه الصريح لصفحة الإيصال دائماً
     window.location.href = lastInsertedOrderId
       ? `receipt.html?order_id=${lastInsertedOrderId}`
@@ -578,20 +658,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   } catch (err) {
     const errMsg = err.message || String(err);
     console.error('[RAIZEY] handlePlaceOrder error:', err);
-    // رسالة alert فقط إذا لم يُعرض alert قبلها من كتلة الـ insert
-    if (!errMsg.includes('duplicate') && !errMsg.includes('الطلب')) {
-      alert('خطأ غير متوقع:\n' + errMsg);
-    }
-    errorBox.textContent = errMsg.includes('duplicate')
-      ? 'هذا الإيصال مستخدم من قبل. يرجى رفع إيصال جديد.'
-      : 'حصل خطأ أثناء تسجيل الطلب. تحقق من console للتفاصيل.';
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = `فشل إنشاء الطلب: ${errMsg}`;
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
   }
 }
 
 function formatSDG(amount) {
-  return parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 init();

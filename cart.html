@@ -135,10 +135,12 @@
         <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
       </div>
 
+      <!-- قبول صور فقط (JPG / PNG / WEBP) -->
       <div class="file-upload" id="fileUploadBox">
-        اضغط لرفع صورة إيصال التحويل الكامل
-        <input type="file" id="receiptInput" accept="image/*" style="display:none;">
+        اضغط لرفع صورة إيصال التحويل الكامل (JPG / PNG / WEBP)
+        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
       </div>
+      <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
     </div>
 
     <div class="summary-box" style="margin-top: 20px;">
@@ -154,6 +156,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<!-- Tesseract.js OCR — فحص محتوى الإيصال -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentUser = null;
 let walletBalance = 0;
@@ -165,27 +169,43 @@ let cart = [];
 let grandTotal = 0;
 
 async function init() {
-  // التحقق من تسجيل الدخول أولاً
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) {
-    sessionStorage.setItem('redirect_after_login', window.location.href);
-    window.location.href = 'login.html';
+  try {
+    // التحقق من تسجيل الدخول أولاً
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      sessionStorage.setItem('redirect_after_login', window.location.href);
+      window.location.href = 'login.html';
+      return;
+    }
+    currentUser = session.user;
+  } catch (e) {
+    document.getElementById('loadingBox').textContent = 'خطأ في التحقق من الجلسة، يرجى تحديث الصفحة.';
     return;
   }
-  currentUser = session.user;
 
-  // جلب بيانات المحفظة وطرق الدفع
-  const { data: wallet } = await supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single();
-  walletBalance = wallet ? wallet.balance : 0;
-
-  const { data: methods } = await supabaseClient.from('payment_methods').select('*').eq('is_active', true);
-  paymentMethods = methods || [];
+  try {
+    // جلب بيانات المحفظة وطرق الدفع
+    const [{ data: wallet, error: walletErr }, { data: methods, error: methodsErr }] = await Promise.all([
+      supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
+      supabaseClient.from('payment_methods').select('*').eq('is_active', true)
+    ]);
+    if (walletErr) console.warn('[RAIZEY] Wallet error:', walletErr.message);
+    if (methodsErr) console.warn('[RAIZEY] Methods error:', methodsErr.message);
+    walletBalance = wallet ? wallet.balance : 0;
+    paymentMethods = methods || [];
+  } catch (e) {
+    console.error('[RAIZEY] init fetch error:', e);
+  }
 
   loadCartData();
 }
 
 function loadCartData() {
-  cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  try {
+    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+  } catch (e) {
+    cart = [];
+  }
   
   if (cart.length === 0) {
     document.getElementById('loadingBox').style.display = 'none';
@@ -215,18 +235,20 @@ function renderCart() {
   grandTotal = 0;
 
   listContainer.innerHTML = cart.map((item, index) => {
-    grandTotal += item.price_sdg;
+    grandTotal += parseFloat(item.price_sdg) || 0;
     
-    // تحويل البيانات المدخلة (مثل الـ ID) لنص منسق
-    const metaText = Object.entries(item.field_values).map(([key, val]) => `${key}: <span>${val}</span>`).join(' | ');
+    // تحويل البيانات المدخلة (مثل الـ ID) لنص منسق مع تعقيم XSS
+    const metaText = Object.entries(item.field_values || {})
+      .map(([key, val]) => `${escapeHtml(key)}: <span>${escapeHtml(val)}</span>`)
+      .join(' | ');
 
     return `
       <div class="cart-item-row">
         <div class="cart-item-thumb">
-          ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}">` : '<div style="font-size:11px; color:var(--text-muted); text-align:center; padding-top:20px;">No Img</div>'}
+          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<div style="font-size:11px; color:var(--text-muted); text-align:center; padding-top:20px;">No Img</div>'}
         </div>
         <div class="cart-item-details">
-          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-name">${escapeHtml(item.name)}</div>
           <div class="cart-item-meta">${metaText}</div>
           <div class="cart-item-price">${formatSDG(item.price_sdg)} ج.س</div>
         </div>
@@ -257,14 +279,14 @@ function renderCart() {
   bankContainer.innerHTML = paymentMethods.map(m => `
     <div style="margin-bottom:14px; font-size:13px; color:var(--text-muted);">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-        <span><strong style="color:var(--ink);">${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+        <span><strong style="color:var(--ink);">${escapeHtml(m.name)}</strong> — اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
+        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_name || '')}">نسخ</button>
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span>رقم الحساب: ${m.account_number || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+        <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
+        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_number || '')}">نسخ</button>
       </div>
-      ${m.instructions ? `<span style="font-size:11px; color:var(--primary);">${m.instructions}</span>` : ''}
+      ${m.instructions ? `<span style="font-size:11px; color:var(--primary);">${escapeHtml(m.instructions)}</span>` : ''}
     </div>
   `).join('');
 
@@ -279,7 +301,7 @@ function renderCart() {
     });
   });
 
-  methodSelect.innerHTML = '<option value="">-- اختر --</option>' + paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  methodSelect.innerHTML = '<option value="">-- اختر --</option>' + paymentMethods.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
 
   attachCartEvents(canUseWallet);
 }
@@ -288,7 +310,6 @@ function removeItem(index) {
   cart.splice(index, 1);
   localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
   
-  // إعادة التحميل إذا أصبحت فارغة تماماً للحصول على شكل صفحة السلة الفارغة
   if(cart.length === 0) {
     location.reload();
   } else {
@@ -302,6 +323,7 @@ function attachCartEvents(canUseWallet) {
   const bankDetails = document.getElementById('bankDetails');
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('receiptInput');
+  const fileError = document.getElementById('fileError');
 
   // إزالة أي مستمعات قديمة لمنع التكرار عند إعادة الرندرة
   const newWalletOption = walletOption.cloneNode(true);
@@ -326,12 +348,23 @@ function attachCartEvents(canUseWallet) {
   });
 
   fileBox.onclick = () => fileInput.click();
-  fileInput.onchange = () => {
-    if (fileInput.files.length > 0) {
-      receiptFile = fileInput.files[0];
-      fileBox.textContent = `${receiptFile.name}`;
-      fileBox.classList.add('has-file');
+  fileInput.onchange = async () => {
+    fileError.textContent = '';
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    // ── فحص MIME + حجم + صورة صحيحة قبل القبول ──
+    const validation = await validateReceiptImage(file);
+    if (!validation.valid) {
+      fileInput.value = '';
+      receiptFile = null;
+      fileBox.textContent = 'اضغط لرفع صورة إيصال التحويل الكامل (JPG / PNG / WEBP)';
+      fileBox.classList.remove('has-file');
+      fileError.textContent = validation.message;
+      return;
     }
+    receiptFile = file;
+    fileBox.textContent = escapeHtml(receiptFile.name);
+    fileBox.classList.add('has-file');
   };
 
   document.getElementById('methodSelect').onchange = (e) => {
@@ -355,33 +388,39 @@ async function submitCartOrder() {
   checkoutBtn.disabled = true;
   checkoutBtn.textContent = 'جارِ معالجة طلبات السلة...';
 
-  // 1⃣ الحالة الأولى: الدفع من المحفظة
+  // ──────────────────────────────────────────────────────────────────
+  // 1⃣ الدفع من المحفظة — السعر يُحسب بالكامل من الـ RPC (SECURITY DEFINER)
+  // ──────────────────────────────────────────────────────────────────
   if (selectedPayment === 'wallet') {
     try {
-      // تنفيذ الطلبات بالتتابع لضمان الخصم الصحيح لكل كارت آيدي
       for (const item of cart) {
         const { error } = await supabaseClient.rpc('create_wallet_order', {
           p_product_id: item.product_id,
           p_field_values: item.field_values,
           p_coupon_code: null
         });
-        
         if (error) throw error;
       }
-
-      // نجاح كامل السلة
       localStorage.removeItem('raizey_store_cart');
       window.location.href = 'my-orders.html';
-
     } catch (err) {
-      errorBox.textContent = 'حصل خطأ أثناء خصم رصيد السلة، تأكد من محفظتك وحاول مجدداً.';
+      const msg = err.message || String(err);
+      if (msg.includes('insufficient_balance')) {
+        errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام جميع الطلبات.';
+      } else if (msg.includes('product_not_found')) {
+        errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
+      } else {
+        errorBox.textContent = 'حصل خطأ أثناء خصم رصيد السلة، تأكد من محفظتك وحاول مجدداً.';
+      }
       checkoutBtn.disabled = false;
       checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
     }
     return;
   }
 
-  // 2⃣ الحالة الثانية: الدفع بالتحويل البنكي للمجموعة كاملة
+  // ──────────────────────────────────────────────────────────────────
+  // 2⃣ الدفع بالتحويل البنكي للمجموعة كاملة
+  // ──────────────────────────────────────────────────────────────────
   if (!selectedMethodId) {
     errorBox.textContent = 'اختر وسيلة التحويل التي قمت بالدفع إليها';
     checkoutBtn.disabled = false;
@@ -403,59 +442,115 @@ async function submitCartOrder() {
     return;
   }
 
-  // رفع الإيصال مرة واحدة فقط واستخدامه لكل عناصر السلة
-  const fileExt = receiptFile.name.split('.').pop();
+  // ── فحص إضافي للملف قبل الرفع ──
+  const validation = await validateReceiptImage(receiptFile);
+  if (!validation.valid) {
+    errorBox.textContent = validation.message;
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
+    return;
+  }
+
+  // ── حساب بصمة الملف وفحص التكرار (hash + transaction_reference) ──
+  checkoutBtn.textContent = 'جارِ التحقق من الإيصال...';
+  let receiptHash = null;
+  try {
+    receiptHash = await hashFile(receiptFile);
+  } catch (e) {
+    errorBox.textContent = 'فشل معالجة الملف، يرجى المحاولة مجدداً.';
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
+    return;
+  }
+
+  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
+    checkDuplicateReceipt('orders', receiptHash),
+    checkDuplicateTransactionRef('orders', transactionRef)
+  ]);
+
+  if (isDuplicateHash || isDuplicateRef) {
+    try {
+      await supabaseClient.from('audit_logs').insert({
+        admin_id: null,
+        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر مكتشف تلقائياً (cart)',
+        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
+      });
+    } catch (e) {}
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = isDuplicateRef
+      ? 'رقم العملية هذا تم استخدامه في طلب سابق!'
+      : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
+    return;
+  }
+
+  // ── رفع الإيصال مرة واحدة فقط لكل عناصر السلة ──
+  checkoutBtn.textContent = 'جارِ رفع الإيصال...';
+  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/cart_${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabaseClient.storage
     .from('receipts')
-    .upload(filePath, receiptFile);
+    .upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
 
   if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال، يرجى المحاولة مرة أخرى.';
+    errorBox.textContent = 'فشل رفع الإيصال — ' + (uploadError.message || 'يرجى المحاولة مرة أخرى.');
     checkoutBtn.disabled = false;
     checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
     return;
   }
 
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const receiptHash = await hashFile(receiptFile);
-  const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
+  const publicReceiptUrl = urlData.publicUrl;
 
-  // تحضير مصفوفة الطلبات لإدخالها دفعة واحدة (Batch Insert)
-  const ordersToInsert = cart.map(item => ({
-    user_id: currentUser.id,
-    product_id: item.product_id,
-    product_name_snapshot: item.name,
-    price_sdg_snapshot: item.price_sdg,
-    field_values: item.field_values,
-    payment_type: 'bank',
-    payment_method_id: selectedMethodId,
-    receipt_url: urlData.publicUrl,
-    receipt_hash: receiptHash,
-    transaction_reference: transactionRef,
-    is_duplicate_receipt: isDuplicate,
-    status: isDuplicate ? 'rejected' : 'pending_review',
-    rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
-  }));
+  // ── الفحص الذكي للإيصال بـ OCR ──
+  checkoutBtn.textContent = 'جارِ فحص الإيصال ذكياً...';
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  console.log('[RAIZEY] Cart OCR result:', JSON.stringify(ocrResult));
 
-  const { error: orderError } = await supabaseClient.from('orders').insert(ordersToInsert);
-
-  if (orderError) {
-    errorBox.textContent = 'حصل خطأ أثناء إرسال الطلبات، حاول مجدداً.';
+  if (!ocrResult.skipped && !ocrResult.passed) {
+    let smartErrMsg;
+    if (ocrResult.reason === 'ref_mismatch') {
+      smartErrMsg = 'فشل الفحص: رقم العملية غير مطابق للرقم الموجود في صورة الإيصال!';
+    } else if (ocrResult.reason === 'unclear') {
+      smartErrMsg = 'صورة الإيصال غير واضحة أو ليست إشعار تحويل صحيح!';
+    } else {
+      smartErrMsg = ocrResult.reason || 'تعذر التحقق من الإيصال — يرجى رفع صورة واضحة.';
+    }
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = smartErrMsg;
     checkoutBtn.disabled = false;
     checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
     return;
   }
 
-  if (isDuplicate) {
-    await supabaseClient.from('audit_logs').insert({
-      admin_id: null,
-      action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً',
-      details: { user_id: currentUser.id, receipt_hash: receiptHash }
-    });
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
+  // ── إنشاء الطلبات (Batch Insert) ──
+  checkoutBtn.textContent = 'جارِ إرسال الطلبات...';
+  const ordersToInsert = cart.map(item => ({
+    user_id:               currentUser.id,
+    product_id:            item.product_id,
+    product_name_snapshot: item.name,
+    price_sdg_snapshot:    Math.round(parseFloat(item.price_sdg) || 0),
+    field_values:          item.field_values,
+    payment_type:          'bank',
+    payment_method_id:     selectedMethodId,
+    receipt_url:           publicReceiptUrl,
+    receipt_hash:          receiptHash,
+    transaction_reference: transactionRef,
+    status:                'pending_review'
+  }));
+
+  try {
+    const { error: orderError } = await supabaseClient.from('orders').insert(ordersToInsert);
+
+    if (orderError) {
+      throw orderError;
+    }
+  } catch (e) {
+    const errMsg = e.message || String(e);
+    console.error('[RAIZEY] Cart order insert error:', e);
+    errorBox.textContent = 'حصل خطأ أثناء إرسال الطلبات: ' + errMsg;
     checkoutBtn.disabled = false;
     checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
     return;

@@ -53,10 +53,12 @@
       <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
     </div>
 
+    <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
     <div class="file-upload" id="fileUploadBox">
-      اضغط لرفع صورة الإيصال
-      <input type="file" id="receiptInput" accept="image/*" style="display:none;">
+      اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)
+      <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
     </div>
+    <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
 
     <div class="form-error" id="formError" style="margin-top:10px;"></div>
 
@@ -79,16 +81,19 @@ let receiptFile = null;
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
 
 async function init() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) {
-    window.location.href = 'login.html';
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      window.location.href = 'login.html';
+      return;
+    }
+    currentUser = session.user;
+  } catch (e) {
+    alert('خطأ في التحقق من الجلسة، يرجى تحديث الصفحة.');
     return;
   }
-  currentUser = session.user;
 
-  await loadBalance();
-  await loadPaymentMethods();
-  await loadTopups();
+  await Promise.all([loadBalance(), loadPaymentMethods(), loadTopups()]);
 
   document.getElementById('toggleFormBtn').addEventListener('click', () => {
     document.getElementById('topupForm').classList.toggle('show');
@@ -100,14 +105,14 @@ async function init() {
     if (!method) { box.innerHTML = ''; return; }
     box.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-        <span>اسم الحساب: ${method.account_name || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${method.account_name || ''}">نسخ</button>
+        <span>اسم الحساب: ${escapeHtml(method.account_name || '')}</span>
+        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_name || '')}">نسخ</button>
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span>رقم الحساب: ${method.account_number || ''}</span>
-        <button type="button" class="copy-account-btn" data-copy="${method.account_number || ''}">نسخ</button>
+        <span>رقم الحساب: ${escapeHtml(method.account_number || '')}</span>
+        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_number || '')}">نسخ</button>
       </div>
-      ${method.instructions ? `<div style="margin-top:6px;">${method.instructions}</div>` : ''}
+      ${method.instructions ? `<div style="margin-top:6px;">${escapeHtml(method.instructions)}</div>` : ''}
     `;
     box.querySelectorAll('.copy-account-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -121,15 +126,28 @@ async function init() {
     });
   });
 
+  // ── فحص الملف فور الاختيار (MIME + حجم + صورة صحيحة) ──
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('receiptInput');
+  const fileError = document.getElementById('fileError');
+
   fileBox.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) {
-      receiptFile = fileInput.files[0];
-      fileBox.textContent = `${receiptFile.name}`;
-      fileBox.classList.add('has-file');
+  fileInput.addEventListener('change', async () => {
+    fileError.textContent = '';
+    if (fileInput.files.length === 0) return;
+    const file = fileInput.files[0];
+    const validation = await validateReceiptImage(file);
+    if (!validation.valid) {
+      fileInput.value = '';
+      receiptFile = null;
+      fileBox.textContent = 'اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+      fileBox.classList.remove('has-file');
+      fileError.textContent = validation.message;
+      return;
     }
+    receiptFile = file;
+    fileBox.textContent = escapeHtml(receiptFile.name);
+    fileBox.classList.add('has-file');
   });
 
   document.getElementById('submitTopupBtn').addEventListener('click', submitTopup);
@@ -147,85 +165,104 @@ async function redeemGiftCard() {
     return;
   }
 
-  const { data, error } = await supabaseClient.rpc('redeem_gift_card', { p_code: code });
+  try {
+    const { data, error } = await supabaseClient.rpc('redeem_gift_card', { p_code: code });
 
-  if (error) {
+    if (error) {
+      msgBox.style.color = 'var(--danger)';
+      msgBox.textContent = (error.message || '').includes('already_redeemed')
+        ? 'الكود ده مستخدم بالفعل'
+        : 'الكود غير صحيح';
+      return;
+    }
+
+    msgBox.style.color = 'var(--primary)';
+    msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك`;
+    document.getElementById('giftCodeInput').value = '';
+    await loadBalance();
+  } catch (e) {
     msgBox.style.color = 'var(--danger)';
-    msgBox.textContent = error.message.includes('already_redeemed')
-      ? 'الكود ده مستخدم بالفعل'
-      : 'الكود غير صحيح';
-    return;
+    msgBox.textContent = 'حصل خطأ أثناء استبدال الكود، حاول مرة أخرى.';
   }
-
-  msgBox.style.color = 'var(--primary)';
-  msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك`;
-  document.getElementById('giftCodeInput').value = '';
-  await loadBalance();
 }
 
 async function loadBalance() {
-  const { data } = await supabaseClient
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', currentUser.id)
-    .single();
-  document.getElementById('balanceAmount').innerHTML = `${formatSDG(data ? data.balance : 0)} <small>ج.س</small>`;
+  try {
+    const { data } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .single();
+    document.getElementById('balanceAmount').innerHTML = `${formatSDG(data ? data.balance : 0)} <small>ج.س</small>`;
+  } catch (e) {
+    document.getElementById('balanceAmount').textContent = '—';
+  }
 }
 
 async function loadPaymentMethods() {
-  const { data } = await supabaseClient
-    .from('payment_methods')
-    .select('*')
-    .eq('is_active', true);
-  paymentMethods = data || [];
+  try {
+    const { data } = await supabaseClient
+      .from('payment_methods')
+      .select('*')
+      .eq('is_active', true);
+    paymentMethods = data || [];
 
-  const select = document.getElementById('methodSelect');
-  paymentMethods.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.name;
-    select.appendChild(opt);
-  });
+    const select = document.getElementById('methodSelect');
+    paymentMethods.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      select.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('[RAIZEY] loadPaymentMethods error:', e);
+  }
 }
 
 async function loadTopups() {
-  const { data: topups, error } = await supabaseClient
-    .from('wallet_topups')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
+  try {
+    const { data: topups, error } = await supabaseClient
+      .from('wallet_topups')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
 
-  const container = document.getElementById('topupsList');
+    const container = document.getElementById('topupsList');
 
-  if (error || !topups || topups.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا يوجد طلبات شحن بعد</div>`;
-    return;
-  }
+    if (error || !topups || topups.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا يوجد طلبات شحن بعد</div>`;
+      return;
+    }
 
-  container.innerHTML = topups.map(t => {
-    const date = new Date(t.created_at).toLocaleDateString('ar-EG', {
-      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-    return `
-      <div class="order-card">
-        <div class="order-top">
-          <div>
-            <div class="order-product">${formatSDG(t.amount)} ج.س</div>
-            <div class="order-date">${date}</div>
+    container.innerHTML = topups.map(t => {
+      const date = new Date(t.created_at).toLocaleDateString('ar-EG', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      return `
+        <div class="order-card">
+          <div class="order-top">
+            <div>
+              <div class="order-product">${formatSDG(t.amount)} ج.س</div>
+              <div class="order-date">${date}</div>
+            </div>
+            <span class="status-badge status-${escapeHtml(t.status)}">${escapeHtml(statusLabels[t.status] || t.status)}</span>
           </div>
-          <span class="status-badge status-${t.status}">${statusLabels[t.status] || t.status}</span>
+          ${t.status === 'rejected' && t.rejection_reason ? `
+            <div class="order-rejection">سبب الرفض: ${escapeHtml(t.rejection_reason)}</div>
+          ` : ''}
         </div>
-        ${t.status === 'rejected' && t.rejection_reason ? `
-          <div class="order-rejection">سبب الرفض: ${t.rejection_reason}</div>
-        ` : ''}
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  } catch (e) {
+    document.getElementById('topupsList').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">تعذّر تحميل سجل الشحن.</div>`;
+  }
 }
 
 async function submitTopup() {
   const errorBox = document.getElementById('formError');
+  const fileError = document.getElementById('fileError');
   errorBox.textContent = '';
+  fileError.textContent = '';
 
   const amount = parseFloat(document.getElementById('amountInput').value);
   const methodId = document.getElementById('methodSelect').value;
@@ -248,67 +285,101 @@ async function submitTopup() {
     return;
   }
 
+  // ── فحص إضافي قبل الرفع (تأكيد نوع MIME وحجم الملف) ──
+  const validation = await validateReceiptImage(receiptFile);
+  if (!validation.valid) {
+    fileError.textContent = validation.message;
+    return;
+  }
+
   const submitBtn = document.getElementById('submitTopupBtn');
   submitBtn.disabled = true;
-  submitBtn.textContent = 'جارِ الإرسال...';
+  submitBtn.textContent = 'جارِ التحقق...';
 
-  const fileExt = receiptFile.name.split('.').pop();
+  // ── فحص تكرار بصمة الملف ورقم العملية قبل الرفع ──
+  let receiptHash = null;
+  try {
+    receiptHash = await hashFile(receiptFile);
+  } catch (e) {
+    errorBox.textContent = 'فشل معالجة الملف، يرجى المحاولة مجدداً.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
+
+  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
+    checkDuplicateReceipt('wallet_topups', receiptHash),
+    checkDuplicateTransactionRef('wallet_topups', transactionRef)
+  ]);
+
+  if (isDuplicateHash || isDuplicateRef) {
+    try {
+      await supabaseClient.from('audit_logs').insert({
+        admin_id: null,
+        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر (wallet topup)',
+        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
+      });
+    } catch (e) {}
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = isDuplicateRef
+      ? 'رقم العملية هذا تم استخدامه في طلب شحن سابق!'
+      : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض طلب الشحن تلقائياً.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
+
+  // ── رفع الإيصال إلى Storage ──
+  submitBtn.textContent = 'جارِ رفع الإيصال...';
+  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/topup_${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabaseClient.storage
     .from('receipts')
-    .upload(filePath, receiptFile);
+    .upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
 
   if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال، حاول تاني';
+    errorBox.textContent = 'فشل رفع الإيصال — ' + (uploadError.message || 'حاول مرة أخرى');
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
   }
 
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const receiptHash = await hashFile(receiptFile);
-  const isDuplicate = await checkDuplicateReceipt('wallet_topups', receiptHash);
 
-  const { error } = await supabaseClient.from('wallet_topups').insert({
-    user_id: currentUser.id,
-    amount,
-    payment_method_id: methodId,
-    receipt_url: urlData.publicUrl,
-    receipt_hash: receiptHash,
-    transaction_reference: transactionRef,
-    is_duplicate_receipt: isDuplicate,
-    status: isDuplicate ? 'rejected' : 'pending',
-    rejection_reason: isDuplicate ? 'إيصال مكرر — تم اكتشافه تلقائياً بواسطة النظام' : null
-  });
-
-  if (error) {
-    errorBox.textContent = 'حصل خطأ، حاول تاني';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
-  }
-
-  if (isDuplicate) {
-    await supabaseClient.from('audit_logs').insert({
-      admin_id: null,
-      action: 'تنبيه احتيال: إيصال مكرر مكتشف تلقائياً',
-      details: { user_id: currentUser.id, receipt_hash: receiptHash }
+  // ── إدخال طلب الشحن ──
+  try {
+    const { error } = await supabaseClient.from('wallet_topups').insert({
+      user_id:               currentUser.id,
+      amount,
+      payment_method_id:     methodId,
+      receipt_url:           urlData.publicUrl,
+      receipt_hash:          receiptHash,
+      transaction_reference: transactionRef,
+      status:                'pending',
     });
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض طلب الشحن تلقائياً.';
+
+    if (error) {
+      throw error;
+    }
+  } catch (e) {
+    const errMsg = e.message || String(e);
+    console.error('[RAIZEY] wallet_topups insert error:', e);
+    errorBox.textContent = 'حصل خطأ أثناء إرسال الطلب: ' + errMsg;
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
   }
 
+  // إعادة ضبط النموذج بعد النجاح
   document.getElementById('topupForm').classList.remove('show');
   document.getElementById('amountInput').value = '';
   document.getElementById('methodSelect').value = '';
   document.getElementById('transactionRefInput').value = '';
   document.getElementById('methodDetails').innerHTML = '';
-  document.getElementById('fileUploadBox').textContent = 'اضغط لرفع صورة الإيصال';
-  document.getElementById('fileUploadBox').classList.remove('has-file');
+  const fBox = document.getElementById('fileUploadBox');
+  fBox.textContent = 'اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  fBox.classList.remove('has-file');
   receiptFile = null;
   submitBtn.disabled = false;
   submitBtn.textContent = 'إرسال طلب الشحن';
