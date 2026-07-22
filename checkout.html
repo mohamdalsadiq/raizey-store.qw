@@ -584,24 +584,8 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
   // ── 5. الفحص الذكي للإيصال باستخدام الرابط العام + رقم العملية ──
   placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, currentTotal());
   console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
-
-  if (!ocrResult.skipped && !ocrResult.passed) {
-    let smartErrMsg;
-    if (ocrResult.reason === 'ref_mismatch') {
-      smartErrMsg = 'رقم العملية المدخل غير مطابق للرقم الموجود في صورة الإيصال!';
-    } else if (ocrResult.reason === 'unclear') {
-      smartErrMsg = 'صورة الإيصال غير واضحة أو البيانات غير مطابقة للطلب!';
-    } else {
-      smartErrMsg = ocrResult.reason || ocrResult.message || 'فشل فحص الإيصال — يرجى رفع صورة أوضح.';
-    }
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = smartErrMsg;
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-    return;
-  }
 
   // ── 6. إنشاء الطلبات في قاعدة البيانات (حلقة عناصر السلة) ──
   try {
@@ -623,7 +607,9 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         transaction_reference: transactionRef,         // ← مُضاف: كان مفقوداً في النسخة الأصلية
         status:                'pending_review',
         receipt_hash:          receiptHash,
-        receipt_url:           publicReceiptUrl
+        receipt_url:           publicReceiptUrl,
+        ocr_status:            ocrResult.ocr_status  || 'needs_review',
+        amount_verified:       ocrResult.amount_verified ?? false
       };
       console.log('[RAIZEY] Inserting order payload:', orderPayload);
       const { data: insertedOrder, error: orderError } = await supabaseClient

@@ -524,22 +524,8 @@ async function submitOrder(errorBox, submitBtn) {
 
   // ── 4. الفحص الذكي الصارم للإيصال بـ OCR ──
   submitBtn.textContent = 'جارِ فحص صورة الإيصال ذكياً...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, currentPrice());
   console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
-
-  if (!ocrResult.passed) {
-    let smartErrMsg;
-    if (ocrResult.reason === 'ref_mismatch') {
-      smartErrMsg = 'فشل الفحص: رقم العملية المدخل غير مطابق للرقم الموجود في صورة الإيصال!';
-    } else if (ocrResult.reason === 'unclear') {
-      smartErrMsg = 'فشل الفحص: صورة الإيصال غير واضحة أو ليست إشعار تحويل صحيح!';
-    } else {
-      smartErrMsg = ocrResult.reason || ocrResult.message || 'تعذر التحقق من الإيصال — يرجى إرفاق صورة إشعار واضحة ومباشرة.';
-    }
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = smartErrMsg;
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
 
   // ── 5. إنشاء الطلب في قاعدة البيانات ──
   const orderPayload = {
@@ -553,7 +539,9 @@ async function submitOrder(errorBox, submitBtn) {
     transaction_reference: transactionRef,
     status:                'pending_review',
     receipt_hash:          receiptHash,
-    receipt_url:           publicReceiptUrl
+    receipt_url:           publicReceiptUrl,
+    ocr_status:            ocrResult.ocr_status  || 'needs_review',
+    amount_verified:       ocrResult.amount_verified ?? false
   };
   console.log('[RAIZEY] Inserting order payload:', orderPayload);
   const { data: insertedOrder, error: orderError } = await supabaseClient

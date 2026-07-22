@@ -506,24 +506,8 @@ async function submitCartOrder() {
 
   // ── الفحص الذكي للإيصال بـ OCR ──
   checkoutBtn.textContent = 'جارِ فحص الإيصال ذكياً...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, grandTotal);
   console.log('[RAIZEY] Cart OCR result:', JSON.stringify(ocrResult));
-
-  if (!ocrResult.skipped && !ocrResult.passed) {
-    let smartErrMsg;
-    if (ocrResult.reason === 'ref_mismatch') {
-      smartErrMsg = 'فشل الفحص: رقم العملية غير مطابق للرقم الموجود في صورة الإيصال!';
-    } else if (ocrResult.reason === 'unclear') {
-      smartErrMsg = 'صورة الإيصال غير واضحة أو ليست إشعار تحويل صحيح!';
-    } else {
-      smartErrMsg = ocrResult.reason || 'تعذر التحقق من الإيصال — يرجى رفع صورة واضحة.';
-    }
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = smartErrMsg;
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
 
   // ── إنشاء الطلبات (Batch Insert) ──
   checkoutBtn.textContent = 'جارِ إرسال الطلبات...';
@@ -538,7 +522,9 @@ async function submitCartOrder() {
     receipt_url:           publicReceiptUrl,
     receipt_hash:          receiptHash,
     transaction_reference: transactionRef,
-    status:                'pending_review'
+    status:                'pending_review',
+    ocr_status:            ocrResult.ocr_status  || 'needs_review',
+    amount_verified:       ocrResult.amount_verified ?? false
   }));
 
   try {
