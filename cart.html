@@ -6,75 +6,109 @@
 <title>سلة المشتريات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  .copy-account-btn {
-    flex-shrink: 0;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 5px 10px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--primary);
-    cursor: pointer;
-  }
-  .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
+  body { background-color: var(--bg) !important; color: var(--ink) !important; }
+
   .cart-container {
     padding: 20px;
     max-width: 600px;
     margin: 0 auto;
+    box-sizing: border-box;
   }
+
+  .cart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .back-link {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--primary); }
+
+  .cart-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cart-title i { color: var(--primary); }
+
   .cart-item-row {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 14px;
     margin-bottom: 12px;
     display: flex;
     align-items: center;
     gap: 12px;
     position: relative;
+    transition: border-color 0.2s;
   }
+  .cart-item-row:hover { border-color: rgba(255, 106, 26, 0.3); }
+
   .cart-item-thumb {
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
+    width: 65px;
+    height: 65px;
+    border-radius: 10px;
     overflow: hidden;
-    background: var(--bg-card);
+    background: var(--bg);
+    border: 1px solid var(--border);
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .cart-item-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .cart-item-details {
-    flex: 1;
-  }
+
+  .cart-item-details { flex: 1; }
+
   .cart-item-name {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 800;
     color: var(--ink);
     margin-bottom: 4px;
   }
+
   .cart-item-meta {
     font-size: 12px;
     color: var(--text-muted);
+    line-height: 1.4;
   }
   .cart-item-meta span {
     color: var(--primary);
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
   }
+
   .cart-item-price {
     font-size: 13px;
     font-weight: 700;
     color: var(--primary);
-    margin-top: 4px;
+    margin-top: 6px;
   }
+
   .cart-qty-stepper {
     display: flex;
     align-items: center;
@@ -82,22 +116,23 @@
     margin-top: 10px;
   }
   .cart-qty-stepper button {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     border: 1.5px solid var(--primary);
     background: transparent;
     color: var(--primary);
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
+    user-select: none;
   }
-  .cart-qty-stepper button:active { transform: scale(0.9); }
-  .cart-qty-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cart-qty-stepper button:active { transform: scale(0.92); }
+  .cart-qty-stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
   .cart-qty-stepper .qty-value {
     min-width: 24px;
     text-align: center;
@@ -105,102 +140,119 @@
     font-weight: 900;
     color: var(--ink);
   }
+
   .remove-item-btn {
-    background: none;
+    background: transparent;
     border: none;
-    color: var(--danger);
-    font-size: 18px;
+    color: var(--danger, #ef4444);
+    font-size: 16px;
     cursor: pointer;
     padding: 8px;
+    border-radius: 8px;
+    transition: 0.15s ease;
   }
+  .remove-item-btn:hover { background: rgba(239, 68, 68, 0.1); }
+
+  .summary-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0 16px 0;
+  }
+  .summary-box .label { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .summary-box .total { font-weight: 900; font-size: 20px; color: var(--primary); }
+
+  .btn-proceed-checkout {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+    background: var(--primary);
+    border: none;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.15s ease;
+    text-decoration: none;
+  }
+  .btn-proceed-checkout:active { transform: scale(0.98); }
+
   .empty-cart-box {
     text-align: center;
     padding: 60px 20px;
     color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-top: 20px;
+  }
+  .empty-cart-icon {
+    font-size: 48px;
+    color: var(--text-muted);
+    opacity: 0.4;
+    margin-bottom: 16px;
   }
 </style>
 </head>
 <body>
 
 <div class="cart-container">
-  <a href="index.html" class="back-link">→ رجوع للمتجر</a>
+  <div class="cart-header">
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-right"></i> العودة للمتجر</a>
+  </div>
   
-  <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 20px; color: var(--ink);">سلة المشتريات</h1>
+  <h1 class="cart-title"><i class="fas fa-shopping-cart"></i> سلة المشتريات</h1>
 
-  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تحميل السلة وتحقق الحساب...</div>
+  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تحميل السلة...</div>
   
   <div id="cartContent" style="display:none;">
     <!-- قائمة المنتجات المضافة ستظهر هنا -->
     <div id="cartItemsList"></div>
 
-    <div class="section-label">تفاصيل الدفع الإجمالية</div>
-
-    <!-- خيارات الدفع الجماعي -->
-    <div class="payment-option" id="walletOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">الدفع الجماعي من المحفظة</div>
-        <div class="payment-option-sub" id="walletSubText">تحقق من الرصيد...</div>
-      </div>
-    </div>
-
-    <div class="payment-option" id="bankOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">تحويل بنكك ورفع إيصال واحد</div>
-        <div class="payment-option-sub">حول إجمالي المبلغ وارفع صورة الإيصال لجميع الطلبات</div>
-      </div>
-    </div>
-
-    <div class="bank-details" id="bankDetails">
-      <div id="bankAccountsContainer"></div>
-
-      <div class="field" style="margin-top:12px;">
-        <label>اختر وسيلة التحويل</label>
-        <select id="methodSelect">
-          <option value="">-- اختر --</option>
-        </select>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <label>رقم العملية (من رسالة التحويل) *</label>
-        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
-      </div>
-
-      <!-- قبول صور فقط (JPG / PNG / WEBP) -->
-      <div class="file-upload" id="fileUploadBox">
-        اضغط لرفع صورة إيصال التحويل الكامل (JPG / PNG / WEBP)
-        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
-      </div>
-      <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
-    </div>
-
-    <div class="summary-box" style="margin-top: 20px;">
-      <span>إجمالي السلة</span>
+    <div class="summary-box">
+      <span class="label">إجمالي السلة:</span>
       <span class="total" id="cartGrandTotal">0 ج.س</span>
     </div>
 
-    <div class="form-error" id="formError" style="margin-top: 10px;"></div>
-
-    <button class="auth-btn" id="checkoutBtn" style="margin-top: 15px;">تأكيد وشحن كامل السلة</button>
+    <button class="btn-proceed-checkout" id="proceedToCheckoutBtn">
+      <span>المتابعة لإتمام الدفع</span>
+      <i class="fas fa-arrow-left"></i>
+    </button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<!-- Tesseract.js OCR — فحص محتوى الإيصال -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let currentUser = null;
-let walletBalance = 0;
-let paymentMethods = [];
-let selectedPayment = null;
-let selectedMethodId = null;
-let receiptFile = null;
 let cart = [];
 let grandTotal = 0;
 
+function safeFormatSDG(val) {
+  if (typeof formatSDG === 'function') return formatSDG(val);
+  return Math.round(val).toLocaleString('ar-EG');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 async function init() {
   try {
-    // التحقق من تسجيل الدخول أولاً
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
       sessionStorage.setItem('redirect_after_login', window.location.href);
@@ -209,22 +261,7 @@ async function init() {
     }
     currentUser = session.user;
   } catch (e) {
-    document.getElementById('loadingBox').textContent = 'خطأ في التحقق من الجلسة، يرجى تحديث الصفحة.';
-    return;
-  }
-
-  try {
-    // جلب بيانات المحفظة وطرق الدفع
-    const [{ data: wallet, error: walletErr }, { data: methods, error: methodsErr }] = await Promise.all([
-      supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
-      supabaseClient.from('payment_methods').select('*').eq('is_active', true)
-    ]);
-    if (walletErr) console.warn('[RAIZEY] Wallet error:', walletErr.message);
-    if (methodsErr) console.warn('[RAIZEY] Methods error:', methodsErr.message);
-    walletBalance = wallet ? wallet.balance : 0;
-    paymentMethods = methods || [];
-  } catch (e) {
-    console.error('[RAIZEY] init fetch error:', e);
+    console.error('[RAIZEY] Session check error:', e);
   }
 
   loadCartData();
@@ -245,10 +282,10 @@ function loadCartData() {
     const emptyBox = document.createElement('div');
     emptyBox.className = 'empty-cart-box';
     emptyBox.innerHTML = `
-      <div style="font-size: 50px; margin-bottom: 15px;"></div>
-      <h3>سلة مشترياتك فاضية حسي!</h3>
-      <p style="font-size:13px; margin-bottom:20px;">ارجع للمتجر وأضف الشدات أو البطاقات العايزها</p>
-      <a href="index.html" class="auth-btn" style="display:inline-block; padding: 10px 25px; text-decoration:none;">تصفح المنتجات</a>
+      <div class="empty-cart-icon"><i class="fas fa-shopping-basket"></i></div>
+      <h3 style="font-size:18px; font-weight:800; margin-bottom:8px; color:var(--ink);">سلة المشتريات فارغة</h3>
+      <p style="font-size:13px; margin-bottom:20px; color:var(--text-muted);">قم بإضافة الباقات والمنتجات التي ترغب بها من المتجر أولاً</p>
+      <a href="index.html" class="btn-proceed-checkout" style="display:inline-flex; width:auto; padding: 12px 28px; font-size:14px;"><i class="fas fa-store"></i> تصفح المنتجات</a>
     `;
     container.appendChild(emptyBox);
     return;
@@ -270,7 +307,6 @@ function renderCart() {
     const lineSubtotal = unitPrice * qty;
     grandTotal += lineSubtotal;
     
-    // تحويل البيانات المدخلة (مثل الـ ID) لنص منسق مع تعقيم XSS
     const metaText = Object.entries(item.field_values || {})
       .map(([key, val]) => `${escapeHtml(key)}: <span>${escapeHtml(val)}</span>`)
       .join(' | ');
@@ -278,84 +314,43 @@ function renderCart() {
     return `
       <div class="cart-item-row">
         <div class="cart-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<div style="font-size:11px; color:var(--text-muted); text-align:center; padding-top:20px;">No Img</div>'}
+          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<i class="fas fa-box-open" style="font-size:20px; color:var(--text-muted);"></i>'}
         </div>
         <div class="cart-item-details">
           <div class="cart-item-name">${escapeHtml(item.name)}</div>
-          <div class="cart-item-meta">${metaText}</div>
-          <div class="cart-item-price">${formatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${formatSDG(lineSubtotal)} ج.س</strong></div>
+          ${metaText ? `<div class="cart-item-meta">${metaText}</div>` : ''}
+          <div class="cart-item-price">${safeFormatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${safeFormatSDG(lineSubtotal)} ج.س</strong></div>
           <div class="cart-qty-stepper">
             <button type="button" onclick="changeQty(${index}, -1)" aria-label="إنقاص الكمية" ${qty <= 1 ? 'disabled' : ''}>&minus;</button>
             <span class="qty-value">${qty}</span>
             <button type="button" onclick="changeQty(${index}, 1)" aria-label="زيادة الكمية">+</button>
           </div>
         </div>
-        <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف العنصر">
+          <i class="fas fa-trash-can"></i>
+        </button>
       </div>
     `;
   }).join('');
 
-  document.getElementById('cartGrandTotal').textContent = `${formatSDG(grandTotal)} ج.س`;
+  document.getElementById('cartGrandTotal').textContent = `${safeFormatSDG(grandTotal)} ج.س`;
 
-  // إعداد المحفظة بناءً على الإجمالي
-  const canUseWallet = walletBalance >= grandTotal;
-  const walletOption = document.getElementById('walletOption');
-  const walletSubText = document.getElementById('walletSubText');
-
-  if (canUseWallet) {
-    walletOption.classList.remove('disabled');
-    walletSubText.innerHTML = `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س (يكفي للدفع)`;
-  } else {
-    walletOption.classList.add('disabled');
-    walletSubText.innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" style="color:var(--primary);">اشحن المحفظة</a>`;
-  }
-
-  // إعداد بيانات الحسابات البنكية في الواجهة
-  const bankContainer = document.getElementById('bankAccountsContainer');
-  const methodSelect = document.getElementById('methodSelect');
-  
-  bankContainer.innerHTML = paymentMethods.map(m => `
-    <div style="margin-bottom:14px; font-size:13px; color:var(--text-muted);">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-        <span><strong style="color:var(--ink);">${escapeHtml(m.name)}</strong> — اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
-        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_name || '')}">نسخ</button>
-      </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
-        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_number || '')}">نسخ</button>
-      </div>
-      ${m.instructions ? `<span style="font-size:11px; color:var(--primary);">${escapeHtml(m.instructions)}</span>` : ''}
-    </div>
-  `).join('');
-
-  bankContainer.querySelectorAll('.copy-account-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(btn.dataset.copy);
-        const original = btn.textContent;
-        btn.textContent = 'تم النسخ'; btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
-      } catch (e) {}
-    });
-  });
-
-  methodSelect.innerHTML = '<option value="">-- اختر --</option>' + paymentMethods.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
-
-  attachCartEvents(canUseWallet);
+  document.getElementById('proceedToCheckoutBtn').onclick = () => {
+    window.location.href = 'checkout.html';
+  };
 }
 
 function removeItem(index) {
   cart.splice(index, 1);
   localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
   
-  if(cart.length === 0) {
+  if (cart.length === 0) {
     location.reload();
   } else {
     renderCart();
   }
 }
 
-// تعديل كمية عنصر داخل السلة وإعادة حساب الإجمالي لحظياً
 function changeQty(index, delta) {
   const item = cart[index];
   if (!item) return;
@@ -366,243 +361,6 @@ function changeQty(index, delta) {
   item.quantity = qty;
   localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
   renderCart();
-}
-
-function attachCartEvents(canUseWallet) {
-  const walletOption = document.getElementById('walletOption');
-  const bankOption = document.getElementById('bankOption');
-  const bankDetails = document.getElementById('bankDetails');
-  const fileBox = document.getElementById('fileUploadBox');
-  const fileInput = document.getElementById('receiptInput');
-  const fileError = document.getElementById('fileError');
-
-  // إزالة أي مستمعات قديمة لمنع التكرار عند إعادة الرندرة
-  const newWalletOption = walletOption.cloneNode(true);
-  const newBankOption = bankOption.cloneNode(true);
-  walletOption.parentNode.replaceChild(newWalletOption, walletOption);
-  bankOption.parentNode.replaceChild(newBankOption, bankOption);
-
-  if (canUseWallet) {
-    newWalletOption.addEventListener('click', () => {
-      selectedPayment = 'wallet';
-      newWalletOption.classList.add('selected');
-      newBankOption.classList.remove('selected');
-      bankDetails.classList.remove('show');
-    });
-  }
-
-  newBankOption.addEventListener('click', () => {
-    selectedPayment = 'bank';
-    newBankOption.classList.add('selected');
-    newWalletOption.classList.remove('selected');
-    bankDetails.classList.add('show');
-  });
-
-  fileBox.onclick = () => fileInput.click();
-  fileInput.onchange = async () => {
-    fileError.textContent = '';
-    if (fileInput.files.length === 0) return;
-    const file = fileInput.files[0];
-    // ── فحص MIME + حجم + صورة صحيحة قبل القبول ──
-    const validation = await validateReceiptImage(file);
-    if (!validation.valid) {
-      fileInput.value = '';
-      receiptFile = null;
-      fileBox.textContent = 'اضغط لرفع صورة إيصال التحويل الكامل (JPG / PNG / WEBP)';
-      fileBox.classList.remove('has-file');
-      fileError.textContent = validation.message;
-      return;
-    }
-    receiptFile = file;
-    fileBox.textContent = escapeHtml(receiptFile.name);
-    fileBox.classList.add('has-file');
-  };
-
-  document.getElementById('methodSelect').onchange = (e) => {
-    selectedMethodId = e.target.value;
-  };
-
-  document.getElementById('checkoutBtn').onclick = submitCartOrder;
-}
-
-async function submitCartOrder() {
-  const errorBox = document.getElementById('formError');
-  const checkoutBtn = document.getElementById('checkoutBtn');
-  errorBox.textContent = '';
-  errorBox.style.color = 'var(--danger)';
-
-  if (!selectedPayment) {
-    errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!';
-    return;
-  }
-
-  checkoutBtn.disabled = true;
-  checkoutBtn.textContent = 'جارِ معالجة طلبات السلة...';
-
-  // ──────────────────────────────────────────────────────────────────
-  // 1⃣ الدفع من المحفظة — السعر يُحسب بالكامل من الـ RPC (SECURITY DEFINER)
-  // ──────────────────────────────────────────────────────────────────
-  if (selectedPayment === 'wallet') {
-    try {
-      for (const item of cart) {
-        const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-        for (let i = 0; i < qty; i++) {
-          const { error } = await supabaseClient.rpc('create_wallet_order', {
-            p_product_id: item.product_id,
-            p_field_values: item.field_values,
-            p_coupon_code: null
-          });
-          if (error) throw error;
-        }
-      }
-      localStorage.removeItem('raizey_store_cart');
-      window.location.href = 'my-orders.html';
-    } catch (err) {
-      const msg = err.message || String(err);
-      if (msg.includes('insufficient_balance')) {
-        errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام جميع الطلبات.';
-      } else if (msg.includes('product_not_found')) {
-        errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
-      } else {
-        errorBox.textContent = 'حصل خطأ أثناء خصم رصيد السلة، تأكد من محفظتك وحاول مجدداً.';
-      }
-      checkoutBtn.disabled = false;
-      checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    }
-    return;
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // 2⃣ الدفع بالتحويل البنكي للمجموعة كاملة
-  // ──────────────────────────────────────────────────────────────────
-  if (!selectedMethodId) {
-    errorBox.textContent = 'اختر وسيلة التحويل التي قمت بالدفع إليها';
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-  if (!receiptFile) {
-    errorBox.textContent = 'يرجى رفع صورة إيصال التحويل لإثبات الدفع';
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) {
-    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  // ── فحص إضافي للملف قبل الرفع ──
-  const validation = await validateReceiptImage(receiptFile);
-  if (!validation.valid) {
-    errorBox.textContent = validation.message;
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  // ── حساب بصمة الملف وفحص التكرار (hash + transaction_reference) ──
-  checkoutBtn.textContent = 'جارِ التحقق من الإيصال...';
-  let receiptHash = null;
-  try {
-    receiptHash = await hashFile(receiptFile);
-  } catch (e) {
-    errorBox.textContent = 'فشل معالجة الملف، يرجى المحاولة مجدداً.';
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
-    checkDuplicateReceipt('orders', receiptHash),
-    checkDuplicateTransactionRef('orders', transactionRef)
-  ]);
-
-  if (isDuplicateHash || isDuplicateRef) {
-    try {
-      await supabaseClient.from('audit_logs').insert({
-        admin_id: null,
-        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر مكتشف تلقائياً (cart)',
-        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
-      });
-    } catch (e) {}
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = isDuplicateRef
-      ? 'رقم العملية هذا تم استخدامه في طلب سابق!'
-      : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض الطلب تلقائياً.';
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  // ── رفع الإيصال مرة واحدة فقط لكل عناصر السلة ──
-  checkoutBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/cart_${Date.now()}.${fileExt}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from('receipts')
-    .upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
-
-  if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال — ' + (uploadError.message || 'يرجى المحاولة مرة أخرى.');
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const publicReceiptUrl = urlData.publicUrl;
-
-  // ── الفحص الذكي للإيصال بـ OCR ──
-  checkoutBtn.textContent = 'جارِ فحص الإيصال ذكياً...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, grandTotal);
-  console.log('[RAIZEY] Cart OCR result:', JSON.stringify(ocrResult));
-
-  // ── إنشاء الطلبات (Batch Insert) ──
-  checkoutBtn.textContent = 'جارِ إرسال الطلبات...';
-  const ordersToInsert = cart.flatMap(item => {
-    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-    const baseRow = {
-      user_id:               currentUser.id,
-      product_id:            item.product_id,
-      product_name_snapshot: item.name,
-      price_sdg_snapshot:    Math.round(parseFloat(item.price_sdg) || 0),
-      field_values:          item.field_values,
-      payment_type:          'bank',
-      payment_method_id:     selectedMethodId,
-      receipt_url:           publicReceiptUrl,
-      receipt_hash:          receiptHash,
-      transaction_reference: transactionRef,
-      status:                'pending_review',
-      ocr_status:            ocrResult.ocr_status  || 'needs_review',
-      amount_verified:       ocrResult.amount_verified ?? false
-    };
-    return Array.from({ length: qty }, () => ({ ...baseRow }));
-  });
-
-  try {
-    const { error: orderError } = await supabaseClient.from('orders').insert(ordersToInsert);
-
-    if (orderError) {
-      throw orderError;
-    }
-  } catch (e) {
-    const errMsg = e.message || String(e);
-    console.error('[RAIZEY] Cart order insert error:', e);
-    errorBox.textContent = 'حصل خطأ أثناء إرسال الطلبات: ' + errMsg;
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = 'تأكيد وشحن كامل السلة';
-    return;
-  }
-
-  // تفريغ السلة والتوجه لصفحة الطلبات
-  localStorage.removeItem('raizey_store_cart');
-  window.location.href = 'my-orders.html';
 }
 
 init();
