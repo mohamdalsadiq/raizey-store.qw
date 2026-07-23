@@ -148,6 +148,32 @@
   .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
   .selected-method-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+
+  /* بيانات العميل */
+  .customer-fields { display: grid; gap: 12px; margin-bottom: 6px; }
+  .customer-fields .field { margin: 0; }
+  .customer-fields label { display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+  .customer-fields input {
+    width: 100%; padding: 13px 14px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--ink); font-size: 14px; font-weight: 600; box-sizing: border-box;
+    font-family: 'Tajawal', sans-serif;
+  }
+  .customer-fields input:focus { border-color: var(--primary); outline: none; }
+
+  /* عداد الكمية */
+  .qty-stepper { display: inline-flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .qty-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--primary); font-size: 18px; font-weight: 800;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    line-height: 1; transition: 0.15s ease;
+  }
+  .qty-btn:hover { border-color: var(--primary); }
+  .qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .qty-value { min-width: 26px; text-align: center; font-size: 15px; font-weight: 800; color: var(--ink); font-family: 'JetBrains Mono', monospace; }
+  .checkout-item-subtotal { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .checkout-item-subtotal strong { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -164,6 +190,20 @@
   <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تجهيز البيانات...</div>
   
   <div id="checkoutContent" style="display:none;">
+    <div class="section-label">بيانات العميل</div>
+    <div class="customer-fields">
+      <div class="field">
+        <label>الاسم بالكامل *</label>
+        <input type="text" id="customerNameInput" placeholder="اكتب اسمك هنا" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>رقم الهاتف *</label>
+        <input type="tel" id="customerPhoneInput" inputmode="numeric" placeholder="مثلاً: 09xxxxxxxx" autocomplete="tel">
+      </div>
+    </div>
+
+    <div style="border-top: 1px dashed var(--border); margin: 20px 0;"></div>
+
     <div class="section-label">المنتجات المطلوبة</div>
     <div id="checkoutItemsList"></div>
 
@@ -233,13 +273,28 @@ let selectedMethodId = null;
 let receiptFile = null;
 let totalCartPriceSDG = 0;
 let appliedCoupon = null;
+let cartSource = 'cart'; // 'cart' أو 'buynow' — لتحديد أي مخزن يُفرَّغ بعد النجاح
+let prefillName = '';
+let prefillPhone = '';
 
 async function init() {
+  // أولوية طلب "الشراء الآن" المباشر إن وُجد، وإلا نستخدم سلة المشتريات
   try {
-    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+    const buyNowRaw = localStorage.getItem('raizey_buy_now');
+    if (buyNowRaw) {
+      const buyNowItem = JSON.parse(buyNowRaw);
+      cart = Array.isArray(buyNowItem) ? buyNowItem : [buyNowItem];
+      cartSource = 'buynow';
+    } else {
+      cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+      cartSource = 'cart';
+    }
   } catch (e) {
     cart = [];
   }
+
+  // ضمان وجود كمية صحيحة لكل عنصر
+  cart = cart.map(item => ({ ...item, quantity: Math.max(1, parseInt(item.quantity, 10) || 1) }));
 
   if (cart.length === 0) {
     document.getElementById('loadingBox').innerHTML = `
@@ -264,6 +319,13 @@ async function init() {
     return;
   }
 
+  // تعبئة اسم ورقم العميل تلقائياً من بيانات الحساب إن توفّرت (بدون كسر أي شيء)
+  try {
+    const meta = (currentUser && currentUser.user_metadata) || {};
+    prefillName = meta.full_name || meta.name || '';
+    prefillPhone = currentUser.phone || meta.phone || meta.phone_number || '';
+  } catch (e) { /* تجاهل */ }
+
   try {
     const [{ data: wallet, error: walletErr }, { data: methods, error: methodsErr }] = await Promise.all([
       supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
@@ -284,7 +346,13 @@ function renderCheckout() {
   document.getElementById('loadingBox').style.display = 'none';
   document.getElementById('checkoutContent').style.display = 'block';
 
-  totalCartPriceSDG = cart.reduce((sum, item) => sum + (parseFloat(item.price_sdg) || 0), 0);
+  // تعبئة بيانات العميل التلقائية إن توفّرت ولم يكتب المستخدم شيئاً بعد
+  const nameInput = document.getElementById('customerNameInput');
+  const phoneInput = document.getElementById('customerPhoneInput');
+  if (nameInput && !nameInput.value && prefillName) nameInput.value = prefillName;
+  if (phoneInput && !phoneInput.value && prefillPhone) phoneInput.value = prefillPhone;
+
+  totalCartPriceSDG = cart.reduce((sum, item) => sum + itemLineTotal(item), 0);
   document.getElementById('checkoutTotal').textContent = formatSDG(currentTotal()) + ' ج.س';
 
   const listContainer = document.getElementById('checkoutItemsList');
@@ -298,9 +366,12 @@ function renderCheckout() {
       fieldsHtml += `</div>`;
     }
 
+    const qty = item.quantity || 1;
+    const cid = escapeHtml(item.cart_item_id);
+
     return `
-      <div class="checkout-item" id="item_${escapeHtml(item.cart_item_id)}">
-        <button class="remove-item-btn" onclick="removeItemFromCheckout('${escapeHtml(item.cart_item_id)}')">
+      <div class="checkout-item" id="item_${cid}">
+        <button class="remove-item-btn" onclick="removeItemFromCheckout('${cid}')">
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
@@ -308,7 +379,13 @@ function renderCheckout() {
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
-          <div class="checkout-item-price">${formatSDG(item.price_sdg)} ج.س</div>
+          <div class="checkout-item-price">${formatSDG(item.price_sdg)} ج.س / للوحدة</div>
+          <div class="qty-stepper">
+            <button type="button" class="qty-btn" onclick="changeCheckoutQty('${cid}', -1)" ${qty <= 1 ? 'disabled' : ''}>−</button>
+            <span class="qty-value">${qty}</span>
+            <button type="button" class="qty-btn" onclick="changeCheckoutQty('${cid}', 1)">+</button>
+          </div>
+          <div class="checkout-item-subtotal">الإجمالي: <strong>${formatSDG(itemLineTotal(item))} ج.س</strong></div>
           ${fieldsHtml}
         </div>
       </div>
@@ -365,11 +442,40 @@ function renderCheckout() {
   attachCheckoutEvents(canUseWallet);
 }
 
+function itemLineTotal(item) {
+  return (parseFloat(item.price_sdg) || 0) * (item.quantity || 1);
+}
+
 function currentTotal() {
-  const raw = cart.reduce((sum, item) => sum + (parseFloat(item.price_sdg) || 0), 0);
+  const raw = cart.reduce((sum, item) => sum + itemLineTotal(item), 0);
   if (appliedCoupon) return raw - (raw * appliedCoupon.discount_percent / 100);
   return raw;
 }
+
+function persistCart() {
+  if (cartSource === 'buynow') {
+    localStorage.setItem('raizey_buy_now', JSON.stringify(cart));
+  } else {
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  }
+}
+
+function clearActiveCart() {
+  if (cartSource === 'buynow') {
+    localStorage.removeItem('raizey_buy_now');
+  } else {
+    localStorage.removeItem('raizey_store_cart');
+  }
+}
+
+window.changeCheckoutQty = function(cartItemId, delta) {
+  const item = cart.find(i => i.cart_item_id === cartItemId);
+  if (!item) return;
+  const next = Math.max(1, (item.quantity || 1) + delta);
+  item.quantity = next;
+  persistCart();
+  renderCheckout();
+};
 
 async function applyCoupon() {
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
@@ -446,16 +552,38 @@ function attachCheckoutEvents(canUseWallet) {
 
 window.removeItemFromCheckout = function(cartItemId) {
   cart = cart.filter(item => item.cart_item_id !== cartItemId);
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  persistCart();
   if (cart.length === 0) {
+    clearActiveCart();
     window.location.reload();
   } else {
     renderCheckout();
   }
 };
 
+function getCustomerInfo() {
+  return {
+    name: document.getElementById('customerNameInput').value.trim(),
+    phone: document.getElementById('customerPhoneInput').value.trim()
+  };
+}
+
+// دمج اسم ورقم العميل داخل بيانات الطلب حتى تُحفظ مع الطلب وتظهر في الإيصال
+function enrichFieldValues(baseFieldValues, customer) {
+  return Object.assign({}, baseFieldValues || {}, {
+    'اسم العميل': customer.name,
+    'رقم الهاتف': customer.phone
+  });
+}
+
 async function handlePlaceOrder(errorBox, placeOrderBtn) {
   errorBox.textContent = '';
+  errorBox.style.color = 'var(--danger)';
+
+  const customer = getCustomerInfo();
+  if (!customer.name) { errorBox.textContent = 'من فضلك اكتب اسمك بالكامل!'; return; }
+  if (!customer.phone) { errorBox.textContent = 'من فضلك اكتب رقم هاتفك!'; return; }
+
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
 
   placeOrderBtn.disabled = true;
@@ -468,16 +596,20 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     try {
       let lastOrderId = null;
       for (const item of cart) {
-        const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
-          p_product_id: item.product_id,
-          p_field_values: item.field_values,
-          p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
-        });
-        if (error) throw error;
-        // RPC returns [{id, status, price_sdg_snapshot}]
-        if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
+        const enriched = enrichFieldValues(item.field_values, customer);
+        // كل وحدة من الكمية = طلب منفصل (السعر يُحسب في الـ RPC لكل وحدة)
+        for (let i = 0; i < (item.quantity || 1); i++) {
+          const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
+            p_product_id: item.product_id,
+            p_field_values: enriched,
+            p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
+          });
+          if (error) throw error;
+          // RPC returns [{id, status, price_sdg_snapshot}]
+          if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
+        }
       }
-      localStorage.removeItem('raizey_store_cart');
+      clearActiveCart();
       window.location.href = lastOrderId
         ? `receipt.html?order_id=${lastOrderId}`
         : 'my-orders.html';
@@ -596,40 +728,44 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         ? (parseFloat(item.price_sdg) || 0) - ((parseFloat(item.price_sdg) || 0) * appliedCoupon.discount_percent / 100)
         : (parseFloat(item.price_sdg) || 0);
 
-      const orderPayload = {
-        user_id:               currentUser.id,
-        product_id:            item.product_id,
-        product_name_snapshot: item.name,
-        price_sdg_snapshot:    Math.round(itemPrice),
-        field_values:          item.field_values,
-        payment_type:          'bank',
-        payment_method_id:     selectedMethodId,      // ← مُضاف: مطلوب لمعرفة وسيلة الدفع
-        transaction_reference: transactionRef,         // ← مُضاف: كان مفقوداً في النسخة الأصلية
-        status:                'pending_review',
-        receipt_hash:          receiptHash,
-        receipt_url:           publicReceiptUrl,
-        ocr_status:            ocrResult.ocr_status  || 'needs_review',
-        amount_verified:       ocrResult.amount_verified ?? false
-      };
-      console.log('[RAIZEY] Inserting order payload:', orderPayload);
-      const { data: insertedOrder, error: orderError } = await supabaseClient
-        .from('orders')
-        .insert(orderPayload)
-        .select('id')
-        .single();
-      if (orderError) {
-        const errDetail = orderError.message || JSON.stringify(orderError);
-        console.error('[RAIZEY] Order insert error:', orderError);
-        errorBox.style.color = 'var(--danger)';
-        errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
-        placeOrderBtn.disabled = false;
-        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-        return;
+      const enriched = enrichFieldValues(item.field_values, customer);
+      // كل وحدة من الكمية = صف طلب منفصل بنفس بيانات الحقول
+      for (let i = 0; i < (item.quantity || 1); i++) {
+        const orderPayload = {
+          user_id:               currentUser.id,
+          product_id:            item.product_id,
+          product_name_snapshot: item.name,
+          price_sdg_snapshot:    Math.round(itemPrice),
+          field_values:          enriched,
+          payment_type:          'bank',
+          payment_method_id:     selectedMethodId,      // ← مُضاف: مطلوب لمعرفة وسيلة الدفع
+          transaction_reference: transactionRef,         // ← مُضاف: كان مفقوداً في النسخة الأصلية
+          status:                'pending_review',
+          receipt_hash:          receiptHash,
+          receipt_url:           publicReceiptUrl,
+          ocr_status:            ocrResult.ocr_status  || 'needs_review',
+          amount_verified:       ocrResult.amount_verified ?? false
+        };
+        console.log('[RAIZEY] Inserting order payload:', orderPayload);
+        const { data: insertedOrder, error: orderError } = await supabaseClient
+          .from('orders')
+          .insert(orderPayload)
+          .select('id')
+          .single();
+        if (orderError) {
+          const errDetail = orderError.message || JSON.stringify(orderError);
+          console.error('[RAIZEY] Order insert error:', orderError);
+          errorBox.style.color = 'var(--danger)';
+          errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
+          placeOrderBtn.disabled = false;
+          placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+          return;
+        }
+        lastInsertedOrderId = insertedOrder?.id;
       }
-      lastInsertedOrderId = insertedOrder?.id;
     }
 
-    localStorage.removeItem('raizey_store_cart');
+    clearActiveCart();
     if (appliedCoupon) {
       try {
         await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
