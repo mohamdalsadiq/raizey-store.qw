@@ -105,6 +105,26 @@
     margin-bottom: 10px !important;
   }
 
+  /* شارة الثقة داخل كارت المنتج */
+  .card-trust {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    align-self: flex-start !important;
+    background: rgba(255, 106, 26, 0.08) !important;
+    border: 1px solid rgba(255, 106, 26, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 4px 9px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    color: var(--text-light) !important;
+    margin-bottom: 10px !important;
+  }
+  .card-trust i {
+    color: var(--accent-gold) !important;
+    font-size: 10px !important;
+  }
+
   .game-btn {
     width: 100% !important;
     background: rgba(255, 106, 26, 0.06) !important;
@@ -471,6 +491,7 @@ function renderCategories(categories) {
         <div class="game-info">
           <div class="game-name">${cat.name}</div>
           <div class="game-desc" title="${descText}">${descText}</div>
+          <span class="card-trust"><i class="fas fa-bolt"></i> تسليم فوري ومضمون 100%</span>
           <div class="game-btn">
             <span>عرض الباقات</span>
             <i class="fas fa-chevron-left" style="font-size:10px;"></i>

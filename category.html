@@ -29,8 +29,20 @@
   .product-hero-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .product-hero-info h1 { font-size: 20px; font-weight: 800; margin: 0; color: var(--ink); }
 
-  .trust-badge { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 12px; color: var(--text-muted); }
-  .trust-badge .stars { color: var(--primary); font-size: 14px; letter-spacing: 1px; }
+  .trust-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .trust-badge-item { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--ink); }
+  .trust-badge-item i { color: var(--primary); font-size: 13px; }
+
+  .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; margin: 6px 0 14px; }
+  .qty-row .qty-label { font-size: 14px; font-weight: 800; color: var(--ink); }
+  .qty-stepper { display: flex; align-items: center; gap: 14px; }
+  .qty-stepper button { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--primary); background: transparent; color: var(--primary); font-size: 22px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .qty-stepper button:active { transform: scale(0.92); }
+  .qty-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .qty-stepper .qty-value { min-width: 30px; text-align: center; font-size: 18px; font-weight: 900; color: var(--ink); }
+
+  .btn-buy-now { width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 900; cursor: pointer; margin-top: 10px; background: var(--primary); border: none; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-buy-now:active { transform: scale(0.98); }
 
   .category-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
 
@@ -115,6 +127,7 @@ let currentUser = null;
 let category = null;
 let variants = [];
 let selectedIndex = 0;
+let selectedQty = 1;
 let walletBalance = 0;
 let paymentMethods = [];
 let selectedPayment = null;
@@ -200,7 +213,11 @@ function render() {
       <div class="product-hero-info"><h1>${category ? category.name : p.name}</h1></div>
     </div>
 
-    <div class="trust-badge"><span class="stars">★★★★★</span> موثوق من آلاف اللاعبين — شحن فوري وآمن 100%</div>
+    <div class="trust-badges">
+      <span class="trust-badge-item"><i class="fas fa-bolt"></i> تسليم فوري ومضمون 100%</span>
+      <span class="trust-badge-item"><i class="fas fa-shield-halved"></i> دفع آمن وموثوق</span>
+      <span class="trust-badge-item"><i class="fas fa-headset"></i> دعم فني على مدار الساعة</span>
+    </div>
 
     ${category && category.description ? `<div class="category-sub">${category.description}</div>` : ''}
 
@@ -225,6 +242,16 @@ function render() {
       `).join('')}
     ` : ''}
 
+    <div class="qty-row">
+      <span class="qty-label">الكمية</span>
+      <div class="qty-stepper">
+        <button type="button" id="qtyMinus" aria-label="إنقاص الكمية">&minus;</button>
+        <span class="qty-value" id="qtyValue">1</span>
+        <button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button>
+      </div>
+    </div>
+
+    <button class="btn-buy-now" id="buyNowBtn"><i class="fas fa-bolt"></i> اشترِ الآن</button>
     <button class="btn-secondary-cart" id="addToCartBtn"><i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات</button>
 
     <div style="border-top: 1px dashed var(--border); margin: 25px 0;"></div>
@@ -333,19 +360,50 @@ function attachEvents(canUseWallet) {
   const errorBox = document.getElementById('formError');
   const submitBtn = document.getElementById('submitBtn');
   const addToCartBtn = document.getElementById('addToCartBtn');
+  const buyNowBtn = document.getElementById('buyNowBtn');
+
+  // ── عناصر التحكم في الكمية (+ / -) ──
+  const qtyValueEl = document.getElementById('qtyValue');
+  const qtyMinusBtn = document.getElementById('qtyMinus');
+  const qtyPlusBtn = document.getElementById('qtyPlus');
+  function syncQtyUI() {
+    qtyValueEl.textContent = selectedQty;
+    qtyMinusBtn.disabled = selectedQty <= 1;
+  }
+  syncQtyUI();
+  qtyMinusBtn.addEventListener('click', () => { if (selectedQty > 1) { selectedQty--; syncQtyUI(); } });
+  qtyPlusBtn.addEventListener('click', () => { if (selectedQty < 99) { selectedQty++; syncQtyUI(); } });
+
+  // يبني عنصر السلة من المنتج الحالي مع الكمية والبيانات المدخلة
+  function buildCartItem(fieldValues) {
+    const p = product();
+    return { cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5), product_id: p.id, name: p.name, price_sdg: p.price_sdg, image_url: p.image_url, field_values: fieldValues, quantity: selectedQty };
+  }
 
   addToCartBtn.addEventListener('click', () => {
     errorBox.textContent = '';
     const fieldValues = collectFieldValues();
     if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'من فضلك املأ الحقول المطلوبة أولاً!'; return; }
-    const p = product();
     let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
-    cart.push({ cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5), product_id: p.id, name: p.name, price_sdg: p.price_sdg, image_url: p.image_url, field_values: fieldValues });
+    cart.push(buildCartItem(fieldValues));
     localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
     updateCartBadgeGlobal();
     errorBox.style.color = 'var(--primary)'; errorBox.textContent = 'تم إضافة المنتج بنجاح إلى السلة!';
     addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإضافة بنجاح!';
     setTimeout(() => { addToCartBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات'; errorBox.textContent = ''; }, 2500);
+  });
+
+  // ── اشترِ الآن: يحفظ المنتج بالكمية ثم يوجّه مباشرة إلى صفحة الدفع ──
+  buyNowBtn.addEventListener('click', () => {
+    errorBox.textContent = '';
+    const fieldValues = collectFieldValues();
+    if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'من فضلك املأ الحقول المطلوبة أولاً!'; return; }
+    let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+    cart.push(buildCartItem(fieldValues));
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+    updateCartBadgeGlobal();
+    buyNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ التحويل...';
+    window.location.href = 'checkout.html';
   });
 
   if (canUseWallet) {

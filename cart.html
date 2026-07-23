@@ -75,6 +75,36 @@
     color: var(--primary);
     margin-top: 4px;
   }
+  .cart-qty-stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .cart-qty-stepper button {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1.5px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .cart-qty-stepper button:active { transform: scale(0.9); }
+  .cart-qty-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cart-qty-stepper .qty-value {
+    min-width: 24px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--ink);
+  }
   .remove-item-btn {
     background: none;
     border: none;
@@ -235,7 +265,10 @@ function renderCart() {
   grandTotal = 0;
 
   listContainer.innerHTML = cart.map((item, index) => {
-    grandTotal += parseFloat(item.price_sdg) || 0;
+    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+    const unitPrice = parseFloat(item.price_sdg) || 0;
+    const lineSubtotal = unitPrice * qty;
+    grandTotal += lineSubtotal;
     
     // تحويل البيانات المدخلة (مثل الـ ID) لنص منسق مع تعقيم XSS
     const metaText = Object.entries(item.field_values || {})
@@ -250,7 +283,12 @@ function renderCart() {
         <div class="cart-item-details">
           <div class="cart-item-name">${escapeHtml(item.name)}</div>
           <div class="cart-item-meta">${metaText}</div>
-          <div class="cart-item-price">${formatSDG(item.price_sdg)} ج.س</div>
+          <div class="cart-item-price">${formatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${formatSDG(lineSubtotal)} ج.س</strong></div>
+          <div class="cart-qty-stepper">
+            <button type="button" onclick="changeQty(${index}, -1)" aria-label="إنقاص الكمية" ${qty <= 1 ? 'disabled' : ''}>&minus;</button>
+            <span class="qty-value">${qty}</span>
+            <button type="button" onclick="changeQty(${index}, 1)" aria-label="زيادة الكمية">+</button>
+          </div>
         </div>
         <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
@@ -315,6 +353,19 @@ function removeItem(index) {
   } else {
     renderCart();
   }
+}
+
+// تعديل كمية عنصر داخل السلة وإعادة حساب الإجمالي لحظياً
+function changeQty(index, delta) {
+  const item = cart[index];
+  if (!item) return;
+  let qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+  qty += delta;
+  if (qty < 1) qty = 1;
+  if (qty > 99) qty = 99;
+  item.quantity = qty;
+  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  renderCart();
 }
 
 function attachCartEvents(canUseWallet) {
@@ -394,12 +445,15 @@ async function submitCartOrder() {
   if (selectedPayment === 'wallet') {
     try {
       for (const item of cart) {
-        const { error } = await supabaseClient.rpc('create_wallet_order', {
-          p_product_id: item.product_id,
-          p_field_values: item.field_values,
-          p_coupon_code: null
-        });
-        if (error) throw error;
+        const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+        for (let i = 0; i < qty; i++) {
+          const { error } = await supabaseClient.rpc('create_wallet_order', {
+            p_product_id: item.product_id,
+            p_field_values: item.field_values,
+            p_coupon_code: null
+          });
+          if (error) throw error;
+        }
       }
       localStorage.removeItem('raizey_store_cart');
       window.location.href = 'my-orders.html';
@@ -511,21 +565,25 @@ async function submitCartOrder() {
 
   // ── إنشاء الطلبات (Batch Insert) ──
   checkoutBtn.textContent = 'جارِ إرسال الطلبات...';
-  const ordersToInsert = cart.map(item => ({
-    user_id:               currentUser.id,
-    product_id:            item.product_id,
-    product_name_snapshot: item.name,
-    price_sdg_snapshot:    Math.round(parseFloat(item.price_sdg) || 0),
-    field_values:          item.field_values,
-    payment_type:          'bank',
-    payment_method_id:     selectedMethodId,
-    receipt_url:           publicReceiptUrl,
-    receipt_hash:          receiptHash,
-    transaction_reference: transactionRef,
-    status:                'pending_review',
-    ocr_status:            ocrResult.ocr_status  || 'needs_review',
-    amount_verified:       ocrResult.amount_verified ?? false
-  }));
+  const ordersToInsert = cart.flatMap(item => {
+    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+    const baseRow = {
+      user_id:               currentUser.id,
+      product_id:            item.product_id,
+      product_name_snapshot: item.name,
+      price_sdg_snapshot:    Math.round(parseFloat(item.price_sdg) || 0),
+      field_values:          item.field_values,
+      payment_type:          'bank',
+      payment_method_id:     selectedMethodId,
+      receipt_url:           publicReceiptUrl,
+      receipt_hash:          receiptHash,
+      transaction_reference: transactionRef,
+      status:                'pending_review',
+      ocr_status:            ocrResult.ocr_status  || 'needs_review',
+      amount_verified:       ocrResult.amount_verified ?? false
+    };
+    return Array.from({ length: qty }, () => ({ ...baseRow }));
+  });
 
   try {
     const { error: orderError } = await supabaseClient.from('orders').insert(ordersToInsert);
