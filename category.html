@@ -33,69 +33,48 @@
   .trust-badge-item { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--ink); }
   .trust-badge-item i { color: var(--primary); font-size: 13px; }
 
-  .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; margin: 6px 0 14px; }
-  .qty-row .qty-label { font-size: 14px; font-weight: 800; color: var(--ink); }
-  .qty-stepper { display: flex; align-items: center; gap: 14px; }
-  .qty-stepper button { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--primary); background: transparent; color: var(--primary); font-size: 22px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
-  .qty-stepper button:active { transform: scale(0.92); }
-  .qty-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .qty-stepper .qty-value { min-width: 30px; text-align: center; font-size: 18px; font-weight: 900; color: var(--ink); }
-
-  .btn-buy-now { width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 900; cursor: pointer; margin-top: 10px; background: var(--primary); border: none; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .btn-buy-now:active { transform: scale(0.98); }
-
   .category-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
-
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 12px; }
 
-  .variant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .variant-pill { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 22px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; display: flex; align-items: center; justify-content: center; min-height: 60px; }
+  .variant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .variant-pill { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; display: flex; align-items: center; justify-content: center; min-height: 55px; }
   .variant-pill .v-name { font-size: 14px; font-weight: 800; color: var(--ink); }
   .variant-pill.active { background: var(--primary); border-color: var(--primary); }
   .variant-pill.active .v-name { color: var(--ink); }
 
-  .price-display { font-size: 28px; font-weight: 900; color: var(--primary); text-align: center; margin: 6px 0 22px; }
+  .price-display { font-size: 26px; font-weight: 900; color: var(--primary); text-align: center; margin: 4px 0 20px; }
 
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .field input[type="text"], .field select { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-sizing: border-box; color: var(--ink); font-size: 15px; font-weight: 600; }
   .field input[type="text"]:focus, .field select:focus { border-color: var(--primary); outline: none; }
 
-  .btn-secondary-cart { width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 10px; margin-bottom: 25px; background: transparent; border: 1px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; margin: 10px 0 8px; }
+  .qty-row .qty-label { font-size: 14px; font-weight: 800; color: var(--ink); }
+  .qty-stepper { display: flex; align-items: center; gap: 14px; }
+  .qty-stepper button { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--primary); background: transparent; color: var(--primary); font-size: 22px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; user-select: none; }
+  .qty-stepper button:active { transform: scale(0.92); }
+  .qty-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .qty-stepper .qty-value { min-width: 30px; text-align: center; font-size: 18px; font-weight: 900; color: var(--ink); }
+
+  /* تنسيق شريط الإجمالي اللحظي الخافت */
+  .live-total-box { display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; }
+  .live-total-label { font-size: 13px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .live-total-label i { color: var(--primary); font-size: 12px; }
+  .live-total-val { font-size: 15px; font-weight: 900; color: var(--ink); opacity: 0.85; }
+
+  .btn-buy-now { width: 100%; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 900; cursor: pointer; margin-top: 6px; background: var(--primary); border: none; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.15s ease; }
+  .btn-buy-now:active { transform: scale(0.98); }
+
+  .btn-secondary-cart { width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 10px; margin-bottom: 20px; background: transparent; border: 1px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.15s ease; }
   .btn-secondary-cart:active { transform: scale(0.98); }
 
-  .payment-option { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: 0.2s ease; }
-  .payment-option.selected { border-color: var(--primary); background: rgba(255, 106, 26, 0.05); }
-  .payment-option-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-  .payment-option-sub { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
-  .recharge-highlight-link { color: var(--primary) !important; font-weight: 800 !important; text-decoration: underline !important; margin-right: 4px; }
+  .form-error-box { text-align: center; font-size: 13px; font-weight: 700; margin-top: 10px; min-height: 20px; }
 
-  .bank-details { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
-  .bank-details.show { display: block !important; }
-  .file-upload { background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; padding: 16px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; margin-top: 14px; }
-  .file-upload:hover, .file-upload.has-file { border-color: var(--primary); color: var(--ink); }
-  .file-upload i { font-size: 16px; margin-left: 6px; color: var(--primary); }
-
-  .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
-
-  .method-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .method-pill { background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); transition: 0.15s ease; }
-  .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
-  .selected-method-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
-  .copy-account-btn { flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; color: var(--primary); cursor: pointer; }
-  .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
-
-  #couponInput { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--ink); font-size: 14px; font-weight: 600; }
-  #couponInput:focus { border-color: var(--primary); outline: none; }
-  #applyCouponBtn { padding: 0 20px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border); color: var(--ink); font-weight: 700; font-size: 14px; cursor: pointer; }
-
-  .summary-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin: 24px 0 16px 0; }
-  .summary-box .total { font-weight: 900; font-size: 18px; color: var(--primary); }
-
-  .product-instructions-box { background: var(--bg-card); border: 1px solid var(--border); border-right: 4px solid var(--primary); padding: 16px; border-radius: 10px; margin: 30px 0; font-size: 14px; line-height: 1.6; color: var(--ink); white-space: pre-line; }
+  .product-instructions-box { background: var(--bg-card); border: 1px solid var(--border); border-right: 4px solid var(--primary); padding: 16px; border-radius: 10px; margin: 25px 0; font-size: 14px; line-height: 1.6; color: var(--ink); white-space: pre-line; }
   .product-instructions-title { color: var(--primary); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
 
-  .related-section { margin-top: 34px; padding-top: 24px; border-top: 1px dashed var(--border); }
+  .related-section { margin-top: 30px; padding-top: 20px; border-top: 1px dashed var(--border); }
   .related-grid { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
   .related-card { flex-shrink: 0; width: 130px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-decoration: none; color: var(--ink); }
   .related-thumb { width: 100%; height: 70px; border-radius: 8px; overflow: hidden; background: var(--bg); margin-bottom: 8px; }
@@ -118,8 +97,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<!-- Tesseract.js OCR — فحص محتوى الإيصال -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <script>
 const params = new URLSearchParams(window.location.search);
 const categoryId = params.get('id');
@@ -128,16 +106,14 @@ let category = null;
 let variants = [];
 let selectedIndex = 0;
 let selectedQty = 1;
-let walletBalance = 0;
-let paymentMethods = [];
-let selectedPayment = null;
-let selectedMethodId = null;
-let receiptFile = null;
-let appliedCoupon = null;
-let welcomeDiscount = null;
 let relatedProducts = [];
 
 function product() { return variants[selectedIndex]; }
+
+function safeFormatSDG(val) {
+  if (typeof formatSDG === 'function') return formatSDG(val);
+  return Math.round(val).toLocaleString('ar-EG');
+}
 
 function updateCartBadgeGlobal() {
   const cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
@@ -152,6 +128,7 @@ async function init() {
     supabaseClient.auth.getSession(),
     getExchangeRate()
   ]);
+
   if (!session) {
     sessionStorage.setItem('redirect_after_login', window.location.href);
     window.location.href = 'login.html';
@@ -162,16 +139,10 @@ async function init() {
   const [
     { data: cat },
     { data: products },
-    { data: wallet },
-    { data: myProfile },
-    { data: methods },
     { data: related }
   ] = await Promise.all([
     supabaseClient.from('categories').select('*').eq('id', categoryId).single(),
     supabaseClient.from('products').select('*').eq('category_id', categoryId).eq('is_active', true).order('display_order'),
-    supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
-    supabaseClient.from('profiles').select('referred_by, referral_discount_used').eq('id', currentUser.id).single(),
-    supabaseClient.from('payment_methods').select('*').eq('is_active', true),
     supabaseClient.from('products').select('*').eq('is_active', true).neq('category_id', categoryId).limit(6)
   ]);
 
@@ -182,15 +153,6 @@ async function init() {
     return;
   }
   variants = products.map(p => ({ ...p, price_sdg: p.price_usd * rate }));
-
-  walletBalance = wallet ? wallet.balance : 0;
-
-  if (myProfile && myProfile.referred_by && !myProfile.referral_discount_used) {
-    const { data: discountRow } = await supabaseClient.from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
-    welcomeDiscount = discountRow ? parseFloat(discountRow.value) : 0;
-  }
-
-  paymentMethods = methods || [];
   relatedProducts = (related || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
 
   render();
@@ -203,12 +165,11 @@ function render() {
 
   const p = product();
   const fields = p.required_fields || [];
-  const canUseWallet = walletBalance >= p.price_sdg;
 
   content.innerHTML = `
     <div class="product-hero">
       <div class="product-hero-thumb">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (category && category.image_url ? `<img src="${category.image_url}" alt="${category.name}">` : 'لا توجد صورة')}
+        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (category && category.image_url ? `<img src="${category.image_url}" alt="${category.name}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
       </div>
       <div class="product-hero-info"><h1>${category ? category.name : p.name}</h1></div>
     </div>
@@ -230,13 +191,13 @@ function render() {
       `).join('')}
     </div>
 
-    <div class="price-display">${formatSDG(p.price_sdg)} ج.س</div>
+    <div class="price-display" id="unitPriceDisplay">${safeFormatSDG(p.price_sdg)} ج.س</div>
 
     ${fields.length > 0 ? `
-      <div class="section-label">بيانات الطلب</div>
+      <div class="section-label">بيانات الطلب المطلوبة</div>
       ${fields.map(f => `
         <div class="field">
-          <label>${f.label}</label>
+          <label>${f.label} *</label>
           <input type="text" data-field-key="${f.key}" required placeholder="${f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`}">
         </div>
       `).join('')}
@@ -251,71 +212,15 @@ function render() {
       </div>
     </div>
 
+    <div class="live-total-box">
+      <span class="live-total-label"><i class="fas fa-calculator"></i> الإجمالي اللحظي:</span>
+      <span class="live-total-val" id="liveTotalDisplay">${safeFormatSDG(p.price_sdg * selectedQty)} ج.س</span>
+    </div>
+
+    <div class="form-error-box" id="formError"></div>
+
     <button class="btn-buy-now" id="buyNowBtn"><i class="fas fa-bolt"></i> اشترِ الآن</button>
     <button class="btn-secondary-cart" id="addToCartBtn"><i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات</button>
-
-    <div style="border-top: 1px dashed var(--border); margin: 25px 0;"></div>
-
-    <div class="section-label">أو شراء مباشر الآن</div>
-
-    <div class="payment-option ${!canUseWallet ? '' : ''}" id="walletOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">الدفع من المحفظة</div>
-        <div class="payment-option-sub">
-          ${canUseWallet ? `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س` : `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`}
-        </div>
-      </div>
-    </div>
-
-    <div class="payment-option" id="bankOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">تحويل بنكك ورفع الإيصال</div>
-        <div class="payment-option-sub">ادفع مباشرة وارفع صورة التحويل</div>
-      </div>
-    </div>
-
-    <div class="bank-details" id="bankDetails">
-      <div class="section-label" style="margin-top:0;">اختر وسيلة التحويل</div>
-      <div class="method-picker-grid" id="methodPickerGrid">
-        ${paymentMethods.map(m => `
-          <div class="method-pill" data-method-id="${m.id}">${m.name}</div>
-        `).join('')}
-      </div>
-
-      <div id="selectedMethodDetails"></div>
-
-      <div class="field" style="margin-top:14px;">
-        <label>رقم العملية (من رسالة التحويل) *</label>
-        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
-      </div>
-
-      <div class="file-upload" id="fileUploadBox">
-        <i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال
-        <input type="file" id="receiptInput" accept="image/*" style="display:none;">
-      </div>
-    </div>
-
-    ${welcomeDiscount ? `
-      <div style="background:rgba(255, 106, 26,0.06); border:1px solid var(--primary); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--primary); font-weight:700;">
-        خصم ترحيبي ${welcomeDiscount}% مطبق تلقائياً على أول طلب ليك
-      </div>
-    ` : ''}
-
-    <div class="section-label">هل لديك كود خصم؟</div>
-    <div style="display:flex; gap:8px; margin-bottom:6px;">
-      <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
-      <button id="applyCouponBtn">تطبيق</button>
-    </div>
-    <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
-
-    <div class="summary-box">
-      <span>الإجمالي للشراء المباشر</span>
-      <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
-    </div>
-
-    <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700;"></div>
-
-    <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
 
     ${p.instructions ? `
       <div class="product-instructions-box">
@@ -332,7 +237,7 @@ function render() {
             <a href="category.html?id=${r.category_id}" class="related-card">
               <div class="related-thumb">${r.image_url ? `<img src="${r.image_url}" alt="${r.name}">` : ''}</div>
               <div class="related-name">${r.name}</div>
-              <div class="related-price">${formatSDG(r.price_sdg)} ج.س</div>
+              <div class="related-price">${safeFormatSDG(r.price_sdg)} ج.س</div>
             </a>
           `).join('')}
         </div>
@@ -340,292 +245,116 @@ function render() {
     ` : ''}
   `;
 
-  attachEvents(canUseWallet);
+  attachEvents();
 }
 
-function attachEvents(canUseWallet) {
-  document.querySelectorAll('.variant-pill').forEach(el => {
-    el.addEventListener('click', () => {
-      selectedIndex = parseInt(el.dataset.idx);
-      selectedPayment = null; selectedMethodId = null; receiptFile = null; appliedCoupon = null;
-      render();
-    });
-  });
-
-  const walletOption = document.getElementById('walletOption');
-  const bankOption = document.getElementById('bankOption');
-  const bankDetails = document.getElementById('bankDetails');
-  const fileBox = document.getElementById('fileUploadBox');
-  const fileInput = document.getElementById('receiptInput');
-  const errorBox = document.getElementById('formError');
-  const submitBtn = document.getElementById('submitBtn');
-  const addToCartBtn = document.getElementById('addToCartBtn');
-  const buyNowBtn = document.getElementById('buyNowBtn');
-
-  // ── عناصر التحكم في الكمية (+ / -) ──
+function attachEvents() {
   const qtyValueEl = document.getElementById('qtyValue');
   const qtyMinusBtn = document.getElementById('qtyMinus');
   const qtyPlusBtn = document.getElementById('qtyPlus');
-  function syncQtyUI() {
+  const liveTotalDisplay = document.getElementById('liveTotalDisplay');
+  const unitPriceDisplay = document.getElementById('unitPriceDisplay');
+  const errorBox = document.getElementById('formError');
+  const addToCartBtn = document.getElementById('addToCartBtn');
+  const buyNowBtn = document.getElementById('buyNowBtn');
+
+  function updateLiveCalculations() {
+    const p = product();
     qtyValueEl.textContent = selectedQty;
     qtyMinusBtn.disabled = selectedQty <= 1;
+    unitPriceDisplay.textContent = safeFormatSDG(p.price_sdg) + ' ج.س';
+    liveTotalDisplay.textContent = safeFormatSDG(p.price_sdg * selectedQty) + ' ج.س';
   }
-  syncQtyUI();
-  qtyMinusBtn.addEventListener('click', () => { if (selectedQty > 1) { selectedQty--; syncQtyUI(); } });
-  qtyPlusBtn.addEventListener('click', () => { if (selectedQty < 99) { selectedQty++; syncQtyUI(); } });
 
-  // يبني عنصر السلة من المنتج الحالي مع الكمية والبيانات المدخلة
+  document.querySelectorAll('.variant-pill').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.variant-pill').forEach(pill => pill.classList.remove('active'));
+      el.classList.add('active');
+      selectedIndex = parseInt(el.dataset.idx);
+      updateLiveCalculations();
+    });
+  });
+
+  qtyMinusBtn.addEventListener('click', () => {
+    if (selectedQty > 1) {
+      selectedQty--;
+      updateLiveCalculations();
+    }
+  });
+
+  qtyPlusBtn.addEventListener('click', () => {
+    if (selectedQty < 99) {
+      selectedQty++;
+      updateLiveCalculations();
+    }
+  });
+
+  function collectFieldValues() {
+    const inputs = document.querySelectorAll('[data-field-key]');
+    const values = {};
+    if (inputs.length === 0) return {};
+    for (const input of inputs) {
+      if (!input.value.trim()) return null;
+      values[input.dataset.fieldKey] = input.value.trim();
+    }
+    return values;
+  }
+
   function buildCartItem(fieldValues) {
     const p = product();
-    return { cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5), product_id: p.id, name: p.name, price_sdg: p.price_sdg, image_url: p.image_url, field_values: fieldValues, quantity: selectedQty };
+    return {
+      cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      product_id: p.id,
+      name: p.name,
+      price_sdg: p.price_sdg,
+      image_url: p.image_url || (category ? category.image_url : ''),
+      field_values: fieldValues,
+      quantity: selectedQty
+    };
   }
 
+  // زر إضافة إلى السلة
   addToCartBtn.addEventListener('click', () => {
     errorBox.textContent = '';
     const fieldValues = collectFieldValues();
-    if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'من فضلك املأ الحقول المطلوبة أولاً!'; return; }
+    if (fieldValues === null) {
+      errorBox.style.color = 'var(--danger)';
+      errorBox.textContent = 'يرجى ملء جميع بيانات الطلب المطلوبة أولاً!';
+      return;
+    }
     let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
     cart.push(buildCartItem(fieldValues));
     localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
     updateCartBadgeGlobal();
-    errorBox.style.color = 'var(--primary)'; errorBox.textContent = 'تم إضافة المنتج بنجاح إلى السلة!';
-    addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإضافة بنجاح!';
-    setTimeout(() => { addToCartBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات'; errorBox.textContent = ''; }, 2500);
+
+    errorBox.style.color = 'var(--success, #10b981)';
+    errorBox.textContent = 'تم إضافة المنتج بنجاح إلى السلة!';
+    addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم الإضافة بنجاح';
+
+    setTimeout(() => {
+      addToCartBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات';
+      errorBox.textContent = '';
+    }, 2500);
   });
 
-  // ── اشترِ الآن: يحفظ المنتج بالكمية ثم يوجّه مباشرة إلى صفحة الدفع ──
+  // زر اشترِ الآن (حفظ + تحويل مباشر لـ checkout.html)
   buyNowBtn.addEventListener('click', () => {
     errorBox.textContent = '';
     const fieldValues = collectFieldValues();
-    if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'من فضلك املأ الحقول المطلوبة أولاً!'; return; }
+    if (fieldValues === null) {
+      errorBox.style.color = 'var(--danger)';
+      errorBox.textContent = 'يرجى ملء جميع بيانات الطلب المطلوبة أولاً!';
+      return;
+    }
     let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
     cart.push(buildCartItem(fieldValues));
     localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
     updateCartBadgeGlobal();
-    buyNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ التحويل...';
+
+    buyNowBtn.disabled = true;
+    buyNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ التوجيه للدفع...';
     window.location.href = 'checkout.html';
   });
-
-  if (canUseWallet) {
-    walletOption.addEventListener('click', () => {
-      selectedPayment = 'wallet';
-      walletOption.classList.add('selected'); bankOption.classList.remove('selected'); bankDetails.classList.remove('show');
-    });
-  } else {
-    walletOption.addEventListener('click', () => { window.location.href = 'wallet.html'; });
-  }
-
-  bankOption.addEventListener('click', () => {
-    selectedPayment = 'bank';
-    bankOption.classList.add('selected'); walletOption.classList.remove('selected'); bankDetails.classList.add('show');
-  });
-
-  fileBox.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', async () => {
-    if (fileInput.files.length > 0) {
-      const file = fileInput.files[0];
-      const validCheck = await validateReceiptImage(file);
-      if (!validCheck.valid) {
-        errorBox.style.color = 'var(--danger)';
-        errorBox.textContent = validCheck.message;
-        fileInput.value = '';
-        receiptFile = null;
-        fileBox.innerHTML = '<i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال';
-        fileBox.classList.remove('has-file');
-        return;
-      }
-      errorBox.textContent = '';
-      receiptFile = file;
-      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> ${receiptFile.name}`;
-      fileBox.classList.add('has-file');
-    }
-  });
-
-  document.querySelectorAll('.method-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      document.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      selectedMethodId = pill.dataset.methodId;
-      const m = paymentMethods.find(x => x.id === selectedMethodId);
-      const box = document.getElementById('selectedMethodDetails');
-      box.innerHTML = `
-        <div class="selected-method-box">
-          <div class="bank-account-row">
-            <span>اسم الحساب: <span class="acc-info-text">${m.account_name || ''}</span></span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
-          </div>
-          <div class="bank-account-row" style="margin-bottom:0;">
-            <span>رقم الحساب: <span class="acc-info-text">${m.account_number || ''}</span></span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
-          </div>
-          ${m.instructions ? `<div style="color:var(--text-muted); font-size:13px; margin-top:8px;">${m.instructions}</div>` : ''}
-        </div>
-      `;
-      box.querySelectorAll('.copy-account-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(btn.dataset.copy);
-            const original = btn.textContent;
-            btn.textContent = 'تم النسخ'; btn.classList.add('copied');
-            setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800);
-          } catch (e) {}
-        });
-      });
-    });
-  });
-
-  document.getElementById('applyCouponBtn').addEventListener('click', applyCoupon);
-  submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
-}
-
-function currentPrice() {
-  const p = product();
-  if (appliedCoupon) return p.price_sdg - (p.price_sdg * appliedCoupon.discount_percent / 100);
-  if (welcomeDiscount) return p.price_sdg - (p.price_sdg * welcomeDiscount / 100);
-  return p.price_sdg;
-}
-function updateSummary() { document.getElementById('summaryTotal').textContent = formatSDG(currentPrice()) + ' ج.س'; }
-
-async function applyCoupon() {
-  const code = document.getElementById('couponInput').value.trim().toUpperCase();
-  const msgBox = document.getElementById('couponMessage');
-  msgBox.style.color = '';
-  if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'اكتب الكود الأول'; return; }
-  const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
-  if (error || !data || data.length === 0) { appliedCoupon = null; msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي'; updateSummary(); return; }
-  appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
-  msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
-}
-
-function collectFieldValues() {
-  const inputs = document.querySelectorAll('[data-field-key]');
-  const values = {};
-  if (inputs.length === 0) return {};
-  for (const input of inputs) {
-    if (!input.value.trim()) return null;
-    values[input.dataset.fieldKey] = input.value.trim();
-  }
-  return values;
-}
-
-async function submitOrder(errorBox, submitBtn) {
-  errorBox.textContent = ''; errorBox.style.color = 'var(--danger)';
-  const p = product();
-  const fieldValues = collectFieldValues();
-  if (fieldValues === null) { errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة'; return; }
-  if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
-  submitBtn.disabled = true; submitBtn.textContent = 'جارِ التنفيذ...';
-
-  // ══════════════════════════════════════════════════
-  // الدفع من المحفظة
-  // ══════════════════════════════════════════════════
-  if (selectedPayment === 'wallet') {
-    const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
-      p_product_id: p.id,
-      p_field_values: fieldValues,
-      p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
-    });
-    if (error) {
-      const msg = error.message || '';
-      errorBox.textContent = msg.includes('insufficient_balance') ? 'رصيدك غير كافٍ للدفع من المحفظة' : 'حصل خطأ، حاول تاني';
-      submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-    }
-    const orderId = rpcData && rpcData.length > 0 ? rpcData[0].id : null;
-    window.location.href = orderId ? `receipt.html?order_id=${orderId}` : 'my-orders.html';
-    return;
-  }
-
-  // ══════════════════════════════════════════════════
-  // الدفع بالتحويل البنكي
-  // ══════════════════════════════════════════════════
-  if (!selectedMethodId || !receiptFile) {
-    errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال';
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) {
-    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
-
-  // ── 1. فحص بصمة الملف + فحص التكرار (قبل رفع الصورة للـ Storage) ──
-  const receiptHash = await hashFile(receiptFile);
-  const isDuplicateHash = await checkDuplicateReceipt('orders', receiptHash);
-  const isDuplicateRef  = await checkDuplicateTransactionRef('orders', transactionRef);
-
-  if (isDuplicateHash || isDuplicateRef) {
-    await supabaseClient.from('audit_logs').insert({
-      admin_id: null,
-      action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر مكتشف تلقائياً',
-      details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
-    });
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = 'هذا الإشعار أو رقم العملية تم استخدامه سابقاً في طلب آخر!';
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
-
-  // ── 2. رفع الإيصال إلى Storage ──
-  submitBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
-  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
-  if (uploadError) {
-    const errMsg = uploadError.message || JSON.stringify(uploadError);
-    console.error('[RAIZEY] Storage upload error:', uploadError);
-    errorBox.textContent = 'فشل رفع الإيصال — ' + errMsg;
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
-
-  // ── 3. بناء الرابط العام المباشر للصورة ──
-  const publicReceiptUrl = `${SUPABASE_URL}/storage/v1/object/public/receipts/${filePath}`;
-  console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
-
-  // ── 4. الفحص الذكي الصارم للإيصال بـ OCR ──
-  submitBtn.textContent = 'جارِ فحص صورة الإيصال ذكياً...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, currentPrice());
-  console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
-
-  // ── 5. إنشاء الطلب في قاعدة البيانات ──
-  const orderPayload = {
-    user_id:               currentUser.id,
-    product_id:            p.id,
-    product_name_snapshot: p.name,
-    price_sdg_snapshot:    currentPrice(),
-    field_values:          fieldValues,
-    payment_type:          'bank',
-    payment_method_id:     selectedMethodId,
-    transaction_reference: transactionRef,
-    status:                'pending_review',
-    receipt_hash:          receiptHash,
-    receipt_url:           publicReceiptUrl,
-    ocr_status:            ocrResult.ocr_status  || 'needs_review',
-    amount_verified:       ocrResult.amount_verified ?? false
-  };
-  console.log('[RAIZEY] Inserting order payload:', orderPayload);
-  const { data: insertedOrder, error: orderError } = await supabaseClient
-    .from('orders')
-    .insert(orderPayload)
-    .select('id')
-    .single();
-  if (orderError) {
-    const errDetail = orderError.message || JSON.stringify(orderError);
-    console.error('[RAIZEY] Order insert error:', orderError);
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
-    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
-  }
-
-  // ── 6. تطبيق الكوبون أو خصم الإحالة ──
-  if (appliedCoupon) {
-    await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
-  } else if (welcomeDiscount) {
-    await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
-  }
-
-  // ── 7. التوجيه لصفحة الإيصال ──
-  window.location.href = insertedOrder && insertedOrder.id
-    ? `receipt.html?order_id=${insertedOrder.id}`
-    : 'my-orders.html';
 }
 
 init();
