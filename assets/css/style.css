@@ -935,3 +935,106 @@ button { font-family: inherit; cursor: pointer; border: none; }
   color: var(--text-muted);
   margin-top: 6px;
 }
+
+/* ---------- Trust Badges (shared) ---------- */
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 20px;
+}
+.trust-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 106, 26, 0.07);
+  border: 1px solid rgba(255, 106, 26, 0.28);
+  color: var(--primary-dim);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 12px;
+  border-radius: 999px;
+  line-height: 1;
+}
+.trust-badge-pill i { font-size: 12px; }
+.trust-badge-pill.is-success {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.3);
+  color: var(--success);
+}
+
+/* mini trust badge inside product/game cards */
+.card-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--success);
+  margin-bottom: 8px;
+}
+.card-trust i { font-size: 10px; }
+
+/* ---------- Quantity Stepper (shared) ---------- */
+.qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 6px;
+}
+.qty-row .qty-label { font-size: 14px; font-weight: 800; color: var(--ink); }
+
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.qty-stepper button {
+  width: 42px;
+  height: 42px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+.qty-stepper button:hover:not(:disabled) { background: rgba(255, 106, 26, 0.1); }
+.qty-stepper button:disabled { color: var(--text-muted); opacity: 0.45; cursor: not-allowed; }
+.qty-stepper .qty-value {
+  min-width: 46px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+
+/* small stepper variant for cart rows */
+.qty-stepper.compact button { width: 34px; height: 34px; font-size: 18px; }
+.qty-stepper.compact .qty-value { min-width: 36px; font-size: 14px; }
+
+/* ---------- Buy Now button (shared) ---------- */
+.btn-buy-now {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 800;
+  background: var(--primary);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.btn-buy-now:hover { background: var(--primary-dim); }
+.btn-buy-now:active { transform: scale(0.98); }
