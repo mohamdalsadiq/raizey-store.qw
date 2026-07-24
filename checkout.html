@@ -225,7 +225,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<!-- Tesseract.js OCR — فحص محتوى الإيصال -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 let cart = [];
@@ -497,9 +496,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   placeOrderBtn.disabled = true;
   placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
 
-  // ══════════════════════════════════════════════════
-  // 1⃣ الدفع من المحفظة — السعر يُحسب بالكامل من الـ RPC
-  // ══════════════════════════════════════════════════
   if (selectedPayment === 'wallet') {
     try {
       let lastOrderId = null;
@@ -537,9 +533,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ══════════════════════════════════════════════════
-  // 2⃣ الدفع بالتحويل البنكي
-  // ══════════════════════════════════════════════════
   if (!selectedMethodId || !receiptFile) {
     errorBox.textContent = !selectedMethodId ? 'الرجاء اختيار وسيلة التحويل البنكي!' : 'الرجاء رفع صورة الإيصال لتأكيد التحويل!';
     placeOrderBtn.disabled = false;
@@ -555,7 +548,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── 1. فحص صلاحية الملف المحلي ──
   const preUploadCheck = await validateReceiptImage(receiptFile);
   if (!preUploadCheck.valid) {
     errorBox.textContent = preUploadCheck.message;
@@ -564,7 +556,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── 2. بصمة الملف + فحص التكرار ──
   placeOrderBtn.textContent = 'جارِ التحقق من الإيصال...';
   let receiptHash = null;
   try {
@@ -598,7 +589,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── 3. رفع الإيصال إلى Storage ──
   placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
@@ -616,21 +606,17 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── 4. بناء الرابط العام المباشر للصورة ──
   const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
   const publicReceiptUrl = urlData.publicUrl;
   console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
 
-  // ── 5. الفحص الذكي للإيصال باستخدام الرابط العام + رقم العملية ──
   placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
   const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, currentTotal());
   console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
 
-  // ── 6. إنشاء الطلبات في قاعدة البيانات (دعم الكميات المتعددة) ──
   try {
     let lastInsertedOrderId = null;
     
-    // بناء مصفوفة الطلبات بالكامل مع تكرار الكميات
     const ordersToInsert = [];
     for (const item of cart) {
       const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
