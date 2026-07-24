@@ -198,6 +198,16 @@ function renderOrderCard(o) {
     `;
   }
 
+  // إضافة عرض الخيار المختار
+  let optionHtml = '';
+  if (o.selected_option && o.selected_option.label) {
+    optionHtml = `
+      <div style="background: rgba(255, 106, 26, 0.05); border: 1px solid var(--primary); border-radius: 8px; padding: 8px; margin-top: 6px;">
+        <strong>الخيار المختار:</strong> <span style="color: var(--primary);">${escapeHtml(o.selected_option.label)}</span>
+      </div>
+    `;
+  }
+
   return `
     <div class="order-card">
       <div class="order-top">
@@ -211,6 +221,7 @@ function renderOrderCard(o) {
       <div class="order-details">
         <div><strong>السعر:</strong> <span style="color:var(--primary); font-family:'JetBrains Mono', monospace; font-weight:700;">${formatSDG(o.price_sdg_snapshot)} ج.س</span></div>
         <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</div>
+        ${optionHtml} <!-- عرض الخيار المختار هنا -->
         ${fieldsHtml}
         ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary); font-weight:700; text-decoration:none;"><i class="fas fa-image"></i> عرض صورة الإيصال</a></div>` : ''}
       </div>
