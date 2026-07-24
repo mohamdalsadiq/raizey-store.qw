@@ -1,0 +1,218 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 30px 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 34px rgba(26, 29, 41, 0.08);
+}
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-dim), var(--primary), #ffc98a, var(--primary));
+}
+
+.auth-logo {
+  text-align: center;
+  font-weight: 800;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+.auth-logo span { color: var(--primary); }
+
+.auth-title {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.auth-sub {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 6px;
+  margin-bottom: 24px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  direction: ltr;
+  text-align: right;
+}
+.field input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 10px;
+  min-height: 18px;
+}
+
+.form-success {
+  color: var(--primary);
+  font-size: 13px;
+  margin-bottom: 10px;
+  min-height: 18px;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--ink); /* متوافق مع الخلفية الفحمية الداكنة */
+  font-weight: 800;
+  font-size: 15px;
+  transition: opacity 0.2s ease;
+}
+.auth-btn:disabled {
+  opacity: 0.6;
+}
+
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 20px;
+}
+.auth-switch a {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.social-login-row {
+  display: flex;
+  gap: 10px;
+}
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  transition: 0.2s ease;
+}
+.social-btn:active { transform: scale(0.98); }
+.social-btn i { font-size: 15px; }
+.social-btn.fb-btn i { color: #1877F2; }
+.social-btn.google-btn i { color: #EA4335; }
+
+.pw-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.pw-strength-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  transition: width 0.25s ease, background 0.25s ease;
+  background: var(--danger);
+}
+.pw-strength-label {
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.otp-inputs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  direction: ltr;
+  margin-bottom: 20px;
+}
+.otp-inputs input {
+  width: 44px;
+  height: 52px;
+  text-align: center;
+  font-size: 20px;
+  font-family: var(--font-mono);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+}
+.otp-inputs input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.resend-link {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.resend-link button {
+  background: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 13px;
+}
+.resend-link button:disabled {
+  color: var(--text-muted);
+}

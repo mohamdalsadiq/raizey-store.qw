@@ -1,0 +1,937 @@
+/* =========================================================
+   RAIZEY STORE — Design Tokens (Paper & Orange Edition)
+   ========================================================= */
+:root {
+  --bg: #ffffff;              /* الورقي الصافي — خلفية الموقع الأساسية */
+  --bg-card: #f5f1ea;         /* الورقي الخافت — خلفية الصناديق والحقول */
+  --primary: #ff6a1a;         /* البرتقالي الحيوي — العنصر التفاعلي الأساسي */
+  --primary-dim: #e85d00;     /* درجة برتقالية أغمق للتأثيرات والهوفر */
+  --ink: #1a1d29;             /* الحبري الداكن — لون النصوص الأساسية */
+  --white: #ffffff;
+  --border: #e8e1d6;          /* حدود فاتحة متناسقة مع الهوية الورقية */
+  --text-muted: #7a7468;      /* نصوص فرعية دافئة مريحة للعين */
+  --danger: #e5484d;
+  --warning: #f59e0b;
+  --success: #16a34a;
+  --font-display: 'Tajawal', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 14px;
+}
+
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
+html, body { 
+  overflow-x: hidden; /* حماية كاملة للموقع من التمدد الأفقي عند التكبير والتصغير */
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  direction: rtl;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* تحجيم تلقائي وآمن لجميع الصور بالموقع */
+img { 
+  max-width: 100%; 
+  height: auto;
+  object-fit: cover; 
+  display: block; 
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; }
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+}
+.logo span { color: var(--primary); }
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  position: relative;
+}
+
+.badge-dot {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  display: none;
+}
+
+/* ---------- Hero Slider ---------- */
+.hero-slider {
+  position: relative;
+  overflow: hidden;
+  margin: 14px 20px 0;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.5s ease;
+}
+
+.slide {
+  min-width: 100%;
+  padding: 34px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.slide::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: -60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(255, 106, 26,0.2) 0%, rgba(255, 106, 26,0) 70%);
+}
+
+.slide-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--primary);
+  letter-spacing: 1px;
+  position: relative;
+}
+
+.slide h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 8px;
+  line-height: 1.4;
+  position: relative;
+  max-width: 80%;
+}
+
+.slide p {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 8px;
+  position: relative;
+  max-width: 85%;
+}
+
+.slide-1 { background: linear-gradient(135deg, #FFF4EA, #FFFFFF); }
+.slide-2 { background: linear-gradient(135deg, #FFEFE0, #FFFFFF); }
+.slide-3 { background: linear-gradient(135deg, #FFF8F2, #FFFFFF); }
+
+.slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 0;
+  background: var(--bg-card);
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+.dot.active { background: var(--primary); width: 18px; border-radius: 4px; }
+
+.hero-sub {
+  text-align: center;
+  padding: 20px 20px 4px;
+}
+.hero-sub p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.hero-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--primary);
+}
+
+/* ---------- Category chips ---------- */
+.categories {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 18px 20px;
+  scrollbar-width: none;
+}
+.categories::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.chip.active {
+  background: var(--primary);
+  color: var(--ink);
+  border-color: var(--primary);
+}
+
+/* ---------- Voucher Product Cards ---------- */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 8px 20px 40px;
+}
+
+@media (min-width: 640px) {
+  .products-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+  .products-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.voucher-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.voucher-card:active { transform: scale(0.97); }
+.voucher-card:hover { border-color: var(--primary); }
+
+.voucher-top {
+  padding: 14px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voucher-thumb {
+  width: 100%;
+  aspect-ratio: 1.4;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+/* إجبار صورة العرض (مثل 60 شدة) على الالتزام الكامل بالحاوية المخصصة لها */
+.voucher-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  display: block;
+}
+
+.voucher-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* perforated divider — the signature element */
+.voucher-divider {
+  position: relative;
+  border-top: 2px dashed var(--border);
+  margin: 0 0;
+}
+.voucher-divider::before,
+.voucher-divider::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--bg);
+  border-radius: 50%;
+}
+.voucher-divider::before { right: -22px; }
+.voucher-divider::after { left: -22px; }
+
+.voucher-bottom {
+  padding: 10px 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.voucher-price {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 14px;
+}
+.voucher-price small {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.buy-btn {
+  background: var(--primary);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+/* ---------- Category Sections (home layout) ---------- */
+.category-section {
+  margin-top: 26px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+
+.category-header h2 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.category-header .see-all {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.products-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 20px 6px;
+  scrollbar-width: none;
+}
+.products-row::-webkit-scrollbar { display: none; }
+
+.products-row .voucher-card {
+  min-width: 42%;
+  flex-shrink: 0;
+}
+
+@media (min-width: 480px) {
+  .products-row .voucher-card { min-width: 31%; }
+}
+@media (min-width: 720px) {
+  .products-row .voucher-card { min-width: 22%; }
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-muted);
+}
+.empty-state h3 { color: var(--ink); margin-bottom: 8px; font-size: 16px; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 20px 90px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ---------- Floating WhatsApp ---------- */
+.whatsapp-fab {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(255, 106, 26,0.25);
+  z-index: 60;
+}
+
+/* ---------- Product Page ---------- */
+.product-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.product-hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.product-hero-thumb {
+  width: 100%;
+  aspect-ratio: 1.8;
+  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  overflow: hidden;
+}
+.product-hero-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block;
+}
+
+.product-hero-info {
+  padding: 16px;
+}
+.product-hero-info h1 {
+  font-size: 18px;
+  font-weight: 800;
+}
+.product-hero-price {
+  font-family: var(--font-mono);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 20px;
+  margin-top: 8px;
+}
+
+.section-label {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 20px 0 12px;
+}
+
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+/* ستايل حقل إدخال معرف اللاعب (ID) والتوهج المتناسق عند التركيز */
+.field input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.field input[type="text"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
+  outline: none;
+}
+
+/* ستايل شبكة باقات الشحن داخل صفحة تفاصيل المنتج */
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.variant-btn {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  color: var(--ink);
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+.variant-btn.active {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.payment-option.selected {
+  border-color: var(--primary);
+  background: rgba(255, 106, 26,0.06);
+}
+.payment-option.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.payment-option-info { flex: 1; }
+.payment-option-title { font-weight: 700; font-size: 14px; }
+.payment-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.bank-details {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  display: none;
+}
+.bank-details.show { display: block; }
+
+.file-upload {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 10px;
+  cursor: pointer;
+}
+.file-upload.has-file { border-color: var(--primary); color: var(--primary); }
+
+.summary-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 16px 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.summary-box .total {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ---------- My Orders ---------- */
+.orders-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.page-header h1 { font-size: 19px; font-weight: 800; }
+
+.order-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.order-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.order-product { font-weight: 700; font-size: 15px; }
+.order-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.copy-account-btn {
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+.copy-account-btn.copied { color: var(--success); border-color: var(--success); }
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.status-pending_review { background: rgba(245, 158, 11,0.15); color: var(--warning); }
+.status-in_progress { background: rgba(245, 158, 11,0.15); color: var(--warning); }
+.status-completed { background: rgba(22, 163, 74,0.15); color: var(--success); }
+.status-cancelled { background: rgba(122, 116, 104,0.15); color: var(--text-muted); }
+.status-rejected { background: rgba(229, 72, 77,0.15); color: var(--danger); }
+
+.order-details {
+  font-size: 13px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.order-details div { margin-bottom: 4px; }
+.order-details strong { color: var(--ink); }
+
+.order-rejection {
+  background: rgba(229, 72, 77,0.08);
+  border: 1px solid rgba(229, 72, 77,0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+.cancel-order-btn {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--danger);
+  background: none;
+  font-weight: 700;
+}
+
+/* ---------- Wallet Page ---------- */
+.wallet-balance-card {
+  background: linear-gradient(135deg, #FFF3E8, var(--bg-card));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.wallet-balance-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.wallet-balance-amount {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 8px;
+}
+.wallet-balance-amount small {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.topup-toggle-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.topup-form {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.topup-form.show { display: block; }
+
+.status-pending { background: rgba(245, 158, 11,0.15); color: var(--warning); }
+.status-confirmed { background: rgba(255, 106, 26,0.15); color: var(--primary); }
+
+/* ---------- Cyber-Hex Logo ---------- */
+.hex-logo {
+  filter: drop-shadow(0 0 6px rgba(255, 106, 26,0.7));
+}
+
+/* ---------- Hamburger + Drawer ---------- */
+.hamburger-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.hamburger-btn span {
+  width: 16px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  z-index: 200;
+}
+.drawer-overlay.show { display: block; }
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 82%;
+  max-width: 320px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  z-index: 201;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  padding: 24px 18px;
+}
+.drawer-overlay.show .drawer-panel {
+  transform: translateX(0);
+}
+
+.drawer-greeting {
+  font-size: 16px;
+  font-weight: 800;
+}
+.drawer-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: 18px;
+}
+
+.drawer-wallet-box {
+  background: linear-gradient(135deg, #FFF3E8, var(--bg));
+  border: 1px solid var(--primary);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.drawer-wallet-label { font-size: 11px; color: var(--text-muted); }
+.drawer-wallet-amount {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 4px;
+  text-shadow: 0 0 12px rgba(255, 106, 26,0.5);
+}
+
+.drawer-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.drawer-nav a:active { background: var(--bg); }
+.drawer-nav a svg { flex-shrink: 0; }
+
+.drawer-divider {
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+.drawer-close-btn {
+  position: absolute;
+  top: 20px;
+  left: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Marquee Strip ---------- */
+.marquee-strip {
+  overflow: hidden;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+  margin-top: 14px;
+  white-space: nowrap;
+}
+.marquee-track {
+  display: inline-flex;
+  align-items: center;
+  animation: marquee-scroll 22s linear infinite;
+}
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 22px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.marquee-item svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* تهيئة وضبط حجم أي صورة أو لوغو يتم إضافته داخل الـ Marquee العلوي */
+.marquee-item img {
+  width: 18px !important;
+  height: 18px !important;
+  object-fit: contain !important;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.marquee-item .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border);
+  margin-right: 6px;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ---------- Manage Item Thumb (admin lists) ---------- */
+.manage-item-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.manage-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Section title ---------- */
+.section-title {
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
