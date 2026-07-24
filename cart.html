@@ -11,10 +11,15 @@
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  body { background-color: var(--bg) !important; color: var(--ink) !important; }
+  body { 
+    background-color: var(--bg) !important; 
+    color: var(--ink) !important; 
+    margin: 0;
+    padding: 0;
+  }
 
   .cart-container {
-    padding: 20px;
+    padding: 20px 16px;
     max-width: 600px;
     margin: 0 auto;
     box-sizing: border-box;
@@ -34,10 +39,26 @@
     font-weight: 700;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     transition: color 0.2s;
   }
   .back-link:hover { color: var(--primary); }
+
+  .clear-cart-btn {
+    background: transparent;
+    border: none;
+    color: var(--danger, #ef4444);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+  .clear-cart-btn:hover { background: rgba(239, 68, 68, 0.1); }
 
   .cart-title {
     font-size: 20px;
@@ -82,19 +103,23 @@
     object-fit: cover;
   }
 
-  .cart-item-details { flex: 1; }
+  .cart-item-details { flex: 1; min-width: 0; }
 
   .cart-item-name {
     font-size: 15px;
     font-weight: 800;
     color: var(--ink);
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .cart-item-meta {
     font-size: 12px;
     color: var(--text-muted);
     line-height: 1.4;
+    word-break: break-word;
   }
   .cart-item-meta span {
     color: var(--primary);
@@ -107,6 +132,7 @@
     font-weight: 700;
     color: var(--primary);
     margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .cart-qty-stepper {
@@ -122,7 +148,7 @@
     border: 1.5px solid var(--primary);
     background: transparent;
     color: var(--primary);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     cursor: pointer;
     display: flex;
@@ -132,13 +158,14 @@
     user-select: none;
   }
   .cart-qty-stepper button:active { transform: scale(0.92); }
-  .cart-qty-stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .cart-qty-stepper button:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
   .cart-qty-stepper .qty-value {
     min-width: 24px;
     text-align: center;
     font-size: 15px;
     font-weight: 900;
     color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .remove-item-btn {
@@ -150,6 +177,7 @@
     padding: 8px;
     border-radius: 8px;
     transition: 0.15s ease;
+    align-self: flex-start;
   }
   .remove-item-btn:hover { background: rgba(239, 68, 68, 0.1); }
 
@@ -164,7 +192,12 @@
     margin: 20px 0 16px 0;
   }
   .summary-box .label { font-size: 14px; font-weight: 700; color: var(--ink); }
-  .summary-box .total { font-weight: 900; font-size: 20px; color: var(--primary); }
+  .summary-box .total { 
+    font-weight: 900; 
+    font-size: 20px; 
+    color: var(--primary); 
+    font-family: 'JetBrains Mono', monospace;
+  }
 
   .btn-proceed-checkout {
     width: 100%;
@@ -175,19 +208,20 @@
     cursor: pointer;
     background: var(--primary);
     border: none;
-    color: var(--ink);
+    color: #000;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     transition: 0.15s ease;
     text-decoration: none;
+    box-sizing: border-box;
   }
   .btn-proceed-checkout:active { transform: scale(0.98); }
 
   .empty-cart-box {
     text-align: center;
-    padding: 60px 20px;
+    padding: 50px 20px;
     color: var(--text-muted);
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -207,14 +241,19 @@
 <div class="cart-container">
   <div class="cart-header">
     <a href="index.html" class="back-link"><i class="fas fa-arrow-right"></i> العودة للمتجر</a>
+    <button class="clear-cart-btn" id="clearCartBtn" style="display:none;" onclick="clearAllItems()">
+      <i class="fas fa-trash-arrow-up"></i> تفريغ السلة
+    </button>
   </div>
   
   <h1 class="cart-title"><i class="fas fa-shopping-cart"></i> سلة المشتريات</h1>
 
-  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تحميل السلة...</div>
+  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+    <i class="fas fa-circle-notch fa-spin style="font-size:24px; color:var(--primary); margin-bottom:10px;"></i>
+    <div>جارِ تحميل السلة...</div>
+  </div>
   
   <div id="cartContent" style="display:none;">
-    <!-- قائمة المنتجات المضافة ستظهر هنا -->
     <div id="cartItemsList"></div>
 
     <div class="summary-box">
@@ -227,6 +266,15 @@
       <i class="fas fa-arrow-left"></i>
     </button>
   </div>
+
+  <div id="emptyCartBox" class="empty-cart-box" style="display:none;">
+    <div class="empty-cart-icon"><i class="fas fa-basket-shopping"></i></div>
+    <h3 style="font-size:18px; font-weight:800; margin-bottom:8px; color:var(--ink);">سلة المشتريات فارغة</h3>
+    <p style="font-size:13px; margin-bottom:20px; color:var(--text-muted);">قم بإضافة الباقات والمنتجات التي ترغب بها من المتجر أولاً</p>
+    <a href="index.html" class="btn-proceed-checkout" style="display:inline-flex; width:auto; padding: 12px 28px; font-size:14px;">
+      <i class="fas fa-store"></i> تصفح المنتجات
+    </a>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -238,7 +286,8 @@ let grandTotal = 0;
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
-  return Math.round(val).toLocaleString('ar-EG');
+  const num = Math.round(val || 0);
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function escapeHtml(str) {
@@ -274,29 +323,26 @@ function loadCartData() {
     cart = [];
   }
   
-  if (cart.length === 0) {
-    document.getElementById('loadingBox').style.display = 'none';
-    document.getElementById('cartContent').style.display = 'none';
-    
-    const container = document.querySelector('.cart-container');
-    const emptyBox = document.createElement('div');
-    emptyBox.className = 'empty-cart-box';
-    emptyBox.innerHTML = `
-      <div class="empty-cart-icon"><i class="fas fa-shopping-basket"></i></div>
-      <h3 style="font-size:18px; font-weight:800; margin-bottom:8px; color:var(--ink);">سلة المشتريات فارغة</h3>
-      <p style="font-size:13px; margin-bottom:20px; color:var(--text-muted);">قم بإضافة الباقات والمنتجات التي ترغب بها من المتجر أولاً</p>
-      <a href="index.html" class="btn-proceed-checkout" style="display:inline-flex; width:auto; padding: 12px 28px; font-size:14px;"><i class="fas fa-store"></i> تصفح المنتجات</a>
-    `;
-    container.appendChild(emptyBox);
+  document.getElementById('loadingBox').style.display = 'none';
+
+  if (!cart || cart.length === 0) {
+    showEmptyCartState();
     return;
   }
 
   renderCart();
 }
 
+function showEmptyCartState() {
+  document.getElementById('cartContent').style.display = 'none';
+  document.getElementById('clearCartBtn').style.display = 'none';
+  document.getElementById('emptyCartBox').style.display = 'block';
+}
+
 function renderCart() {
-  document.getElementById('loadingBox').style.display = 'none';
+  document.getElementById('emptyCartBox').style.display = 'none';
   document.getElementById('cartContent').style.display = 'block';
+  document.getElementById('clearCartBtn').style.display = 'inline-flex';
 
   const listContainer = document.getElementById('cartItemsList');
   grandTotal = 0;
@@ -345,9 +391,17 @@ function removeItem(index) {
   localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
   
   if (cart.length === 0) {
-    location.reload();
+    showEmptyCartState();
   } else {
     renderCart();
+  }
+}
+
+function clearAllItems() {
+  if (confirm('هل أنت تأكد من رغبتك في تفريغ سلة المشتريات بالكامل؟')) {
+    cart = [];
+    localStorage.removeItem('raizey_store_cart');
+    showEmptyCartState();
   }
 }
 
@@ -367,3 +421,4 @@ init();
 </script>
 </body>
 </html>
+
