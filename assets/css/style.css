@@ -283,7 +283,6 @@ button { font-family: inherit; cursor: pointer; border: none; }
   overflow: hidden;
 }
 
-/* إجبار صورة العرض (مثل 60 شدة) على الالتزام الكامل بالحاوية المخصصة لها */
 .voucher-thumb img {
   width: 100% !important;
   height: 100% !important;
@@ -298,7 +297,6 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-weight: 700;
 }
 
-/* perforated divider — the signature element */
 .voucher-divider {
   position: relative;
   border-top: 2px dashed var(--border);
@@ -497,7 +495,6 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 14px;
 }
 
-/* ستايل حقل إدخال معرف اللاعب (ID) والتوهج المتناسق عند التركيز */
 .field input[type="text"] {
   width: 100%;
   padding: 12px 14px;
@@ -515,7 +512,6 @@ button { font-family: inherit; cursor: pointer; border: none; }
   outline: none;
 }
 
-/* ستايل شبكة باقات الشحن داخل صفحة تفاصيل المنتج */
 .variants-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -884,7 +880,6 @@ button { font-family: inherit; cursor: pointer; border: none; }
   flex-shrink: 0;
 }
 
-/* تهيئة وضبط حجم أي صورة أو لوغو يتم إضافته داخل الـ Marquee العلوي */
 .marquee-item img {
   width: 18px !important;
   height: 18px !important;
@@ -927,11 +922,60 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: block;
 }
 
-/* ---------- Section title ---------- */
 .section-title {
   padding: 0 20px;
   font-size: 15px;
   font-weight: 700;
   color: var(--text-muted);
   margin-top: 6px;
+}
+
+/* === تنسيق الخيارات الفرعية للمنتج === */
+.product-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 16px 0 20px 0;
+}
+
+.option-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.option-card:active {
+  transform: scale(0.97);
+}
+
+.option-card:hover {
+  border-color: rgba(255, 106, 26, 0.4);
+}
+
+.option-card .opt-title {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.option-card .opt-price {
+  font-weight: 800;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.option-card.selected {
+  border-color: var(--primary);
+  background: rgba(255, 106, 26, 0.05);
+  box-shadow: 0 0 12px rgba(255, 106, 26, 0.1);
 }
