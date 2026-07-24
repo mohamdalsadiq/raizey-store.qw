@@ -204,9 +204,9 @@ async function init() {
 }
 
 // التحكم بظهور وإخفاء قسم الخيارات
-function toggleOptionsSection(show, skipAutoCreate = false) {
+function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
-  if (show && !skipAutoCreate && optionsBuilder.children.length === 0) {
+  if (show && optionsBuilder.children.length === 0) {
     addOptionRow('', '', '');
     addOptionRow('', '', '');
   }
@@ -231,28 +231,21 @@ function addOptionRow(label = '', price = '', id = '') {
   optionsBuilder.appendChild(row);
 }
 
-// تجميع الخيارات وتصفيتها (Data Sanitization)
+// تجميع الخيارات وتحويلها لمصفوفة
 function collectOptions() {
   if (!hasOptionsToggle.checked) return [];
   const rows = optionsBuilder.querySelectorAll('.option-row');
   const options = [];
 
   rows.forEach((row) => {
-    const idInput = row.querySelector('.opt-id');
-    const labelInput = row.querySelector('.opt-label');
-    const priceInput = row.querySelector('.opt-price');
-
-    const id = idInput ? idInput.value : '';
-    const label = labelInput ? labelInput.value.trim() : '';
-    const rawPrice = priceInput ? priceInput.value.trim() : '';
-    const parsedPrice = parseFloat(rawPrice);
-
-    // تصفية استبعاد أي خيار يحتوي على اسم فارغ أو سعر غير محدد أو غير رقمي
-    if (label !== '' && rawPrice !== '' && !isNaN(parsedPrice) && parsedPrice >= 0) {
+    const id = row.querySelector('.opt-id').value;
+    const label = row.querySelector('.opt-label').value.trim();
+    const price = parseFloat(row.querySelector('.opt-price').value) || 0;
+    if (label) {
       options.push({
-        id: id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+        id: id,
         label: label,
-        price_usd: parsedPrice
+        price_usd: price
       });
     }
   });
@@ -289,7 +282,7 @@ function render() {
         <div class="manage-item-name">
           ${p.name}
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
-          ${p.has_options && Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
+          ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
         <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
       </div>
@@ -332,7 +325,7 @@ function openForm(id) {
   editingId = id;
   formError.textContent = '';
   fieldsBuilder.innerHTML = '';
-  optionsBuilder.innerHTML = ''; // تفريغ حاوية الخيارات تماماً عند التعديل أو إضافة منتج جديد
+  optionsBuilder.innerHTML = '';
 
   const fileBox = document.getElementById('fileUploadBox');
 
@@ -350,15 +343,14 @@ function openForm(id) {
     orderInput.value = p.display_order;
     activeInput.value = String(p.is_active);
     
-    // عند التعديل: يعرض فقط الخيارات المخزنة سابقاً دون إضافة أي حقول فارغة تلقائية
-    if (p.has_options && Array.isArray(p.options) && p.options.length > 0) {
+    // تعبئة الخيارات الفرعية عند التعديل
+    if (Array.isArray(p.options) && p.options.length > 0) {
       hasOptionsToggle.checked = true;
-      toggleOptionsSection(true, true); // skipAutoCreate = true
-      optionsBuilder.innerHTML = '';
+      toggleOptionsSection(true);
       p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
     } else {
       hasOptionsToggle.checked = false;
-      toggleOptionsSection(false, true);
+      toggleOptionsSection(false);
     }
 
     (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
@@ -375,7 +367,7 @@ function openForm(id) {
     activeInput.value = 'true';
 
     hasOptionsToggle.checked = false;
-    toggleOptionsSection(false, true);
+    toggleOptionsSection(false);
   }
 
   formModal.classList.add('show');
@@ -406,19 +398,17 @@ async function saveProduct() {
   const categoryId = categoryInput.value;
 
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
-  if (isNaN(price) || price < 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
+  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
   if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
 
-  // تصفية بيانات الخيارات الفرعية واستبعاد أي حقول فارغة
-  const sanitizedOptions = collectOptions();
-
   // التحقق من الخيارات الفرعية عند التفعيل
-  if (hasOptionsToggle.checked && sanitizedOptions.length === 0) {
-    formError.textContent = 'عند تفعيل الخيارات الفرعية، يرجى إدخال خيار واحد صحيح على الأقل (اسم وسعر).';
-    return;
+  if (hasOptionsToggle.checked) {
+    const opts = collectOptions();
+    if (opts.length < 2) {
+      formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
+      return;
+    }
   }
-
-  const hasOpts = hasOptionsToggle.checked && sanitizedOptions.length > 0;
 
   const payload = {
     name,
@@ -430,8 +420,8 @@ async function saveProduct() {
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
-    options: hasOpts ? sanitizedOptions : [],
-    has_options: hasOpts
+    options: collectOptions(),
+    has_options: hasOptionsToggle.checked && collectOptions().length > 0
   };
 
   const { error } = editingId
