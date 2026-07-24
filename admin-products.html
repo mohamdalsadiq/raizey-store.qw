@@ -87,7 +87,7 @@
 
       <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
         <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
-          أدخل الخيارات وسعر كل خيار ($). سيكون اختيار أحد الخيارات إجبارياً على الزبون عند الشراء.
+          أدخل الخيارات وسعر كل خيار ($). يمكنك كتابة الاسم "فئة - خيار" لتقسيمها لمرحلتين، أو كتابة الاسم مباشرة لتظهر مباشرة.
         </label>
         <div id="optionsBuilder"></div>
         <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top: 8px;">
@@ -148,7 +148,6 @@ const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
 const fieldsBuilder = document.getElementById('fieldsBuilder');
 
-// عناصر ميزة الخيارات الفرعية
 const hasOptionsToggle = document.getElementById('hasOptionsToggle');
 const optionsContainer = document.getElementById('optionsContainer');
 const optionsBuilder = document.getElementById('optionsBuilder');
@@ -172,7 +171,6 @@ async function init() {
   document.getElementById('formSaveBtn').addEventListener('click', saveProduct);
   document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', '', ''));
 
-  // أحداث الخيارات الفرعية
   hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
   addOptionBtn.addEventListener('click', () => addOptionRow('', '', ''));
 
@@ -203,16 +201,15 @@ async function init() {
   await loadProducts();
 }
 
-// التحكم بظهور وإخفاء قسم الخيارات
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
+  // التحقق: لا نضيف صفوفاً فارغة إلا إذا لم يكن هناك خيارات حالية
   if (show && optionsBuilder.children.length === 0) {
     addOptionRow('', '', '');
     addOptionRow('', '', '');
   }
 }
 
-// إضافة سطر خيار فرعي مع الحفاظ على المرفق الفريد (ID)
 function addOptionRow(label = '', price = '', id = '') {
   const row = document.createElement('div');
   row.className = 'option-row';
@@ -231,7 +228,6 @@ function addOptionRow(label = '', price = '', id = '') {
   optionsBuilder.appendChild(row);
 }
 
-// تجميع الخيارات وتحويلها لمصفوفة
 function collectOptions() {
   if (!hasOptionsToggle.checked) return [];
   const rows = optionsBuilder.querySelectorAll('.option-row');
@@ -325,7 +321,7 @@ function openForm(id) {
   editingId = id;
   formError.textContent = '';
   fieldsBuilder.innerHTML = '';
-  optionsBuilder.innerHTML = '';
+  optionsBuilder.innerHTML = ''; // تنظيف الخيارات أولاً
 
   const fileBox = document.getElementById('fileUploadBox');
 
@@ -346,11 +342,11 @@ function openForm(id) {
     // تعبئة الخيارات الفرعية عند التعديل
     if (Array.isArray(p.options) && p.options.length > 0) {
       hasOptionsToggle.checked = true;
-      toggleOptionsSection(true);
+      optionsContainer.style.display = 'block'; // إظهار الحاوية بدون استدعاء دالة الإضافة الفارغة
       p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
     } else {
       hasOptionsToggle.checked = false;
-      toggleOptionsSection(false);
+      optionsContainer.style.display = 'none';
     }
 
     (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
@@ -367,7 +363,7 @@ function openForm(id) {
     activeInput.value = 'true';
 
     hasOptionsToggle.checked = false;
-    toggleOptionsSection(false);
+    optionsContainer.style.display = 'none';
   }
 
   formModal.classList.add('show');
@@ -401,7 +397,6 @@ async function saveProduct() {
   if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
   if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
 
-  // التحقق من الخيارات الفرعية عند التفعيل
   if (hasOptionsToggle.checked) {
     const opts = collectOptions();
     if (opts.length < 2) {
