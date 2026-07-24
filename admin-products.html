@@ -75,7 +75,7 @@
       <input type="number" id="priceInput" step="0.01" placeholder="1.00">
     </div>
 
-    <!-- قسم الخيارات الفرعية للمنتج (الميزة الجديدة) -->
+    <!-- قسم الخيارات الفرعية للمنتج -->
     <div class="field" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <label style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
@@ -174,7 +174,7 @@ async function init() {
 
   // أحداث الخيارات الفرعية
   hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
-  addOptionBtn.addEventListener('click', () => addOptionRow('', ''));
+  addOptionBtn.addEventListener('click', () => addOptionRow('', '', ''));
 
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('imageFileInput');
@@ -207,20 +207,22 @@ async function init() {
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
   if (show && optionsBuilder.children.length === 0) {
-    addOptionRow('', '');
-    addOptionRow('', '');
+    addOptionRow('', '', '');
+    addOptionRow('', '', '');
   }
 }
 
-// إضافة سطر خيار فرعي
-function addOptionRow(label = '', price = '') {
+// إضافة سطر خيار فرعي مع الحفاظ على المرفق الفريد (ID)
+function addOptionRow(label = '', price = '', id = '') {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
   
   const cleanLabel = (label || '').replace(/"/g, '&quot;');
-  
+  const safeId = id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+
   row.innerHTML = `
+    <input type="hidden" class="opt-id" value="${safeId}">
     <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
     <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
     <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
@@ -235,12 +237,13 @@ function collectOptions() {
   const rows = optionsBuilder.querySelectorAll('.option-row');
   const options = [];
 
-  rows.forEach((row, index) => {
+  rows.forEach((row) => {
+    const id = row.querySelector('.opt-id').value;
     const label = row.querySelector('.opt-label').value.trim();
     const price = parseFloat(row.querySelector('.opt-price').value) || 0;
     if (label) {
       options.push({
-        id: 'opt_' + (index + 1) + '_' + Date.now().toString(36),
+        id: id,
         label: label,
         price_usd: price
       });
@@ -279,7 +282,7 @@ function render() {
         <div class="manage-item-name">
           ${p.name}
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
-          ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متناوبة</span>' : ''}
+          ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
         <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
       </div>
@@ -312,7 +315,7 @@ function addFieldRow(key, label, placeholder = '') {
     <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
     <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
     <input type="hidden" class="field-key" value="${safeKey}">
-    <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><i class="fas fa-xmark"></i></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
   fieldsBuilder.appendChild(row);
@@ -344,7 +347,7 @@ function openForm(id) {
     if (Array.isArray(p.options) && p.options.length > 0) {
       hasOptionsToggle.checked = true;
       toggleOptionsSection(true);
-      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? ''));
+      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
     } else {
       hasOptionsToggle.checked = false;
       toggleOptionsSection(false);
@@ -395,10 +398,10 @@ async function saveProduct() {
   const categoryId = categoryInput.value;
 
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
-  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح'; return; }
+  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
   if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
 
-  // التحقق من الخيارات الفرعية في حال التفعيل
+  // التحقق من الخيارات الفرعية عند التفعيل
   if (hasOptionsToggle.checked) {
     const opts = collectOptions();
     if (opts.length < 2) {
