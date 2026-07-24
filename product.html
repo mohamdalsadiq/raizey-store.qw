@@ -125,7 +125,7 @@
     transition: all 0.2s ease;
   }
 
-  /* تنسيق الباقة الأساسية (المستوى الأول) */
+  /* تنسيق الباقة الأساسية (المستوى الأول - إجباري لو كان فيه شرطة في الاسم) */
   .main-category-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -190,7 +190,6 @@
   }
   .option-card.selected .opt-check { display: block; }
 
-  /* تأثير الرج عند عدم الاختيار */
   .selection-shake { animation: optionsShake 0.45s ease; border-radius: 12px; }
   @keyframes optionsShake {
     0%, 100% { transform: translateX(0); }
@@ -217,7 +216,6 @@
   .fixed-price-bar .fpb-amount.placeholder { color: var(--text-muted); font-size: 14px; font-weight: 700; }
   .product-page { padding-bottom: 90px; }
 
-  /* باقي التنسيقات (محافظة عليها كما هي) */
   .product-instructions-box { background: var(--bg-card); border: 1px solid var(--border-color); border-right: 4px solid var(--accent-gold); padding: 16px; border-radius: 10px; margin-bottom: 25px; font-size: 14px; line-height: 1.6; color: #1a1d29; white-space: pre-line; }
   .product-instructions-title { color: var(--accent-gold); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
@@ -289,9 +287,9 @@ let product = null;
 let exchangeRate = 1;
 
 // متغيرات الخيارات المتداخلة
-let selectedMainCat = null; // الخيار الرئيسي (RedotPay)
-let selectedOption = null;  // الخيار الفرعي (حساب موثق فقط)
-let groupedOptions = {};    // لتخزين الخيارات مجمعة
+let selectedMainCat = null; 
+let selectedOption = null;  
+let groupedOptions = {};    
 
 let walletBalance = 0;
 let paymentMethods = [];
@@ -367,10 +365,6 @@ function hasOptions() {
   return Array.isArray(product.options) && product.options.length > 0;
 }
 
-function hasSubOptions() {
-  return hasOptions() && selectedMainCat !== null;
-}
-
 function getSelectedPriceUsd() {
   if (selectedOption) return parseFloat(selectedOption.price_usd ?? selectedOption.price ?? 0);
   return parseFloat(product.price_usd || 0);
@@ -404,13 +398,13 @@ function render() {
   groupedOptions = {};
   if (hasOptions()) {
     product.options.forEach(opt => {
-      let cat = 'أخرى';
+      let cat = 'الخيارات المتاحة';
       let label = opt.label;
       // إذا كان الاسم يحتوي على " - "، نقسمه (فئة - خيار)
       if (opt.label.includes(' - ')) {
         const parts = opt.label.split(' - ');
         cat = parts[0].trim();
-        label = parts.slice(1).join(' - '); // لضمان عدم التكسر إذا كان هناك أكثر من واصلة
+        label = parts.slice(1).join(' - '); 
       } else if (opt.label.includes('-')) {
         const parts = opt.label.split('-');
         cat = parts[0].trim();
@@ -425,7 +419,7 @@ function render() {
 
   const fields = product.required_fields || [];
   const canUseWallet = (selectedOption && walletBalance >= getSelectedPriceSdg());
-  const heroPriceText = selectedOption ? `${formatSDG(getSelectedPriceSdg())} ج.س` : 'اختر الباقة ثم الخيار';
+  const heroPriceText = selectedOption ? `${formatSDG(getSelectedPriceSdg())} ج.س` : 'اختر الخيار المناسب';
 
   // --- 2. بناء الواجهة ---
   let htmlContent = `
@@ -440,7 +434,7 @@ function render() {
     </div>
   `;
 
-  // عرض أزرار الفئات الأساسية (المستوى الأول)
+  // عرض أزرار الفئات الأساسية (إذا كان فيه فئات متعددة)
   if (mainCategories.length > 0) {
     htmlContent += `
       <div class="section-label">
@@ -457,7 +451,7 @@ function render() {
     `;
   }
 
-  // عرض الخيارات الفرعية (المستوى الثاني) - سيتم إظهاره بالـ JS عند الضغط
+  // عرض الخيارات الفرعية (سيتم التحكم في إظهارها عبر JS عند الضغط)
   if (hasOptions()) {
     htmlContent += `
       <div class="section-label" style="display:none;" id="subLabel">
@@ -467,7 +461,7 @@ function render() {
     `;
   }
 
-  // باقي محتوى الصفحة (الأسئلة، طرق الدفع...)
+  // باقي محتوى الصفحة
   htmlContent += `
     ${product.instructions ? `
       <div class="product-instructions-box">
@@ -554,7 +548,7 @@ function render() {
 
     <div class="summary-box">
       <span>الإجمالي للشراء المباشر</span>
-      <span class="total" id="summaryTotal">${selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الباقة والخيار'}</span>
+      <span class="total" id="summaryTotal">${selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الخيار'}</span>
     </div>
 
     <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700; color:var(--danger);"></div>
@@ -712,7 +706,7 @@ function currentPrice() {
   if (welcomeDiscount) base = base - (base * welcomeDiscount / 100);
   return base;
 }
-function updateSummary() { document.getElementById('summaryTotal').textContent = selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الباقة والخيار'; }
+function updateSummary() { document.getElementById('summaryTotal').textContent = selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الخيار'; }
 
 async function applyCoupon() {
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
@@ -731,7 +725,8 @@ function validateSelection(errorBox) {
     errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الباقة الأساسية أولاً!'; document.getElementById('mainCategoryGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('mainCategoryGrid')?.classList.remove('selection-shake'), 500); return false;
   }
-  if (hasSubOptions() && !selectedOption) {
+  // إذا كانت الفئة تحتوي على خيارات فرعية، أو كانت فئة واحدة، نتحقق من اختيار خيار.
+  if (hasOptions() && !selectedOption) {
     errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الخيار المطلوب أولاً!';
     document.getElementById('subOptionsGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('subOptionsGrid')?.classList.remove('selection-shake'), 500); return false;
@@ -775,7 +770,6 @@ async function submitOrder(errorBox, submitBtn) {
   const transactionRef = document.getElementById('transactionRefInput').value.trim();
   if (!transactionRef) { errorBox.textContent = 'اكتب رقم العملية'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
-  // رفع الفحص... (باقي الكود كما هو للبنك)
   const preCheck = await validateReceiptImage(receiptFile);
   if (!preCheck.valid) { errorBox.textContent = preCheck.message; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
