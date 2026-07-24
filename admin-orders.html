@@ -230,6 +230,12 @@ function renderOrderCard(o) {
       `).join('')
     : '';
 
+  const optionHtml = (o.selected_option && o.selected_option.label) ? `
+    <div style="display:flex; align-items:center; gap:6px; color:var(--primary); font-weight:700;">
+      <i class="fas fa-list-check"></i> الخيار المختار: ${escapeHtml(o.selected_option.label)}
+    </div>
+  ` : '';
+
   const refHtml = o.transaction_reference ? `
     <div class="copyable-row">
       <span>رقم العملية: ${escapeHtml(o.transaction_reference)}</span>
@@ -274,6 +280,7 @@ function renderOrderCard(o) {
       <div class="order-details">
         <div><strong>السعر:</strong> ${formatSDG(o.price_sdg_snapshot)} ج.س</div>
         <div><strong>الدفع:</strong> ${o.payment_type === 'wallet' ? 'من المحفظة' : 'تحويل بنكك'}</div>
+        ${optionHtml}
         ${fieldsHtml}
         ${refHtml}
         ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}

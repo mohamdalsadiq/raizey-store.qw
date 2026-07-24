@@ -180,6 +180,66 @@
     display: block;
   }
 
+  /* تنبيه إجباري عند عدم اختيار خيار فرعي */
+  .product-options-grid.needs-selection {
+    animation: optionsShake 0.45s ease;
+    border-radius: 12px;
+  }
+  @keyframes optionsShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .options-hint {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin: -10px 0 18px 0;
+  }
+  .options-hint.error {
+    color: var(--danger);
+  }
+
+  /* الشريط الثابت لعرض السعر الإجمالي أسفل الشاشة */
+  .fixed-price-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    background: var(--bg-main);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -6px 20px rgba(0,0,0,0.06);
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)) 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
+  .fixed-price-bar .fpb-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .fixed-price-bar .fpb-amount {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--accent-gold);
+    transition: all 0.15s ease;
+  }
+  .fixed-price-bar .fpb-amount.placeholder {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .product-page {
+    padding-bottom: 90px;
+  }
+
   /* صندوق الشرح والتنبيهات */
   .product-instructions-box {
     background: var(--bg-card); 
@@ -450,6 +510,11 @@
   <div id="content" style="display:none;"></div>
 </div>
 
+<div class="fixed-price-bar" id="fixedPriceBar" style="display:none;">
+  <span class="fpb-label"><i class="fas fa-tag" style="color:var(--accent-gold); margin-left:4px;"></i>السعر الإجمالي</span>
+  <span class="fpb-amount" id="fixedPriceAmount">—</span>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <!-- Tesseract.js OCR -->
@@ -501,10 +566,8 @@ async function init() {
   
   product = p;
 
-  // إعداد الخيار الافتراضي إذا وُجدت خيارات فرعية
-  if (Array.isArray(product.options) && product.options.length > 0) {
-    selectedOption = product.options[0];
-  }
+  // لا يتم اختيار أي خيار تلقائياً — التحديد إجباري من الزبون نفسه
+  selectedOption = null;
 
   const { data: wallet } = await supabaseClient
     .from('wallets')
@@ -534,17 +597,43 @@ async function init() {
   render();
 }
 
-// حساب سعر المنتج الأساسي المختار بالدولار
+// هل المنتج يحتوي على خيارات فرعية إجبارية؟
+function hasOptions() {
+  return Array.isArray(product.options) && product.options.length > 0;
+}
+
+// هل السعر جاهز للعرض؟ (يكون غير جاهز إذا وُجدت خيارات ولم يتم اختيار واحد بعد)
+function priceReady() {
+  return !hasOptions() || !!selectedOption;
+}
+
+// حساب سعر المنتج الأساسي المختار بالدولار — null إن لم يتم الاختيار بعد
 function getSelectedPriceUsd() {
-  if (selectedOption) {
-    return parseFloat(selectedOption.price_usd ?? selectedOption.price ?? 0);
+  if (hasOptions()) {
+    return selectedOption ? parseFloat(selectedOption.price_usd ?? selectedOption.price ?? 0) : null;
   }
   return parseFloat(product.price_usd || 0);
 }
 
-// حساب سعر المنتج الأساسي المختار بالجنيه
+// حساب سعر المنتج الأساسي المختار بالجنيه — null إن لم يتم الاختيار بعد
 function getSelectedPriceSdg() {
-  return getSelectedPriceUsd() * exchangeRate;
+  const usd = getSelectedPriceUsd();
+  return usd === null ? null : usd * exchangeRate;
+}
+
+// تحديث الشريط الثابت أسفل الشاشة بالسعر الإجمالي
+function updateFixedPriceBar() {
+  const bar = document.getElementById('fixedPriceBar');
+  const amountEl = document.getElementById('fixedPriceAmount');
+  if (!bar || !amountEl) return;
+  bar.style.display = 'flex';
+  if (!priceReady()) {
+    amountEl.textContent = 'اختر خياراً أولاً';
+    amountEl.classList.add('placeholder');
+  } else {
+    amountEl.textContent = formatSDG(getSelectedPriceSdg()) + ' ج.س';
+    amountEl.classList.remove('placeholder');
+  }
 }
 
 function render() {
@@ -555,7 +644,8 @@ function render() {
   const fields = product.required_fields || [];
   const options = Array.isArray(product.options) ? product.options : [];
   const baseSdgPrice = getSelectedPriceSdg();
-  const canUseWallet = walletBalance >= baseSdgPrice;
+  const canUseWallet = priceReady() && walletBalance >= baseSdgPrice;
+  const heroPriceText = priceReady() ? `${formatSDG(baseSdgPrice)} ج.س` : 'اختر خياراً لعرض السعر';
 
   content.innerHTML = `
     <div class="product-hero">
@@ -564,7 +654,7 @@ function render() {
       </div>
       <div class="product-hero-info">
         <h1>${product.name}</h1>
-        <div class="product-hero-price" id="heroPriceDisplay">${formatSDG(baseSdgPrice)} ج.س</div>
+        <div class="product-hero-price" id="heroPriceDisplay">${heroPriceText}</div>
       </div>
     </div>
 
@@ -587,6 +677,7 @@ function render() {
           `;
         }).join('')}
       </div>
+      <div class="options-hint" id="optionsHint"><i class="fas fa-circle-info"></i> يجب اختيار خيار واحد قبل المتابعة</div>
     ` : ''}
 
     ${product.instructions ? `
@@ -686,7 +777,7 @@ function render() {
 
     <div class="summary-box">
       <span>الإجمالي للشراء المباشر</span>
-      <span class="total" id="summaryTotal">${formatSDG(currentPrice())} ج.س</span>
+      <span class="total" id="summaryTotal">${priceReady() ? formatSDG(currentPrice()) + ' ج.س' : 'اختر خياراً أولاً'}</span>
     </div>
 
     <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700; color:var(--danger);"></div>
@@ -694,6 +785,7 @@ function render() {
     <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
   `;
 
+  updateFixedPriceBar();
   attachEvents();
 }
 
@@ -718,12 +810,19 @@ function attachEvents() {
         selectedOption = found;
         optionCards.forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
-        
-        // تحديث الأسعار وشاشة الملخص
+
+        // إزالة أي تنبيه سابق بعدم الاختيار
+        const grid = document.getElementById('optionsGrid');
+        const hint = document.getElementById('optionsHint');
+        if (grid) grid.classList.remove('needs-selection');
+        if (hint) { hint.classList.remove('error'); hint.innerHTML = '<i class="fas fa-circle-info"></i> يجب اختيار خيار واحد قبل المتابعة'; }
+
+        // تحديث الأسعار وشاشة الملخص والشريط الثابت أسفل الشاشة
         const baseSdg = getSelectedPriceSdg();
         document.getElementById('heroPriceDisplay').textContent = formatSDG(baseSdg) + ' ج.س';
         updateSummary();
-        
+        updateFixedPriceBar();
+
         // إعادة تقييم المحفظة بناءً على السعر الجديد
         const canUse = walletBalance >= currentPrice();
         if (canUse) {
@@ -743,6 +842,7 @@ function attachEvents() {
 
   addToCartBtn.addEventListener('click', () => {
     errorBox.textContent = '';
+    if (!requireOptionSelected()) return;
     const fieldValues = collectFieldValues();
     
     if (fieldValues === null) {
@@ -844,14 +944,15 @@ function attachEvents() {
 }
 
 function currentPrice() {
+  if (!priceReady()) return 0;
   const baseSdg = getSelectedPriceSdg();
   if (appliedCoupon) return baseSdg - (baseSdg * appliedCoupon.discount_percent / 100);
   if (welcomeDiscount) return baseSdg - (baseSdg * welcomeDiscount / 100);
   return baseSdg;
 }
 
-function updateSummary() { 
-  document.getElementById('summaryTotal').textContent = formatSDG(currentPrice()) + ' ج.س'; 
+function updateSummary() {
+  document.getElementById('summaryTotal').textContent = priceReady() ? (formatSDG(currentPrice()) + ' ج.س') : 'اختر خياراً أولاً';
 }
 
 async function applyCoupon() {
@@ -863,6 +964,24 @@ async function applyCoupon() {
   if (error || !data || data.length === 0) { appliedCoupon = null; msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي'; updateSummary(); return; }
   appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
   msgBox.style.color = 'var(--accent-gold)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
+}
+
+// يتحقق من وجود اختيار إجباري لخيار فرعي قبل إتمام أي عملية شراء
+function requireOptionSelected() {
+  if (!hasOptions() || selectedOption) return true;
+  const grid = document.getElementById('optionsGrid');
+  const hint = document.getElementById('optionsHint');
+  if (grid) {
+    grid.classList.remove('needs-selection');
+    void grid.offsetWidth; // إعادة تشغيل التأثير الحركي
+    grid.classList.add('needs-selection');
+    grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  if (hint) {
+    hint.classList.add('error');
+    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> اختر خياراً واحداً على الأقل قبل المتابعة!';
+  }
+  return false;
 }
 
 function collectFieldValues() {
@@ -884,6 +1003,7 @@ function collectFieldValues() {
 
 async function submitOrder(errorBox, submitBtn) {
   errorBox.textContent = ''; errorBox.style.color = 'var(--danger)';
+  if (!requireOptionSelected()) { errorBox.textContent = 'اختر خياراً واحداً على الأقل قبل تأكيد الطلب!'; return; }
   const fieldValues = collectFieldValues();
   if (fieldValues === null) { errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة'; return; }
   if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
@@ -900,7 +1020,8 @@ async function submitOrder(errorBox, submitBtn) {
     const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
       p_product_id: productId,
       p_field_values: fieldValues,
-      p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
+      p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null,
+      p_selected_option_id: selectedOption ? selectedOption.id : null
     });
     if (error) {
       const msg = error.message || '';
@@ -989,6 +1110,7 @@ async function submitOrder(errorBox, submitBtn) {
     product_name_snapshot: productNameSnapshot,
     price_sdg_snapshot:    currentPrice(),
     field_values:          fieldValues,
+    selected_option:       selectedOption ? { id: selectedOption.id, label: selectedOption.label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() } : null,
     payment_type:          'bank',
     status:                'pending_review',
     receipt_hash:          receiptHash,

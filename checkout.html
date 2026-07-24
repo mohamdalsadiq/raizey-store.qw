@@ -323,6 +323,11 @@ function renderCheckout() {
     const unitPrice = parseFloat(item.price_sdg) || 0;
     const lineSubtotal = unitPrice * qty;
 
+    let optionHtml = '';
+    if (item.selected_option && item.selected_option.label) {
+      optionHtml = `<div class="checkout-item-fields"><i class="fas fa-list-check" style="color:var(--accent-gold, #ff6a1a);"></i> <strong>الخيار المختار:</strong> ${escapeHtml(item.selected_option.label)}</div>`;
+    }
+
     let fieldsHtml = '';
     if (item.field_values && Object.keys(item.field_values).length > 0) {
       fieldsHtml = `<div class="checkout-item-fields">`;
@@ -345,6 +350,7 @@ function renderCheckout() {
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
           <div class="checkout-item-price">${safeFormatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${safeFormatSDG(lineSubtotal)} ج.س</strong></div>
+          ${optionHtml}
           ${fieldsHtml}
         </div>
       </div>
@@ -503,7 +509,8 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
           const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
             p_product_id: item.product_id,
             p_field_values: item.field_values,
-            p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null
+            p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null,
+            p_selected_option_id: item.selected_option ? item.selected_option.id : null
           });
           if (error) throw error;
           if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
@@ -638,6 +645,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         product_name_snapshot: item.name,
         price_sdg_snapshot:    Math.round(itemPrice),
         field_values:          item.field_values,
+        selected_option:       item.selected_option || null,
         payment_type:          'bank',
         payment_method_id:     selectedMethodId,
         transaction_reference: transactionRef,

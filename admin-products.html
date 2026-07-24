@@ -420,7 +420,8 @@ async function saveProduct() {
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
-    options: collectOptions()
+    options: collectOptions(),
+    has_options: hasOptionsToggle.checked && collectOptions().length > 0
   };
 
   const { error } = editingId
