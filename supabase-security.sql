@@ -174,13 +174,19 @@ CREATE POLICY "coupons_admin" ON coupons
 
 -- ─────────────────────────────────────────────────────────────────────
 -- PART 7: RPC آمنة — create_wallet_order (atomic transaction)
--- السعر يُحسب من قاعدة البيانات — لا نقبل أي قيمة من العميل
+-- السعر يُحسب من قاعدة البيانات مع إضافة سعر الخيار الفرعي المختار
 -- FOR UPDATE يمنع race conditions على رصيد المحفظة
 -- ─────────────────────────────────────────────────────────────────────
+-- تحديث أعمدة الجداول لدعم الخيارات الفرعية
+ALTER TABLE products ADD COLUMN IF NOT EXISTS has_options BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS options JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS selected_option JSONB DEFAULT NULL;
+
 CREATE OR REPLACE FUNCTION public.create_wallet_order(
-  p_product_id   uuid,
-  p_field_values jsonb DEFAULT '{}',
-  p_coupon_code  text  DEFAULT NULL
+  p_product_id         uuid,
+  p_field_values       jsonb DEFAULT '{}',
+  p_coupon_code        text  DEFAULT NULL,
+  p_selected_option_id text  DEFAULT NULL
 )
 RETURNS TABLE(id uuid, status text, price_sdg_snapshot numeric)
 LANGUAGE plpgsql SECURITY DEFINER
@@ -192,6 +198,10 @@ DECLARE
   v_wallet_balance numeric;
   v_rate           numeric;
   v_margin         numeric;
+  v_base_price_usd numeric;
+  v_opt_price_usd  numeric := 0;
+  v_opt_item       jsonb;
+  v_selected_opt   jsonb   := NULL;
   v_price_sdg      numeric;
   v_coupon_id      uuid;
   v_discount_pct   numeric := 0;
@@ -212,6 +222,24 @@ BEGIN
     RAISE EXCEPTION 'product_not_found';
   END IF;
 
+  v_base_price_usd := COALESCE(v_product.price_usd, 0);
+
+  -- إذا تم اختيار خيار فرعي، البحث عنه وحساب سعره
+  IF p_selected_option_id IS NOT NULL AND v_product.options IS NOT NULL THEN
+    FOR v_opt_item IN SELECT * FROM jsonb_array_elements(v_product.options)
+    LOOP
+      IF (v_opt_item->>'id') = p_selected_option_id THEN
+        v_opt_price_usd := COALESCE((v_opt_item->>'price_usd')::numeric, (v_opt_item->>'price')::numeric, 0);
+        v_selected_opt  := jsonb_build_object(
+          'id', v_opt_item->>'id',
+          'label', v_opt_item->>'label',
+          'price_usd', v_opt_price_usd
+        );
+        EXIT;
+      END IF;
+    END LOOP;
+  END IF;
+
   -- حساب السعر بالجنيه السوداني من إعدادات المتجر
   SELECT
     (SELECT value::numeric FROM settings WHERE key = 'usd_to_sdg_rate'      LIMIT 1),
@@ -220,7 +248,9 @@ BEGIN
 
   v_rate   := COALESCE(v_rate,   0);
   v_margin := COALESCE(v_margin, 0);
-  v_price_sdg := v_product.price_usd * v_rate * (1 + v_margin / 100.0);
+
+  -- السعر الإجمالي بالدولار = السعر الأساسي للمنتج + سعر الخيار الفرعي
+  v_price_sdg := (v_base_price_usd + v_opt_price_usd) * v_rate * (1 + v_margin / 100.0);
 
   IF v_price_sdg <= 0 THEN
     RAISE EXCEPTION 'price_calculation_error';
@@ -266,11 +296,11 @@ BEGIN
   -- إنشاء الطلب بحالة pending_review ليظهر في لوحة الأدمن
   INSERT INTO orders (
     user_id, product_id, product_name_snapshot,
-    price_sdg_snapshot, field_values, payment_type, status
+    price_sdg_snapshot, field_values, selected_option, payment_type, status
   )
   VALUES (
     v_user_id, p_product_id, v_product.name,
-    v_price_sdg, COALESCE(p_field_values, '{}'), 'wallet', v_order_status
+    v_price_sdg, COALESCE(p_field_values, '{}'), v_selected_opt, 'wallet', v_order_status
   )
   RETURNING orders.id INTO v_order_id;
 

@@ -1,0 +1,13 @@
+{
+  "name": "digital-store",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx --yes serve . -p 3000",
+    "build": "mkdir -p dist && cp -r ./* dist/ 2>/dev/null || true",
+    "start": "npx --yes serve . -p 3000"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

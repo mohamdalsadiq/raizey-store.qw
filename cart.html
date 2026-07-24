@@ -353,6 +353,8 @@ function renderCart() {
     const lineSubtotal = unitPrice * qty;
     grandTotal += lineSubtotal;
     
+    const optionLabel = item.selected_option ? item.selected_option.label : '';
+
     const metaText = Object.entries(item.field_values || {})
       .map(([key, val]) => `${escapeHtml(key)}: <span>${escapeHtml(val)}</span>`)
       .join(' | ');
@@ -364,6 +366,7 @@ function renderCart() {
         </div>
         <div class="cart-item-details">
           <div class="cart-item-name">${escapeHtml(item.name)}</div>
+          ${optionLabel ? `<div style="font-size:12px; color:var(--primary); margin:2px 0 4px 0; font-weight:700;"><i class="fas fa-list-check"></i> الخيار: ${escapeHtml(optionLabel)}</div>` : ''}
           ${metaText ? `<div class="cart-item-meta">${metaText}</div>` : ''}
           <div class="cart-item-price">${safeFormatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${safeFormatSDG(lineSubtotal)} ج.س</strong></div>
           <div class="cart-qty-stepper">
