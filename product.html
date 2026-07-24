@@ -6,20 +6,18 @@
 <title>تفاصيل المنتج — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<!-- مكتبة الأيقونات الاحترافية -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  /* تفعيل لوحة الألوان الملكية المعتمدة لـ RAIZEY STORE */
   :root {
-    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
-    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
-    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
-    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
-    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
-    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+    --bg-main: #ffffff;
+    --bg-card: #f5f1ea;
+    --accent-gold: #ff6a1a;
+    --border-color: #e8e1d6;
+    --text-light: #1a1d29;
+    --text-muted: #7a7468;
     --danger: #e5484d;
   }
 
@@ -86,7 +84,6 @@
     font-weight: 800;
   }
 
-  /* هيرو المنتج */
   .product-hero {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -128,13 +125,13 @@
     transition: all 0.2s ease;
   }
 
-  /* خيارات المنتجات الفرعية التفاعلية */
   .product-options-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px;
     margin-bottom: 20px;
   }
+
   .option-card {
     background: var(--bg-card);
     border: 2px solid var(--border-color);
@@ -147,6 +144,7 @@
     justify-content: space-between;
     position: relative;
     user-select: none;
+    text-align: center;
   }
   .option-card:hover {
     border-color: rgba(255, 106, 26, 0.4);
@@ -180,7 +178,6 @@
     display: block;
   }
 
-  /* تنبيه إجباري عند عدم اختيار خيار فرعي */
   .product-options-grid.needs-selection {
     animation: optionsShake 0.45s ease;
     border-radius: 12px;
@@ -202,7 +199,6 @@
     color: var(--danger);
   }
 
-  /* الشريط الثابت لعرض السعر الإجمالي أسفل الشاشة */
   .fixed-price-bar {
     position: fixed;
     bottom: 0;
@@ -240,7 +236,6 @@
     padding-bottom: 90px;
   }
 
-  /* صندوق الشرح والتنبيهات */
   .product-instructions-box {
     background: var(--bg-card); 
     border: 1px solid var(--border-color); 
@@ -263,7 +258,6 @@
     font-weight: 700;
   }
 
-  /* حقول إدخال البيانات */
   .section-label {
     font-size: 14px;
     font-weight: 800;
@@ -303,7 +297,6 @@
     outline: none;
   }
 
-  /* زر السلة التفاعلي */
   .btn-secondary-cart {
     width: 100%;
     padding: 15px;
@@ -334,7 +327,6 @@
     transform: scale(0.98);
   }
   
-  /* خيارات الدفع التفاعلية */
   .payment-option {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -376,7 +368,6 @@
     display: inline-block;
   }
 
-  /* تفاصيل الحسابات البنكية وصندوق الرفع */
   .bank-details {
     background: var(--bg-main);
     border: 1px solid var(--border-color);
@@ -423,7 +414,6 @@
     color: var(--accent-gold);
   }
 
-  /* كود الخصم وصندوق الملخص السعري */
   #couponInput {
     flex: 1;
     padding: 14px;
@@ -477,7 +467,6 @@
     color: var(--accent-gold);
   }
 
-  /* زر التأكيد الرئيسي */
   .auth-btn {
     width: 100%;
     padding: 16px;
@@ -517,7 +506,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<!-- Tesseract.js OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const params = new URLSearchParams(window.location.search);
@@ -525,7 +513,7 @@ const productId = params.get('id');
 let currentUser = null;
 let product = null;
 let exchangeRate = 1;
-let selectedOption = null; // الخيار الفرعي المختار
+let selectedOption = null; 
 let walletBalance = 0;
 let paymentMethods = [];
 let selectedPayment = null;
@@ -565,8 +553,6 @@ async function init() {
   }
   
   product = p;
-
-  // لا يتم اختيار أي خيار تلقائياً — التحديد إجباري من الزبون نفسه
   selectedOption = null;
 
   const { data: wallet } = await supabaseClient
@@ -597,17 +583,14 @@ async function init() {
   render();
 }
 
-// هل المنتج يحتوي على خيارات فرعية إجبارية؟
 function hasOptions() {
   return Array.isArray(product.options) && product.options.length > 0;
 }
 
-// هل السعر جاهز للعرض؟ (يكون غير جاهز إذا وُجدت خيارات ولم يتم اختيار واحد بعد)
 function priceReady() {
   return !hasOptions() || !!selectedOption;
 }
 
-// حساب سعر المنتج الأساسي المختار بالدولار — null إن لم يتم الاختيار بعد
 function getSelectedPriceUsd() {
   if (hasOptions()) {
     return selectedOption ? parseFloat(selectedOption.price_usd ?? selectedOption.price ?? 0) : null;
@@ -615,13 +598,11 @@ function getSelectedPriceUsd() {
   return parseFloat(product.price_usd || 0);
 }
 
-// حساب سعر المنتج الأساسي المختار بالجنيه — null إن لم يتم الاختيار بعد
 function getSelectedPriceSdg() {
   const usd = getSelectedPriceUsd();
   return usd === null ? null : usd * exchangeRate;
 }
 
-// تحديث الشريط الثابت أسفل الشاشة بالسعر الإجمالي
 function updateFixedPriceBar() {
   const bar = document.getElementById('fixedPriceBar');
   const amountEl = document.getElementById('fixedPriceAmount');
@@ -664,13 +645,11 @@ function render() {
         اختر الفئة / النوع المطلوب:
       </div>
       <div class="product-options-grid" id="optionsGrid">
-        ${options.map((opt, idx) => {
+        ${options.map((opt) => {
           const optPriceUsd = parseFloat(opt.price_usd ?? opt.price ?? 0);
           const optPriceSdg = optPriceUsd * exchangeRate;
-          const isSelected = selectedOption && selectedOption.id === opt.id;
           return `
-            <div class="option-card ${isSelected ? 'selected' : ''}" data-option-id="${opt.id}">
-              <i class="fas fa-circle-check opt-check"></i>
+            <div class="option-card" data-option-id="${opt.id}">
               <div class="opt-title">${opt.label}</div>
               <div class="opt-price-tag">${formatSDG(optPriceSdg)} ج.س</div>
             </div>
@@ -798,51 +777,69 @@ function attachEvents() {
   const errorBox = document.getElementById('formError');
   const submitBtn = document.getElementById('submitBtn');
   const addToCartBtn = document.getElementById('addToCartBtn');
+  const optionsGrid = document.getElementById('optionsGrid');
+  const hint = document.getElementById('optionsHint');
 
-  // الأحداث الخاصة بتغيير الخيارات الفرعية
-  const optionCards = document.querySelectorAll('.option-card');
-  optionCards.forEach(card => {
-    card.addEventListener('click', () => {
-      const optId = card.dataset.optionId;
-      const opts = Array.isArray(product.options) ? product.options : [];
-      const found = opts.find(o => o.id === optId);
-      if (found) {
-        selectedOption = found;
-        optionCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
+  // أحداث النقر على الخيارات الفرعية
+  if (optionsGrid) {
+    optionsGrid.querySelectorAll('.option-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const optId = card.dataset.optionId;
+        const opts = Array.isArray(product.options) ? product.options : [];
+        const found = opts.find(o => o.id === optId);
+        if (found) {
+          selectedOption = found;
+          optionsGrid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
 
-        // إزالة أي تنبيه سابق بعدم الاختيار
-        const grid = document.getElementById('optionsGrid');
-        const hint = document.getElementById('optionsHint');
-        if (grid) grid.classList.remove('needs-selection');
-        if (hint) { hint.classList.remove('error'); hint.innerHTML = '<i class="fas fa-circle-info"></i> يجب اختيار خيار واحد قبل المتابعة'; }
-
-        // تحديث الأسعار وشاشة الملخص والشريط الثابت أسفل الشاشة
-        const baseSdg = getSelectedPriceSdg();
-        document.getElementById('heroPriceDisplay').textContent = formatSDG(baseSdg) + ' ج.س';
-        updateSummary();
-        updateFixedPriceBar();
-
-        // إعادة تقييم المحفظة بناءً على السعر الجديد
-        const canUse = walletBalance >= currentPrice();
-        if (canUse) {
-          walletOption.classList.remove('disabled');
-          document.getElementById('walletOptionSub').innerHTML = `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س`;
-        } else {
-          walletOption.classList.add('disabled');
-          if (selectedPayment === 'wallet') {
-            selectedPayment = null;
-            walletOption.classList.remove('selected');
+          if (hint) { 
+            hint.classList.remove('error'); 
+            hint.innerHTML = '<i class="fas fa-circle-info"></i> يجب اختيار خيار واحد قبل المتابعة'; 
           }
-          document.getElementById('walletOptionSub').innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`;
-        }
-      }
-    });
-  });
 
+          const baseSdg = getSelectedPriceSdg();
+          document.getElementById('heroPriceDisplay').textContent = formatSDG(baseSdg) + ' ج.س';
+          updateSummary();
+          updateFixedPriceBar();
+
+          const canUse = walletBalance >= currentPrice();
+          if (canUse) {
+            walletOption.classList.remove('disabled');
+            document.getElementById('walletOptionSub').innerHTML = `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س`;
+          } else {
+            walletOption.classList.add('disabled');
+            if (selectedPayment === 'wallet') {
+              selectedPayment = null;
+              walletOption.classList.remove('selected');
+            }
+            document.getElementById('walletOptionSub').innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`;
+          }
+        }
+      });
+    });
+  }
+
+  // زر إضافة للسلة
   addToCartBtn.addEventListener('click', () => {
     errorBox.textContent = '';
-    if (!requireOptionSelected()) return;
+    
+    // التحقق الإجباري من اختيار الخيار قبل الإضافة للسلة
+    if (product.options && product.options.length > 0 && !selectedOption) {
+      errorBox.style.color = 'var(--danger)';
+      errorBox.textContent = '⚠️ من فضلك اختر خياراً أولاً من القائمة!';
+      if (optionsGrid) {
+        optionsGrid.classList.remove('needs-selection');
+        void optionsGrid.offsetWidth;
+        optionsGrid.classList.add('needs-selection');
+        optionsGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (hint) {
+        hint.classList.add('error');
+        hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> اختر خياراً واحداً على الأقل قبل المتابعة!';
+      }
+      return;
+    }
+
     const fieldValues = collectFieldValues();
     
     if (fieldValues === null) {
@@ -886,6 +883,7 @@ function attachEvents() {
     }, 2500);
   });
 
+  // أحداث طرق الدفع
   walletOption.addEventListener('click', () => {
     const currentPriceSdg = currentPrice();
     if (walletBalance < currentPriceSdg) {
@@ -966,44 +964,34 @@ async function applyCoupon() {
   msgBox.style.color = 'var(--accent-gold)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}%`; updateSummary();
 }
 
-// يتحقق من وجود اختيار إجباري لخيار فرعي قبل إتمام أي عملية شراء
-function requireOptionSelected() {
-  if (!hasOptions() || selectedOption) return true;
-  const grid = document.getElementById('optionsGrid');
-  const hint = document.getElementById('optionsHint');
-  if (grid) {
-    grid.classList.remove('needs-selection');
-    void grid.offsetWidth; // إعادة تشغيل التأثير الحركي
-    grid.classList.add('needs-selection');
-    grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  if (hint) {
-    hint.classList.add('error');
-    hint.innerHTML = '<i class="fas fa-triangle-exclamation"></i> اختر خياراً واحداً على الأقل قبل المتابعة!';
-  }
-  return false;
-}
-
 function collectFieldValues() {
   const inputs = document.querySelectorAll('[data-field-key]');
   const values = {};
-  if (inputs.length === 0) {
-    if (selectedOption) values['الخيار المختار'] = selectedOption.label;
-    return values;
-  }
+  if (inputs.length === 0) return values;
   for (const input of inputs) {
     if (!input.value.trim()) return null;
     values[input.dataset.fieldKey] = input.value.trim();
   }
-  if (selectedOption) {
-    values['الخيار المختار'] = selectedOption.label;
-  }
+  // تم حذف سطر 'الخيار المختار' من هنا لأنه يُعالج ككائن منفصل
   return values;
 }
 
 async function submitOrder(errorBox, submitBtn) {
   errorBox.textContent = ''; errorBox.style.color = 'var(--danger)';
-  if (!requireOptionSelected()) { errorBox.textContent = 'اختر خياراً واحداً على الأقل قبل تأكيد الطلب!'; return; }
+  
+  // التحقق الإجباري مرة أخرى قبل الشراء المباشر
+  if (product.options && product.options.length > 0 && !selectedOption) {
+    errorBox.textContent = '⚠️ من فضلك اختر خياراً أولاً من القائمة!';
+    const optionsGrid = document.getElementById('optionsGrid');
+    if (optionsGrid) {
+        optionsGrid.classList.remove('needs-selection');
+        void optionsGrid.offsetWidth;
+        optionsGrid.classList.add('needs-selection');
+        optionsGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return; 
+  }
+
   const fieldValues = collectFieldValues();
   if (fieldValues === null) { errorBox.textContent = 'من فضلك أكمل كل البيانات المطلوبة'; return; }
   if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
@@ -1013,9 +1001,6 @@ async function submitOrder(errorBox, submitBtn) {
     ? `${product.name} - ${selectedOption.label}` 
     : product.name;
 
-  // ══════════════════════════════════════════════════
-  // الدفع من المحفظة
-  // ══════════════════════════════════════════════════
   if (selectedPayment === 'wallet') {
     const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
       p_product_id: productId,
@@ -1033,9 +1018,6 @@ async function submitOrder(errorBox, submitBtn) {
     return;
   }
 
-  // ══════════════════════════════════════════════════
-  // الدفع بالتحويل البنكي
-  // ══════════════════════════════════════════════════
   if (!selectedMethodId || !receiptFile) {
     errorBox.textContent = !selectedMethodId ? 'اختر وسيلة التحويل' : 'ارفع صورة الإيصال';
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
@@ -1046,14 +1028,12 @@ async function submitOrder(errorBox, submitBtn) {
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 1. فحص صلاحية الملف المحلي (قبل أي رفع) ──
   const preCheck = await validateReceiptImage(receiptFile);
   if (!preCheck.valid) {
     errorBox.textContent = preCheck.message;
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 2. رفع الإيصال إلى Storage أولاً ──
   submitBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
@@ -1066,11 +1046,9 @@ async function submitOrder(errorBox, submitBtn) {
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 3. بناء الرابط العام المباشر للصورة ──
   const publicReceiptUrl = `${SUPABASE_URL}/storage/v1/object/public/receipts/${filePath}`;
   console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
 
-  // ── 4. بصمة الملف + فحص التكرار (قبل إنشاء الطلب) ──
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
   if (isDuplicate) {
@@ -1084,7 +1062,6 @@ async function submitOrder(errorBox, submitBtn) {
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 5. الفحص الذكي للإيصال باستخدام الرابط العام + رقم العملية ──
   submitBtn.textContent = 'جارِ فحص صورة الإيصال...';
   const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
   console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
@@ -1103,7 +1080,6 @@ async function submitOrder(errorBox, submitBtn) {
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 6. إنشاء الطلب في قاعدة البيانات ──
   const orderPayload = {
     user_id:               currentUser.id,
     product_id:            productId,
@@ -1132,14 +1108,12 @@ async function submitOrder(errorBox, submitBtn) {
     submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب المباشر'; return;
   }
 
-  // ── 7. تطبيق الكوبون أو خصم الإحالة ──
   if (appliedCoupon) {
     await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
   } else if (welcomeDiscount) {
     await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
   }
 
-  // ── 8. التوجيه لصفحة الإيصال ──
   window.location.href = insertedOrder && insertedOrder.id
     ? `receipt.html?order_id=${insertedOrder.id}`
     : 'my-orders.html';
