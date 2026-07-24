@@ -253,7 +253,7 @@ async function init() {
     .from('orders')
     .select('*')
     .eq('id', orderId)
-    .eq('user_id', session.user.id)   // ← مهم: المستخدم يشوف طلبه فقط
+    .eq('user_id', session.user.id)
     .single();
 
   if (error || !order) {
@@ -277,7 +277,6 @@ function renderReceipt(o) {
     hour: '2-digit', minute: '2-digit'
   });
 
-  // حالة الأيقونة
   let iconClass = 'pending';
   let iconName  = 'fa-clock';
   let titleText = 'تم إرسال طلبك بنجاح!';
@@ -301,7 +300,6 @@ function renderReceipt(o) {
     subText = 'قمت بإلغاء هذا الطلب.';
   }
 
-  // بيانات الحقول المطلوبة
   let fieldsHtml = '';
   if (o.field_values && Object.keys(o.field_values).length > 0) {
     fieldsHtml = `
@@ -316,7 +314,17 @@ function renderReceipt(o) {
     `;
   }
 
-  // رابط الإيصال البنكي
+  // إضافة عرض الخيار المختار في الإيصال
+  let optionHtml = '';
+  if (o.selected_option && o.selected_option.label) {
+    optionHtml = `
+      <div class="receipt-row">
+        <span class="label">الخيار المختار</span>
+        <span class="value" style="color: var(--primary); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
+      </div>
+    `;
+  }
+
   const receiptLinkHtml = o.receipt_url ? `
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
@@ -353,6 +361,8 @@ function renderReceipt(o) {
         <span class="label">المنتج</span>
         <span class="value">${escapeHtml(o.product_name_snapshot)}</span>
       </div>
+
+      ${optionHtml} <!-- عرض الخيار المختار هنا -->
 
       <div class="receipt-row">
         <span class="label">المبلغ</span>
