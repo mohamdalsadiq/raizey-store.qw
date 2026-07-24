@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -47,7 +48,7 @@
 
     <div class="field">
       <label>اسم المنتج</label>
-      <input type="text" id="nameInput" placeholder="مثلاً: 60 UC">
+      <input type="text" id="nameInput" placeholder="مثلاً: 60 UC أو حساب توثيق">
     </div>
 
     <div class="field">
@@ -55,7 +56,6 @@
       <input type="text" id="descInput" placeholder="وصف مختصر يظهر في القائمة">
     </div>
 
-    <!-- الحقل الجديد الفاخر: شرح المنتج والتعليمات والتنبيهات للعميل -->
     <div class="field">
       <label>شرح المنتج / طريقة الاستلام والتنبيهات (يظهر للعميل في صفحة المنتج)</label>
       <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal', sans-serif; font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
@@ -71,8 +71,29 @@
     </div>
 
     <div class="field">
-      <label>السعر (بالدولار)</label>
+      <label>السعر الأساسي (بالدولار $)</label>
       <input type="number" id="priceInput" step="0.01" placeholder="1.00">
+    </div>
+
+    <!-- قسم الخيارات الفرعية للمنتج (الميزة الجديدة) -->
+    <div class="field" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
+          <i class="fas fa-list-check" style="color: var(--primary);"></i>
+          إضافة خيارات فرعية للمنتج
+        </label>
+        <input type="checkbox" id="hasOptionsToggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+      </div>
+
+      <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
+        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
+          أدخل الخيارات وسعر كل خيار ($). سيكون اختيار أحد الخيارات إجبارياً على الزبون عند الشراء.
+        </label>
+        <div id="optionsBuilder"></div>
+        <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top: 8px;">
+          <i class="fas fa-plus"></i> إضافة خيار جديد
+        </button>
+      </div>
     </div>
 
     <div class="field">
@@ -119,13 +140,19 @@ const formModal = document.getElementById('formModal');
 const categoryInput = document.getElementById('categoryInput');
 const nameInput = document.getElementById('nameInput');
 const descInput = document.getElementById('descInput');
-const instructionsInput = document.getElementById('instructionsInput'); // ربط الحقل الجديد
+const instructionsInput = document.getElementById('instructionsInput');
 const imageInput = document.getElementById('imageInput');
 const priceInput = document.getElementById('priceInput');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
 const fieldsBuilder = document.getElementById('fieldsBuilder');
+
+// عناصر ميزة الخيارات الفرعية
+const hasOptionsToggle = document.getElementById('hasOptionsToggle');
+const optionsContainer = document.getElementById('optionsContainer');
+const optionsBuilder = document.getElementById('optionsBuilder');
+const addOptionBtn = document.getElementById('addOptionBtn');
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -144,6 +171,10 @@ async function init() {
   document.getElementById('formCancelBtn').addEventListener('click', closeForm);
   document.getElementById('formSaveBtn').addEventListener('click', saveProduct);
   document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', '', ''));
+
+  // أحداث الخيارات الفرعية
+  hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
+  addOptionBtn.addEventListener('click', () => addOptionRow('', ''));
 
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('imageFileInput');
@@ -170,6 +201,53 @@ async function init() {
 
   await loadCategories();
   await loadProducts();
+}
+
+// التحكم بظهور وإخفاء قسم الخيارات
+function toggleOptionsSection(show) {
+  optionsContainer.style.display = show ? 'block' : 'none';
+  if (show && optionsBuilder.children.length === 0) {
+    addOptionRow('', '');
+    addOptionRow('', '');
+  }
+}
+
+// إضافة سطر خيار فرعي
+function addOptionRow(label = '', price = '') {
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
+  
+  const cleanLabel = (label || '').replace(/"/g, '&quot;');
+  
+  row.innerHTML = `
+    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
+    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
+    <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
+  `;
+  row.querySelector('button').addEventListener('click', () => row.remove());
+  optionsBuilder.appendChild(row);
+}
+
+// تجميع الخيارات وتحويلها لمصفوفة
+function collectOptions() {
+  if (!hasOptionsToggle.checked) return [];
+  const rows = optionsBuilder.querySelectorAll('.option-row');
+  const options = [];
+
+  rows.forEach((row, index) => {
+    const label = row.querySelector('.opt-label').value.trim();
+    const price = parseFloat(row.querySelector('.opt-price').value) || 0;
+    if (label) {
+      options.push({
+        id: 'opt_' + (index + 1) + '_' + Date.now().toString(36),
+        label: label,
+        price_usd: price
+      });
+    }
+  });
+
+  return options;
 }
 
 async function loadCategories() {
@@ -201,6 +279,7 @@ function render() {
         <div class="manage-item-name">
           ${p.name}
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
+          ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متناوبة</span>' : ''}
         </div>
         <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
       </div>
@@ -219,7 +298,6 @@ function render() {
   });
 }
 
-// دالة بناء الأسطر المحدثة: تدعم ترتيب (العنوان يمين) و (النص الداخلي شمال) مع توليد مفتاح برمجى مخفي ذكي تلقائياً
 function addFieldRow(key, label, placeholder = '') {
   const row = document.createElement('div');
   row.className = 'field-row';
@@ -228,7 +306,6 @@ function addFieldRow(key, label, placeholder = '') {
   row.style.marginBottom = '12px';
   row.style.alignItems = 'center';
   
-  // توليد مفتاح برمجى فريد في الخلفية عشان السوبابيز يحفظ القيم بشكل منظم
   const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
 
   row.innerHTML = `
@@ -245,6 +322,7 @@ function openForm(id) {
   editingId = id;
   formError.textContent = '';
   fieldsBuilder.innerHTML = '';
+  optionsBuilder.innerHTML = '';
 
   const fileBox = document.getElementById('fileUploadBox');
 
@@ -254,7 +332,7 @@ function openForm(id) {
     categoryInput.value = p.category_id || '';
     nameInput.value = p.name;
     descInput.value = p.description || '';
-    instructionsInput.value = p.instructions || ''; // تعبئة حقل التعليمات عند التعديل
+    instructionsInput.value = p.instructions || '';
     document.getElementById('imageInput').value = p.image_url || '';
     fileBox.textContent = p.image_url ? 'يوجد صورة مرفوعة (اضغط للتغيير)' : 'اضغط لرفع صورة';
     fileBox.classList.toggle('has-file', !!p.image_url);
@@ -262,19 +340,31 @@ function openForm(id) {
     orderInput.value = p.display_order;
     activeInput.value = String(p.is_active);
     
-    // تمرير الـ placeholder للحقول المخزنة سابقاً
+    // تعبئة الخيارات الفرعية عند التعديل
+    if (Array.isArray(p.options) && p.options.length > 0) {
+      hasOptionsToggle.checked = true;
+      toggleOptionsSection(true);
+      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? ''));
+    } else {
+      hasOptionsToggle.checked = false;
+      toggleOptionsSection(false);
+    }
+
     (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
   } else {
     document.getElementById('formModalTitle').textContent = 'منتج جديد';
     nameInput.value = '';
     descInput.value = '';
-    instructionsInput.value = ''; // تصفير حقل التعليمات للمنتج الجديد
+    instructionsInput.value = '';
     document.getElementById('imageInput').value = '';
     fileBox.textContent = 'اضغط لرفع صورة';
     fileBox.classList.remove('has-file');
     priceInput.value = '';
     orderInput.value = products.length;
     activeInput.value = 'true';
+
+    hasOptionsToggle.checked = false;
+    toggleOptionsSection(false);
   }
 
   formModal.classList.add('show');
@@ -285,7 +375,6 @@ function closeForm() {
   editingId = null;
 }
 
-// تجميع الحقول مع النص التوضيحي المكتوب
 function collectFields() {
   const rows = fieldsBuilder.querySelectorAll('.field-row');
   const fields = [];
@@ -309,24 +398,33 @@ async function saveProduct() {
   if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح'; return; }
   if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
 
+  // التحقق من الخيارات الفرعية في حال التفعيل
+  if (hasOptionsToggle.checked) {
+    const opts = collectOptions();
+    if (opts.length < 2) {
+      formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
+      return;
+    }
+  }
+
   const payload = {
     name,
     description: descInput.value.trim() || null,
-    instructions: instructionsInput.value.trim() || null, // حفظ حقل التعليمات الجديد في قاعدة البيانات
+    instructions: instructionsInput.value.trim() || null,
     image_url: imageInput.value.trim() || null,
     price_usd: price,
     category_id: categoryId,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
-    required_fields: collectFields()
+    required_fields: collectFields(),
+    options: collectOptions()
   };
 
   const { error } = editingId
     ? await supabaseClient.from('products').update(payload).eq('id', editingId)
     : await supabaseClient.from('products').insert(payload);
 
-    if (error) {
-    // هيطبع ليك سبب المشكلة الحقيقي عشان نعرفه فوراً
+  if (error) {
     formError.textContent = 'خطأ من قاعدة البيانات: ' + error.message;
     return;
   }
