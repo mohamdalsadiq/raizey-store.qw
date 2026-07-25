@@ -493,6 +493,13 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   errorBox.textContent = '';
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
 
+  // ── Rate Limiting: منع إرسال طلبات متكررة بشكل مفرط ──
+  const rlKey = `checkout_${currentUser?.id || 'guest'}`;
+  if (!rateLimiter.check(rlKey, 3, 60000)) {
+    errorBox.textContent = 'محاولات كثيرة جداً، انتظر دقيقة ثم حاول مجدداً.';
+    return;
+  }
+
   placeOrderBtn.disabled = true;
   placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
 
@@ -600,19 +607,28 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   if (uploadError) {
     const errMsg = uploadError.message || JSON.stringify(uploadError);
     console.error('[RAIZEY] Storage upload error:', uploadError);
-    errorBox.textContent = 'فشل رفع صورة الإيصال — ' + errMsg;
+    devWarn('[RAIZEY] Storage upload error:', errMsg);
+    errorBox.textContent = 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
 
-  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
-  const publicReceiptUrl = urlData.publicUrl;
-  console.log('[RAIZEY] Receipt public URL:', publicReceiptUrl);
+  // ── رابط الإيصال الآمن (Signed URL — مؤقت وغير مكشوف) ──
+  const { data: signedData, error: signedErr } = await supabaseClient.storage
+    .from('receipts')
+    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 يوم
+  if (signedErr || !signedData) {
+    errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+  const receiptSignedUrl = signedData.signedUrl;
 
   placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef, currentTotal());
-  console.log('[RAIZEY] Smart check response:', JSON.stringify(ocrResult));
+  const ocrResult = await verifyReceiptContent(receiptSignedUrl, null, transactionRef, currentTotal());
+  devLog('[RAIZEY] Smart check response:', ocrResult.ocr_status);
 
   try {
     let lastInsertedOrderId = null;
@@ -637,7 +653,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         transaction_reference: transactionRef,
         status:                'pending_review',
         receipt_hash:          receiptHash,
-        receipt_url:           publicReceiptUrl,
+        receipt_url:           receiptSignedUrl,
         ocr_status:            ocrResult.ocr_status  || 'needs_review',
         amount_verified:       ocrResult.amount_verified ?? false
       };
@@ -647,17 +663,27 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       }
     }
 
-    console.log('[RAIZEY] Inserting orders payload:', ordersToInsert);
+    // ── استخدام الكوبون ذرياً قبل إدخال الطلبات (لمنع Race Condition) ──
+    if (appliedCoupon) {
+      const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
+      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
+      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
+        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته. أعد المحاولة بدون الكود.';
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+        return;
+      }
+    }
+
     const { data: insertedOrders, error: orderError } = await supabaseClient
       .from('orders')
       .insert(ordersToInsert)
       .select('id');
 
     if (orderError) {
-      const errDetail = orderError.message || JSON.stringify(orderError);
-      console.error('[RAIZEY] Order insert error:', orderError);
+      devWarn('[RAIZEY] Order insert error:', orderError.message);
       errorBox.style.color = 'var(--danger)';
-      errorBox.textContent = `فشل إنشاء الطلب: ${errDetail}`;
+      errorBox.textContent = getFriendlyError(orderError.message);
       placeOrderBtn.disabled = false;
       placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
       return;
@@ -668,22 +694,16 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     }
 
     localStorage.removeItem('raizey_store_cart');
-    if (appliedCoupon) {
-      try {
-        await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
-      } catch (e) {
-        console.warn('[RAIZEY] increment_coupon_usage error:', e);
-      }
-    }
+    // الكوبون استُخدم ذرياً بواسطة use_coupon_atomic أعلاه — لا حاجة لاستدعاء إضافي
 
     window.location.href = lastInsertedOrderId
       ? `receipt.html?order_id=${lastInsertedOrderId}`
       : 'my-orders.html';
   } catch (err) {
     const errMsg = err.message || String(err);
-    console.error('[RAIZEY] handlePlaceOrder error:', err);
+    devWarn('[RAIZEY] handlePlaceOrder error:', errMsg);
     errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = `فشل إنشاء الطلب: ${errMsg}`;
+    errorBox.textContent = getFriendlyError(errMsg);
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
   }

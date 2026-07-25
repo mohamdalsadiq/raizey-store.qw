@@ -777,28 +777,43 @@ async function submitOrder(errorBox, submitBtn) {
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
-  if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
-  const publicReceiptUrl = `${SUPABASE_URL}/storage/v1/object/public/receipts/${filePath}`;
+  if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، تأكد من الاتصال وحجم الصورة.'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
+
+  // ── رابط الإيصال الآمن (Signed URL — 30 يوم) ──
+  const { data: signedData, error: signedErr } = await supabaseClient.storage
+    .from('receipts').createSignedUrl(filePath, 60 * 60 * 24 * 30);
+  if (signedErr || !signedData) { errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
+  const receiptUrl = signedData.signedUrl;
 
   const receiptHash = await hashFile(receiptFile);
   const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
   if (isDuplicate) { errorBox.textContent = 'الإيصال مستخدم من قبل!'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
   submitBtn.textContent = 'جارِ فحص الإيصال...';
-  const ocrResult = await verifyReceiptContent(publicReceiptUrl, null, transactionRef);
+  const ocrResult = await verifyReceiptContent(receiptUrl, null, transactionRef);
+
+  // ── استخدام الكوبون ذرياً قبل إدخال الطلب (لمنع Race Condition) ──
+  if (appliedCoupon) {
+    const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
+    const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
+    if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
+      errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته، أعد المحاولة بدون الكود.';
+      submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return;
+    }
+  }
 
   const orderPayload = {
     user_id: currentUser.id, product_id: productId, product_name_snapshot: productNameSnapshot,
     price_sdg_snapshot: currentPrice(), field_values: fieldValues,
     selected_option: { id: selectedOption.id, label: selectedMainCat + ' - ' + selectedOption.display_label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() },
-    payment_type: 'bank', status: 'pending_review', receipt_hash: receiptHash, receipt_url: publicReceiptUrl
+    payment_type: 'bank', status: 'pending_review', receipt_hash: receiptHash, receipt_url: receiptUrl
   };
 
   const { data: insertedOrder, error: orderError } = await supabaseClient.from('orders').insert(orderPayload).select('id').single();
-  if (orderError) { errorBox.textContent = 'فشل إنشاء الطلب'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
+  if (orderError) { errorBox.textContent = getFriendlyError(orderError.message); submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
-  if (appliedCoupon) await supabaseClient.rpc('increment_coupon_usage', { p_coupon_id: appliedCoupon.coupon_id });
-  else if (welcomeDiscount) await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
+  // الكوبون استُخدم ذرياً أعلاه؛ welcomeDiscount يُحدَّث هنا
+  if (welcomeDiscount) await supabaseClient.from('profiles').update({ referral_discount_used: true }).eq('id', currentUser.id);
 
   window.location.href = insertedOrder && insertedOrder.id ? `receipt.html?order_id=${insertedOrder.id}` : 'my-orders.html';
 }
