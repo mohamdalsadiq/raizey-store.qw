@@ -132,6 +132,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
+// =============================================================
+// 🔥 دالة تنظيف النصوص لمنع XSS في قاعدة البيانات
+// =============================================================
+function sanitizeText(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.textContent;
+}
+
 let products = [];
 let categories = [];
 let editingId = null;
@@ -203,19 +213,21 @@ async function init() {
 
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
-  // التحقق: لا نضيف صفوفاً فارغة إلا إذا لم يكن هناك خيارات حالية
   if (show && optionsBuilder.children.length === 0) {
     addOptionRow('', '', '');
     addOptionRow('', '', '');
   }
 }
 
+// =============================================================
+// 🔥 دالة إضافة خيار (مع تنظيف النص)
+// =============================================================
 function addOptionRow(label = '', price = '', id = '') {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
   
-  const cleanLabel = (label || '').replace(/"/g, '&quot;');
+  const cleanLabel = sanitizeText(label);
   const safeId = id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
 
   row.innerHTML = `
@@ -228,6 +240,9 @@ function addOptionRow(label = '', price = '', id = '') {
   optionsBuilder.appendChild(row);
 }
 
+// =============================================================
+// 🔥 دالة جمع الخيارات (مع تنظيف النص قبل التخزين)
+// =============================================================
 function collectOptions() {
   if (!hasOptionsToggle.checked) return [];
   const rows = optionsBuilder.querySelectorAll('.option-row');
@@ -235,7 +250,8 @@ function collectOptions() {
 
   rows.forEach((row) => {
     const id = row.querySelector('.opt-id').value;
-    const label = row.querySelector('.opt-label').value.trim();
+    const rawLabel = row.querySelector('.opt-label').value.trim();
+    const label = sanitizeText(rawLabel); // تنظيف XSS هنا
     const price = parseFloat(row.querySelector('.opt-price').value) || 0;
     if (label) {
       options.push({
@@ -272,15 +288,15 @@ function render() {
   container.innerHTML = products.map(p => `
     <div class="manage-item">
       <div class="manage-item-thumb">
-        ${p.image_url ? `<img src="${p.image_url}" alt="">` : 'لا صورة'}
+        ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="" loading="lazy">` : 'لا صورة'}
       </div>
       <div class="manage-item-info">
         <div class="manage-item-name">
-          ${p.name}
+          ${escapeHtml(p.name)}
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
           ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
-        <div class="manage-item-sub">${p.categories?.name || 'بدون تصنيف'} — $${p.price_usd}</div>
+        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
@@ -306,10 +322,12 @@ function addFieldRow(key, label, placeholder = '') {
   row.style.alignItems = 'center';
   
   const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
+  const safeLabel = sanitizeText(label);
+  const safePlaceholder = sanitizeText(placeholder);
 
   row.innerHTML = `
-    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
-    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${safeLabel}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${safePlaceholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
     <input type="hidden" class="field-key" value="${safeKey}">
     <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><i class="fas fa-xmark"></i></button>
   `;
@@ -321,7 +339,7 @@ function openForm(id) {
   editingId = id;
   formError.textContent = '';
   fieldsBuilder.innerHTML = '';
-  optionsBuilder.innerHTML = ''; // تنظيف الخيارات أولاً
+  optionsBuilder.innerHTML = '';
 
   const fileBox = document.getElementById('fileUploadBox');
 
@@ -339,10 +357,9 @@ function openForm(id) {
     orderInput.value = p.display_order;
     activeInput.value = String(p.is_active);
     
-    // تعبئة الخيارات الفرعية عند التعديل
     if (Array.isArray(p.options) && p.options.length > 0) {
       hasOptionsToggle.checked = true;
-      optionsContainer.style.display = 'block'; // إظهار الحاوية بدون استدعاء دالة الإضافة الفارغة
+      optionsContainer.style.display = 'block';
       p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
     } else {
       hasOptionsToggle.checked = false;
@@ -379,17 +396,21 @@ function collectFields() {
   const fields = [];
   for (const row of rows) {
     const key = row.querySelector('.field-key').value.trim();
-    const label = row.querySelector('.field-label').value.trim();
-    const placeholder = row.querySelector('.field-placeholder').value.trim();
-    if (label) {
-      fields.push({ key, label, placeholder });
+    const rawLabel = row.querySelector('.field-label').value.trim();
+    const rawPlaceholder = row.querySelector('.field-placeholder').value.trim();
+    if (rawLabel) {
+      fields.push({ 
+        key, 
+        label: sanitizeText(rawLabel), 
+        placeholder: sanitizeText(rawPlaceholder) 
+      });
     }
   }
   return fields;
 }
 
 async function saveProduct() {
-  const name = nameInput.value.trim();
+  const name = sanitizeText(nameInput.value.trim());
   const price = parseFloat(priceInput.value);
   const categoryId = categoryInput.value;
 
@@ -407,8 +428,8 @@ async function saveProduct() {
 
   const payload = {
     name,
-    description: descInput.value.trim() || null,
-    instructions: instructionsInput.value.trim() || null,
+    description: sanitizeText(descInput.value.trim()) || null,
+    instructions: sanitizeText(instructionsInput.value.trim()) || null,
     image_url: imageInput.value.trim() || null,
     price_usd: price,
     category_id: categoryId,
@@ -424,7 +445,8 @@ async function saveProduct() {
     : await supabaseClient.from('products').insert(payload);
 
   if (error) {
-    formError.textContent = 'خطأ من قاعدة البيانات: ' + error.message;
+    formError.textContent = 'فشل حفظ المنتج، يرجى المحاولة مجدداً.';
+    devLog('[RAIZEY] save product error:', error);
     return;
   }
 
