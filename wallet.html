@@ -53,7 +53,6 @@
       <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
     </div>
 
-    <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
     <div class="file-upload" id="fileUploadBox">
       اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)
       <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
@@ -126,7 +125,6 @@ async function init() {
     });
   });
 
-  // ── فحص الملف فور الاختيار (MIME + حجم + صورة صحيحة) ──
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('receiptInput');
   const fileError = document.getElementById('fileError');
@@ -285,7 +283,6 @@ async function submitTopup() {
     return;
   }
 
-  // ── فحص إضافي قبل الرفع (تأكيد نوع MIME وحجم الملف) ──
   const validation = await validateReceiptImage(receiptFile);
   if (!validation.valid) {
     fileError.textContent = validation.message;
@@ -296,7 +293,6 @@ async function submitTopup() {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ التحقق...';
 
-  // ── فحص تكرار بصمة الملف ورقم العملية قبل الرفع ──
   let receiptHash = null;
   try {
     receiptHash = await hashFile(receiptFile);
@@ -329,7 +325,6 @@ async function submitTopup() {
     return;
   }
 
-  // ── رفع الإيصال إلى Storage ──
   submitBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/topup_${Date.now()}.${fileExt}`;
@@ -338,22 +333,30 @@ async function submitTopup() {
     .from('receipts')
     .upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
 
+  // 🔥 التعديل الأمني هنا: استخدام getFriendlyError بدلاً من الرسالة الخام
   if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال — ' + (uploadError.message || 'حاول مرة أخرى');
+    errorBox.textContent = getFriendlyError(uploadError.message) || 'فشل رفع الإيصال، حاول مرة أخرى.';
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
   }
 
-  const { data: urlData } = supabaseClient.storage.from('receipts').getPublicUrl(filePath);
+  const { data: signedData, error: signedErr } = await supabaseClient.storage
+    .from('receipts')
+    .createSignedUrl(filePath, 60 * 60 * 24 * 30);
+  if (signedErr || !signedData) {
+    errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
 
-  // ── إدخال طلب الشحن ──
   try {
     const { error } = await supabaseClient.from('wallet_topups').insert({
       user_id:               currentUser.id,
       amount,
       payment_method_id:     methodId,
-      receipt_url:           urlData.publicUrl,
+      receipt_url:           signedData.signedUrl,
       receipt_hash:          receiptHash,
       transaction_reference: transactionRef,
       status:                'pending',
@@ -364,14 +367,13 @@ async function submitTopup() {
     }
   } catch (e) {
     const errMsg = e.message || String(e);
-    console.error('[RAIZEY] wallet_topups insert error:', e);
-    errorBox.textContent = 'حصل خطأ أثناء إرسال الطلب: ' + errMsg;
+    devWarn('[RAIZEY] wallet_topups insert error:', errMsg);
+    errorBox.textContent = getFriendlyError(errMsg);
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
   }
 
-  // إعادة ضبط النموذج بعد النجاح
   document.getElementById('topupForm').classList.remove('show');
   document.getElementById('amountInput').value = '';
   document.getElementById('methodSelect').value = '';
