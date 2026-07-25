@@ -1,6 +1,6 @@
 -- =====================================================================
--- RAIZEY STORE — Security SQL Script
--- شغّل هذا الملف كاملاً في Supabase SQL Editor
+-- RAIZ3Y STORE — Complete Secured SQL Script
+-- شغّل هذا الملف كاملاً في Supabase SQL Editor لإغلاق كافة الثغرات الأمنية
 -- =====================================================================
 
 -- ─────────────────────────────────────────────────────────────────────
@@ -62,8 +62,47 @@ CREATE POLICY "profiles_admin_all" ON profiles
   FOR ALL USING (public.is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 4: سياسات RLS — جدول orders
+-- PART 4: حماية الأسعار وسجل الطلبات — جدول orders
 -- ─────────────────────────────────────────────────────────────────────
+-- 1. دالة وتريجر للتحقق الفوري من سعر الطلبات (التحويل البنكي) لمنع التلاعب بالسعر
+CREATE OR REPLACE FUNCTION verify_order_price_before_insert()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_product_price NUMERIC;
+    v_option_price NUMERIC;
+    v_expected_price NUMERIC;
+BEGIN
+    SELECT price_sdg INTO v_product_price
+    FROM products
+    WHERE id = NEW.product_id;
+
+    IF v_product_price IS NULL THEN
+        RAISE EXCEPTION 'المنتج غير موجود';
+    END IF;
+
+    v_expected_price := v_product_price;
+
+    IF NEW.selected_option IS NOT NULL AND (NEW.selected_option->>'price') IS NOT NULL THEN
+        v_option_price := (NEW.selected_option->>'price')::NUMERIC;
+        IF v_option_price > 0 THEN
+            v_expected_price := v_option_price;
+        END IF;
+    END IF;
+
+    IF NEW.coupon_id IS NULL AND NEW.price_sdg_snapshot < v_expected_price THEN
+        RAISE EXCEPTION 'عذراً، تم التلاعب بسعر الطلب!';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_verify_order_price ON orders;
+CREATE TRIGGER trg_verify_order_price
+BEFORE INSERT ON orders
+FOR EACH ROW EXECUTE FUNCTION verify_order_price_before_insert();
+
+-- 2. سياسات RLS لجدول orders
 DROP POLICY IF EXISTS "orders_select"        ON orders;
 DROP POLICY IF EXISTS "orders_insert_own"    ON orders;
 DROP POLICY IF EXISTS "orders_cancel_own"    ON orders;
@@ -93,16 +132,14 @@ CREATE POLICY "orders_admin_all" ON orders
 DROP POLICY IF EXISTS "wallets_select_own"  ON wallets;
 DROP POLICY IF EXISTS "wallets_admin_all"   ON wallets;
 
--- المستخدم يقرأ رصيده فقط — لا يعدّله مباشرة أبداً
 CREATE POLICY "wallets_select_own" ON wallets
   FOR SELECT USING (user_id = auth.uid() OR public.is_admin());
 
--- التعديل فقط عبر RPCs آمنة (SECURITY DEFINER)
 CREATE POLICY "wallets_admin_all" ON wallets
   FOR ALL USING (public.is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 6: سياسات RLS — جداول أخرى
+-- PART 6: سياسات RLS باقي الجداول (محمية ومُعدّلة أمنياً)
 -- ─────────────────────────────────────────────────────────────────────
 
 -- products: قراءة عامة للمنتجات النشطة + أدمن كامل
@@ -127,11 +164,12 @@ CREATE POLICY "payment_methods_select" ON payment_methods
 CREATE POLICY "payment_methods_admin" ON payment_methods
   FOR ALL USING (public.is_admin());
 
--- settings: قراءة للمستخدمين المسجلين + أدمن كامل
+-- settings: تقييد القراءة للأدمن فقط لحماية هامش الربح والبيانات الحساسة
 DROP POLICY IF EXISTS "settings_select" ON settings;
 DROP POLICY IF EXISTS "settings_admin"  ON settings;
-CREATE POLICY "settings_select" ON settings
-  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "settings_select_admin_only" ON settings;
+CREATE POLICY "settings_select_admin_only" ON settings
+  FOR SELECT USING (public.is_admin());
 CREATE POLICY "settings_admin" ON settings
   FOR ALL USING (public.is_admin());
 
@@ -157,25 +195,27 @@ CREATE POLICY "topups_insert" ON wallet_topups
 CREATE POLICY "topups_admin" ON wallet_topups
   FOR ALL USING (public.is_admin());
 
--- audit_logs
+-- audit_logs: منع التزوير باسم الأدمن
 DROP POLICY IF EXISTS "audit_logs_admin"  ON audit_logs;
 DROP POLICY IF EXISTS "audit_logs_insert" ON audit_logs;
 CREATE POLICY "audit_logs_admin"  ON audit_logs FOR ALL USING (public.is_admin());
 CREATE POLICY "audit_logs_insert" ON audit_logs
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND (admin_id IS NULL OR admin_id = auth.uid())
+  );
 
--- coupons
+-- coupons: تقييد القراءة المباشرة للأدمن فقط لمنع استكشاف الخصومات والأكواد غير المفعلة
 DROP POLICY IF EXISTS "coupons_select" ON coupons;
 DROP POLICY IF EXISTS "coupons_admin"  ON coupons;
-CREATE POLICY "coupons_select" ON coupons
-  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "coupons_select_admin_only" ON coupons;
+CREATE POLICY "coupons_select_admin_only" ON coupons
+  FOR SELECT USING (public.is_admin());
 CREATE POLICY "coupons_admin" ON coupons
   FOR ALL USING (public.is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────
 -- PART 7: RPC آمنة — create_wallet_order (atomic transaction)
--- السعر يُحسب من قاعدة البيانات — لا نقبل أي قيمة من العميل
--- FOR UPDATE يمنع race conditions على رصيد المحفظة
 -- ─────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.create_wallet_order(
   p_product_id   uuid,
@@ -198,12 +238,10 @@ DECLARE
   v_order_id       uuid;
   v_order_status   text    := 'pending_review';
 BEGIN
-  -- التحقق من تسجيل الدخول
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'not_authenticated';
   END IF;
 
-  -- جلب بيانات المنتج من قاعدة البيانات
   SELECT * INTO v_product
   FROM products
   WHERE products.id = p_product_id AND is_active = true;
@@ -212,7 +250,6 @@ BEGIN
     RAISE EXCEPTION 'product_not_found';
   END IF;
 
-  -- حساب السعر بالجنيه السوداني من إعدادات المتجر
   SELECT
     (SELECT value::numeric FROM settings WHERE key = 'usd_to_sdg_rate'      LIMIT 1),
     (SELECT value::numeric FROM settings WHERE key = 'profit_margin_percent' LIMIT 1)
@@ -226,7 +263,6 @@ BEGIN
     RAISE EXCEPTION 'price_calculation_error';
   END IF;
 
-  -- تطبيق كوبون الخصم إن وُجد
   IF p_coupon_code IS NOT NULL AND trim(p_coupon_code) != '' THEN
     SELECT c.id, c.discount_percent
     INTO   v_coupon_id, v_discount_pct
@@ -243,7 +279,6 @@ BEGIN
 
   v_price_sdg := round(v_price_sdg);
 
-  -- قفل رصيد المحفظة لمنع السحب المزدوج (FOR UPDATE)
   SELECT balance INTO v_wallet_balance
   FROM   wallets
   WHERE  user_id = v_user_id
@@ -257,13 +292,11 @@ BEGIN
     RAISE EXCEPTION 'insufficient_balance';
   END IF;
 
-  -- خصم الرصيد
   UPDATE wallets
   SET    balance    = balance - v_price_sdg,
          updated_at = now()
   WHERE  user_id = v_user_id;
 
-  -- إنشاء الطلب بحالة pending_review ليظهر في لوحة الأدمن
   INSERT INTO orders (
     user_id, product_id, product_name_snapshot,
     price_sdg_snapshot, field_values, payment_type, status
@@ -274,7 +307,6 @@ BEGIN
   )
   RETURNING orders.id INTO v_order_id;
 
-  -- تحديث عداد الكوبون
   IF v_coupon_id IS NOT NULL THEN
     UPDATE coupons
     SET current_uses = current_uses + 1
@@ -286,8 +318,42 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 8: RPC آمنة — admin_refund_wallet
--- تُستخدَم عند رفض طلب محفظة لإعادة الرصيد للمستخدم
+-- PART 8: RPC آمنة — use_coupon_atomic (حل سباق الكوبونات)
+-- ─────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.use_coupon_atomic(p_code TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_coupon RECORD;
+BEGIN
+    SELECT * INTO v_coupon
+    FROM coupons
+    WHERE UPPER(code) = UPPER(TRIM(p_code))
+      AND is_active = TRUE
+      AND (expires_at IS NULL OR expires_at > NOW())
+      AND (max_uses IS NULL OR current_uses < max_uses)
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'message', 'الكوبون غير صالح أو انتهت استخداماته');
+    END IF;
+
+    UPDATE coupons
+    SET current_uses = current_uses + 1
+    WHERE id = v_coupon.id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'coupon_id', v_coupon.id,
+        'discount_percent', v_coupon.discount_percent
+    );
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- PART 9: RPC آمنة — admin_refund_wallet
 -- ─────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.admin_refund_wallet(
   p_user_id  uuid,
@@ -319,14 +385,12 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 9: سياسات Storage Bucket — receipts
--- تأكد أن bucket باسم "receipts" موجود في Storage > Buckets
+-- PART 10: سياسات Storage Bucket — receipts
 -- ─────────────────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "receipts_upload_own" ON storage.objects;
 DROP POLICY IF EXISTS "receipts_read_own"   ON storage.objects;
 DROP POLICY IF EXISTS "receipts_admin_read" ON storage.objects;
 
--- المستخدم يرفع فقط في مجلده الخاص
 CREATE POLICY "receipts_upload_own" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -334,7 +398,6 @@ CREATE POLICY "receipts_upload_own" ON storage.objects
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- المستخدم يقرأ ملفاته فقط
 CREATE POLICY "receipts_read_own" ON storage.objects
   FOR SELECT TO authenticated
   USING (
@@ -342,7 +405,6 @@ CREATE POLICY "receipts_read_own" ON storage.objects
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- الأدمن يقرأ جميع الإيصالات
 CREATE POLICY "receipts_admin_read" ON storage.objects
   FOR SELECT TO authenticated
   USING (
@@ -351,7 +413,7 @@ CREATE POLICY "receipts_admin_read" ON storage.objects
   );
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 10: إضافة عمود receipt_hash لـ wallet_topups إن لم يكن موجوداً
+-- PART 11: إضافة الأعمده الناقصة
 -- ─────────────────────────────────────────────────────────────────────
 DO $$
 BEGIN
@@ -364,7 +426,7 @@ BEGIN
 END $$;
 
 -- ─────────────────────────────────────────────────────────────────────
--- PART 11: Indexes لتحسين أداء استعلامات الأدمن
+-- PART 12: Indexes لتحسين الأداء
 -- ─────────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_orders_status      ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id     ON orders(user_id);
@@ -373,7 +435,3 @@ CREATE INDEX IF NOT EXISTS idx_orders_receipt_hash
   ON orders(receipt_hash) WHERE receipt_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_topups_receipt_hash
   ON wallet_topups(receipt_hash) WHERE receipt_hash IS NOT NULL;
-
--- ─────────────────────────────────────────────────────────────────────
--- ✅ انتهى — الملف جاهز للتشغيل في Supabase SQL Editor
--- ─────────────────────────────────────────────────────────────────────
