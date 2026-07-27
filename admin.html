@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم — RAIZEY STORE</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff6a1a">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
@@ -30,6 +33,7 @@
     <a href="admin-audit-log.html">سجل النشاطات</a>
     <a href="admin-coupons.html">الكوبونات</a>
 <a href="admin-giftcards.html">كروت الهدايا</a>
+    <a href="#" id="aiInsightsBtn" style="background: var(--accent-gold); color: white; border-radius: 8px;"><i class="fas fa-robot"></i> رؤى الذكاء الاصطناعي</a>
   </div>
 
   <div class="stat-grid">
@@ -82,6 +86,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/ai-service.js"></script>
 <script>
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -235,6 +240,47 @@ async function loadRecentCustomers() {
 }
 
 init();
-</script>
-</body>
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('SW registered: ', reg.scope);
+    }).catch(err => console.log('SW registration failed: ', err));
+  });
+}
+
+// Real-time Notifications & AI Architecture hook
+function setupRealtime() {
+  const channel = supabaseClient.channel('admin_dashboard')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+      // إشعار جديد في لوحة التحكم (Notification API / Web Push)
+      if (Notification.permission === "granted") {
+        new Notification("طلب جديد من متجر RAIZ3Y", {
+          body: `طلب جديد: ${payload.new.product_name_snapshot}`,
+          icon: "/assets/icon-192.png"
+        });
+      }
+      loadStats();
+      loadRecentOrders();
+    })
+    .subscribe();
+
+  // طلب إذن الإشعارات
+  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+     Notification.requestPermission();
+   }
+ }
+ setupRealtime();
+
+ // AI Insights Event
+ document.getElementById('aiInsightsBtn').addEventListener('click', async (e) => {
+   e.preventDefault();
+   if(window.raizeyAI) {
+     const result = await window.raizeyAI.analyzeSalesTrend();
+     alert(`[AI Analysis]\nTrend: ${result.trend}\nSuggestion: ${result.suggestion}`);
+   }
+ });
+ </script>
+ </body>
 </html>
