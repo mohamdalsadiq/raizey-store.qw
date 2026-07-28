@@ -1,286 +1,2078 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة التحكم — RAIZEY STORE</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff6a1a">
-<link rel="apple-touch-icon" href="/assets/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/auth.css">
-<link rel="stylesheet" href="assets/css/admin.css">
-</head>
-<body>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>لوحة الإدارة</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg-elevated: #0d1b2d;
+      --bg-surface: rgba(15, 25, 40, 0.92);
+      --bg-soft: rgba(20, 33, 53, 0.92);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-strong: #0ea5e9;
+      --success: #34d399;
+      --danger: #fb7185;
+      --warning: #f59e0b;
+      --shadow: 0 20px 48px rgba(2, 6, 23, 0.42);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 12px;
+      --nav-height: 84px;
+      font-family: "Inter", "Segoe UI", Tahoma, sans-serif;
+    }
 
-<div class="admin-page" id="adminPage" style="display:none;">
-  <div class="page-header">
-    <h1>لوحة التحكم</h1>
-    <a href="index.html" class="back-link">→ المتجر</a>
-  </div>
+    * {
+      box-sizing: border-box;
+    }
 
-  <div class="admin-nav">
-    <a href="admin.html" class="active">الرئيسية</a>
-    <a href="admin-orders.html">الطلبات</a>
-    <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html">المنتجات</a>
-    <a href="admin-categories.html">التصنيفات</a>
-    <a href="admin-customers.html">العملاء</a>
-    <a href="admin-payment-methods.html">وسائل الدفع</a>
-    <a href="admin-settings.html">الإعدادات</a>
-    <a href="admin-audit-log.html">سجل النشاطات</a>
-    <a href="admin-coupons.html">الكوبونات</a>
-<a href="admin-giftcards.html">كروت الهدايا</a>
-    <a href="#" id="aiInsightsBtn" style="background: var(--accent-gold); color: white; border-radius: 8px;"><i class="fas fa-robot"></i> رؤى الذكاء الاصطناعي</a>
-  </div>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 26%),
+        radial-gradient(circle at top left, rgba(99, 102, 241, 0.15), transparent 22%),
+        var(--bg);
+      color: var(--text);
+    }
 
-  <div class="stat-grid">
-    <div class="stat-card highlight">
-      <div class="stat-card-label">إجمالي المبيعات</div>
-      <div class="stat-card-value" id="statRevenue">...</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد الطلبات</div>
-      <div class="stat-card-value" id="statOrders">...</div>
-    </div>
-    <div class="stat-card alert">
-      <div class="stat-card-label">طلبات قيد المراجعة</div>
-      <div class="stat-card-value" id="statPending">...</div>
-      <a href="admin-orders.html" class="stat-card-link">مراجعة الآن ←</a>
-    </div>
-    <div class="stat-card alert">
-      <div class="stat-card-label">شحن محفظة معلّق</div>
-      <div class="stat-card-value" id="statPendingTopups">...</div>
-      <a href="admin-topups.html" class="stat-card-link">مراجعة الآن ←</a>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد العملاء</div>
-      <div class="stat-card-value" id="statCustomers">...</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">عدد المنتجات</div>
-      <div class="stat-card-value" id="statProducts">...</div>
-    </div>
-  </div>
+    body {
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
 
-  <div class="admin-section-title">المبيعات آخر 7 أيام</div>
-  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:24px;">
-    <canvas id="salesChart" height="180"></canvas>
-  </div>
+    a {
+      color: inherit;
+    }
 
-  <div class="admin-section-title">آخر الطلبات</div>
-  <div id="recentOrders"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
 
-  <div class="admin-section-title">آخر العملاء</div>
-  <div id="recentCustomers"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
-</div>
+    button {
+      border: 0;
+      cursor: pointer;
+    }
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <p>هذه الصفحة مخصصة للإدارة فقط</p>
-  <a href="index.html" style="color:var(--primary); font-weight:700; display:inline-block; margin-top:14px;">← رجوع للمتجر</a>
-</div>
+    .app-shell {
+      min-height: 100vh;
+      padding: 18px 16px calc(var(--nav-height) + 28px);
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/ai-service.js"></script>
-<script>
-async function init() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
+    .topbar {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
 
-  const { data: profile } = await supabaseClient
-    .from('profiles')
-    .select('role')
-    .eq('id', session.user.id)
-    .single();
+    .topbar-card {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(9, 15, 27, 0.98));
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
 
-  if (!profile || profile.role !== 'admin') {
-    document.getElementById('accessDenied').style.display = 'block';
-    return;
-  }
+    .topbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-  document.getElementById('adminPage').style.display = 'block';
-  await loadStats();
-  await loadSalesChart();
-  await loadRecentOrders();
-  await loadRecentCustomers();
-}
+    .brand-block {
+      display: grid;
+      gap: 6px;
+    }
 
-async function loadSalesChart() {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+    .eyebrow {
+      color: var(--primary);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
-  const { data: orders } = await supabaseClient
-    .from('orders')
-    .select('price_sdg_snapshot, created_at')
-    .in('status', ['in_progress', 'completed'])
-    .gte('created_at', sevenDaysAgo.toISOString());
+    .headline {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
 
-  const labels = [];
-  const totals = [];
+    .subline {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
 
-  for (let i = 6; i >= 0; i--) {
-    const day = new Date();
-    day.setDate(day.getDate() - i);
-    const dayKey = day.toISOString().slice(0, 10);
-    labels.push(day.toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' }));
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-    const dayTotal = (orders || [])
-      .filter(o => o.created_at.slice(0, 10) === dayKey)
-      .reduce((sum, o) => sum + Number(o.price_sdg_snapshot), 0);
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      font-size: 0.87rem;
+      white-space: nowrap;
+    }
 
-    totals.push(dayTotal);
-  }
+    .status-chip strong {
+      color: var(--text);
+      font-size: 0.92rem;
+    }
 
-  new Chart(document.getElementById('salesChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'المبيعات (ج.س)',
-        data: totals,
-        borderColor: '#ff6a1a',
-        backgroundColor: 'rgba(43,237,51,0.1)',
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } },
-        y: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } }
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--muted);
+      box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.08);
+    }
+
+    .status-dot.live {
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.14);
+    }
+
+    .status-dot.warn {
+      background: var(--warning);
+      box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.14);
+    }
+
+    .hero-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: rgba(12, 18, 32, 0.72);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .panel {
+      display: none;
+      gap: 16px;
+      animation: fade-slide 0.18s ease;
+    }
+
+    .panel.active {
+      display: grid;
+    }
+
+    .section-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .section-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .section-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 10px;
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 46px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(15, 23, 42, 0.76);
+      color: var(--text);
+      padding: 12px 14px;
+      outline: none;
+    }
+
+    .input:focus,
+    .select:focus {
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+    }
+
+    .controls-grid,
+    .settings-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 46px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text);
+      transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn:not(:disabled):active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: #03131f;
+      font-weight: 800;
+    }
+
+    .btn-soft {
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .btn-success {
+      background: rgba(16, 185, 129, 0.14);
+      color: #a7f3d0;
+      border: 1px solid rgba(52, 211, 153, 0.32);
+    }
+
+    .btn-danger {
+      background: rgba(244, 63, 94, 0.12);
+      color: #fecdd3;
+      border: 1px solid rgba(251, 113, 133, 0.3);
+    }
+
+    .btn svg,
+    .nav-btn svg,
+    .icon-only svg,
+    .tab-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-soft);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .order-card {
+      display: grid;
+      gap: 0;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .card-subtitle {
+      margin: 6px 0 0;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .pill.success {
+      background: rgba(16, 185, 129, 0.14);
+      color: #a7f3d0;
+      border-color: rgba(52, 211, 153, 0.24);
+    }
+
+    .pill.danger {
+      background: rgba(244, 63, 94, 0.12);
+      color: #fecdd3;
+      border-color: rgba(251, 113, 133, 0.24);
+    }
+
+    .pill.warning {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      border-color: rgba(245, 158, 11, 0.24);
+    }
+
+    .card-grid {
+      display: grid;
+      gap: 12px;
+      padding: 0 14px 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .summary-item {
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 14px;
+      padding: 11px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .summary-item strong {
+      font-size: 0.9rem;
+    }
+
+    .summary-item span {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .thumb-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .thumb-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .thumb {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.72);
+      object-fit: cover;
+      flex-shrink: 0;
+      cursor: zoom-in;
+    }
+
+    .order-actions,
+    .wallet-actions,
+    .product-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .note-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .wallet-card,
+    .product-card,
+    .settings-card {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .customer-meta,
+    .product-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .switch {
+      position: relative;
+      width: 62px;
+      height: 34px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.22);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      transition: background 0.2s ease;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s ease;
+      box-shadow: 0 8px 14px rgba(2, 6, 23, 0.24);
+    }
+
+    .switch[data-on="true"] {
+      background: rgba(16, 185, 129, 0.36);
+      border-color: rgba(52, 211, 153, 0.4);
+    }
+
+    .switch[data-on="true"]::after {
+      transform: translateX(-28px);
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .settings-copy h3 {
+      margin: 0 0 5px;
+      font-size: 0.98rem;
+    }
+
+    .settings-copy p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .empty-state {
+      padding: 22px 16px;
+      border-radius: 18px;
+      border: 1px dashed rgba(148, 163, 184, 0.2);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.8;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      right: 12px;
+      left: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      background: rgba(7, 13, 25, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 24px;
+      padding: 10px;
+      box-shadow: 0 18px 48px rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(18px);
+      z-index: 25;
+    }
+
+    .nav-btn {
+      min-height: 62px;
+      border-radius: 18px;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      gap: 6px;
+      padding: 8px 6px;
+      border: 1px solid transparent;
+    }
+
+    .nav-btn span {
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .nav-btn.active {
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.72));
+      border-color: rgba(56, 189, 248, 0.22);
+    }
+
+    .nav-btn[hidden] {
+      display: none;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(2, 6, 23, 0.82);
+      backdrop-filter: blur(12px);
+      z-index: 40;
+    }
+
+    .modal.active {
+      display: grid;
+    }
+
+    .modal-card {
+      width: min(100%, 560px);
+      background: rgba(9, 15, 27, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .modal-image {
+      width: 100%;
+      max-height: 75vh;
+      object-fit: contain;
+      background: #020617;
+    }
+
+    .icon-only {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.88);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top));
+      left: 14px;
+      right: 14px;
+      display: grid;
+      gap: 8px;
+      z-index: 45;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(7, 13, 25, 0.94);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .toast.success {
+      border-color: rgba(52, 211, 153, 0.28);
+    }
+
+    .toast.error {
+      border-color: rgba(251, 113, 133, 0.34);
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(2, 6, 23, 0.54);
+      z-index: 30;
+      backdrop-filter: blur(6px);
+    }
+
+    .loading.active {
+      display: grid;
+    }
+
+    .spinner {
+      width: 56px;
+      height: 56px;
+      border: 3px solid rgba(148, 163, 184, 0.18);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .auth-notice {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(127, 29, 29, 0.16);
+      border: 1px solid rgba(248, 113, 113, 0.24);
+      color: #fecaca;
+      line-height: 1.8;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
     }
-  });
-}
 
-async function loadStats() {
-  const { count: ordersCount } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true });
+    @keyframes fade-slide {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  const { count: customersCount } = await supabaseClient
-    .from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer');
+    @media (min-width: 768px) {
+      .app-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding-inline: 22px;
+      }
 
-  const { count: productsCount } = await supabaseClient
-    .from('products').select('*', { count: 'exact', head: true });
+      .hero-metrics {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
 
-  // عدد الطلبات قيد المراجعة (جميع وسائل الدفع بما فيها المحفظة)
-  const { count: pendingOrders } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true })
-    .eq('status', 'pending_review');
+      .summary-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
 
-  const { count: pendingTopups } = await supabaseClient
-    .from('wallet_topups').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      .controls-grid,
+      .settings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
 
-  const { data: revenueRows } = await supabaseClient
-    .from('orders').select('price_sdg_snapshot').in('status', ['in_progress', 'completed']);
+      .toolbar {
+        grid-template-columns: minmax(0, 1.6fr) auto;
+        align-items: end;
+      }
 
-  const revenue = (revenueRows || []).reduce((sum, o) => sum + Number(o.price_sdg_snapshot), 0);
+      .bottom-nav {
+        right: 50%;
+        left: auto;
+        width: min(560px, calc(100% - 40px));
+        transform: translateX(50%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-wrap" id="toastWrap"></div>
+  <div class="loading" id="loadingOverlay" aria-hidden="true">
+    <div class="spinner" aria-label="جارٍ التحميل"></div>
+  </div>
 
-  document.getElementById('statOrders').textContent = ordersCount ?? 0;
-  document.getElementById('statCustomers').textContent = customersCount ?? 0;
-  document.getElementById('statProducts').textContent = productsCount ?? 0;
-  document.getElementById('statPending').textContent = pendingOrders ?? 0;
-  document.getElementById('statPendingTopups').textContent = pendingTopups ?? 0;
-  document.getElementById('statRevenue').textContent = formatSDG(revenue) + ' ج.س';
-}
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-card">
+        <div class="topbar-row">
+          <div class="brand-block">
+            <span class="eyebrow">Admin Console</span>
+            <h1 class="headline">لوحة إدارة المتجر</h1>
+            <p class="subline">إدارة الطلبات، المحافظ، المنتجات، والإعدادات من واجهة موحدة مرتبطة مباشرة بـ Supabase.</p>
+          </div>
+          <div class="header-actions">
+            <div class="status-chip">
+              <span class="status-dot" id="realtimeDot"></span>
+              <span>الحالة <strong id="realtimeText">جاري التهيئة</strong></span>
+            </div>
+            <div class="status-chip">
+              <span class="status-dot" id="maintenanceDot"></span>
+              <span>الصيانة <strong id="maintenanceStatus">غير معروفة</strong></span>
+            </div>
+          </div>
+        </div>
 
-async function loadRecentOrders() {
-  const { data: orders } = await supabaseClient
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  const container = document.getElementById('recentOrders');
-  if (!orders || orders.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا توجد طلبات بعد</div>`;
-    return;
-  }
-
-  container.innerHTML = orders.map(o => `
-    <div class="mini-list-item">
-      <div>
-        <div class="name">${escapeHtml(o.product_name_snapshot)}</div>
-        <div class="sub">${formatSDG(o.price_sdg_snapshot)} ج.س — ${o.payment_type === 'wallet' ? 'محفظة' : 'تحويل'}</div>
+        <div class="hero-metrics">
+          <div class="metric">
+            <span class="metric-label">الطلبات</span>
+            <strong class="metric-value" id="ordersMetric">0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">العملاء</span>
+            <strong class="metric-value" id="customersMetric">0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">المنتجات</span>
+            <strong class="metric-value" id="productsMetric">0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">سعر الصرف</span>
+            <strong class="metric-value" id="exchangeMetric">--</strong>
+          </div>
+        </div>
       </div>
-      <span class="status-badge status-${escapeHtml(o.status)}">${{'pending_review':'قيد المراجعة','in_progress':'قيد التنفيذ','completed':'مكتمل','cancelled':'ملغي','rejected':'مرفوض'}[o.status] || escapeHtml(o.status)}</span>
-    </div>
-  `).join('');
-}
+    </header>
 
-async function loadRecentCustomers() {
-  const { data: customers } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('role', 'customer')
-    .order('created_at', { ascending: false })
-    .limit(5);
+    <main id="appPanels">
+      <section class="panel active" id="panel-orders" data-tab="orders">
+        <article class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>الطلبات</h2>
+              <p>مراجعة الطلبات بسرعة مع صور قابلة للتكبير وروابط واتساب فورية.</p>
+            </div>
+            <div class="button-row">
+              <button class="btn btn-soft" id="refreshOrdersBtn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                <span>تحديث</span>
+              </button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="note-box" id="ordersNotice">سيتم عرض آخر الطلبات فور اكتمال الاتصال بقاعدة البيانات.</div>
+            <div class="list" id="ordersList"></div>
+          </div>
+        </article>
+      </section>
 
-  const container = document.getElementById('recentCustomers');
-  if (!customers || customers.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">لا يوجد عملاء بعد</div>`;
-    return;
-  }
+      <section class="panel" id="panel-wallet" data-tab="wallet">
+        <article class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>المحفظة والعملاء</h2>
+              <p>البحث عن العملاء وتعديل الرصيد مباشرة مع تسجيل ملاحظة العملية.</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="toolbar">
+              <input class="input" id="customerSearch" type="search" placeholder="ابحث بالاسم أو الهاتف أو البريد">
+              <div class="toolbar-row">
+                <button class="btn btn-soft" id="refreshCustomersBtn" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                  <span>تحديث</span>
+                </button>
+              </div>
+            </div>
+            <div class="list" id="customersList"></div>
+          </div>
+        </article>
+      </section>
 
-  container.innerHTML = customers.map(c => `
-    <div class="mini-list-item">
-      <div>
-        <div class="name">${escapeHtml(c.full_name || 'بدون اسم')}</div>
-        <div class="sub">${escapeHtml(c.whatsapp_number || '—')}</div>
+      <section class="panel" id="panel-products" data-tab="products">
+        <article class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>المنتجات والتصنيفات</h2>
+              <p>إظهار أو إخفاء المنتجات وتعديل السعر مع إظهار التصنيف المرتبط.</p>
+            </div>
+            <div class="button-row">
+              <button class="btn btn-soft" id="refreshProductsBtn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                <span>تحديث</span>
+              </button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="list" id="productsList"></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel" id="panel-settings" data-tab="settings">
+        <article class="section-card">
+          <div class="section-head">
+            <div>
+              <h2>الإعدادات والصيانة</h2>
+              <p>التحكم في وضع الصيانة وسعر الصرف مع مزامنة فورية عبر Realtime.</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="settings-grid">
+              <div class="settings-card">
+                <div class="settings-row">
+                  <div class="settings-copy">
+                    <h3>وضع الصيانة</h3>
+                    <p>تفعيل هذا الخيار ينعكس مباشرة على `store_settings` ويُبث فورياً لباقي العملاء.</p>
+                  </div>
+                  <button class="switch" id="maintenanceToggle" type="button" data-on="false" aria-label="تبديل وضع الصيانة"></button>
+                </div>
+                <button class="btn btn-primary" id="saveMaintenanceBtn" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                  <span>حفظ وضع الصيانة</span>
+                </button>
+              </div>
+
+              <div class="settings-card">
+                <div class="form-grid">
+                  <input class="input" id="exchangeRateInput" type="number" step="0.0001" min="0" placeholder="أدخل سعر الصرف">
+                  <button class="btn btn-primary" id="saveExchangeBtn" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                    <span>حفظ سعر الصرف</span>
+                  </button>
+                </div>
+                <div class="note-box" id="settingsNotice">سيتم حفظ القيمة في `store_settings` وإعادة تحميلها آلياً من الاشتراك المباشر.</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="التنقل السفلي">
+    <button class="nav-btn active" type="button" data-tab-target="orders">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4z"/><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><path d="M9 13h6"/></svg>
+      <span>الطلبات</span>
+    </button>
+    <button class="nav-btn" type="button" data-tab-target="wallet">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h11A2.5 2.5 0 0 1 19 7.5V9h-5a3 3 0 0 0 0 6h5v1.5A2.5 2.5 0 0 1 16.5 19h-11A2.5 2.5 0 0 1 3 16.5z"/><path d="M19 9h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-6a3 3 0 0 1 0-6z"/><path d="M14.5 12h.01"/></svg>
+      <span>المحفظة</span>
+    </button>
+    <button class="nav-btn" type="button" data-tab-target="products">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8.5v7L12 20l-9-4.5v-7L12 4z"/><path d="M12 20v-9"/><path d="M3.5 8.75L12 13l8.5-4.25"/></svg>
+      <span>المنتجات</span>
+    </button>
+    <button class="nav-btn" type="button" data-tab-target="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.33 4.32 11 2h2l.67 2.32a7.8 7.8 0 0 1 1.73.72l2.11-1.1 1.42 1.42-1.1 2.11c.3.54.54 1.12.72 1.73L22 11v2l-2.32.67a7.8 7.8 0 0 1-.72 1.73l1.1 2.11-1.42 1.42-2.11-1.1a7.8 7.8 0 0 1-1.73.72L13 22h-2l-.67-2.32a7.8 7.8 0 0 1-1.73-.72l-2.11 1.1-1.42-1.42 1.1-2.11a7.8 7.8 0 0 1-.72-1.73L2 13v-2l2.32-.67a7.8 7.8 0 0 1 .72-1.73l-1.1-2.11 1.42-1.42 2.11 1.1c.54-.3 1.12-.54 1.73-.72"/><circle cx="12" cy="12" r="3.2"/></svg>
+      <span>الإعدادات</span>
+    </button>
+  </nav>
+
+  <div class="modal" id="imageModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <strong>معاينة الصورة</strong>
+        </div>
+        <button class="icon-only" id="closeModalBtn" type="button" aria-label="إغلاق المعاينة">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
       </div>
+      <img class="modal-image" id="modalImage" alt="صورة مرفوعة مع الطلب">
     </div>
-  `).join('');
-}
+  </div>
 
-init();
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/admin-rbac.js"></script>
+  <script>
+    (() => {
+      const state = {
+        supabase: null,
+        activeTab: "orders",
+        permissions: {
+          ordersView: true,
+          ordersManage: true,
+          walletView: true,
+          walletManage: true,
+          productsView: true,
+          productsManage: true,
+          settingsView: true,
+          settingsManage: true
+        },
+        resources: {
+          ordersTable: "orders",
+          customersTable: null,
+          productsTable: "products",
+          categoriesTable: "categories",
+          settingsTable: "store_settings",
+          walletTransactionsTable: null
+        },
+        orders: [],
+        customers: [],
+        products: [],
+        categories: [],
+        settingsRows: [],
+        settingsMap: {
+          maintenance: false,
+          exchangeRate: null
+        },
+        subscriptions: {
+          settings: null
+        }
+      };
 
-// PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      console.log('SW registered: ', reg.scope);
-    }).catch(err => console.log('SW registration failed: ', err));
-  });
-}
+      const els = {
+        panels: Array.from(document.querySelectorAll(".panel")),
+        navButtons: Array.from(document.querySelectorAll(".nav-btn")),
+        ordersList: document.getElementById("ordersList"),
+        customersList: document.getElementById("customersList"),
+        productsList: document.getElementById("productsList"),
+        ordersNotice: document.getElementById("ordersNotice"),
+        customerSearch: document.getElementById("customerSearch"),
+        refreshOrdersBtn: document.getElementById("refreshOrdersBtn"),
+        refreshCustomersBtn: document.getElementById("refreshCustomersBtn"),
+        refreshProductsBtn: document.getElementById("refreshProductsBtn"),
+        maintenanceToggle: document.getElementById("maintenanceToggle"),
+        saveMaintenanceBtn: document.getElementById("saveMaintenanceBtn"),
+        exchangeRateInput: document.getElementById("exchangeRateInput"),
+        saveExchangeBtn: document.getElementById("saveExchangeBtn"),
+        settingsNotice: document.getElementById("settingsNotice"),
+        realtimeDot: document.getElementById("realtimeDot"),
+        realtimeText: document.getElementById("realtimeText"),
+        maintenanceDot: document.getElementById("maintenanceDot"),
+        maintenanceStatus: document.getElementById("maintenanceStatus"),
+        ordersMetric: document.getElementById("ordersMetric"),
+        customersMetric: document.getElementById("customersMetric"),
+        productsMetric: document.getElementById("productsMetric"),
+        exchangeMetric: document.getElementById("exchangeMetric"),
+        loadingOverlay: document.getElementById("loadingOverlay"),
+        toastWrap: document.getElementById("toastWrap"),
+        imageModal: document.getElementById("imageModal"),
+        modalImage: document.getElementById("modalImage"),
+        closeModalBtn: document.getElementById("closeModalBtn")
+      };
 
-// Real-time Notifications & AI Architecture hook
-function setupRealtime() {
-  const channel = supabaseClient.channel('admin_dashboard')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-      // إشعار جديد في لوحة التحكم (Notification API / Web Push)
-      if (Notification.permission === "granted") {
-        new Notification("طلب جديد من متجر RAIZ3Y", {
-          body: `طلب جديد: ${payload.new.product_name_snapshot}`,
-          icon: "/assets/icon-192.png"
+      const icons = {
+        plus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+        minus: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
+        message: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.59 7.46L3 20l1.12-5.08A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5h7"/><path d="M8.5 14h4"/></svg>',
+        eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+        eyeOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"/><path d="M10.58 10.58A2 2 0 0 0 13.41 13.4"/><path d="M9.88 5.09A11.2 11.2 0 0 1 12 4.9c6.5 0 10 7.1 10 7.1a17.52 17.52 0 0 1-3.07 3.98"/><path d="M6.61 6.61C3.91 8.35 2 12 2 12s3.5 7.1 10 7.1a10.8 10.8 0 0 0 4.11-.77"/></svg>',
+        save: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21h14"/><path d="M7 21V7l2-3h6l2 3v14"/><path d="M9 11h6"/></svg>'
+      };
+
+      function setLoading(active) {
+        els.loadingOverlay.classList.toggle("active", Boolean(active));
+      }
+
+      function toast(message, type = "info") {
+        const item = document.createElement("div");
+        item.className = "toast" + (type === "success" ? " success" : type === "error" ? " error" : "");
+        item.textContent = message;
+        els.toastWrap.appendChild(item);
+        window.setTimeout(() => item.remove(), 3400);
+      }
+
+      function setRealtimeStatus(label, kind) {
+        els.realtimeText.textContent = label;
+        els.realtimeDot.className = "status-dot" + (kind === "live" ? " live" : kind === "warn" ? " warn" : "");
+      }
+
+      function setMaintenanceBadge(active) {
+        els.maintenanceStatus.textContent = active ? "مفعل" : "متوقف";
+        els.maintenanceDot.className = "status-dot" + (active ? " warn" : " live");
+        els.maintenanceToggle.dataset.on = String(Boolean(active));
+      }
+
+      function firstValue(source, keys) {
+        if (!source || typeof source !== "object") return null;
+        for (const key of keys) {
+          if (source[key] !== undefined && source[key] !== null && source[key] !== "") {
+            return source[key];
+          }
+        }
+        return null;
+      }
+
+      function normalizeText(value) {
+        return value === null || value === undefined ? "" : String(value).trim();
+      }
+
+      function normalizeNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : 0;
+      }
+
+      function formatCurrency(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return "--";
+        return new Intl.NumberFormat("ar", {
+          maximumFractionDigits: 2
+        }).format(number);
+      }
+
+      function formatDate(value) {
+        if (!value) return "غير محدد";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return normalizeText(value);
+        return new Intl.DateTimeFormat("ar", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(date);
+      }
+
+      function coerceBoolean(value) {
+        if (typeof value === "boolean") return value;
+        if (typeof value === "number") return value === 1;
+        const text = normalizeText(value).toLowerCase();
+        return ["1", "true", "yes", "on", "active", "enabled"].includes(text);
+      }
+
+      function parseJsonMaybe(value) {
+        if (Array.isArray(value) || (value && typeof value === "object")) return value;
+        const text = normalizeText(value);
+        if (!text) return null;
+        try {
+          return JSON.parse(text);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function extractImages(order) {
+        const candidates = [
+          firstValue(order, ["images", "attachments", "image_urls"]),
+          firstValue(order, ["receipt_images", "screenshots"]),
+          firstValue(order, ["image_url", "receipt_image", "proof_image", "product_image", "screenshot_url"])
+        ];
+        const urls = [];
+        candidates.forEach((item) => {
+          if (!item) return;
+          if (Array.isArray(item)) {
+            item.forEach((entry) => {
+              const url = normalizeText(typeof entry === "string" ? entry : entry?.url || entry?.src);
+              if (url) urls.push(url);
+            });
+            return;
+          }
+          const parsed = parseJsonMaybe(item);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((entry) => {
+              const url = normalizeText(typeof entry === "string" ? entry : entry?.url || entry?.src);
+              if (url) urls.push(url);
+            });
+            return;
+          }
+          const text = normalizeText(item);
+          if (text.includes(",")) {
+            text.split(",").map((part) => part.trim()).filter(Boolean).forEach((part) => urls.push(part));
+            return;
+          }
+          urls.push(text);
+        });
+        return Array.from(new Set(urls.filter(Boolean)));
+      }
+
+      function getOrderStatusInfo(statusValue) {
+        const status = normalizeText(statusValue).toLowerCase();
+        if (["approved", "accepted", "paid", "completed"].includes(status)) {
+          return { label: "مقبول", className: "success" };
+        }
+        if (["rejected", "declined", "cancelled", "canceled"].includes(status)) {
+          return { label: "مرفوض", className: "danger" };
+        }
+        return { label: statusValue ? normalizeText(statusValue) : "قيد المراجعة", className: "warning" };
+      }
+
+      function getCustomerName(row) {
+        return firstValue(row, ["full_name", "name", "customer_name", "display_name", "username"]) || "عميل غير معروف";
+      }
+
+      function getCustomerPhone(row) {
+        return firstValue(row, ["phone", "phone_number", "whatsapp", "mobile"]) || "";
+      }
+
+      function getCustomerEmail(row) {
+        return firstValue(row, ["email", "contact_email"]) || "";
+      }
+
+      function getCustomerBalance(row) {
+        return normalizeNumber(firstValue(row, ["wallet_balance", "balance", "credit", "wallet"]));
+      }
+
+      function getCustomerId(row) {
+        return firstValue(row, ["id", "user_id", "customer_id", "profile_id"]);
+      }
+
+      function getOrderId(row) {
+        return firstValue(row, ["id", "order_id", "uuid"]) || "بدون معرف";
+      }
+
+      function getOrderName(row) {
+        return firstValue(row, ["product_name", "title", "item_name", "service_name", "name"]) || "طلب جديد";
+      }
+
+      function getOrderCustomerName(row) {
+        return firstValue(row, ["customer_name", "name", "full_name"]) || "عميل";
+      }
+
+      function getOrderPhone(row) {
+        return firstValue(row, ["phone", "customer_phone", "whatsapp", "mobile"]) || "";
+      }
+
+      function getOrderAmount(row) {
+        return firstValue(row, ["total_amount", "total", "amount", "price"]) || 0;
+      }
+
+      function getOrderNotes(row) {
+        const items = firstValue(row, ["notes", "note", "details", "description", "comment"]);
+        if (typeof items === "string") return items;
+        const parsed = parseJsonMaybe(items);
+        return parsed ? JSON.stringify(parsed, null, 2) : "";
+      }
+
+      function getProductName(row) {
+        return firstValue(row, ["name", "title", "product_name"]) || "منتج";
+      }
+
+      function getProductPrice(row) {
+        return normalizeNumber(firstValue(row, ["price", "sale_price", "amount"]));
+      }
+
+      function getProductVisibility(row) {
+        return coerceBoolean(firstValue(row, ["is_visible", "visible", "is_active", "active", "published"]));
+      }
+
+      function getProductId(row) {
+        return firstValue(row, ["id", "product_id", "uuid"]);
+      }
+
+      function getProductCategoryId(row) {
+        return firstValue(row, ["category_id", "collection_id", "group_id"]);
+      }
+
+      function getCategoryName(categoryId) {
+        const category = state.categories.find((entry) => String(firstValue(entry, ["id", "category_id", "uuid"])) === String(categoryId));
+        return category ? firstValue(category, ["name", "title", "category_name"]) || "بدون تصنيف" : "بدون تصنيف";
+      }
+
+      function getSettingKey(row) {
+        return normalizeText(firstValue(row, ["key", "setting_key", "name", "slug"])).toLowerCase();
+      }
+
+      function getSettingValue(row) {
+        const raw = firstValue(row, ["value", "setting_value", "content", "json_value"]);
+        const parsed = parseJsonMaybe(raw);
+        return parsed ?? raw;
+      }
+
+      function findSettingRow(targets) {
+        return state.settingsRows.find((row) => {
+          const key = getSettingKey(row);
+          return targets.includes(key);
+        }) || null;
+      }
+
+      function updateMetrics() {
+        els.ordersMetric.textContent = String(state.orders.length);
+        els.customersMetric.textContent = String(state.customers.length);
+        els.productsMetric.textContent = String(state.products.length);
+        els.exchangeMetric.textContent = state.settingsMap.exchangeRate === null ? "--" : formatCurrency(state.settingsMap.exchangeRate);
+      }
+
+      function getSupabaseConfig() {
+        const meta = document.querySelector.bind(document);
+        const candidates = [
+          window.__SUPABASE_CONFIG__,
+          window.SUPABASE_CONFIG,
+          window.supabaseConfig,
+          {
+            url: meta('meta[name="supabase-url"]')?.content,
+            anonKey: meta('meta[name="supabase-anon-key"]')?.content
+          },
+          {
+            url: document.documentElement.dataset.supabaseUrl,
+            anonKey: document.documentElement.dataset.supabaseAnonKey
+          }
+        ];
+
+        try {
+          const storedUrl = localStorage.getItem("supabase.url") || localStorage.getItem("SUPABASE_URL");
+          const storedKey = localStorage.getItem("supabase.anonKey") || localStorage.getItem("SUPABASE_ANON_KEY");
+          candidates.push({ url: storedUrl, anonKey: storedKey });
+        } catch (error) {
+          void error;
+        }
+
+        for (const candidate of candidates) {
+          if (candidate?.url && (candidate.anonKey || candidate.key)) {
+            return {
+              url: candidate.url,
+              anonKey: candidate.anonKey || candidate.key
+            };
+          }
+        }
+        return null;
+      }
+
+      async function canAny(permissions, fallback = true) {
+        if (!window.adminRbac || typeof window.adminRbac.can !== "function") {
+          return fallback;
+        }
+
+        let evaluated = false;
+        for (const permission of permissions) {
+          try {
+            const result = await window.adminRbac.can(permission);
+            if (result === true) return true;
+            if (result === false) evaluated = true;
+          } catch (error) {
+            void error;
+          }
+        }
+        return evaluated ? false : fallback;
+      }
+
+      async function applyPermissions() {
+        state.permissions.ordersView = await canAny(["orders.view", "admin.orders.view", "admin.orders"], true);
+        state.permissions.ordersManage = await canAny(["orders.manage", "orders.update", "admin.orders.manage"], state.permissions.ordersView);
+        state.permissions.walletView = await canAny(["wallet.view", "customers.view", "admin.wallet.view"], true);
+        state.permissions.walletManage = await canAny(["wallet.manage", "wallet.update", "customers.manage", "admin.wallet.manage"], state.permissions.walletView);
+        state.permissions.productsView = await canAny(["products.view", "catalog.view", "admin.products.view"], true);
+        state.permissions.productsManage = await canAny(["products.manage", "products.update", "catalog.manage", "admin.products.manage"], state.permissions.productsView);
+        state.permissions.settingsView = await canAny(["settings.view", "store_settings.view", "admin.settings.view"], true);
+        state.permissions.settingsManage = await canAny(["settings.manage", "store_settings.manage", "admin.settings.manage"], state.permissions.settingsView);
+
+        const visibilityMap = {
+          orders: state.permissions.ordersView,
+          wallet: state.permissions.walletView,
+          products: state.permissions.productsView,
+          settings: state.permissions.settingsView
+        };
+
+        els.navButtons.forEach((button) => {
+          const tab = button.dataset.tabTarget;
+          button.hidden = !visibilityMap[tab];
+        });
+
+        els.panels.forEach((panel) => {
+          const tab = panel.dataset.tab;
+          panel.classList.toggle("hidden", !visibilityMap[tab]);
+        });
+
+        if (!visibilityMap[state.activeTab]) {
+          const firstVisible = Object.entries(visibilityMap).find((entry) => entry[1]);
+          if (firstVisible) {
+            switchTab(firstVisible[0]);
+          }
+        }
+      }
+
+      async function probeFirstAvailableTable(candidates) {
+        for (const name of candidates) {
+          const { error } = await state.supabase.from(name).select("*").limit(1);
+          if (!error) return name;
+        }
+        return null;
+      }
+
+      async function fetchRows(table, { orderBy, ascending = false, limit = 100 } = {}) {
+        let query = state.supabase.from(table).select("*");
+        if (orderBy) {
+          query = query.order(orderBy, { ascending });
+        }
+        if (limit) {
+          query = query.limit(limit);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+      }
+
+      function renderOrders() {
+        if (!state.permissions.ordersView) {
+          els.ordersList.innerHTML = '<div class="empty-state">لا تملك صلاحية عرض الطلبات.</div>';
+          return;
+        }
+
+        if (!state.orders.length) {
+          els.ordersList.innerHTML = '<div class="empty-state">لا توجد طلبات لعرضها حالياً.</div>';
+          return;
+        }
+
+        const html = state.orders.map((order) => {
+          const orderId = getOrderId(order);
+          const name = getOrderName(order);
+          const customerName = getOrderCustomerName(order);
+          const phone = getOrderPhone(order);
+          const amount = getOrderAmount(order);
+          const status = getOrderStatusInfo(firstValue(order, ["status", "order_status", "state"]));
+          const images = extractImages(order);
+          const notes = getOrderNotes(order);
+          const createdAt = formatDate(firstValue(order, ["created_at", "date", "inserted_at"]));
+          const orderCode = normalizeText(orderId);
+          const messageBase = encodeURIComponent(
+            `مرحباً ${customerName}\n` +
+            `تمت مراجعة طلبك رقم ${orderCode} الخاص بـ ${name}.\n` +
+            `إذا احتجت أي استفسار إضافي نحن في خدمتك.`
+          );
+
+          return `
+            <article class="card order-card">
+              <div class="card-head">
+                <div>
+                  <h3 class="card-title">${escapeHtml(name)}</h3>
+                  <p class="card-subtitle">العميل: ${escapeHtml(customerName)}<br>الوقت: ${escapeHtml(createdAt)}</p>
+                </div>
+                <span class="pill ${status.className}">${escapeHtml(status.label)}</span>
+              </div>
+              <div class="card-grid">
+                <div class="summary-grid">
+                  <div class="summary-item">
+                    <strong>#${escapeHtml(orderCode)}</strong>
+                    <span>رقم الطلب</span>
+                  </div>
+                  <div class="summary-item">
+                    <strong>${escapeHtml(formatCurrency(amount))}</strong>
+                    <span>القيمة</span>
+                  </div>
+                  <div class="summary-item">
+                    <strong>${escapeHtml(phone || "غير متوفر")}</strong>
+                    <span>الهاتف</span>
+                  </div>
+                  <div class="summary-item">
+                    <strong>${escapeHtml(images.length ? String(images.length) : "0")}</strong>
+                    <span>عدد الصور</span>
+                  </div>
+                </div>
+
+                ${images.length ? `
+                  <div class="thumb-strip">
+                    ${images.map((src, index) => `
+                      <img
+                        class="thumb"
+                        src="${escapeAttribute(src)}"
+                        alt="صورة الطلب ${index + 1}"
+                        loading="lazy"
+                        data-image-src="${escapeAttribute(src)}"
+                      >
+                    `).join("")}
+                  </div>
+                ` : ""}
+
+                ${notes ? `<div class="note-box">${escapeHtml(notes)}</div>` : ""}
+
+                <div class="order-actions">
+                  <button class="btn btn-success" type="button" data-action="order-approve" data-order-id="${escapeAttribute(orderId)}" ${state.permissions.ordersManage ? "" : "disabled"}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                    <span>قبول وإرسال واتساب</span>
+                  </button>
+                  <button class="btn btn-danger" type="button" data-action="order-reject" data-order-id="${escapeAttribute(orderId)}" ${state.permissions.ordersManage ? "" : "disabled"}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <span>رفض وإرسال واتساب</span>
+                  </button>
+                  ${phone ? `
+                    <a class="btn btn-soft" href="https://wa.me/${escapeAttribute(sanitizePhone(phone))}?text=${messageBase}" target="_blank" rel="noopener noreferrer">
+                      ${icons.message}
+                      <span>فتح واتساب</span>
+                    </a>
+                  ` : ""}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join("");
+
+        els.ordersList.innerHTML = html;
+      }
+
+      function renderCustomers() {
+        if (!state.permissions.walletView) {
+          els.customersList.innerHTML = '<div class="empty-state">لا تملك صلاحية عرض العملاء أو المحافظ.</div>';
+          return;
+        }
+
+        const query = normalizeText(els.customerSearch.value).toLowerCase();
+        const filtered = !query
+          ? state.customers
+          : state.customers.filter((row) => {
+              const haystack = [
+                getCustomerName(row),
+                getCustomerPhone(row),
+                getCustomerEmail(row),
+                getCustomerId(row)
+              ].join(" ").toLowerCase();
+              return haystack.includes(query);
+            });
+
+        if (!filtered.length) {
+          els.customersList.innerHTML = '<div class="empty-state">لا توجد نتائج مطابقة لبحثك.</div>';
+          return;
+        }
+
+        els.customersList.innerHTML = filtered.map((customer) => {
+          const customerId = getCustomerId(customer);
+          const balance = getCustomerBalance(customer);
+          const phone = getCustomerPhone(customer);
+          const email = getCustomerEmail(customer);
+          return `
+            <article class="card wallet-card">
+              <div class="card-head" style="padding:0;">
+                <div>
+                  <h3 class="card-title">${escapeHtml(getCustomerName(customer))}</h3>
+                  <p class="card-subtitle">${escapeHtml(phone || email || "بدون بيانات تواصل")}</p>
+                </div>
+                <span class="pill">${escapeHtml(formatCurrency(balance))}</span>
+              </div>
+
+              <div class="customer-meta">
+                <span class="mini-badge">المعرف: ${escapeHtml(customerId || "--")}</span>
+                ${phone ? `<span class="mini-badge">الهاتف: ${escapeHtml(phone)}</span>` : ""}
+                ${email ? `<span class="mini-badge">البريد: ${escapeHtml(email)}</span>` : ""}
+              </div>
+
+              <div class="controls-grid">
+                <input class="input" type="number" min="0" step="0.01" placeholder="المبلغ" data-wallet-amount="${escapeAttribute(customerId)}">
+                <input class="input" type="text" placeholder="ملاحظة العملية" data-wallet-note="${escapeAttribute(customerId)}">
+              </div>
+
+              <div class="wallet-actions">
+                <button class="btn btn-primary" type="button" data-action="wallet-topup" data-customer-id="${escapeAttribute(customerId)}" ${state.permissions.walletManage ? "" : "disabled"}>
+                  ${icons.plus}
+                  <span>شحن الرصيد</span>
+                </button>
+                <button class="btn btn-danger" type="button" data-action="wallet-deduct" data-customer-id="${escapeAttribute(customerId)}" ${state.permissions.walletManage ? "" : "disabled"}>
+                  ${icons.minus}
+                  <span>تخصيم الرصيد</span>
+                </button>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderProducts() {
+        if (!state.permissions.productsView) {
+          els.productsList.innerHTML = '<div class="empty-state">لا تملك صلاحية عرض المنتجات والتصنيفات.</div>';
+          return;
+        }
+
+        if (!state.products.length) {
+          els.productsList.innerHTML = '<div class="empty-state">لا توجد منتجات متاحة حالياً.</div>';
+          return;
+        }
+
+        els.productsList.innerHTML = state.products.map((product) => {
+          const productId = getProductId(product);
+          const visible = getProductVisibility(product);
+          const categoryId = getProductCategoryId(product);
+          return `
+            <article class="card product-card">
+              <div class="card-head" style="padding:0;">
+                <div>
+                  <h3 class="card-title">${escapeHtml(getProductName(product))}</h3>
+                  <p class="card-subtitle">${escapeHtml(getCategoryName(categoryId))}</p>
+                </div>
+                <span class="pill ${visible ? "success" : "danger"}">${visible ? "ظاهر" : "مخفي"}</span>
+              </div>
+
+              <div class="product-meta">
+                <span class="mini-badge">السعر الحالي: ${escapeHtml(formatCurrency(getProductPrice(product)))}</span>
+                <span class="mini-badge">المعرف: ${escapeHtml(productId || "--")}</span>
+              </div>
+
+              <div class="controls-grid">
+                <input class="input" type="number" min="0" step="0.01" value="${escapeAttribute(getProductPrice(product))}" data-product-price="${escapeAttribute(productId)}">
+                <select class="select" data-product-visible="${escapeAttribute(productId)}">
+                  <option value="true" ${visible ? "selected" : ""}>ظاهر</option>
+                  <option value="false" ${!visible ? "selected" : ""}>مخفي</option>
+                </select>
+              </div>
+
+              <div class="product-actions">
+                <button class="btn btn-primary" type="button" data-action="product-save" data-product-id="${escapeAttribute(productId)}" ${state.permissions.productsManage ? "" : "disabled"}>
+                  ${icons.save}
+                  <span>حفظ التعديلات</span>
+                </button>
+                <button class="btn btn-soft" type="button" data-action="product-toggle" data-product-id="${escapeAttribute(productId)}" ${state.permissions.productsManage ? "" : "disabled"}>
+                  ${visible ? icons.eyeOff : icons.eye}
+                  <span>${visible ? "إخفاء سريع" : "إظهار سريع"}</span>
+                </button>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderSettings() {
+        const maintenanceActive = Boolean(state.settingsMap.maintenance);
+        setMaintenanceBadge(maintenanceActive);
+        els.exchangeRateInput.value = state.settingsMap.exchangeRate === null ? "" : String(state.settingsMap.exchangeRate);
+        els.settingsNotice.textContent = state.permissions.settingsManage
+          ? "سيتم حفظ القيمة في `store_settings` وإعادة تحميلها آلياً من الاشتراك المباشر."
+          : "لديك صلاحية مشاهدة الإعدادات فقط، لذلك تم تعطيل أزرار التعديل.";
+        els.saveMaintenanceBtn.disabled = !state.permissions.settingsManage;
+        els.saveExchangeBtn.disabled = !state.permissions.settingsManage;
+      }
+
+      function switchTab(tab) {
+        state.activeTab = tab;
+        els.panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.tab === tab));
+        els.navButtons.forEach((button) => button.classList.toggle("active", button.dataset.tabTarget === tab));
+      }
+
+      function escapeHtml(value) {
+        return normalizeText(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function escapeAttribute(value) {
+        return escapeHtml(value);
+      }
+
+      function sanitizePhone(value) {
+        return normalizeText(value).replace(/[^\d]/g, "");
+      }
+
+      async function loadOrders() {
+        if (!state.permissions.ordersView) {
+          renderOrders();
+          return;
+        }
+        try {
+          const rows = await fetchRows(state.resources.ordersTable, { orderBy: "created_at", ascending: false, limit: 60 });
+          state.orders = rows;
+          els.ordersNotice.textContent = "تم تحميل الطلبات بنجاح.";
+        } catch (error) {
+          state.orders = [];
+          els.ordersNotice.textContent = `تعذر تحميل الطلبات: ${normalizeText(error.message || error)}`;
+          toast("تعذر تحميل الطلبات من Supabase.", "error");
+        }
+        updateMetrics();
+        renderOrders();
+      }
+
+      async function loadCustomers() {
+        if (!state.permissions.walletView) {
+          renderCustomers();
+          return;
+        }
+
+        if (!state.resources.customersTable) {
+          state.resources.customersTable = await probeFirstAvailableTable(["profiles", "customers", "users"]);
+        }
+
+        if (!state.resources.customersTable) {
+          state.customers = [];
+          renderCustomers();
+          toast("لم يتم العثور على جدول عملاء مدعوم.", "error");
+          return;
+        }
+
+        try {
+          const rows = await fetchRows(state.resources.customersTable, { orderBy: "created_at", ascending: false, limit: 120 });
+          state.customers = rows;
+        } catch (error) {
+          state.customers = [];
+          toast("تعذر تحميل بيانات العملاء.", "error");
+        }
+        updateMetrics();
+        renderCustomers();
+      }
+
+      async function loadProducts() {
+        if (!state.permissions.productsView) {
+          renderProducts();
+          return;
+        }
+
+        if (!state.resources.categoriesTable) {
+          state.resources.categoriesTable = await probeFirstAvailableTable(["categories", "product_categories"]);
+        }
+
+        try {
+          state.products = await fetchRows(state.resources.productsTable, { orderBy: "created_at", ascending: false, limit: 100 });
+        } catch (error) {
+          state.products = [];
+          toast("تعذر تحميل المنتجات.", "error");
+        }
+
+        if (state.resources.categoriesTable) {
+          try {
+            state.categories = await fetchRows(state.resources.categoriesTable, { orderBy: "created_at", ascending: false, limit: 100 });
+          } catch (error) {
+            state.categories = [];
+          }
+        }
+
+        updateMetrics();
+        renderProducts();
+      }
+
+      async function loadSettings() {
+        try {
+          state.settingsRows = await fetchRows(state.resources.settingsTable, { limit: 100 });
+          const maintenanceRow = findSettingRow(["maintenance_mode", "maintenance", "store_maintenance"]);
+          const exchangeRow = findSettingRow(["exchange_rate", "rate", "usd_rate"]);
+          state.settingsMap.maintenance = maintenanceRow ? coerceBoolean(getSettingValue(maintenanceRow)) : false;
+          const rateValue = exchangeRow ? Number(getSettingValue(exchangeRow)) : null;
+          state.settingsMap.exchangeRate = Number.isFinite(rateValue) ? rateValue : null;
+          renderSettings();
+          updateMetrics();
+        } catch (error) {
+          toast("تعذر تحميل الإعدادات من store_settings.", "error");
+          els.settingsNotice.textContent = `تعذر تحميل الإعدادات: ${normalizeText(error.message || error)}`;
+        }
+      }
+
+      async function saveSetting(settingName, value) {
+        const existingRow = findSettingRow([settingName]);
+        const keyColumn = existingRow && firstValue(existingRow, ["key", "setting_key", "name", "slug"]) !== null
+          ? (existingRow.key !== undefined ? "key" : existingRow.setting_key !== undefined ? "setting_key" : existingRow.name !== undefined ? "name" : "slug")
+          : "key";
+        const valueColumn = existingRow && firstValue(existingRow, ["value", "setting_value", "content", "json_value"]) !== null
+          ? (existingRow.value !== undefined ? "value" : existingRow.setting_value !== undefined ? "setting_value" : existingRow.content !== undefined ? "content" : "json_value")
+          : "value";
+
+        if (existingRow) {
+          const matcherId = firstValue(existingRow, ["id", "setting_id"]);
+          let query = state.supabase.from(state.resources.settingsTable).update({
+            [valueColumn]: value
+          });
+          if (matcherId !== null && matcherId !== undefined) {
+            query = query.eq(existingRow.id !== undefined ? "id" : "setting_id", matcherId);
+          } else {
+            query = query.eq(keyColumn, settingName);
+          }
+          const { error } = await query;
+          if (error) throw error;
+        } else {
+          const payload = {
+            [keyColumn]: settingName,
+            [valueColumn]: value
+          };
+          const { error } = await state.supabase.from(state.resources.settingsTable).insert(payload);
+          if (error) throw error;
+        }
+
+        await loadSettings();
+      }
+
+      async function updateOrderStatus(orderId, status, messageLabel) {
+        const match = state.orders.find((row) => String(getOrderId(row)) === String(orderId));
+        if (!match) {
+          toast("تعذر العثور على الطلب المطلوب.", "error");
+          return;
+        }
+
+        if (!state.permissions.ordersManage) {
+          toast("لا تملك صلاحية تعديل حالة الطلب.", "error");
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const statusColumn = match.status !== undefined ? "status" : match.order_status !== undefined ? "order_status" : "state";
+          const idColumn = match.id !== undefined ? "id" : match.order_id !== undefined ? "order_id" : "uuid";
+          const { error } = await state.supabase.from(state.resources.ordersTable).update({
+            [statusColumn]: status
+          }).eq(idColumn, getOrderId(match));
+          if (error) throw error;
+
+          toast(`تم تحديث حالة الطلب إلى ${messageLabel}.`, "success");
+          await loadOrders();
+
+          const phone = sanitizePhone(getOrderPhone(match));
+          if (phone) {
+            const customerName = getOrderCustomerName(match);
+            const orderName = getOrderName(match);
+            const message = status === "approved"
+              ? `مرحباً ${customerName}\nتم قبول طلبك رقم ${getOrderId(match)} الخاص بـ ${orderName}.`
+              : `مرحباً ${customerName}\nتم تحديث طلبك رقم ${getOrderId(match)} إلى حالة ${messageLabel}.`;
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+          }
+        } catch (error) {
+          toast(`تعذر تحديث حالة الطلب: ${normalizeText(error.message || error)}`, "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function updateWallet(customerId, mode) {
+        if (!state.permissions.walletManage) {
+          toast("لا تملك صلاحية تعديل المحافظ.", "error");
+          return;
+        }
+        const customer = state.customers.find((row) => String(getCustomerId(row)) === String(customerId));
+        if (!customer) {
+          toast("لم يتم العثور على العميل المحدد.", "error");
+          return;
+        }
+
+        const amountInput = document.querySelector(`[data-wallet-amount="${CSS.escape(String(customerId))}"]`);
+        const noteInput = document.querySelector(`[data-wallet-note="${CSS.escape(String(customerId))}"]`);
+        const rawAmount = Number(amountInput?.value);
+        const note = normalizeText(noteInput?.value) || (mode === "topup" ? "شحن رصيد من لوحة الإدارة" : "تخصيم رصيد من لوحة الإدارة");
+
+        if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+          toast("أدخل مبلغاً صحيحاً أكبر من صفر.", "error");
+          return;
+        }
+
+        const currentBalance = getCustomerBalance(customer);
+        const nextBalance = mode === "topup" ? currentBalance + rawAmount : currentBalance - rawAmount;
+        if (nextBalance < 0) {
+          toast("لا يمكن أن يصبح الرصيد سالباً.", "error");
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const balanceColumn = customer.wallet_balance !== undefined ? "wallet_balance" : customer.balance !== undefined ? "balance" : customer.credit !== undefined ? "credit" : "wallet";
+          const idColumn = customer.id !== undefined ? "id" : customer.user_id !== undefined ? "user_id" : customer.customer_id !== undefined ? "customer_id" : "profile_id";
+
+          const { error } = await state.supabase.from(state.resources.customersTable).update({
+            [balanceColumn]: nextBalance
+          }).eq(idColumn, getCustomerId(customer));
+          if (error) throw error;
+
+          if (!state.resources.walletTransactionsTable) {
+            state.resources.walletTransactionsTable = await probeFirstAvailableTable(["wallet_transactions", "transactions", "wallet_logs"]);
+          }
+
+          if (state.resources.walletTransactionsTable) {
+            const transactionPayload = {
+              customer_id: getCustomerId(customer),
+              amount: mode === "topup" ? rawAmount : -rawAmount,
+              note
+            };
+            await state.supabase.from(state.resources.walletTransactionsTable).insert(transactionPayload);
+          }
+
+          toast(mode === "topup" ? "تم شحن الرصيد بنجاح." : "تم تخصيم الرصيد بنجاح.", "success");
+          amountInput.value = "";
+          noteInput.value = "";
+          await loadCustomers();
+        } catch (error) {
+          toast(`تعذر تنفيذ العملية على المحفظة: ${normalizeText(error.message || error)}`, "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function updateProduct(productId, mode = "save") {
+        if (!state.permissions.productsManage) {
+          toast("لا تملك صلاحية تعديل المنتجات.", "error");
+          return;
+        }
+
+        const product = state.products.find((row) => String(getProductId(row)) === String(productId));
+        if (!product) {
+          toast("تعذر العثور على المنتج المحدد.", "error");
+          return;
+        }
+
+        const priceInput = document.querySelector(`[data-product-price="${CSS.escape(String(productId))}"]`);
+        const visibilityInput = document.querySelector(`[data-product-visible="${CSS.escape(String(productId))}"]`);
+        const currentVisible = getProductVisibility(product);
+        const nextVisible = mode === "toggle" ? !currentVisible : visibilityInput?.value === "true";
+        const nextPrice = Number(priceInput?.value);
+
+        if (!Number.isFinite(nextPrice) || nextPrice < 0) {
+          toast("أدخل سعراً صحيحاً للمنتج.", "error");
+          return;
+        }
+
+        const visibleColumn = product.is_visible !== undefined ? "is_visible" : product.visible !== undefined ? "visible" : product.is_active !== undefined ? "is_active" : product.active !== undefined ? "active" : "published";
+        const priceColumn = product.price !== undefined ? "price" : product.sale_price !== undefined ? "sale_price" : "amount";
+        const idColumn = product.id !== undefined ? "id" : product.product_id !== undefined ? "product_id" : "uuid";
+
+        setLoading(true);
+        try {
+          const { error } = await state.supabase.from(state.resources.productsTable).update({
+            [priceColumn]: nextPrice,
+            [visibleColumn]: nextVisible
+          }).eq(idColumn, getProductId(product));
+          if (error) throw error;
+          toast("تم حفظ تعديلات المنتج بنجاح.", "success");
+          await loadProducts();
+        } catch (error) {
+          toast(`تعذر تحديث المنتج: ${normalizeText(error.message || error)}`, "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function bindEvents() {
+        els.navButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const target = button.dataset.tabTarget;
+            switchTab(target);
+          });
+        });
+
+        els.customerSearch.addEventListener("input", () => renderCustomers());
+        els.refreshOrdersBtn.addEventListener("click", () => loadOrders());
+        els.refreshCustomersBtn.addEventListener("click", () => loadCustomers());
+        els.refreshProductsBtn.addEventListener("click", () => loadProducts());
+
+        els.maintenanceToggle.addEventListener("click", () => {
+          if (!state.permissions.settingsManage) return;
+          const current = els.maintenanceToggle.dataset.on === "true";
+          setMaintenanceBadge(!current);
+        });
+
+        els.saveMaintenanceBtn.addEventListener("click", async () => {
+          if (!state.permissions.settingsManage) {
+            toast("لا تملك صلاحية تعديل وضع الصيانة.", "error");
+            return;
+          }
+          setLoading(true);
+          try {
+            await saveSetting("maintenance_mode", els.maintenanceToggle.dataset.on === "true");
+            toast("تم حفظ وضع الصيانة بنجاح.", "success");
+          } catch (error) {
+            toast(`تعذر حفظ وضع الصيانة: ${normalizeText(error.message || error)}`, "error");
+          } finally {
+            setLoading(false);
+          }
+        });
+
+        els.saveExchangeBtn.addEventListener("click", async () => {
+          if (!state.permissions.settingsManage) {
+            toast("لا تملك صلاحية تعديل سعر الصرف.", "error");
+            return;
+          }
+          const rate = Number(els.exchangeRateInput.value);
+          if (!Number.isFinite(rate) || rate <= 0) {
+            toast("أدخل سعر صرف صحيحاً أكبر من صفر.", "error");
+            return;
+          }
+
+          setLoading(true);
+          try {
+            await saveSetting("exchange_rate", rate);
+            toast("تم حفظ سعر الصرف بنجاح.", "success");
+          } catch (error) {
+            toast(`تعذر حفظ سعر الصرف: ${normalizeText(error.message || error)}`, "error");
+          } finally {
+            setLoading(false);
+          }
+        });
+
+        document.addEventListener("click", (event) => {
+          const thumb = event.target.closest("[data-image-src]");
+          if (thumb) {
+            els.modalImage.src = thumb.dataset.imageSrc;
+            els.imageModal.classList.add("active");
+            els.imageModal.setAttribute("aria-hidden", "false");
+            return;
+          }
+
+          const actionTarget = event.target.closest("[data-action]");
+          if (!actionTarget) return;
+          const action = actionTarget.dataset.action;
+
+          if (action === "order-approve") {
+            updateOrderStatus(actionTarget.dataset.orderId, "approved", "مقبول");
+          } else if (action === "order-reject") {
+            updateOrderStatus(actionTarget.dataset.orderId, "rejected", "مرفوض");
+          } else if (action === "wallet-topup") {
+            updateWallet(actionTarget.dataset.customerId, "topup");
+          } else if (action === "wallet-deduct") {
+            updateWallet(actionTarget.dataset.customerId, "deduct");
+          } else if (action === "product-save") {
+            updateProduct(actionTarget.dataset.productId, "save");
+          } else if (action === "product-toggle") {
+            updateProduct(actionTarget.dataset.productId, "toggle");
+          }
+        });
+
+        els.closeModalBtn.addEventListener("click", closeModal);
+        els.imageModal.addEventListener("click", (event) => {
+          if (event.target === els.imageModal) closeModal();
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") closeModal();
         });
       }
-      loadStats();
-      loadRecentOrders();
-    })
-    .subscribe();
 
-  // طلب إذن الإشعارات
-  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-     Notification.requestPermission();
-   }
- }
- setupRealtime();
+      function closeModal() {
+        els.imageModal.classList.remove("active");
+        els.imageModal.setAttribute("aria-hidden", "true");
+        els.modalImage.removeAttribute("src");
+      }
 
- // AI Insights Event
- document.getElementById('aiInsightsBtn').addEventListener('click', async (e) => {
-   e.preventDefault();
-   if(window.raizeyAI) {
-     const result = await window.raizeyAI.analyzeSalesTrend();
-     alert(`[AI Analysis]\nTrend: ${result.trend}\nSuggestion: ${result.suggestion}`);
-   }
- });
- </script>
- </body>
+      async function subscribeSettingsRealtime() {
+        if (state.subscriptions.settings) {
+          await state.supabase.removeChannel(state.subscriptions.settings);
+        }
+
+        state.subscriptions.settings = state.supabase
+          .channel("store-settings-live")
+          .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: state.resources.settingsTable
+          }, async () => {
+            setRealtimeStatus("تم استقبال تحديث مباشر", "live");
+            await loadSettings();
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              setRealtimeStatus("متصل مباشر", "live");
+            } else if (status === "CHANNEL_ERROR") {
+              setRealtimeStatus("خطأ في الاشتراك", "warn");
+            } else {
+              setRealtimeStatus("جاري التوصيل", "");
+            }
+          });
+      }
+
+      function renderAuthNotice(message) {
+        els.ordersNotice.innerHTML = `<div class="auth-notice">${escapeHtml(message)}</div>`;
+        els.customersList.innerHTML = '<div class="empty-state">الواجهة بانتظار اتصال Supabase.</div>';
+        els.productsList.innerHTML = '<div class="empty-state">الواجهة بانتظار اتصال Supabase.</div>';
+        els.settingsNotice.textContent = message;
+      }
+
+      async function init() {
+        bindEvents();
+        setLoading(true);
+        try {
+          const config = getSupabaseConfig();
+          if (!window.supabase || typeof window.supabase.createClient !== "function") {
+            throw new Error("مكتبة Supabase لم يتم تحميلها.");
+          }
+          if (!config?.url || !config?.anonKey) {
+            throw new Error("لم يتم العثور على إعدادات Supabase. عرّف `window.__SUPABASE_CONFIG__` أو وسوم meta المناسبة.");
+          }
+
+          state.supabase = window.supabase.createClient(config.url, config.anonKey, {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true
+            }
+          });
+
+          await applyPermissions();
+          await Promise.all([
+            loadOrders(),
+            loadCustomers(),
+            loadProducts(),
+            loadSettings()
+          ]);
+          await subscribeSettingsRealtime();
+          renderOrders();
+          renderCustomers();
+          renderProducts();
+          renderSettings();
+          updateMetrics();
+        } catch (error) {
+          setRealtimeStatus("غير متصل", "warn");
+          renderAuthNotice(normalizeText(error.message || error));
+          toast("تعذر تهيئة لوحة الإدارة.", "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      window.addEventListener("load", init);
+    })();
+  </script>
+</body>
 </html>
