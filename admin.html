@@ -61,15 +61,28 @@
     .modal-body{padding:20px;display:flex;flex-direction:column;gap:14px}.modal-footer{justify-content:flex-end;padding:0 20px 20px}
     .upload-shell{border:1px dashed rgba(124,58,237,.45);background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(255,255,255,.02));border-radius:20px;padding:16px}.upload-status{color:var(--muted);font-size:.86rem;line-height:1.8;min-height:24px}
     .preview-wrap{display:none;align-items:flex-start;gap:14px;border:1px solid var(--border);border-radius:18px;padding:12px;background:rgba(255,255,255,.02)}.preview-wrap.visible{display:flex}.preview-img{width:110px;height:110px;border-radius:16px;border:1px solid var(--border);background:#212121;object-fit:cover;flex-shrink:0}.preview-meta{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}.preview-link{color:#C4B5FD;font-size:.82rem;word-break:break-all;line-height:1.8}
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1600;display:grid;grid-template-columns:repeat(5,1fr);padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:rgba(17,17,17,.95);border-top:1px solid rgba(124,58,237,.18);backdrop-filter:blur(14px)}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1600;display:grid;grid-template-columns:repeat(7,1fr);padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:rgba(17,17,17,.95);border-top:1px solid rgba(124,58,237,.18);backdrop-filter:blur(14px)}
     .nav-btn{position:relative;background:transparent;border:none;color:var(--muted);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:16px;cursor:pointer;font-size:.74rem;font-weight:800}.nav-btn.active{color:#fff;background:rgba(124,58,237,.14)}.nav-btn i{font-size:1.12rem}
     .badge-count{position:absolute;top:8px;left:calc(50% + 4px);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--danger);color:#fff;font-size:.72rem;font-weight:900;padding:0 7px}
     .receipt-canvas{flex:1;min-height:0;overflow:auto;padding:8px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(255,255,255,.01)),#0F0F0F}.receipt-canvas img{width:auto;max-width:100%;max-height:100%;border-radius:20px;border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 45px rgba(0,0,0,.4);transform-origin:center;transition:transform .2s ease}
     .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-16px);min-width:220px;max-width:min(92vw,440px);padding:13px 16px;border-radius:16px;background:rgba(17,17,17,.96);border:1px solid var(--border);color:#fff;text-align:center;z-index:4000;opacity:0;pointer-events:none;transition:.22s ease}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:rgba(16,185,129,.35);color:#A7F3D0}.toast.error{border-color:rgba(239,68,68,.35);color:#FCA5A5}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-grid .form-group{margin-bottom:0}.form-grid-full{grid-column:1/-1}
+    .inline-actions,.table-actions,.filter-actions,.generated-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:18px}
+    .admin-table{width:100%;border-collapse:collapse;min-width:760px}.admin-table th,.admin-table td{padding:14px 12px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05);font-size:.9rem;vertical-align:top}.admin-table th{color:var(--muted);font-weight:800;background:rgba(255,255,255,.02)}.admin-table tr:last-child td{border-bottom:none}
+    .status-chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:.78rem;font-weight:900;border:1px solid transparent;white-space:nowrap}
+    .status-chip.success{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.28);color:#A7F3D0}
+    .status-chip.warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.28);color:#FCD34D}
+    .status-chip.danger{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.28);color:#FCA5A5}
+    .status-chip.muted{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#D1D5DB}
+    .mono-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-weight:800;letter-spacing:.04em}
+    .generated-codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .generated-code{padding:12px 14px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
+    .hint-inline{color:var(--muted);font-size:.82rem;line-height:1.8}
     .maintenance-screen{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top,rgba(124,58,237,.24),transparent 26%),var(--bg)}.maintenance-card{width:min(560px,100%);background:var(--card);border:1px solid var(--border);border-radius:28px;padding:28px;text-align:center;box-shadow:var(--shadow)}.maintenance-card i{width:72px;height:72px;margin:0 auto 18px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.14);color:var(--danger);font-size:1.6rem}.maintenance-card h1{font-size:1.5rem;margin-bottom:10px}.maintenance-card p{color:var(--muted);line-height:2}.maintenance-trigger{position:fixed;left:12px;bottom:12px;border:none;background:transparent;color:rgba(255,255,255,.38);font-size:18px;cursor:pointer;z-index:3}.maintenance-login{display:none;position:fixed;inset:0;z-index:4;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:18px}.maintenance-login.open{display:flex}.maintenance-login-card{width:min(420px,100%);background:var(--card);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}.maintenance-login-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.wa-btn{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.34);color:#BBF7D0}
     @media (max-width:980px){.stats-grid,.compare-grid,.analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-grid{grid-template-columns:1fr}}
     @media (max-width:820px){.product-card{grid-template-columns:96px 1fr}.product-thumb{width:96px;height:96px}.product-actions{grid-column:1/-1;min-width:100%;flex-direction:row;flex-wrap:wrap}.order-grid{grid-template-columns:1fr}}
-    @media (max-width:640px){.container{width:min(100%,calc(100% - 16px))}.admin-header{padding:14px}.card,.modal-body{padding:16px}.modal-header{padding:16px}.modal-footer{padding:0 16px 16px}.stats-grid,.compare-grid{grid-template-columns:1fr}.catalog-card{flex-direction:column;align-items:stretch}.catalog-info{width:100%}.toggle-container{align-items:flex-start}.analytics-table th,.analytics-table td{padding:10px 8px;font-size:.82rem}}
+    @media (max-width:640px){.container{width:min(100%,calc(100% - 16px))}.admin-header{padding:14px}.card,.modal-body{padding:16px}.modal-header{padding:16px}.modal-footer{padding:0 16px 16px}.stats-grid,.compare-grid,.form-grid,.generated-codes{grid-template-columns:1fr}.catalog-card{flex-direction:column;align-items:stretch}.catalog-info{width:100%}.toggle-container{align-items:flex-start}.analytics-table th,.analytics-table td,.admin-table th,.admin-table td{padding:10px 8px;font-size:.82rem}.nav-btn{font-size:.68rem;padding:10px 4px}}
   </style>
 </head>
 <body>
@@ -160,13 +173,108 @@
       <div class="card"><div class="card-title"><span><i class="fa-solid fa-list"></i> نتائج البحث</span></div><div id="usersList" class="item-list"><div class="empty-state">أدخل بيانات البحث بالأعلى...</div></div></div>
     </section>
 
-    <section id="tab-settings" class="tab-content">
+    <section id="tab-coupons" class="tab-content">
       <div class="card">
-        <div class="card-title"><span><i class="fa-solid fa-ticket"></i> إضافة كود خصم</span></div>
-        <div class="form-group"><label for="couponCode">كود الخصم</label><input type="text" id="couponCode" placeholder="مثال: RAIZ3Y20"></div>
-        <div class="form-group"><label for="couponDiscount">نسبة الخصم (%)</label><input type="number" id="couponDiscount" placeholder="10"></div>
+        <div class="card-title"><span><i class="fa-solid fa-ticket"></i> إدارة الكوبونات</span></div>
+        <p class="section-copy">يعرض الجدول جميع الكوبونات مع النوع والقيمة والاستخدام والحالة، ويمكنك التفعيل أو التعطيل أو الحذف مباشرة.</p>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>نوع الخصم</th>
+                <th>القيمة</th>
+                <th>تاريخ الانتهاء</th>
+                <th>عدد مرات الاستخدام</th>
+                <th>الحد الأقصى</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="couponsTableBody">
+              <tr><td colspan="8" class="empty-state">جاري تحميل الكوبونات...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span><i class="fa-solid fa-plus"></i> إضافة كوبون جديد</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="couponCode">كود الكوبون</label>
+            <div class="inline-actions">
+              <input type="text" id="couponCode" placeholder="مثال: RAIZEY-AB123" style="text-transform:uppercase">
+              <button class="action-btn primary" type="button" onclick="generateCouponCodeInput()"><i class="fa-solid fa-wand-magic-sparkles"></i><span>توليد تلقائي</span></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="couponDiscountType">نوع الخصم</label>
+            <select id="couponDiscountType" onchange="toggleCouponMaxDiscountField()">
+              <option value="percentage">نسبة مئوية %</option>
+              <option value="fixed">قيمة ثابتة جنيه</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="couponDiscountValue">قيمة الخصم</label>
+            <input type="number" id="couponDiscountValue" min="0" step="0.01" placeholder="مثال: 10">
+          </div>
+          <div class="form-group" id="couponMaxDiscountGroup">
+            <label for="couponMaxDiscount">الحد الأقصى للخصم بالجنيه</label>
+            <input type="number" id="couponMaxDiscount" min="0" step="0.01" placeholder="اختياري">
+          </div>
+          <div class="form-group">
+            <label for="couponUsageLimit">الحد الأقصى لعدد الاستخدام</label>
+            <input type="number" id="couponUsageLimit" min="1" step="1" placeholder="مثال: 50">
+          </div>
+          <div class="form-group">
+            <label for="couponExpiresAt">تاريخ الانتهاء</label>
+            <input type="date" id="couponExpiresAt">
+          </div>
+        </div>
         <button class="btn btn-success btn-block" type="button" onclick="saveCoupon()"><i class="fa-solid fa-floppy-disk"></i><span>حفظ الكوبون</span></button>
       </div>
+    </section>
+    <section id="tab-gift-cards" class="tab-content">
+      <div class="card">
+        <div class="card-title"><span><i class="fa-solid fa-gift"></i> بطاقات الهدايا</span><div class="filter-actions"><select id="giftCardsFilter" onchange="renderGiftCards()"><option value="all">الكل</option><option value="unused">غير مستخدمة</option><option value="used">مستخدمة</option></select><button class="action-btn accent" type="button" onclick="exportGiftCardsCsv()"><i class="fa-solid fa-file-csv"></i><span>تصدير CSV</span></button></div></div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>القيمة بالجنيه</th>
+                <th>هل استُخدم</th>
+                <th>من استخدمه</th>
+                <th>تاريخ الإنشاء</th>
+              </tr>
+            </thead>
+            <tbody id="giftCardsTableBody">
+              <tr><td colspan="5" class="empty-state">جاري تحميل بطاقات الهدايا...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span><i class="fa-solid fa-wand-magic-sparkles"></i> توليد بطاقات هدايا</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="giftCardsCount">عدد البطاقات</label>
+            <input type="number" id="giftCardsCount" min="1" max="50" step="1" placeholder="من 1 إلى 50">
+          </div>
+          <div class="form-group">
+            <label for="giftCardsAmount">قيمة كل بطاقة بالجنيه</label>
+            <input type="number" id="giftCardsAmount" min="1" step="0.01" placeholder="مثال: 5000">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="button" onclick="generateGiftCards()"><i class="fa-solid fa-bolt"></i><span>توليد وحفظ</span></button>
+        <div id="generatedGiftCardsWrap" style="display:none;margin-top:16px">
+          <div class="card-title" style="margin-bottom:12px"><span><i class="fa-solid fa-list"></i> الأكواد المولدة</span><div class="generated-actions"><button class="action-btn primary" type="button" onclick="copyAllGeneratedGiftCodes()"><i class="fa-solid fa-copy"></i><span>نسخ الكل</span></button></div></div>
+          <div id="generatedGiftCardsList" class="generated-codes"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-content">
       <div class="card">
         <div class="card-title"><span><i class="fa-solid fa-bell-concierge"></i> إشعارات وتثبيت التطبيق</span></div>
         <p class="section-copy">تفعيل إشعارات الهاتف لتلقي تنبيهات عند وجود طلبات شحن أو شراء جديدة حتى عند إغلاق اللوحة.</p>
@@ -308,23 +416,28 @@
     <button class="nav-btn" type="button" onclick="switchTab('catalog',this)"><i class="fa-solid fa-boxes-stacked"></i><span>الكتالوج</span></button>
     <button class="nav-btn" type="button" onclick="switchTab('orders',this)"><i class="fa-solid fa-list-check"></i><span>الطلبات</span><span id="pendingBadge" class="badge-count" style="display:none">0</span></button>
     <button class="nav-btn" type="button" onclick="switchTab('users',this)"><i class="fa-solid fa-users-gear"></i><span>العملاء</span></button>
+    <button class="nav-btn" type="button" onclick="switchTab('coupons',this)"><i class="fa-solid fa-ticket"></i><span>الكوبونات</span></button>
+    <button class="nav-btn" type="button" onclick="switchTab('gift-cards',this)"><i class="fa-solid fa-gift"></i><span>بطاقات الهدايا</span></button>
     <button class="nav-btn" type="button" onclick="switchTab('settings',this)"><i class="fa-solid fa-sliders"></i><span>الإعدادات</span></button>
   </nav>
 
   <div id="toast" class="toast"></div>
 
   <script>
-    let categoriesCache=[],productsCache=[],ordersCache=[],topupsCache=[],currentUser=null,currentUserRole='admin',currentReceiptUrl='',receiptZoom=1,pendingOrdersPoller=null;
+    let categoriesCache=[],productsCache=[],ordersCache=[],topupsCache=[],couponsCache=[],giftCardsCache=[],giftCardsProfilesCache={},generatedGiftCodes=[],currentUser=null,currentUserRole='admin',currentReceiptUrl='',receiptZoom=1,pendingOrdersPoller=null;
     const uploadState={product:{publicUrl:'',isUploading:false},category:{publicUrl:'',isUploading:false}};
     const statusLabels={pending_review:'قيد المراجعة',in_progress:'قيد التنفيذ',completed:'مكتمل',cancelled:'ملغي',rejected:'مرفوض',pending:'قيد المراجعة',confirmed:'مؤكد'};
     const roleLabels={user:'عميل',moderator:'مشرف',admin:'مدير',superadmin:'Super Admin'};
     const baseAdminTitle='RAIZEY ADMIN';
     const pendingOrdersStorageKey='raizey_admin_pending_review_count';
+    const couponTypeLabels={percentage:'نسبة مئوية',fixed:'قيمة ثابتة'};
 
     function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
     function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(showToast._timer);showToast._timer=setTimeout(()=>t.className='toast',2600)}
     function formatDate(v){if(!v)return'غير محدد';return new Date(v).toLocaleString('ar-EG',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+    function formatDateInputValue(v){if(!v)return'';const date=new Date(v);if(Number.isNaN(date.getTime()))return'';return date.toISOString().slice(0,10)}
     function formatNumber(v){return new Intl.NumberFormat('en-US').format(Number(v||0))}
+    function formatMoney(v){return `${formatNumber(v)} ج.س`}
     function getDisplayPrice(p){return p&&((p.price_usd??p.price)??0)}
     function getOrderRevenue(order){return Number(order?.total_price??order?.price_sdg_snapshot??order?.price_snapshot??0)||0}
     function getOrderProductName(order){return order?.product_name??order?.product_name_snapshot??'غير محدد'}
@@ -332,7 +445,22 @@
     function sanitizeFileName(n){return String(n||'image').trim().replace(/\s+/g,'_').replace(/[^a-zA-Z0-9._-]/g,'')}
     function openModal(id){document.getElementById(id).classList.add('open')}
     function closeModal(id){document.getElementById(id).classList.remove('open')}
-    function switchTab(tabId,btn){document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(s=>s.classList.remove('active'));document.getElementById(`tab-${tabId}`).classList.add('active');if(btn)btn.classList.add('active');if(tabId==='home'){loadStats();loadSettings();loadHomeAnalytics()}if(tabId==='catalog'){loadCategories();loadProducts()}if(tabId==='orders'){loadTopupRequests();loadOrders()}}
+    function randomCode(prefix,length){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let suffix='';for(let i=0;i<length;i++)suffix+=chars[Math.floor(Math.random()*chars.length)];return `${prefix}${suffix}`}
+    function generateCouponCode(){return randomCode('RAIZEY-',5)}
+    function generateGiftCardCode(){return randomCode('GIFT-',8)}
+    function downloadTextFile(name,content,type='text/plain;charset=utf-8'){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+    function toCsvCell(value){const safe=String(value??'').replace(/"/g,'""');return `"${safe}"`}
+    function getGiftCardRedeemerId(card){return card?.redeemed_by??card?.used_by??card?.user_id??card?.redeemed_by_user_id??null}
+    function getGiftCardRedeemerName(card){const id=getGiftCardRedeemerId(card);const profile=giftCardsProfilesCache[id]||card?.profiles||card?.profile||{};return profile?.full_name||profile?.name||''}
+    function getGiftCardUsedFlag(card){return Boolean(card?.is_redeemed??card?.is_used??card?.used)}
+    function getCouponUsageCount(coupon){return Number(coupon?.usage_count??coupon?.uses_count??coupon?.use_count??0)||0}
+    function getCouponUsageLimit(coupon){const raw=coupon?.usage_limit??coupon?.max_uses??coupon?.usage_cap??null;return raw===null||raw===''?null:Number(raw)}
+    function getCouponType(coupon){if(coupon?.discount_type)return coupon.discount_type;if(coupon?.discount_amount!=null||coupon?.fixed_discount_amount!=null)return'fixed';return'percentage'}
+    function getCouponValue(coupon){const type=getCouponType(coupon);if(type==='fixed')return Number(coupon?.discount_value??coupon?.discount_amount??coupon?.fixed_discount_amount??0)||0;return Number(coupon?.discount_value??coupon?.discount_percent??0)||0}
+    function getCouponMaxDiscount(coupon){const raw=coupon?.max_discount_amount??coupon?.max_discount??coupon?.discount_cap??null;return raw===null||raw===''?null:Number(raw)}
+    function isCouponExpired(coupon){return Boolean(coupon?.expires_at)&&new Date(coupon.expires_at).getTime()<Date.now()}
+    function getCouponStatusMarkup(coupon){if(!coupon?.is_active)return'<span class="status-chip muted">معطل</span>';if(isCouponExpired(coupon))return'<span class="status-chip warn">منتهي</span>';return'<span class="status-chip success">فعال</span>'}
+    function switchTab(tabId,btn){document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(s=>s.classList.remove('active'));document.getElementById(`tab-${tabId}`).classList.add('active');if(btn)btn.classList.add('active');if(tabId==='home'){loadStats();loadSettings();loadHomeAnalytics()}if(tabId==='catalog'){loadCategories();loadProducts()}if(tabId==='orders'){loadTopupRequests();loadOrders()}if(tabId==='coupons'){loadCoupons()}if(tabId==='gift-cards'){loadGiftCards()}}
     function setUploadStatus(type,msg,isError=false){const el=document.getElementById(`${type}UploadStatus`);el.textContent=msg;el.style.color=isError?'var(--danger)':'var(--muted)'}
     function setImagePreview(type,url,label='معاينة الصورة'){uploadState[type].publicUrl=url||'';const wrap=document.getElementById(`${type}PreviewWrap`),img=document.getElementById(`${type}ImagePreview`),link=document.getElementById(`${type}ImageLink`),ttl=document.getElementById(`${type}PreviewLabel`);if(url){wrap.classList.add('visible');img.src=url;link.textContent=url;ttl.textContent=label}else{wrap.classList.remove('visible');img.removeAttribute('src');link.textContent='';ttl.textContent='معاينة الصورة'}}
     async function uploadImageToSupabase(file, type){const bucket = type === 'category' ? 'category-images' : 'product-images';const path=`${Date.now()}_${sanitizeFileName(file.name)}`;const {error}=await supabaseClient.storage.from(bucket).upload(path,file,{upsert:true});if(error)throw error;return supabaseClient.storage.from(bucket).getPublicUrl(path).data.publicUrl}
@@ -397,15 +525,28 @@
     async function syncPendingReviewNotifications(notifyOnIncrease=true){const {count,error}=await supabaseClient.from('orders').select('*',{count:'exact',head:true}).eq('status','pending_review');if(error)return;const pendingCount=count||0;setAdminPageTitle(pendingCount);const savedRaw=localStorage.getItem(pendingOrdersStorageKey);const savedCount=savedRaw===null?null:Number(savedRaw)||0;if(savedCount===null){localStorage.setItem(pendingOrdersStorageKey,String(pendingCount));return}if(notifyOnIncrease&&pendingCount>savedCount&&'Notification'in window&&Notification.permission==='granted'){new Notification('🔔 RAIZEY ADMIN',{body:'طلب جديد بانتظار مراجعتك'})}localStorage.setItem(pendingOrdersStorageKey,String(pendingCount))}
     function startPendingReviewPolling(){clearInterval(pendingOrdersPoller);syncPendingReviewNotifications(false);pendingOrdersPoller=setInterval(()=>syncPendingReviewNotifications(true),45000)}
     async function loadStats(){const [{count:ordersCount},{count:topupsCount},{count:productsCount},{count:usersCount}]=await Promise.all([supabaseClient.from('orders').select('*',{count:'exact',head:true}),supabaseClient.from('wallet_topups').select('*',{count:'exact',head:true}).eq('status','pending'),supabaseClient.from('products').select('*',{count:'exact',head:true}),supabaseClient.from('profiles').select('*',{count:'exact',head:true})]);document.getElementById('statTotalOrders').textContent=ordersCount||0;document.getElementById('statPendingTopups').textContent=topupsCount||0;document.getElementById('statTotalProducts').textContent=productsCount||0;document.getElementById('statTotalUsers').textContent=usersCount||0;const badge=document.getElementById('pendingBadge');if(topupsCount>0){badge.textContent=topupsCount;badge.style.display='inline-flex'}else badge.style.display='none'}
-    async function saveCoupon(){const code=document.getElementById('couponCode').value.trim(),discount=parseFloat(document.getElementById('couponDiscount').value);if(!code){showToast('أدخل كود الخصم','error');return}if(!Number.isFinite(discount)||discount<=0){showToast('أدخل نسبة خصم صحيحة','error');return}const {error}=await supabaseClient.from('coupons').insert([{code,discount_percent:discount,is_active:true}]);if(error){showToast(`فشل حفظ الكوبون: ${error.message}`,'error');return}document.getElementById('couponCode').value='';document.getElementById('couponDiscount').value='';showToast('تم حفظ الكوبون')}
+    function generateCouponCodeInput(){document.getElementById('couponCode').value=generateCouponCode()}
+    function toggleCouponMaxDiscountField(){const type=document.getElementById('couponDiscountType').value;const group=document.getElementById('couponMaxDiscountGroup');group.style.display=type==='percentage'?'block':'none';if(type!=='percentage')document.getElementById('couponMaxDiscount').value=''}
+    function resetCouponForm(){document.getElementById('couponCode').value='';document.getElementById('couponDiscountType').value='percentage';document.getElementById('couponDiscountValue').value='';document.getElementById('couponMaxDiscount').value='';document.getElementById('couponUsageLimit').value='';document.getElementById('couponExpiresAt').value='';toggleCouponMaxDiscountField()}
+    async function loadCoupons(){const {data,error}=await supabaseClient.from('coupons').select('*').order('created_at',{ascending:false});const body=document.getElementById('couponsTableBody');if(error){body.innerHTML=`<tr><td colspan="8" class="empty-state">فشل تحميل الكوبونات: ${escapeHtml(error.message)}</td></tr>`;return}couponsCache=data||[];renderCoupons()}
+    function renderCoupons(){const body=document.getElementById('couponsTableBody');if(!couponsCache.length){body.innerHTML='<tr><td colspan="8" class="empty-state">لا توجد كوبونات بعد.</td></tr>';return}body.innerHTML=couponsCache.map(coupon=>{const type=getCouponType(coupon),value=getCouponValue(coupon),usageLimit=getCouponUsageLimit(coupon),maxDiscount=getCouponMaxDiscount(coupon);return `<tr><td class="mono-code">${escapeHtml(coupon.code||'-')}</td><td>${escapeHtml(couponTypeLabels[type]||type)}</td><td>${type==='percentage'?`${escapeHtml(formatNumber(value))}%${maxDiscount!=null?`<div class="hint-inline">حد أقصى ${escapeHtml(formatMoney(maxDiscount))}</div>`:''}`:escapeHtml(formatMoney(value))}</td><td>${escapeHtml(coupon.expires_at?formatDate(coupon.expires_at):'غير محدد')}</td><td>${escapeHtml(formatNumber(getCouponUsageCount(coupon)))}</td><td>${usageLimit!=null?escapeHtml(formatNumber(usageLimit)):'غير محدود'}</td><td>${getCouponStatusMarkup(coupon)}</td><td><div class="table-actions"><button class="action-btn primary" type="button" data-coupon-toggle="${escapeHtml(coupon.id)}">${coupon.is_active?'<i class="fa-solid fa-toggle-off"></i><span>تعطيل</span>':'<i class="fa-solid fa-toggle-on"></i><span>تفعيل</span>'}</button><button class="action-btn danger" type="button" data-coupon-delete="${escapeHtml(coupon.id)}"><i class="fa-solid fa-trash"></i><span>حذف</span></button></div></td></tr>`}).join('')}
+    async function saveCoupon(){const code=document.getElementById('couponCode').value.trim().toUpperCase(),type=document.getElementById('couponDiscountType').value,value=parseFloat(document.getElementById('couponDiscountValue').value),usageLimit=parseInt(document.getElementById('couponUsageLimit').value,10),maxDiscount=parseFloat(document.getElementById('couponMaxDiscount').value),expiresRaw=document.getElementById('couponExpiresAt').value,expiresAt=expiresRaw?new Date(`${expiresRaw}T23:59:59`).toISOString():null;if(!code){showToast('أدخل كود الكوبون','error');return}if(!Number.isFinite(value)||value<=0){showToast('أدخل قيمة خصم صحيحة','error');return}if(type==='percentage'&&value>100){showToast('نسبة الخصم يجب أن تكون من 1 إلى 100','error');return}if(!Number.isInteger(usageLimit)||usageLimit<=0){showToast('أدخل الحد الأقصى لعدد الاستخدام بشكل صحيح','error');return}if(type==='percentage'&&document.getElementById('couponMaxDiscount').value&&(!Number.isFinite(maxDiscount)||maxDiscount<=0)){showToast('أدخل الحد الأقصى للخصم بالجنيه بشكل صحيح','error');return}const payloadVariants=[{code,discount_type:type,discount_value:value,discount_percent:type==='percentage'?value:null,discount_amount:type==='fixed'?value:null,fixed_discount_amount:type==='fixed'?value:null,max_discount_amount:type==='percentage'&&Number.isFinite(maxDiscount)?maxDiscount:null,max_discount:type==='percentage'&&Number.isFinite(maxDiscount)?maxDiscount:null,usage_limit:usageLimit,max_uses:usageLimit,expires_at:expiresAt,is_active:true},{code,discount_percent:type==='percentage'?value:null,discount_amount:type==='fixed'?value:null,max_uses:usageLimit,expires_at:expiresAt,is_active:true},{code,discount_percent:type==='percentage'?value:null,max_uses:usageLimit,expires_at:expiresAt,is_active:true}].filter(payload=>!(type==='fixed'&&payload.discount_percent!=null&&payload.discount_amount==null&&payload.fixed_discount_amount==null));let lastError=null;for(const payload of payloadVariants){const cleanPayload=Object.fromEntries(Object.entries(payload).filter(([,val])=>val!==undefined));const {error}=await supabaseClient.from('coupons').insert([cleanPayload]);if(!error){resetCouponForm();await loadCoupons();showToast('تم حفظ الكوبون بنجاح');return}lastError=error;if(!/column/i.test(String(error.message||'')))break}if(type==='fixed'&&/column/i.test(String(lastError?.message||''))){showToast('قاعدة البيانات الحالية لا تدعم الخصم الثابت بعد','error');return}showToast(`فشل حفظ الكوبون: ${lastError?.message||'خطأ غير معروف'}`,'error')}
+    async function toggleCouponActive(id){const coupon=couponsCache.find(item=>String(item.id)===String(id));if(!coupon)return;const {error}=await supabaseClient.from('coupons').update({is_active:!coupon.is_active}).eq('id',id);if(error){showToast(`فشل تحديث حالة الكوبون: ${error.message}`,'error');return}await loadCoupons();showToast(!coupon.is_active?'تم تفعيل الكوبون':'تم تعطيل الكوبون')}
+    async function deleteCoupon(id){if(!confirm('هل تريد حذف هذا الكوبون نهائياً؟'))return;const {error}=await supabaseClient.from('coupons').delete().eq('id',id);if(error){showToast(`فشل حذف الكوبون: ${error.message}`,'error');return}await loadCoupons();showToast('تم حذف الكوبون')}
+    function renderGeneratedGiftCodes(){const wrap=document.getElementById('generatedGiftCardsWrap'),list=document.getElementById('generatedGiftCardsList');if(!generatedGiftCodes.length){wrap.style.display='none';list.innerHTML='';return}wrap.style.display='block';list.innerHTML=generatedGiftCodes.map(code=>`<div class="generated-code mono-code">${escapeHtml(code)}</div>`).join('')}
+    async function loadGiftCards(){const {data,error}=await supabaseClient.from('gift_cards').select('*').order('created_at',{ascending:false});const body=document.getElementById('giftCardsTableBody');if(error){body.innerHTML=`<tr><td colspan="5" class="empty-state">فشل تحميل بطاقات الهدايا: ${escapeHtml(error.message)}</td></tr>`;return}giftCardsCache=data||[];giftCardsProfilesCache=await fetchProfilesMap(giftCardsCache.map(getGiftCardRedeemerId));renderGiftCards()}
+    function renderGiftCards(){const filter=document.getElementById('giftCardsFilter').value;const body=document.getElementById('giftCardsTableBody');const filtered=giftCardsCache.filter(card=>filter==='used'?getGiftCardUsedFlag(card):filter==='unused'?!getGiftCardUsedFlag(card):true);if(!filtered.length){body.innerHTML='<tr><td colspan="5" class="empty-state">لا توجد بطاقات مطابقة لهذا الفلتر.</td></tr>';return}body.innerHTML=filtered.map(card=>`<tr><td class="mono-code">${escapeHtml(card.code||'-')}</td><td>${escapeHtml(formatMoney(card.amount||0))}</td><td>${getGiftCardUsedFlag(card)?'<span class="status-chip danger">نعم</span>':'<span class="status-chip success">لا</span>'}</td><td>${escapeHtml(getGiftCardRedeemerName(card)||'غير مستخدمة')}</td><td>${escapeHtml(formatDate(card.created_at))}</td></tr>`).join('')}
+    async function generateGiftCards(){const count=parseInt(document.getElementById('giftCardsCount').value,10),amount=parseFloat(document.getElementById('giftCardsAmount').value);if(!Number.isInteger(count)||count<1||count>50){showToast('عدد البطاقات يجب أن يكون بين 1 و50','error');return}if(!Number.isFinite(amount)||amount<=0){showToast('أدخل قيمة صحيحة لكل بطاقة','error');return}const codes=new Set();while(codes.size<count)codes.add(generateGiftCardCode());const variants=[[...codes].map(code=>({code,amount,is_redeemed:false})),[...codes].map(code=>({code,amount}))];let lastError=null;for(const rows of variants){const {error}=await supabaseClient.from('gift_cards').insert(rows);if(!error){generatedGiftCodes=[...codes];renderGeneratedGiftCodes();document.getElementById('giftCardsCount').value='';document.getElementById('giftCardsAmount').value='';await loadGiftCards();showToast('تم توليد وحفظ بطاقات الهدايا');return}lastError=error;if(!/column/i.test(String(error.message||'')))break}showToast(`فشل توليد بطاقات الهدايا: ${lastError?.message||'خطأ غير معروف'}`,'error')}
+    function copyAllGeneratedGiftCodes(){if(!generatedGiftCodes.length){showToast('لا توجد أكواد مولدة لنسخها','error');return}copyText(generatedGiftCodes.join('\n'),'تم نسخ جميع الأكواد')}
+    function exportGiftCardsCsv(){if(!giftCardsCache.length){showToast('لا توجد بطاقات لتصديرها','error');return}const rows=[['الكود','القيمة بالجنيه','هل استخدم','من استخدمه','تاريخ الإنشاء']].concat(giftCardsCache.map(card=>[card.code||'',card.amount||0,getGiftCardUsedFlag(card)?'نعم':'لا',getGiftCardRedeemerName(card)||'',card.created_at?formatDate(card.created_at):'']));const csv=rows.map(row=>row.map(toCsvCell).join(',')).join('\n');downloadTextFile('gift-cards.csv',csv,'text/csv;charset=utf-8');showToast('تم تصدير CSV بنجاح')}
     function enablePushNotifications(){if(!('Notification'in window)){showToast('هذا المتصفح لا يدعم الإشعارات','error');return}Notification.requestPermission().then(permission=>{if(permission==='granted'){new Notification('RAIZ3Y STORE Admin',{body:'تم تفعيل الإشعارات بنجاح! ستتلقى تنبيهات بالطلبات الجديدة.',icon:'icon-192.png'});showToast('تم تفعيل الإشعارات')}else showToast('تم رفض صلاحية الإشعارات','error')})}
     function triggerNotificationTest(){if('Notification'in window&&Notification.permission==='granted'){new Notification('طلب جديد!',{body:'لديك طلب جديد يرجى المراجعة.',icon:'icon-192.png'})}else enablePushNotifications()}
 
-    document.addEventListener('click',e=>{const copyBtn=e.target.closest('[data-copy]');if(copyBtn){copyText(copyBtn.dataset.copy,'تم نسخ رقم العملية');return}const receiptBtn=e.target.closest('[data-open-receipt]');if(receiptBtn){openReceiptModal(receiptBtn.dataset.openReceipt,receiptBtn.dataset.receiptTitle||'عرض الإيصال');return}const productEdit=e.target.closest('[data-product-edit]');if(productEdit){openProductModal(productEdit.dataset.productEdit);return}const productDelete=e.target.closest('[data-product-delete]');if(productDelete){deleteProduct(productDelete.dataset.productDelete);return}const categoryEdit=e.target.closest('[data-category-edit]');if(categoryEdit){openCategoryModal(categoryEdit.dataset.categoryEdit);return}const categoryDelete=e.target.closest('[data-category-delete]');if(categoryDelete){deleteCategory(categoryDelete.dataset.categoryDelete);return}const userRole=e.target.closest('[data-user-role]');if(userRole){openRoleModal(userRole.dataset.userRole,userRole.dataset.userRoleValue);return}const copyImg=e.target.closest('[data-copy-image]');if(copyImg&&copyImg.dataset.copyImage){copyText(copyImg.dataset.copyImage,'تم نسخ رابط الصورة')}})
+    document.addEventListener('click',e=>{const copyBtn=e.target.closest('[data-copy]');if(copyBtn){copyText(copyBtn.dataset.copy,'تم نسخ رقم العملية');return}const receiptBtn=e.target.closest('[data-open-receipt]');if(receiptBtn){openReceiptModal(receiptBtn.dataset.openReceipt,receiptBtn.dataset.receiptTitle||'عرض الإيصال');return}const productEdit=e.target.closest('[data-product-edit]');if(productEdit){openProductModal(productEdit.dataset.productEdit);return}const productDelete=e.target.closest('[data-product-delete]');if(productDelete){deleteProduct(productDelete.dataset.productDelete);return}const categoryEdit=e.target.closest('[data-category-edit]');if(categoryEdit){openCategoryModal(categoryEdit.dataset.categoryEdit);return}const categoryDelete=e.target.closest('[data-category-delete]');if(categoryDelete){deleteCategory(categoryDelete.dataset.categoryDelete);return}const userRole=e.target.closest('[data-user-role]');if(userRole){openRoleModal(userRole.dataset.userRole,userRole.dataset.userRoleValue);return}const couponToggle=e.target.closest('[data-coupon-toggle]');if(couponToggle){toggleCouponActive(couponToggle.dataset.couponToggle);return}const couponDelete=e.target.closest('[data-coupon-delete]');if(couponDelete){deleteCoupon(couponDelete.dataset.couponDelete);return}const copyImg=e.target.closest('[data-copy-image]');if(copyImg&&copyImg.dataset.copyImage){copyText(copyImg.dataset.copyImage,'تم نسخ رابط الصورة')}})
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){['productModal','categoryModal','roleModal','receiptModal'].forEach(closeModal)}})
     document.querySelectorAll('.modal').forEach(modal=>modal.addEventListener('click',e=>{if(e.target===modal)closeModal(modal.id)}))
 
-    document.addEventListener('DOMContentLoaded',async()=>{setAdminPageTitle(0);if('Notification'in window)Notification.requestPermission().catch(()=>{});const blocked=await checkMaintenanceMode();if(blocked)return;await loadCurrentUserContext();await Promise.all([loadStats(),loadSettings(),loadCategories(),loadHomeAnalytics()]);await loadProducts();startPendingReviewPolling()})
+    document.addEventListener('DOMContentLoaded',async()=>{setAdminPageTitle(0);toggleCouponMaxDiscountField();renderGeneratedGiftCodes();if('Notification'in window)Notification.requestPermission().catch(()=>{});const blocked=await checkMaintenanceMode();if(blocked)return;await loadCurrentUserContext();await Promise.all([loadStats(),loadSettings(),loadCategories(),loadHomeAnalytics(),loadCoupons()]);await loadProducts();startPendingReviewPolling()})
   </script>
 </body>
 </html>
