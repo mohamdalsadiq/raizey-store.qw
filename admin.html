@@ -61,7 +61,7 @@
     .modal-body{padding:20px;display:flex;flex-direction:column;gap:14px}.modal-footer{justify-content:flex-end;padding:0 20px 20px}
     .upload-shell{border:1px dashed rgba(124,58,237,.45);background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(255,255,255,.02));border-radius:20px;padding:16px}.upload-status{color:var(--muted);font-size:.86rem;line-height:1.8;min-height:24px}
     .preview-wrap{display:none;align-items:flex-start;gap:14px;border:1px solid var(--border);border-radius:18px;padding:12px;background:rgba(255,255,255,.02)}.preview-wrap.visible{display:flex}.preview-img{width:110px;height:110px;border-radius:16px;border:1px solid var(--border);background:#212121;object-fit:cover;flex-shrink:0}.preview-meta{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1}.preview-link{color:#C4B5FD;font-size:.82rem;word-break:break-all;line-height:1.8}
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1600;display:grid;grid-template-columns:repeat(7,1fr);padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:rgba(17,17,17,.95);border-top:1px solid rgba(124,58,237,.18);backdrop-filter:blur(14px)}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:1600;display:grid;grid-template-columns:repeat(8,1fr);padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:rgba(17,17,17,.95);border-top:1px solid rgba(124,58,237,.18);backdrop-filter:blur(14px)}
     .nav-btn{position:relative;background:transparent;border:none;color:var(--muted);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:16px;cursor:pointer;font-size:.74rem;font-weight:800}.nav-btn.active{color:#fff;background:rgba(124,58,237,.14)}.nav-btn i{font-size:1.12rem}
     .badge-count{position:absolute;top:8px;left:calc(50% + 4px);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--danger);color:#fff;font-size:.72rem;font-weight:900;padding:0 7px}
     .receipt-canvas{flex:1;min-height:0;overflow:auto;padding:8px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(124,58,237,.08),rgba(255,255,255,.01)),#0F0F0F}.receipt-canvas img{width:auto;max-width:100%;max-height:100%;border-radius:20px;border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 45px rgba(0,0,0,.4);transform-origin:center;transition:transform .2s ease}
@@ -79,10 +79,19 @@
     .generated-codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .generated-code{padding:12px 14px;border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
     .hint-inline{color:var(--muted);font-size:.82rem;line-height:1.8}
+    .permission-banner{display:none;margin-bottom:12px;padding:12px 14px;border-radius:16px;border:1px solid rgba(245,158,11,.28);background:rgba(245,158,11,.1);color:#FCD34D;font-size:.88rem;font-weight:800}
+    .permission-banner.show{display:block}
+    .supervisor-card{padding:18px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01))}
+    .supervisor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .supervisor-meta{color:var(--muted);font-size:.88rem;line-height:1.9}
+    .permissions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+    .permission-check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02)}
+    .permission-check input{width:auto}
+    .tab-blocked{display:none !important}
     .maintenance-screen{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top,rgba(124,58,237,.24),transparent 26%),var(--bg)}.maintenance-card{width:min(560px,100%);background:var(--card);border:1px solid var(--border);border-radius:28px;padding:28px;text-align:center;box-shadow:var(--shadow)}.maintenance-card i{width:72px;height:72px;margin:0 auto 18px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,.14);color:var(--danger);font-size:1.6rem}.maintenance-card h1{font-size:1.5rem;margin-bottom:10px}.maintenance-card p{color:var(--muted);line-height:2}.maintenance-trigger{position:fixed;left:12px;bottom:12px;border:none;background:transparent;color:rgba(255,255,255,.38);font-size:18px;cursor:pointer;z-index:3}.maintenance-login{display:none;position:fixed;inset:0;z-index:4;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:18px}.maintenance-login.open{display:flex}.maintenance-login-card{width:min(420px,100%);background:var(--card);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}.maintenance-login-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.wa-btn{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.34);color:#BBF7D0}
     @media (max-width:980px){.stats-grid,.compare-grid,.analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-grid{grid-template-columns:1fr}}
     @media (max-width:820px){.product-card{grid-template-columns:96px 1fr}.product-thumb{width:96px;height:96px}.product-actions{grid-column:1/-1;min-width:100%;flex-direction:row;flex-wrap:wrap}.order-grid{grid-template-columns:1fr}}
-    @media (max-width:640px){.container{width:min(100%,calc(100% - 16px))}.admin-header{padding:14px}.card,.modal-body{padding:16px}.modal-header{padding:16px}.modal-footer{padding:0 16px 16px}.stats-grid,.compare-grid,.form-grid,.generated-codes{grid-template-columns:1fr}.catalog-card{flex-direction:column;align-items:stretch}.catalog-info{width:100%}.toggle-container{align-items:flex-start}.analytics-table th,.analytics-table td,.admin-table th,.admin-table td{padding:10px 8px;font-size:.82rem}.nav-btn{font-size:.68rem;padding:10px 4px}}
+    @media (max-width:640px){.container{width:min(100%,calc(100% - 16px))}.admin-header{padding:14px}.card,.modal-body{padding:16px}.modal-header{padding:16px}.modal-footer{padding:0 16px 16px}.stats-grid,.compare-grid,.form-grid,.generated-codes,.permissions-grid{grid-template-columns:1fr}.catalog-card{flex-direction:column;align-items:stretch}.catalog-info{width:100%}.toggle-container{align-items:flex-start}.analytics-table th,.analytics-table td,.admin-table th,.admin-table td{padding:10px 8px;font-size:.82rem}.nav-btn{font-size:.68rem;padding:10px 4px}}
   </style>
 </head>
 <body>
@@ -164,16 +173,17 @@
       <div class="card"><div class="card-title"><span><i class="fa-solid fa-receipt"></i> أحدث طلبات الشراء</span></div><div id="ordersList" class="item-list"><div class="empty-state">جاري تحميل الطلبات...</div></div></div>
     </section>
 
-    <section id="tab-users" class="tab-content">
+    <section id="tab-supervisors" class="tab-content">
+      <div id="banner-supervisors" class="permission-banner">وضع القراءة فقط</div>
       <div class="card">
-        <div class="card-title"><span><i class="fa-solid fa-user-gear"></i> إدارة العملاء والمشرفين</span></div>
-        <div class="form-group"><label for="userSearchInput">بحث بالموبايل أو البريد أو المعرّف</label><input type="text" id="userSearchInput" placeholder="ابحث برقم الواتساب، البريد، أو الـ ID..."></div>
-        <button class="btn btn-primary btn-block" type="button" onclick="searchUsers()"><i class="fa-solid fa-magnifying-glass"></i><span>بحث</span></button>
+        <div class="card-title"><span><i class="fa-solid fa-user-shield"></i> إدارة المشرفين والصلاحيات</span></div>
+        <div class="form-group"><label for="supervisorSearchInput">بحث بالإيميل أو رقم الواتساب</label><input type="text" id="supervisorSearchInput" placeholder="ابدأ الكتابة للبحث الفوري..." oninput="searchSupervisors()"></div>
       </div>
-      <div class="card"><div class="card-title"><span><i class="fa-solid fa-list"></i> نتائج البحث</span></div><div id="usersList" class="item-list"><div class="empty-state">أدخل بيانات البحث بالأعلى...</div></div></div>
+      <div class="card"><div class="card-title"><span><i class="fa-solid fa-list"></i> نتائج البحث</span></div><div id="supervisorsList" class="item-list"><div class="empty-state">ابدأ البحث بالإيميل أو رقم الواتساب...</div></div></div>
     </section>
 
     <section id="tab-coupons" class="tab-content">
+      <div id="banner-coupons" class="permission-banner">وضع القراءة فقط</div>
       <div class="card">
         <div class="card-title"><span><i class="fa-solid fa-ticket"></i> إدارة الكوبونات</span></div>
         <p class="section-copy">يعرض الجدول جميع الكوبونات مع النوع والقيمة والاستخدام والحالة، ويمكنك التفعيل أو التعطيل أو الحذف مباشرة.</p>
@@ -235,6 +245,7 @@
       </div>
     </section>
     <section id="tab-gift-cards" class="tab-content">
+      <div id="banner-gift-cards" class="permission-banner">وضع القراءة فقط</div>
       <div class="card">
         <div class="card-title"><span><i class="fa-solid fa-gift"></i> بطاقات الهدايا</span><div class="filter-actions"><select id="giftCardsFilter" onchange="renderGiftCards()"><option value="all">الكل</option><option value="unused">غير مستخدمة</option><option value="used">مستخدمة</option></select><button class="action-btn accent" type="button" onclick="exportGiftCardsCsv()"><i class="fa-solid fa-file-csv"></i><span>تصدير CSV</span></button></div></div>
         <div class="table-wrap">
@@ -274,7 +285,42 @@
       </div>
     </section>
 
+    <section id="tab-logs" class="tab-content">
+      <div id="banner-logs" class="permission-banner">وضع القراءة فقط</div>
+      <div class="card">
+        <div class="card-title"><span><i class="fa-solid fa-clipboard-list"></i> سجل النشاطات</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="auditDateFilter">فلتر بالتاريخ</label>
+            <input type="date" id="auditDateFilter" onchange="renderAuditLogs()">
+          </div>
+          <div class="form-group">
+            <label for="auditAdminFilter">فلتر بالمشرف</label>
+            <select id="auditAdminFilter" onchange="renderAuditLogs()">
+              <option value="">الكل</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>التوقيت</th>
+                <th>اسم المشرف</th>
+                <th>الإجراء</th>
+                <th>التفاصيل</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogsTableBody">
+              <tr><td colspan="4" class="empty-state">جاري تحميل السجلات...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-settings" class="tab-content">
+      <div id="banner-settings" class="permission-banner">وضع القراءة فقط</div>
       <div class="card">
         <div class="card-title"><span><i class="fa-solid fa-bell-concierge"></i> إشعارات وتثبيت التطبيق</span></div>
         <p class="section-copy">تفعيل إشعارات الهاتف لتلقي تنبيهات عند وجود طلبات شحن أو شراء جديدة حتى عند إغلاق اللوحة.</p>
@@ -412,25 +458,29 @@
   </div>
 
   <nav class="bottom-nav">
-    <button class="nav-btn active" type="button" onclick="switchTab('home',this)"><i class="fa-solid fa-chart-pie"></i><span>الرئيسية</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('catalog',this)"><i class="fa-solid fa-boxes-stacked"></i><span>الكتالوج</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('orders',this)"><i class="fa-solid fa-list-check"></i><span>الطلبات</span><span id="pendingBadge" class="badge-count" style="display:none">0</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('users',this)"><i class="fa-solid fa-users-gear"></i><span>العملاء</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('coupons',this)"><i class="fa-solid fa-ticket"></i><span>الكوبونات</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('gift-cards',this)"><i class="fa-solid fa-gift"></i><span>بطاقات الهدايا</span></button>
-    <button class="nav-btn" type="button" onclick="switchTab('settings',this)"><i class="fa-solid fa-sliders"></i><span>الإعدادات</span></button>
+    <button class="nav-btn active" data-tab="home" type="button" onclick="switchTab('home',this)"><i class="fa-solid fa-chart-pie"></i><span>الرئيسية</span></button>
+    <button class="nav-btn" data-tab="catalog" type="button" onclick="switchTab('catalog',this)"><i class="fa-solid fa-boxes-stacked"></i><span>الكتالوج</span></button>
+    <button class="nav-btn" data-tab="orders" type="button" onclick="switchTab('orders',this)"><i class="fa-solid fa-list-check"></i><span>الطلبات</span><span id="pendingBadge" class="badge-count" style="display:none">0</span></button>
+    <button class="nav-btn" data-tab="supervisors" type="button" onclick="switchTab('supervisors',this)"><i class="fa-solid fa-user-shield"></i><span>المشرفون</span></button>
+    <button class="nav-btn" data-tab="coupons" type="button" onclick="switchTab('coupons',this)"><i class="fa-solid fa-ticket"></i><span>الكوبونات</span></button>
+    <button class="nav-btn" data-tab="gift-cards" type="button" onclick="switchTab('gift-cards',this)"><i class="fa-solid fa-gift"></i><span>الهدايا</span></button>
+    <button class="nav-btn" data-tab="logs" type="button" onclick="switchTab('logs',this)"><i class="fa-solid fa-clipboard-list"></i><span>السجلات</span></button>
+    <button class="nav-btn" data-tab="settings" type="button" onclick="switchTab('settings',this)"><i class="fa-solid fa-sliders"></i><span>الإعدادات</span></button>
   </nav>
 
   <div id="toast" class="toast"></div>
 
   <script>
-    let categoriesCache=[],productsCache=[],ordersCache=[],topupsCache=[],couponsCache=[],giftCardsCache=[],giftCardsProfilesCache={},generatedGiftCodes=[],currentUser=null,currentUserRole='admin',currentReceiptUrl='',receiptZoom=1,pendingOrdersPoller=null;
+    let categoriesCache=[],productsCache=[],ordersCache=[],topupsCache=[],couponsCache=[],giftCardsCache=[],giftCardsProfilesCache={},generatedGiftCodes=[],auditLogsCache=[],supervisorsCache=[],currentUser=null,currentUserProfile=null,currentUserPermissions=null,currentUserRole='admin',currentReceiptUrl='',receiptZoom=1,pendingOrdersPoller=null,currentTabId='home';
     const uploadState={product:{publicUrl:'',isUploading:false},category:{publicUrl:'',isUploading:false}};
     const statusLabels={pending_review:'قيد المراجعة',in_progress:'قيد التنفيذ',completed:'مكتمل',cancelled:'ملغي',rejected:'مرفوض',pending:'قيد المراجعة',confirmed:'مؤكد'};
     const roleLabels={user:'عميل',moderator:'مشرف',admin:'مدير',superadmin:'Super Admin'};
     const baseAdminTitle='RAIZEY ADMIN';
     const pendingOrdersStorageKey='raizey_admin_pending_review_count';
     const couponTypeLabels={percentage:'نسبة مئوية',fixed:'قيمة ثابتة'};
+    const permissionLabels={super_admin:'Super Admin',manage_orders:'إدارة الطلبات',manage_products:'إدارة المنتجات',manage_wallets:'إدارة المحافظ',manage_settings:'إدارة الإعدادات',manage_admins:'إدارة المشرفين',manage_coupons:'إدارة الكوبونات',manage_gift_cards:'إدارة الهدايا',view_audit_logs:'عرض السجلات',read_only:'عرض فقط'};
+    const permissionKeys=['super_admin','manage_orders','manage_products','manage_wallets','manage_settings','manage_admins','manage_coupons','manage_gift_cards','view_audit_logs','read_only'];
+    const tabPermissionMap={home:()=>true,catalog:perms=>Boolean(perms.manage_products),orders:perms=>Boolean(perms.manage_orders||perms.manage_wallets),supervisors:perms=>Boolean(perms.manage_admins),coupons:perms=>Boolean(perms.manage_coupons),giftCards:perms=>Boolean(perms.manage_gift_cards),logs:perms=>Boolean(perms.view_audit_logs),settings:perms=>Boolean(perms.manage_settings)};
 
     function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
     function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(showToast._timer);showToast._timer=setTimeout(()=>t.className='toast',2600)}
@@ -445,6 +495,14 @@
     function sanitizeFileName(n){return String(n||'image').trim().replace(/\s+/g,'_').replace(/[^a-zA-Z0-9._-]/g,'')}
     function openModal(id){document.getElementById(id).classList.add('open')}
     function closeModal(id){document.getElementById(id).classList.remove('open')}
+    function getEmptyPermissions(){return permissionKeys.reduce((acc,key)=>{acc[key]=false;return acc},{})}
+    function normalizePermissions(raw,role='user'){const base=getEmptyPermissions();const src=typeof raw==='string'?(()=>{try{return JSON.parse(raw)}catch{return {}}})():(raw||{});base.super_admin=Boolean(src.super_admin??src.is_super_admin??role==='superadmin');base.manage_orders=Boolean(src.manage_orders??src.can_manage_orders??base.super_admin);base.manage_products=Boolean(src.manage_products??src.can_manage_products??base.super_admin);base.manage_wallets=Boolean(src.manage_wallets??src.can_manage_wallets??base.super_admin);base.manage_settings=Boolean(src.manage_settings??src.can_manage_settings??base.super_admin);base.manage_admins=Boolean(src.manage_admins??src.can_manage_admins??base.super_admin);base.manage_coupons=Boolean(src.manage_coupons??src.can_manage_coupons??base.super_admin);base.manage_gift_cards=Boolean(src.manage_gift_cards??src.can_manage_gift_cards??base.super_admin);base.view_audit_logs=Boolean(src.view_audit_logs??src.can_view_audit_logs??base.super_admin);base.read_only=Boolean(src.read_only);if(role==='superadmin'){Object.keys(base).forEach(key=>base[key]=true);base.read_only=false;return base}const rawExists=raw&&((typeof raw==='string'&&raw.trim())||(typeof raw==='object'&&Object.keys(raw).length));if(role==='admin'&&!rawExists){Object.keys(base).forEach(key=>base[key]=true);base.read_only=false}if(base.super_admin){Object.keys(base).forEach(key=>base[key]=true);base.read_only=false}return base}
+    function canAccessTab(tabId){if(!currentUserPermissions)return tabId==='home';const mapper=tabPermissionMap[tabId];return mapper?mapper(currentUserPermissions):false}
+    function isReadOnlyMode(){return Boolean(currentUserPermissions?.read_only&&!currentUserPermissions?.super_admin)}
+    function requirePermission(key){if(currentUserPermissions?.super_admin)return true;if(currentUserPermissions?.read_only)return false;return Boolean(currentUserPermissions?.[key])}
+    function showTabBanner(tabId,message){const banner=document.getElementById(`banner-${tabId}`);if(!banner)return;banner.textContent=message||'وضع القراءة فقط';banner.classList.add('show')}
+    function hideAllBanners(){document.querySelectorAll('.permission-banner').forEach(el=>el.classList.remove('show'))}
+    function getFirstAllowedTab(){const order=['home','catalog','orders','supervisors','coupons','gift-cards','logs','settings'];return order.find(canAccessTab)||'home'}
     function randomCode(prefix,length){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let suffix='';for(let i=0;i<length;i++)suffix+=chars[Math.floor(Math.random()*chars.length)];return `${prefix}${suffix}`}
     function generateCouponCode(){return randomCode('RAIZEY-',5)}
     function generateGiftCardCode(){return randomCode('GIFT-',8)}
@@ -460,7 +518,11 @@
     function getCouponMaxDiscount(coupon){const raw=coupon?.max_discount_amount??coupon?.max_discount??coupon?.discount_cap??null;return raw===null||raw===''?null:Number(raw)}
     function isCouponExpired(coupon){return Boolean(coupon?.expires_at)&&new Date(coupon.expires_at).getTime()<Date.now()}
     function getCouponStatusMarkup(coupon){if(!coupon?.is_active)return'<span class="status-chip muted">معطل</span>';if(isCouponExpired(coupon))return'<span class="status-chip warn">منتهي</span>';return'<span class="status-chip success">فعال</span>'}
-    function switchTab(tabId,btn){document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(s=>s.classList.remove('active'));document.getElementById(`tab-${tabId}`).classList.add('active');if(btn)btn.classList.add('active');if(tabId==='home'){loadStats();loadSettings();loadHomeAnalytics()}if(tabId==='catalog'){loadCategories();loadProducts()}if(tabId==='orders'){loadTopupRequests();loadOrders()}if(tabId==='coupons'){loadCoupons()}if(tabId==='gift-cards'){loadGiftCards()}}
+    function getOrderTabVisibility(){return{showOrders:Boolean(currentUserPermissions?.super_admin||currentUserPermissions?.manage_orders),showWallets:Boolean(currentUserPermissions?.super_admin||currentUserPermissions?.manage_wallets)}}
+    function applyNavigationPermissions(){document.querySelectorAll('.nav-btn[data-tab]').forEach(btn=>{const tab=btn.dataset.tab;const allowed=tab==='gift-cards'?canAccessTab('giftCards'):tab==='logs'?canAccessTab('logs'):tab==='supervisors'?canAccessTab('supervisors'):canAccessTab(tab);btn.style.display=allowed?'flex':'none'});const activeBtn=document.querySelector('.nav-btn.active');if(activeBtn&&activeBtn.style.display==='none'){const nextTab=getFirstAllowedTab();const nextBtn=document.querySelector(`.nav-btn[data-tab="${nextTab}"]`);if(nextBtn)switchTab(nextTab,nextBtn)}}
+    function applyReadOnlyUi(){const hide=isReadOnlyMode();const selectors=['[onclick="openCategoryModal()"]','[onclick="openProductModal()"]','[onclick="saveExchangeRate()"]','[onclick="saveMaintenanceMessage()"]','[onclick="saveCoupon()"]','[onclick="generateGiftCards()"]','[data-product-edit]','[data-product-delete]','[data-category-edit]','[data-category-delete]','[data-coupon-toggle]','[data-coupon-delete]','[data-supervisor-save]','[data-supervisor-remove]','#maintenanceToggle','#productImageFile','#categoryImageFile','[onclick="addProdOption()"]','[onclick="addProdRequiredField()"]','.modal-footer .btn-primary','.modal-footer .btn-danger'];document.querySelectorAll(selectors.join(',')).forEach(el=>{if(el.tagName==='INPUT'&&el.type==='checkbox')el.disabled=hide;else if(el.tagName==='INPUT'&&el.type==='file')el.disabled=hide;else if(el.tagName==='BUTTON'||el.classList.contains('action-btn')||el.classList.contains('btn'))el.style.display=hide?'none':''})}
+    function updatePermissionBanners(tabId){hideAllBanners();if(isReadOnlyMode())showTabBanner(tabId,'وضع القراءة فقط')}
+    function switchTab(tabId,btn){const normalizedTab=tabId==='gift-cards'?'giftCards':tabId;if(normalizedTab!=='home'&&!canAccessTab(normalizedTab)){const fallback=getFirstAllowedTab();const fallbackBtn=document.querySelector(`.nav-btn[data-tab="${fallback}"]`);if(fallbackBtn&&fallback!==tabId){switchTab(fallback,fallbackBtn)}return}currentTabId=tabId;document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(s=>s.classList.remove('active'));const tabEl=document.getElementById(`tab-${tabId}`);if(tabEl)tabEl.classList.add('active');if(btn)btn.classList.add('active');updatePermissionBanners(tabId);if(tabId==='home'){loadStats();loadSettings();loadHomeAnalytics()}if(tabId==='catalog'){loadCategories();loadProducts()}if(tabId==='orders'){loadTopupRequests();loadOrders()}if(tabId==='coupons'){loadCoupons()}if(tabId==='gift-cards'){loadGiftCards()}if(tabId==='supervisors'){searchSupervisors()}if(tabId==='logs'){loadAuditLogs()}applyReadOnlyUi()}
     function setUploadStatus(type,msg,isError=false){const el=document.getElementById(`${type}UploadStatus`);el.textContent=msg;el.style.color=isError?'var(--danger)':'var(--muted)'}
     function setImagePreview(type,url,label='معاينة الصورة'){uploadState[type].publicUrl=url||'';const wrap=document.getElementById(`${type}PreviewWrap`),img=document.getElementById(`${type}ImagePreview`),link=document.getElementById(`${type}ImageLink`),ttl=document.getElementById(`${type}PreviewLabel`);if(url){wrap.classList.add('visible');img.src=url;link.textContent=url;ttl.textContent=label}else{wrap.classList.remove('visible');img.removeAttribute('src');link.textContent='';ttl.textContent='معاينة الصورة'}}
     async function uploadImageToSupabase(file, type){const bucket = type === 'category' ? 'category-images' : 'product-images';const path=`${Date.now()}_${sanitizeFileName(file.name)}`;const {error}=await supabaseClient.storage.from(bucket).upload(path,file,{upsert:true});if(error)throw error;return supabaseClient.storage.from(bucket).getPublicUrl(path).data.publicUrl}
@@ -471,7 +533,9 @@
     function toggleMaintenanceLogin(show){const el=document.getElementById('maintenanceLogin');if(el)el.classList[show?'add':'remove']('open')}
     async function performMaintenanceLogin(){const email=document.getElementById('maintenanceLoginEmail')?.value.trim(),password=document.getElementById('maintenanceLoginPassword')?.value||'';if(!email||!password){showToast('أدخل البريد وكلمة المرور','error');return}const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error){showToast(`فشل تسجيل الدخول: ${error.message}`,'error');return}location.reload()}
 
-    async function loadCurrentUserContext(){try{const {data}=await supabaseClient.auth.getUser();currentUser=data?.user||null;if(!currentUser)return;const {data:profile}=await supabaseClient.from('profiles').select('role').eq('id',currentUser.id).maybeSingle();currentUserRole=profile?.role||'admin';document.getElementById('currentRoleBadge').textContent=roleLabels[currentUserRole]||currentUserRole}catch(err){console.error('loadCurrentUserContext',err)}}
+    function formatAuditDetails(details){if(!details)return'—';if(typeof details==='string')return details;return Object.entries(details).map(([key,val])=>`${key}: ${typeof val==='object'?JSON.stringify(val):val}`).join(' — ')}
+    async function logAudit(action,details={}){if(!currentUser)return;const payloadVariants=[{admin_id:currentUser.id,admin_name:currentUserProfile?.full_name||currentUser.email||'مشرف',action,details,created_at:new Date().toISOString()},{admin_id:currentUser.id,action,details,created_at:new Date().toISOString()},{admin_id:currentUser.id,action,details}];for(const payload of payloadVariants){const {error}=await supabaseClient.from('audit_logs').insert(payload);if(!error)return;if(!/column/i.test(String(error.message||'')))return}}
+    async function loadCurrentUserContext(){try{const {data}=await supabaseClient.auth.getUser();currentUser=data?.user||null;if(!currentUser)return;const {data:profile}=await supabaseClient.from('profiles').select('id,full_name,email,phone,whatsapp_number,role,permissions').eq('id',currentUser.id).maybeSingle();currentUserProfile=profile||null;currentUserRole=profile?.role||'admin';currentUserPermissions=normalizePermissions(profile?.permissions,profile?.role||'admin');document.getElementById('currentRoleBadge').textContent=currentUserPermissions.super_admin?'Super Admin':(roleLabels[currentUserRole]||currentUserRole);applyNavigationPermissions()}catch(err){console.error('loadCurrentUserContext',err)}}
     async function checkMaintenanceMode(){const {data:authData}=await supabaseClient.auth.getUser();currentUser=authData?.user||null;if(currentUser){try{const {data:profile}=await supabaseClient.from('profiles').select('role').eq('id',currentUser.id).maybeSingle();currentUserRole=profile?.role||currentUserRole;if(profile&&['admin','superadmin'].includes(profile.role))return false}catch(err){console.warn('maintenance role check failed',err)}}const {data,error}=await supabaseClient.from('settings').select('key,value').in('key',['maintenance_mode','maintenance_message']);if(error)return false;let isMaintenance=false,maintenanceMessage='الموقع تحت الصيانة حالياً.';(data||[]).forEach(item=>{if(item.key==='maintenance_mode'&&item.value==='true')isMaintenance=true;if(item.key==='maintenance_message'&&item.value)maintenanceMessage=item.value});if(isMaintenance){renderMaintenanceScreen(maintenanceMessage);return true}return false}
 
     function ensureCategoryOptions(){const select=document.getElementById('prodCategorySelect');select.innerHTML=categoriesCache.length?categoriesCache.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join(''):'<option value="">لا توجد تصنيفات</option>'}
@@ -511,10 +575,14 @@
     function downloadCurrentReceipt(){if(!currentReceiptUrl){showToast('لا يوجد إيصال للتحميل','error');return}const a=document.createElement('a');a.href=currentReceiptUrl;a.target='_blank';a.rel='noopener';a.download='receipt';a.click()}
     function openReceiptInNewTab(){if(!currentReceiptUrl){showToast('لا يوجد إيصال لفتحه','error');return}window.open(currentReceiptUrl,'_blank','noopener')}
 
-    async function searchUsers(){const q=document.getElementById('userSearchInput').value.trim(),list=document.getElementById('usersList');if(!q){list.innerHTML='<div class="empty-state">اكتب عبارة بحث أولاً.</div>';return}const {data,error}=await supabaseClient.from('profiles').select('*').or(`phone.ilike.%${q}%,whatsapp_number.ilike.%${q}%,email.ilike.%${q}%,id.eq.${q}`);if(error){list.innerHTML=`<div class="empty-state">فشل البحث: ${escapeHtml(error.message)}</div>`;return}list.innerHTML=(data||[]).map(u=>`<div class="catalog-card"><div class="catalog-info"><div class="thumb"><i class="fa-solid fa-user"></i></div><div class="item-details"><h4>${escapeHtml(u.full_name||u.phone||u.email||'عميل')}</h4><p>الرتبة: ${escapeHtml(roleLabels[u.role]||u.role||'user')}</p><p>${escapeHtml(u.email||u.whatsapp_number||u.phone||'بدون بيانات إضافية')}</p></div></div><div class="action-btns"><button class="action-btn primary" type="button" data-user-role="${escapeHtml(u.id)}" data-user-role-value="${escapeHtml(u.role||'user')}"><i class="fa-solid fa-user-pen"></i><span>تعديل الرتبة</span></button></div></div>`).join('')||'<div class="empty-state">لا توجد نتائج.</div>'}
-    function openRoleModal(id,role){document.getElementById('modalUserId').value=id;document.getElementById('modalUserRole').value=role||'user';openModal('roleModal')}
-    async function saveUserRole(){const id=document.getElementById('modalUserId').value,role=document.getElementById('modalUserRole').value;const {error}=await supabaseClient.from('profiles').update({role}).eq('id',id);if(error){showToast(`فشل تحديث الرتبة: ${error.message}`,'error');return}closeModal('roleModal');showToast('تم حفظ الرتبة');searchUsers()}
-    async function deleteUser(){const id=document.getElementById('modalUserId').value;if(!confirm('حذف هذا الحساب نهائياً؟'))return;const {error}=await supabaseClient.from('profiles').delete().eq('id',id);if(error){showToast(`فشل حذف الحساب: ${error.message}`,'error');return}closeModal('roleModal');showToast('تم حذف الحساب');searchUsers()}
+    function renderSupervisorPermissionCheckboxes(user){const perms=normalizePermissions(user.permissions,user.role);return permissionKeys.map(key=>`<label class="permission-check"><input type="checkbox" data-permission-key="${escapeHtml(key)}" ${perms[key]?'checked':''} ${isReadOnlyMode()?'disabled':''}><span>${escapeHtml(permissionLabels[key])}</span></label>`).join('')}
+    function renderSupervisors(){const list=document.getElementById('supervisorsList');if(!supervisorsCache.length){list.innerHTML='<div class="empty-state">لا توجد نتائج مطابقة.</div>';return}list.innerHTML=supervisorsCache.map(user=>`<div class="supervisor-card"><div class="supervisor-head"><div><h4>${escapeHtml(user.full_name||'بدون اسم')}</h4><div class="supervisor-meta">الإيميل: ${escapeHtml(user.email||'غير متوفر')}<br>الواتساب: ${escapeHtml(user.whatsapp_number||user.phone||'غير متوفر')}<br>الدور الحالي: ${escapeHtml(roleLabels[user.role]||user.role||'user')}</div></div><span class="status-chip ${normalizePermissions(user.permissions,user.role).super_admin?'danger':'muted'}">${normalizePermissions(user.permissions,user.role).super_admin?'Super Admin':'حساب إداري'}</span></div><div class="permissions-grid" data-permissions-grid="${escapeHtml(user.id)}">${renderSupervisorPermissionCheckboxes(user)}</div><div class="table-actions"><button class="action-btn primary" type="button" data-supervisor-save="${escapeHtml(user.id)}"><i class="fa-solid fa-floppy-disk"></i><span>حفظ الصلاحيات</span></button><button class="action-btn danger" type="button" data-supervisor-remove="${escapeHtml(user.id)}"><i class="fa-solid fa-user-minus"></i><span>إزالة الصلاحيات</span></button></div></div>`).join('');applyReadOnlyUi()}
+    async function searchSupervisors(){const query=document.getElementById('supervisorSearchInput').value.trim();const list=document.getElementById('supervisorsList');let request=supabaseClient.from('profiles').select('id,full_name,email,phone,whatsapp_number,role,permissions').order('created_at',{ascending:false}).limit(25);if(query){request=request.or(`email.ilike.%${query}%,whatsapp_number.ilike.%${query}%,phone.ilike.%${query}%`)}else request=request.in('role',['admin','superadmin']);const {data,error}=await request;if(error){list.innerHTML=`<div class="empty-state">فشل تحميل المشرفين: ${escapeHtml(error.message)}</div>`;return}supervisorsCache=data||[];renderSupervisors()}
+    function collectSupervisorPermissions(userId){const grid=document.querySelector(`[data-permissions-grid="${CSS.escape(String(userId))}"]`);const result=getEmptyPermissions();if(!grid)return result;grid.querySelectorAll('[data-permission-key]').forEach(input=>{result[input.dataset.permissionKey]=Boolean(input.checked)});if(result.super_admin){Object.keys(result).forEach(key=>result[key]=true);result.read_only=false}return result}
+    async function saveSupervisorPermissions(userId){if(!requirePermission('manage_admins')){showToast('لا تملك صلاحية تعديل المشرفين','error');return}const user=supervisorsCache.find(item=>String(item.id)===String(userId));if(!user)return;const permissions=collectSupervisorPermissions(userId);const nextRole=permissions.super_admin?'superadmin':'admin';const {error}=await supabaseClient.from('profiles').update({role:nextRole,permissions}).eq('id',userId);if(error){showToast(`فشل حفظ الصلاحيات: ${error.message}`,'error');return}await logAudit('حفظ صلاحيات مشرف',{target_id:userId,target_name:user.full_name||user.email||userId,permissions});showToast('تم حفظ الصلاحيات');await searchSupervisors();if(String(userId)===String(currentUser?.id))await loadCurrentUserContext()}
+    async function removeSupervisorPermissions(userId){if(!requirePermission('manage_admins')){showToast('لا تملك صلاحية تعديل المشرفين','error');return}const user=supervisorsCache.find(item=>String(item.id)===String(userId));if(!user)return;const {error}=await supabaseClient.from('profiles').update({role:'user',permissions:{}}).eq('id',userId);if(error){showToast(`فشل إزالة الصلاحيات: ${error.message}`,'error');return}await logAudit('إزالة صلاحيات مشرف',{target_id:userId,target_name:user.full_name||user.email||userId});showToast('تمت إعادة الحساب إلى مستخدم عادي');await searchSupervisors();if(String(userId)===String(currentUser?.id))await loadCurrentUserContext()}
+    async function loadAuditLogs(){const body=document.getElementById('auditLogsTableBody');const {data,error}=await supabaseClient.from('audit_logs').select('*').order('created_at',{ascending:false}).limit(300);if(error){body.innerHTML=`<tr><td colspan="4" class="empty-state">فشل تحميل السجلات: ${escapeHtml(error.message)}</td></tr>`;return}auditLogsCache=data||[];const profiles=await fetchProfilesMap(auditLogsCache.map(log=>log.admin_id));auditLogsCache=auditLogsCache.map(log=>({...log,_admin_name:log.admin_name||profiles[log.admin_id]?.full_name||profiles[log.admin_id]?.email||'مشرف'}));const filter=document.getElementById('auditAdminFilter');const admins=[...new Set(auditLogsCache.map(log=>log.admin_id).filter(Boolean).map(id=>JSON.stringify({id,name:auditLogsCache.find(log=>log.admin_id===id)?._admin_name||'مشرف'})))].map(item=>JSON.parse(item));filter.innerHTML='<option value="">الكل</option>'+admins.map(admin=>`<option value="${escapeHtml(admin.id)}">${escapeHtml(admin.name)}</option>`).join('');renderAuditLogs()}
+    function renderAuditLogs(){const body=document.getElementById('auditLogsTableBody');const dateFilter=document.getElementById('auditDateFilter').value;const adminFilter=document.getElementById('auditAdminFilter').value;const filtered=auditLogsCache.filter(log=>{const sameAdmin=!adminFilter||String(log.admin_id)===String(adminFilter);const sameDate=!dateFilter||formatDateInputValue(log.created_at)===dateFilter;return sameAdmin&&sameDate});if(!filtered.length){body.innerHTML='<tr><td colspan="4" class="empty-state">لا توجد سجلات مطابقة للفلاتر الحالية.</td></tr>';return}body.innerHTML=filtered.map(log=>`<tr><td>${escapeHtml(formatDate(log.created_at))}</td><td>${escapeHtml(log._admin_name||'مشرف')}</td><td>${escapeHtml(log.action||'-')}</td><td>${escapeHtml(formatAuditDetails(log.details))}</td></tr>`).join('')}
 
     function startOfDay(date){const d=new Date(date);d.setHours(0,0,0,0);return d}
     function formatTrend(current,previous,isCurrency=false){const diff=previous===0?(current>0?100:0):((current-previous)/previous)*100;const rounded=Math.round(diff);const cls=rounded>0?'trend-up':rounded<0?'trend-down':'trend-flat';const arrow=rounded>0?'↑':rounded<0?'↓':'→';const prefix=isCurrency?'ج.س ':'';return `<div class="${cls}">${arrow} ${Math.abs(rounded)}% <span style="color:var(--muted)">${prefix}${formatNumber(current)}</span></div>`}
