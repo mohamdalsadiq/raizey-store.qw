@@ -970,6 +970,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
   <script src="assets/js/admin-rbac.js"></script>
   <script>
     (() => {
@@ -1270,12 +1271,38 @@
         els.exchangeMetric.textContent = state.settingsMap.exchangeRate === null ? "--" : formatCurrency(state.settingsMap.exchangeRate);
       }
 
+      function getProjectSupabaseClient() {
+        if (window.supabaseClient) {
+          return window.supabaseClient;
+        }
+
+        try {
+          if (typeof supabaseClient !== "undefined" && supabaseClient) {
+            return supabaseClient;
+          }
+        } catch (error) {
+          void error;
+        }
+
+        const nestedCandidates = [
+          window.__SUPABASE_CONFIG__?.client,
+          window.SUPABASE_CONFIG?.client,
+          window.supabaseConfig?.client
+        ];
+
+        return nestedCandidates.find(Boolean) || null;
+      }
+
       function getSupabaseConfig() {
         const meta = document.querySelector.bind(document);
         const candidates = [
           window.__SUPABASE_CONFIG__,
           window.SUPABASE_CONFIG,
           window.supabaseConfig,
+          {
+            url: window.supabaseClient?.supabaseUrl,
+            anonKey: window.supabaseClient?.supabaseKey
+          },
           {
             url: meta('meta[name="supabase-url"]')?.content,
             anonKey: meta('meta[name="supabase-anon-key"]')?.content
@@ -1287,6 +1314,12 @@
         ];
 
         try {
+          const scriptUrl = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : null;
+          const scriptKey = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : null;
+          if (scriptUrl && scriptKey) {
+            candidates.push({ url: scriptUrl, anonKey: scriptKey });
+          }
+
           const storedUrl = localStorage.getItem("supabase.url") || localStorage.getItem("SUPABASE_URL");
           const storedKey = localStorage.getItem("supabase.anonKey") || localStorage.getItem("SUPABASE_ANON_KEY");
           candidates.push({ url: storedUrl, anonKey: storedKey });
@@ -2034,20 +2067,24 @@
         bindEvents();
         setLoading(true);
         try {
-          const config = getSupabaseConfig();
           if (!window.supabase || typeof window.supabase.createClient !== "function") {
             throw new Error("مكتبة Supabase لم يتم تحميلها.");
           }
-          if (!config?.url || !config?.anonKey) {
-            throw new Error("لم يتم العثور على إعدادات Supabase. عرّف `window.__SUPABASE_CONFIG__` أو وسوم meta المناسبة.");
-          }
+          const projectClient = getProjectSupabaseClient();
+          const config = getSupabaseConfig();
 
-          state.supabase = window.supabase.createClient(config.url, config.anonKey, {
-            auth: {
-              persistSession: true,
-              autoRefreshToken: true
-            }
-          });
+          if (projectClient) {
+            state.supabase = projectClient;
+          } else if (config?.url && (config?.anonKey || config?.key)) {
+            state.supabase = window.supabase.createClient(config.url, config.anonKey || config.key, {
+              auth: {
+                persistSession: true,
+                autoRefreshToken: true
+              }
+            });
+          } else {
+            throw new Error("لم يتم العثور على عميل Supabase أو إعدادات الاتصال داخل `assets/js/supabase-client.js` أو الإعدادات العامة.");
+          }
 
           await applyPermissions();
           await Promise.all([
