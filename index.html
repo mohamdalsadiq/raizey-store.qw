@@ -11,6 +11,33 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 
+  async function checkMaintenanceMode() {
+  const { data } = await supabaseClient
+    .from('settings')
+    .select('*')
+    .in('key', ['maintenance_mode', 'maintenance_message']);
+
+  let isMaintenance = false;
+  let message = "الموقع تحت الصيانة حالياً.";
+
+  if (data) {
+    data.forEach(item => {
+      if (item.key === 'maintenance_mode' && item.value === 'true') isMaintenance = true;
+      if (item.key === 'maintenance_message') message = item.value;
+    });
+  }
+
+  if (isMaintenance) {
+    document.body.innerHTML = `
+      <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#0b0f19; color:#fff; text-align:center; padding:20px; font-family:'Tajawal', sans-serif;">
+        <h1 style="color:#ef4444; margin-bottom:10px;">الموقع تحت الصيانة</h1>
+        <p style="color:#94a3b8; font-size:1.1rem;">${message}</p>
+      </div>
+    `;
+  }
+}
+checkMaintenanceMode();
+  
 <style>
   /* تفعيل لوحة الألوان الملكية الفخمة لـ RAIZEY STORE */
   :root {
