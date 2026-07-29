@@ -1,0 +1,2 @@
+- [Static HTML in Vite](static-html-vite.md) — put static multi-page HTML sites in public/ so Vite doesn't process/transform them; root index.html redirects.
+- [Bare JS bug in imported HTML](bare-js-in-html.md) — original HTML had bare JS (missing <script> tags) between <link> and <style> in <head>; fixed with regex wrap before serving.
