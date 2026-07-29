@@ -2,6 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; object-src 'none'; base-uri 'self';">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>اختر باقتك — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -176,7 +179,7 @@ function render() {
   content.innerHTML = `
     <div class="product-hero">
       <div class="product-hero-thumb">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (category && category.image_url ? `<img src="${category.image_url}" alt="${category.name}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
+        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy">` : (category && category.image_url ? `<img src="${category.image_url}" alt="${category.name}" loading="lazy">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
       </div>
       <div class="product-hero-info"><h1>${category ? category.name : p.name}</h1></div>
     </div>
@@ -248,7 +251,7 @@ function render() {
         <div class="related-grid">
           ${relatedProducts.map(r => `
             <a href="category.html?id=${r.category_id}" class="related-card">
-              <div class="related-thumb">${r.image_url ? `<img src="${r.image_url}" alt="${r.name}">` : ''}</div>
+              <div class="related-thumb">${r.image_url ? `<img src="${r.image_url}" alt="${r.name}" loading="lazy">` : ''}</div>
               <div class="related-name">${r.name}</div>
               <div class="related-price">${safeFormatSDG(r.price_sdg)} ج.س</div>
             </a>

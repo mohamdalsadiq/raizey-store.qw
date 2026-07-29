@@ -2,6 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; object-src 'none'; base-uri 'self';">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>إتمام الشراء — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -175,7 +178,7 @@
 
     <div class="section-label">هل لديك كود خصم؟</div>
     <div style="display:flex; gap:8px; margin-bottom:6px;">
-      <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
+      <input type="text" id="couponInput" autocomplete="off" placeholder="اكتب الكود هنا">
       <button id="applyCouponBtn" type="button">تطبيق</button>
     </div>
     <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
@@ -203,7 +206,7 @@
 
       <div class="field" style="margin-top:12px;">
         <label>رقم العملية (من رسالة التحويل) *</label>
-        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+        <input type="text" id="transactionRefInput" autocomplete="off" placeholder="مثلاً: FT2507191234">
       </div>
 
       <div class="file-upload" id="fileUploadBox">
@@ -286,12 +289,11 @@ async function init() {
       supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
       supabaseClient.from('payment_methods').select('*').eq('is_active', true)
     ]);
-    if (walletErr) console.warn('[RAIZEY] Wallet fetch error:', walletErr.message);
-    if (methodsErr) console.warn('[RAIZEY] Methods fetch error:', methodsErr.message);
+    if (walletErr)
+    if (methodsErr)
     walletBalance = wallet ? wallet.balance : 0;
     paymentMethods = methods || [];
   } catch (e) {
-    console.error('[RAIZEY] init data fetch error:', e);
   }
 
   renderCheckout();
@@ -344,7 +346,7 @@ function renderCheckout() {
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
+          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="" loading="lazy">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
@@ -606,7 +608,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   });
   if (uploadError) {
     const errMsg = uploadError.message || JSON.stringify(uploadError);
-    console.error('[RAIZEY] Storage upload error:', uploadError);
     devWarn('[RAIZEY] Storage upload error:', errMsg);
     errorBox.textContent = 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.';
     placeOrderBtn.disabled = false;

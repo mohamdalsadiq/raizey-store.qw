@@ -6,6 +6,41 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// =========================================================
+// أداة: سجلّ التطوير فقط — لا يُظهر شيئاً في الإنتاج
+// =========================================================
+const _IS_DEV = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.includes('.local') ||
+  window.location.hostname.includes('.replit.dev')
+);
+function _devLog(...args)  { if (_IS_DEV) console.log(...args); }
+function _devWarn(...args) { if (_IS_DEV) console.warn(...args); }
+
+// =========================================================
+// أداة: رسائل خطأ ودية للمستخدم (بدون كشف تفاصيل SQL)
+// =========================================================
+function getFriendlyError(errMsg) {
+  if (!errMsg) return 'حدث خطأ غير متوقع، يرجى المحاولة مجدداً.';
+  const msg = String(errMsg).toLowerCase();
+  if (msg.includes('تلاعب') || msg.includes('price') || msg.includes('المنتج غير موجود'))
+    return 'خطأ في حساب السعر، أعد تحميل الصفحة وحاول مجدداً.';
+  if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('مكرر'))
+    return 'الإيصال أو رقم العملية هذا مستخدم مسبقاً.';
+  if (msg.includes('insufficient_balance') || msg.includes('رصيد'))
+    return 'رصيدك غير كافٍ لإتمام العملية.';
+  if (msg.includes('product_not_found') || msg.includes('not found'))
+    return 'المنتج غير متاح حالياً، يرجى تحديث الصفحة.';
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch'))
+    return 'تحقق من اتصالك بالإنترنت وأعد المحاولة.';
+  if (msg.includes('timeout') || msg.includes('time out'))
+    return 'انتهت مهلة الاتصال، يرجى المحاولة مجدداً.';
+  if (msg.includes('jwt') || msg.includes('token') || msg.includes('auth'))
+    return 'انتهت جلستك، يرجى تسجيل الدخول من جديد.';
+  return 'حدث خطأ أثناء معالجة طلبك، يرجى المحاولة مجدداً.';
+}
+
 // دالة مساعدة: جلب سعر الصرف مع هامش الربح مطبق تلقائياً
 async function getExchangeRate() {
   try {
@@ -24,7 +59,7 @@ async function getExchangeRate() {
 
     return rate * (1 + margin / 100);
   } catch (e) {
-    console.error('[RAIZEY] getExchangeRate error:', e);
+    console.error('[RAIZEY] getExchangeRate error:', e.message || e);
     return 0;
   }
 }
@@ -42,18 +77,17 @@ async function hashFile(file) {
     return Array.from(new Uint8Array(hashBuffer))
       .map(b => b.toString(16).padStart(2, '0')).join('');
   } catch (e) {
-    console.error('[RAIZEY] hashFile error:', e);
+    console.error('[RAIZEY] hashFile error:', e.message || e);
     return null;
   }
 }
 
-// فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
+// فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول
 async function checkDuplicateReceipt(table, hashOrRef) {
   if (!hashOrRef) return false;
   const cleanVal = String(hashOrRef).trim();
 
   try {
-    // 1. فحص بعمود receipt_hash
     const { data: dataHash } = await supabaseClient
       .from(table)
       .select('id')
@@ -63,10 +97,9 @@ async function checkDuplicateReceipt(table, hashOrRef) {
 
     if (dataHash) return true;
   } catch (e) {
-    console.warn('[RAIZEY] checkDuplicateReceipt (hash) error:', e);
+    _devWarn('[RAIZEY] checkDuplicateReceipt (hash) warning');
   }
 
-  // 2. فحص بعمود transaction_reference احتياطياً إن وجد
   try {
     const { data: dataRef } = await supabaseClient
       .from(table)
@@ -123,7 +156,6 @@ async function validateReceiptImage(file) {
     return { valid: false, message: 'لم يتم اختيار أي ملف.' };
   }
 
-  // 1. فحص نوع MIME + الامتداد
   const allowedMime = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
   const fileExt     = (file.name.split('.').pop() || '').toLowerCase();
@@ -132,17 +164,14 @@ async function validateReceiptImage(file) {
     return { valid: false, message: 'نوع الملف غير مدعوم. استخدم JPG أو PNG أو WEBP فقط.' };
   }
 
-  // 2. فحص الحجم (أقل من 5 ميجابايت)
   if (file.size > 5 * 1024 * 1024) {
     return { valid: false, message: 'حجم الصورة كبير جداً. الحد الأقصى المسموح 5 ميجابايت.' };
   }
 
-  // 3. الحجم الأدنى (أكبر من 10 كيلوبايت — لمنع الصور الفارغة)
   if (file.size < 10 * 1024) {
     return { valid: false, message: 'الصورة صغيرة جداً. تأكد من رفع صورة واضحة للإيصال.' };
   }
 
-  // 4. تحقق من أن الملف صورة حقيقية قابلة للتحميل
   const isValidImage = await new Promise(resolve => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -167,19 +196,14 @@ async function validateReceiptImage(file) {
 //     لتظهر للأدمن كـ 🟢 أو 🟡 فقط.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
-  // الحالة الافتراضية: تمرير الطلب + طلب مراجعة يدوية
   const SOFT_PASS = { passed: true, ocr_status: 'needs_review', amount_verified: false };
 
-  // إذا لم تُحمَّل Tesseract — نمرّر الطلب ونضعه للمراجعة
   if (typeof Tesseract === 'undefined') {
-    console.log('[RAIZEY OCR] Tesseract not loaded — soft pass');
     return SOFT_PASS;
   }
 
   return new Promise(async (resolve) => {
-    // مهلة 20 ثانية — إذا انتهت نمرّر الطلب للمراجعة
     const timeout = setTimeout(() => {
-      console.log('[RAIZEY OCR] Timeout — soft pass');
       resolve(SOFT_PASS);
     }, 20000);
 
@@ -190,16 +214,12 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
       clearTimeout(timeout);
 
       const text = (result.data.text || '').trim();
-      console.log('[RAIZEY OCR] Extracted text length:', text.length);
 
-      // إذا كان النص قصير جداً → لا يمكن التحقق → مراجعة يدوية
       if (text.length < 10) {
-        console.log('[RAIZEY OCR] Text too short — needs_review');
         resolve(SOFT_PASS);
         return;
       }
 
-      // ── 1. فحص رقم العملية (للإبلاغ فقط) ──
       let refMatched = false;
       if (transactionRef && transactionRef.trim()) {
         const userDigits = transactionRef.replace(/\D/g, '');
@@ -208,17 +228,11 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
           const fullMatch    = ocrDigits.includes(userDigits);
           const partialMatch = userDigits.length > 4 && ocrDigits.includes(userDigits.slice(0, -1));
           refMatched = fullMatch || partialMatch;
-          console.log('[RAIZEY OCR] Ref check — userDigits:', userDigits, '| matched:', refMatched);
         }
-      } else {
-        // لا يوجد رقم عملية لمقارنته → نعتبره غير محقَّق
-        refMatched = false;
       }
 
-      // ── 2. فحص المبلغ (للإبلاغ فقط) ──
       let amountMatched = false;
       if (expectedAmountSDG && expectedAmountSDG > 0) {
-        // استخراج كل الأرقام الموجودة في النص (بما فيها الأرقام العربية)
         const normalised = text
           .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
           .replace(/,/g, '');
@@ -227,13 +241,9 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
           .filter(n => !isNaN(n) && n > 0);
 
         const rounded = Math.round(expectedAmountSDG);
-        // نقبل تطابقاً بهامش ±1%
         amountMatched = amounts.some(a => Math.abs(a - rounded) / rounded <= 0.01);
-        console.log('[RAIZEY OCR] Amount check — expected:', rounded, '| found amounts:', amounts, '| matched:', amountMatched);
       }
 
-      // ── 3. القرار النهائي ──
-      // passed دائماً true — فقط ocr_status و amount_verified تتغير
       if (refMatched && (!expectedAmountSDG || amountMatched)) {
         resolve({ passed: true, ocr_status: 'passed', amount_verified: amountMatched });
       } else {
@@ -242,7 +252,6 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
 
     } catch (e) {
       clearTimeout(timeout);
-      console.warn('[RAIZEY OCR] Error — soft pass:', e.message);
       resolve(SOFT_PASS);
     }
   });

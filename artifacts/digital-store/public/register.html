@@ -2,6 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; object-src 'none'; base-uri 'self';">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إنشاء حساب — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,35 +21,53 @@
     <h1 class="auth-title">إنشاء حساب جديد</h1>
     <p class="auth-sub">سجل عشان تقدر تشحن وتتابع طلباتك</p>
 
-    <form id="registerForm">
+    <form id="registerForm" novalidate>
       <div class="field">
-        <label>الاسم الكامل</label>
-        <input type="text" id="fullName" required placeholder="اسمك">
+        <label for="fullName">الاسم الكامل</label>
+        <input type="text" id="fullName" name="fullName" required
+               placeholder="اسمك"
+               autocomplete="name"
+               maxlength="80"
+               pattern="[^<>\"'%;()&+\-\=]{2,80}">
       </div>
 
       <div class="field">
-        <label>البريد الإلكتروني</label>
-        <input type="email" id="email" required placeholder="example@email.com">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" required
+               placeholder="example@email.com"
+               autocomplete="email"
+               inputmode="email">
       </div>
 
       <div class="field">
-        <label>رقم الواتساب</label>
-        <input type="tel" id="whatsapp" required placeholder="+2499XXXXXXXX">
+        <label for="whatsapp">رقم الواتساب</label>
+        <input type="tel" id="whatsapp" name="whatsapp" required
+               placeholder="+2499XXXXXXXX"
+               autocomplete="tel"
+               inputmode="tel"
+               maxlength="20"
+               pattern="^\+?[0-9\s\-]{7,20}$">
       </div>
 
       <div class="field">
-        <label>كلمة السر</label>
-        <input type="password" id="password" required placeholder="8 أحرف على الأقل" minlength="8" oninput="updatePwStrength()">
+        <label for="password">كلمة السر</label>
+        <input type="password" id="password" name="password" required
+               placeholder="8 أحرف على الأقل"
+               minlength="8"
+               autocomplete="new-password"
+               oninput="updatePwStrength()">
         <div class="pw-strength-bar"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
-        <div class="pw-strength-label" id="pwStrengthLabel"></div>
+        <div class="pw-strength-label" id="pwStrengthLabel" aria-live="polite"></div>
       </div>
 
       <div class="field">
-        <label>تأكيد كلمة السر</label>
-        <input type="password" id="confirmPassword" required placeholder="أعد كتابة كلمة السر">
+        <label for="confirmPassword">تأكيد كلمة السر</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" required
+               placeholder="أعد كتابة كلمة السر"
+               autocomplete="new-password">
       </div>
 
-      <div class="form-error" id="formError"></div>
+      <div class="form-error" id="formError" role="alert" aria-live="polite"></div>
 
       <button type="submit" class="auth-btn" id="submitBtn">إنشاء الحساب</button>
     </form>
@@ -55,30 +76,56 @@
 
     <div class="auth-divider">أو</div>
     <div class="social-login-row">
-      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()"><i class="fab fa-facebook-f"></i> فيسبوك</button>
-      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()"><i class="fab fa-google"></i> جوجل</button>
+      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()">
+        <i class="fab fa-facebook-f" aria-hidden="true"></i> فيسبوك
+      </button>
+      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()">
+        <i class="fab fa-google" aria-hidden="true"></i> جوجل
+      </button>
     </div>
-    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;"></p>
+    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;" role="status"></p>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
-const form = document.getElementById('registerForm');
-const errorBox = document.getElementById('formError');
+const form      = document.getElementById('registerForm');
+const errorBox  = document.getElementById('formError');
 const submitBtn = document.getElementById('submitBtn');
+
+// Sanitise plain text — strips HTML tags and trims
+function sanitiseText(str) {
+  return String(str).replace(/<[^>]*>/g, '').replace(/[<>"'%;()&]/g, '').trim();
+}
+
+function validatePhone(phone) {
+  return /^\+?[0-9\s\-]{7,20}$/.test(phone);
+}
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorBox.textContent = '';
 
-  const fullName = document.getElementById('fullName').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const whatsapp = document.getElementById('whatsapp').value.trim();
-  const password = document.getElementById('password').value;
+  const fullName        = sanitiseText(document.getElementById('fullName').value);
+  const email           = document.getElementById('email').value.trim().toLowerCase();
+  const whatsapp        = document.getElementById('whatsapp').value.trim();
+  const password        = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
 
+  // Client-side validation
+  if (!fullName || fullName.length < 2) {
+    errorBox.textContent = 'يرجى إدخال اسم صحيح (حرفين على الأقل).';
+    return;
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errorBox.textContent = 'يرجى إدخال بريد إلكتروني صحيح.';
+    return;
+  }
+  if (!validatePhone(whatsapp)) {
+    errorBox.textContent = 'يرجى إدخال رقم واتساب صحيح (أرقام فقط، مع رمز الدولة).';
+    return;
+  }
   if (password !== confirmPassword) {
     errorBox.textContent = 'كلمة السر غير متطابقة';
     return;
@@ -91,82 +138,91 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ الإنشاء...';
 
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName }
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } }
+    });
+
+    if (error) {
+      errorBox.textContent = translateError(error.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'إنشاء الحساب';
+      return;
     }
-  });
 
-  if (error) {
-    errorBox.textContent = translateError(error.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إنشاء الحساب';
-    return;
-  }
-
-  // حفظ رقم الواتساب في البروفايل بعد إنشاء الحساب
-  if (data.user) {
-    await supabaseClient
-      .from('profiles')
-      .update({ whatsapp_number: whatsapp })
-      .eq('id', data.user.id);
-
-    const refCode = new URLSearchParams(window.location.search).get('ref');
-    if (refCode) {
-      const { data: referrer } = await supabaseClient
+    if (data.user) {
+      // Update profile with WhatsApp (non-blocking)
+      supabaseClient
         .from('profiles')
-        .select('id')
-        .eq('referral_code', refCode.toUpperCase())
-        .single();
+        .update({ whatsapp_number: whatsapp })
+        .eq('id', data.user.id)
+        .then(() => {});
 
-      if (referrer && referrer.id !== data.user.id) {
-        await supabaseClient
+      // Handle referral code
+      const refCode = new URLSearchParams(window.location.search).get('ref');
+      if (refCode && /^[A-Z0-9]{4,20}$/.test(refCode.toUpperCase())) {
+        supabaseClient
           .from('profiles')
-          .update({ referred_by: referrer.id })
-          .eq('id', data.user.id);
+          .select('id')
+          .eq('referral_code', refCode.toUpperCase())
+          .single()
+          .then(({ data: referrer }) => {
+            if (referrer && referrer.id !== data.user.id) {
+              supabaseClient
+                .from('profiles')
+                .update({ referred_by: referrer.id })
+                .eq('id', data.user.id)
+                .then(() => {});
+            }
+          });
       }
     }
-  }
 
-  // تخزين الإيميل مؤقتاً عشان نستخدمه في صفحة التحقق
-  sessionStorage.setItem('pending_email', email);
-  window.location.href = 'verify.html';
+    sessionStorage.setItem('pending_email', email);
+    window.location.href = 'verify.html';
+
+  } catch (err) {
+    errorBox.textContent = 'حدث خطأ في الاتصال، يرجى المحاولة مجدداً.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إنشاء الحساب';
+  }
 });
 
 function translateError(msg) {
+  if (!msg) return 'حصل خطأ، حاول تاني';
   if (msg.includes('already registered')) return 'الإيميل ده مسجل بالفعل، جرب تسجل دخول';
-  if (msg.includes('Password')) return 'كلمة السر ضعيفة أو قصيرة جداً';
-  if (msg.includes('rate limit')) return 'محاولات كتيرة، حاول بعد شوية';
+  if (msg.includes('Password'))          return 'كلمة السر ضعيفة أو قصيرة جداً';
+  if (msg.includes('rate limit'))        return 'محاولات كتيرة، حاول بعد شوية';
   return 'حصل خطأ، حاول تاني';
 }
 
 function updatePwStrength() {
-  const pw = document.getElementById('password').value;
-  const fill = document.getElementById('pwStrengthFill');
+  const pw    = document.getElementById('password').value;
+  const fill  = document.getElementById('pwStrengthFill');
   const label = document.getElementById('pwStrengthLabel');
   if (!pw) { fill.style.width = '0%'; label.textContent = ''; return; }
 
   let score = 0;
-  if (pw.length >= 8) score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (pw.length >= 8)                           score++;
+  if (pw.length >= 12)                          score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw))    score++;
+  if (/[0-9]/.test(pw))                         score++;
+  if (/[^A-Za-z0-9]/.test(pw))                 score++;
 
   const levels = [
-    { pct: 20,  color: 'var(--danger)',      text: 'ضعيفة جداً' },
-    { pct: 40,  color: 'var(--danger)',      text: 'ضعيفة' },
-    { pct: 60,  color: 'var(--warning)',     text: 'متوسطة' },
-    { pct: 80,  color: '#65a30d',            text: 'قوية' },
-    { pct: 100, color: 'var(--success)',     text: 'قوية جداً' },
+    { pct: 20,  color: 'var(--danger)',  text: 'ضعيفة جداً' },
+    { pct: 40,  color: 'var(--danger)',  text: 'ضعيفة' },
+    { pct: 60,  color: 'var(--warning)', text: 'متوسطة' },
+    { pct: 80,  color: '#65a30d',        text: 'قوية' },
+    { pct: 100, color: 'var(--success)', text: 'قوية جداً' },
   ];
   const lvl = levels[Math.min(score, levels.length - 1)];
-  fill.style.width = lvl.pct + '%';
+  fill.style.width      = lvl.pct + '%';
   fill.style.background = lvl.color;
-  label.textContent = 'قوة كلمة السر: ' + lvl.text;
-  label.style.color = lvl.color;
+  label.textContent     = 'قوة كلمة السر: ' + lvl.text;
+  label.style.color     = lvl.color;
 }
 
 function showSocialSoon() {

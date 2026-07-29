@@ -1002,3 +1002,79 @@ button { font-family: inherit; cursor: pointer; border: none; }
     background-position: right -40px top 0;
   }
 }
+
+/* =========================================================
+   RAIZEY STORE — Security & UX Hardening Patch
+   ========================================================= */
+
+/* Focus-visible ring for keyboard accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Ensure minimum touch target size (48px) on mobile buttons */
+@media (max-width: 640px) {
+  button, .buy-btn, .auth-btn, .icon-btn, .chip {
+    min-height: 44px;
+  }
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.buy-btn, .auth-btn, .chip, .variant-btn, .method-pill {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Smooth fade-in for page content */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.auth-card {
+  animation: fadeInUp 0.3s ease both;
+}
+
+/* Disabled button state */
+button:disabled, .auth-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Image lazy-load blur-in */
+img[loading="lazy"] {
+  transition: opacity 0.3s ease;
+}
+
+/* Better scrollbar styling (Webkit) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Improved form field focus ring */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(255, 106, 26, 0.15) !important;
+  outline: none;
+}
+
+/* Active press animation for cards */
+.voucher-card:active,
+.payment-option:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Better mobile footer spacing */
+@media (max-width: 480px) {
+  .site-footer { padding-bottom: 110px; }
+}
