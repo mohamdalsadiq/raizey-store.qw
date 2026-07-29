@@ -106,11 +106,11 @@ async function init() {
     box.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
         <span>اسم الحساب: ${escapeHtml(method.account_name || '')}</span>
-        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_name || '')}">نسخ</button>
+        <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(method.account_name || '')}">نسخ</button>
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
         <span>رقم الحساب: ${escapeHtml(method.account_number || '')}</span>
-        <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_number || '')}">نسخ</button>
+        <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(method.account_number || '')}">نسخ</button>
       </div>
       ${method.instructions ? `<div style="margin-top:6px;">${escapeHtml(method.instructions)}</div>` : ''}
     `;

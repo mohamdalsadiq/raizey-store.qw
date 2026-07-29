@@ -181,8 +181,11 @@ function render() {
   }
 
   container.innerHTML = categories.map(c => {
+    const safeName = escapeHtml(c.name || 'بدون اسم');
+    const safeImageUrl = sanitizeUrl(c.image_url);
+    const safeCategoryId = safeDataAttr(c.id || '');
     const imgHtml = c.image_url 
-      ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
+      ? `<img src="${escapeAttribute(safeImageUrl)}" class="category-thumb" alt="${escapeAttribute(c.name || 'تصنيف')}" loading="lazy">`
       : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad"></i></div>`;
 
     return `
@@ -191,17 +194,17 @@ function render() {
           ${imgHtml}
           <div class="category-meta-text">
             <div class="manage-item-name">
-              ${c.name}
+              ${safeName}
               ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
             </div>
             <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
           </div>
         </div>
         <div class="manage-item-actions">
-          <button data-action="edit" data-id="${c.id}" class="admin-action-btn" title="تعديل">
+          <button data-action="edit" data-id="${safeCategoryId}" class="admin-action-btn" title="تعديل">
             <i class="fas fa-pen" style="color:var(--text-muted);"></i>
           </button>
-          <button data-action="delete" data-id="${c.id}" class="admin-action-btn" title="حذف">
+          <button data-action="delete" data-id="${safeCategoryId}" class="admin-action-btn" title="حذف">
             <i class="fas fa-trash-can" style="color:var(--danger);"></i>
           </button>
         </div>

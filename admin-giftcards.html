@@ -98,12 +98,12 @@ async function loadCards() {
     <div class="manage-item">
       <div class="manage-item-info">
         <div class="manage-item-name" style="font-family:var(--font-mono);">
-          ${c.code}
+          ${escapeHtml(c.code || '')}
           ${c.is_redeemed ? '<span class="inactive-badge" style="color:var(--danger); background:rgba(255,77,79,0.15);">مستخدم</span>' : '<span class="inactive-badge" style="color:var(--primary); background:rgba(43,237,51,0.15);">متاح</span>'}
         </div>
         <div class="manage-item-sub">
           ${formatSDG(c.amount)} ج.س
-          ${c.is_redeemed ? ' — بواسطة: ' + (c.profiles?.full_name || 'مستخدم') : ''}
+          ${c.is_redeemed ? ' — بواسطة: ' + escapeHtml(c.profiles?.full_name || 'مستخدم') : ''}
         </div>
       </div>
     </div>

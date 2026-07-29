@@ -62,13 +62,16 @@ async function loadLogs() {
     const date = new Date(l.created_at).toLocaleDateString('ar-EG', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-    const adminName = l.profiles?.full_name || 'أدمن';
-    const detailsText = l.details ? Object.entries(l.details).map(([k, v]) => `${k}: ${v}`).join(' — ') : '';
+    const adminName = escapeHtml(l.profiles?.full_name || 'أدمن');
+    const actionName = escapeHtml(l.action || 'نشاط');
+    const detailsText = l.details
+      ? Object.entries(l.details).map(([k, v]) => `${escapeHtml(k)}: ${escapeHtml(v)}`).join(' — ')
+      : '';
 
     return `
       <div class="mini-list-item" style="flex-direction:column; align-items:stretch;">
         <div style="display:flex; justify-content:space-between;">
-          <div class="name">${l.action}</div>
+          <div class="name">${actionName}</div>
           <div class="sub">${date}</div>
         </div>
         <div class="sub" style="margin-top:4px;">بواسطة: ${adminName}</div>

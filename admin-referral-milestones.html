@@ -118,14 +118,14 @@ function render() {
     <div class="manage-item">
       <div class="manage-item-info">
         <div class="manage-item-name">
-          ${m.label || 'مستوى'} — ${m.threshold} إحالة
+          ${escapeHtml(m.label || 'مستوى')} — ${m.threshold} إحالة
           ${!m.is_active ? '<span class="inactive-badge">معطّل</span>' : ''}
         </div>
         <div class="manage-item-sub">مكافأة: ${formatSDG(m.bonus)} ج.س</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${m.id}"><i class="fas fa-trash-can"></i></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${safeDataAttr(m.id || '')}"><i class="fas fa-pen"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${safeDataAttr(m.id || '')}"><i class="fas fa-trash-can"></i></button>
       </div>
     </div>
   `).join('');

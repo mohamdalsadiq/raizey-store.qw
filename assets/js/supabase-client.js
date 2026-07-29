@@ -1,8 +1,9 @@
 // =========================================================
 // RAIZEY STORE — Supabase Client
 // =========================================================
-const SUPABASE_URL = "https://rglbfizqolrenwfsndyv.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
+const runtimeSupabaseConfig = window.__SUPABASE_CONFIG__ || {};
+const SUPABASE_URL = runtimeSupabaseConfig.url || "https://rglbfizqolrenwfsndyv.supabase.co";
+const SUPABASE_ANON_KEY = runtimeSupabaseConfig.anonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -50,6 +51,8 @@ async function hashFile(file) {
 // فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
 async function checkDuplicateReceipt(table, hashOrRef) {
   if (!hashOrRef) return false;
+  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
+  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
   const cleanVal = String(hashOrRef).trim();
 
   try {
@@ -86,6 +89,8 @@ async function checkDuplicateReceipt(table, hashOrRef) {
 // فحص منفصل لتكرار رقم العملية (transaction_reference) فقط
 async function checkDuplicateTransactionRef(table, transactionRef) {
   if (!transactionRef) return false;
+  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
+  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
   const cleanRef = String(transactionRef).replace(/[\r\n\s\-_]+/g, '');
   if (!cleanRef) return false;
 
@@ -113,6 +118,30 @@ function escapeHtml(str) {
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#x27;');
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, '&#x60;');
+}
+
+function safeDataAttr(value) {
+  return escapeAttribute(value).replace(/\n/g, ' ').replace(/\r/g, ' ');
+}
+
+function sanitizeUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    return url.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+function safeText(value, fallback = '') {
+  if (value === null || value === undefined || value === '') return fallback;
+  return escapeHtml(value);
 }
 
 // =========================================================
@@ -161,10 +190,10 @@ async function validateReceiptImage(file) {
 // =========================================================
 // فحص محتوى الإيصال بـ OCR (Tesseract.js) — نظام الإبلاغ فقط
 //
-// ⚠️  لا يوقف هذا الكود أي طلب أبداً.
-//     النتيجة دائماً passed: true.
-//     ocr_status / amount_verified تُحفظ في قاعدة البيانات
-//     لتظهر للأدمن كـ 🟢 أو 🟡 فقط.
+// لا يوقف هذا الكود أي طلب أبداً.
+// النتيجة دائماً passed: true.
+// ocr_status / amount_verified تُحفظ في قاعدة البيانات
+// لتظهر للأدمن كمؤشر فقط.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
   // الحالة الافتراضية: تمرير الطلب + طلب مراجعة يدوية

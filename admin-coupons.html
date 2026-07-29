@@ -116,24 +116,28 @@ function render() {
     return;
   }
 
-  container.innerHTML = coupons.map(c => `
-    <div class="manage-item">
-      <div class="manage-item-info">
-        <div class="manage-item-name">
-          ${c.code}
-          ${!c.is_active ? '<span class="inactive-badge">معطّل</span>' : ''}
+  container.innerHTML = coupons.map(c => {
+    const safeCouponId = safeDataAttr(c.id || '');
+    const safeCode = escapeHtml(c.code || '');
+    return `
+      <div class="manage-item">
+        <div class="manage-item-info">
+          <div class="manage-item-name">
+            ${safeCode}
+            ${!c.is_active ? '<span class="inactive-badge">معطّل</span>' : ''}
+          </div>
+          <div class="manage-item-sub">
+            خصم ${c.discount_percent}% — استُخدم ${c.uses_count}${c.max_uses ? ' / ' + c.max_uses : ''}
+            ${c.expires_at ? ' — ينتهي ' + new Date(c.expires_at).toLocaleDateString('ar-EG') : ''}
+          </div>
         </div>
-        <div class="manage-item-sub">
-          خصم ${c.discount_percent}% — استُخدم ${c.uses_count}${c.max_uses ? ' / ' + c.max_uses : ''}
-          ${c.expires_at ? ' — ينتهي ' + new Date(c.expires_at).toLocaleDateString('ar-EG') : ''}
+        <div class="manage-item-actions">
+          <button class="icon-action-btn" data-action="edit" data-id="${safeCouponId}"><i class="fas fa-pen"></i></button>
+          <button class="icon-action-btn" data-action="delete" data-id="${safeCouponId}"><i class="fas fa-trash-can"></i></button>
         </div>
       </div>
-      <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${c.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${c.id}"><i class="fas fa-trash-can"></i></button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.querySelectorAll('[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => openForm(btn.dataset.id));

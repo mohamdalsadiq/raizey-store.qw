@@ -663,7 +663,7 @@ function attachEvents() {
       if (!validation.valid) {
         fileInput.value = ''; receiptFile = null; fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال`; document.getElementById('formError').textContent = validation.message; return;
       }
-      receiptFile = file; document.getElementById('formError').textContent = ''; fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);"></i> ${escapeHtml(receiptFile.name)}`; fileBox.classList.add('has-file');
+      receiptFile = file; document.getElementById('formError').textContent = ''; fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);" aria-hidden="true"></i> ${escapeHtml(receiptFile.name)}`; fileBox.classList.add('has-file');
     }
   });
 
@@ -722,12 +722,12 @@ async function applyCoupon() {
 // فحص الإجبارية للمستويين
 function validateSelection(errorBox) {
   if (hasOptions() && !selectedMainCat) {
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الباقة الأساسية أولاً!'; document.getElementById('mainCategoryGrid')?.classList.add('selection-shake');
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الباقة الأساسية أولاً.'; document.getElementById('mainCategoryGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('mainCategoryGrid')?.classList.remove('selection-shake'), 500); return false;
   }
   // إذا كانت الفئة تحتوي على خيارات فرعية، أو كانت فئة واحدة، نتحقق من اختيار خيار.
   if (hasOptions() && !selectedOption) {
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الخيار المطلوب أولاً!';
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الخيار المطلوب أولاً.';
     document.getElementById('subOptionsGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('subOptionsGrid')?.classList.remove('selection-shake'), 500); return false;
   }
