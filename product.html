@@ -425,7 +425,7 @@ function render() {
   let htmlContent = `
     <div class="product-hero">
       <div class="product-hero-thumb">
-        ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : 'لا توجد صورة'}
+        ${product.image_url ? `<img src="${escapeAttribute(sanitizeUrl(product.image_url))}" alt="${escapeAttribute(product.name)}">` : 'لا توجد صورة'}
       </div>
       <div class="product-hero-info">
         <h1>${product.name}</h1>

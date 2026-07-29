@@ -290,15 +290,7 @@ function safeFormatSDG(val) {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+
 
 async function init() {
   try {
@@ -360,7 +352,7 @@ function renderCart() {
     return `
       <div class="cart-item-row">
         <div class="cart-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<i class="fas fa-box-open" style="font-size:20px; color:var(--text-muted);"></i>'}
+          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<i class="fas fa-box-open" style="font-size:20px; color:var(--text-muted);"></i>'}
         </div>
         <div class="cart-item-details">
           <div class="cart-item-name">${escapeHtml(item.name)}</div>

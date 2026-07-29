@@ -176,7 +176,7 @@ function render() {
   content.innerHTML = `
     <div class="product-hero">
       <div class="product-hero-thumb">
-        ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (category && category.image_url ? `<img src="${category.image_url}" alt="${category.name}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
+        ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}">` : (category && category.image_url ? `<img src="${escapeAttribute(sanitizeUrl(category.image_url))}" alt="${escapeAttribute(category.name)}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
       </div>
       <div class="product-hero-info"><h1>${category ? category.name : p.name}</h1></div>
     </div>
@@ -247,9 +247,9 @@ function render() {
         <div class="section-label">منتجات ذات صلة</div>
         <div class="related-grid">
           ${relatedProducts.map(r => `
-            <a href="category.html?id=${r.category_id}" class="related-card">
-              <div class="related-thumb">${r.image_url ? `<img src="${r.image_url}" alt="${r.name}">` : ''}</div>
-              <div class="related-name">${r.name}</div>
+            <a href="category.html?id=${escapeAttribute(r.category_id)}" class="related-card">
+                <div class="related-thumb">${r.image_url ? `<img src="${escapeAttribute(sanitizeUrl(r.image_url))}" alt="${escapeAttribute(r.name)}">` : ''}</div>
+                <div class="related-name">${escapeHtml(r.name)}</div>
               <div class="related-price">${safeFormatSDG(r.price_sdg)} ج.س</div>
             </a>
           `).join('')}
@@ -307,7 +307,7 @@ function attachEvents() {
           optBtn.className = 'sub-option-btn';
           optBtn.dataset.optId = opt.id;
           optBtn.innerHTML = `
-            <div class="so-name">${opt.label}</div>
+            <div class="so-name">${escapeHtml(opt.label)}</div>
             <div class="so-price">${safeFormatSDG(opt.price_usd * exchangeRate)} ج.س</div>
           `;
           

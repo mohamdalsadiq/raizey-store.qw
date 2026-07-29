@@ -323,7 +323,7 @@ async function search(query) {
       
       categoriesGrid.innerHTML = categoryResults.map(cat => {
         const imgHtml = cat.image_url 
-          ? `<img src="${escapeHtml(cat.image_url)}" alt="${escapeHtml(cat.name)}" loading="lazy">`
+          ? `<img src="${escapeAttribute(sanitizeUrl(cat.image_url))}" alt="${escapeAttribute(cat.name)}" loading="lazy">`
           : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
         const descText = escapeHtml(cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً');
 
@@ -350,7 +350,7 @@ async function search(query) {
         <a href="category.html?id=${encodeURIComponent(p.category_id)}" class="voucher-card">
           <div class="voucher-top">
             <div class="voucher-thumb">
-              ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
+              ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
             </div>
             <div class="voucher-name">${escapeHtml(p.name)}</div>
           </div>

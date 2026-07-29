@@ -241,15 +241,7 @@ function safeFormatSDG(val) {
   return Math.round(val).toLocaleString('ar-EG');
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+
 
 async function init() {
   try {
@@ -344,7 +336,7 @@ function renderCheckout() {
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
+          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>

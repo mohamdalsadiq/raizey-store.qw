@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npx --yes serve . -p 3000",
     "test": "node tests/security-hardening.test.js",
-    "build": "mkdir -p dist && cp -r ./* dist/ 2>/dev/null || true",
+    "build": "mkdir -p dist && cp -r assets docs tests *.html *.js *.json *.sql dist/",
     "start": "npx --yes serve . -p 3000"
   },
   "dependencies": {
