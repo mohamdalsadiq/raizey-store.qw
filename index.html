@@ -476,20 +476,23 @@ function renderCategories(categories) {
 
   container.innerHTML = categories.map(cat => {
     // تجهيز الصورة أو الأيقونة الافتراضية
+    const safeImageUrl = sanitizeUrl(cat.image_url);
+    const safeName = escapeHtml(cat.name || 'تصنيف');
+    const safeDescription = escapeAttribute(cat.description || 'تصفح الباقات والشدات المتوفرة حصرياً');
     const imgHtml = cat.image_url 
-      ? `<img src="${cat.image_url}" alt="${cat.name}" loading="lazy">`
+      ? `<img src="${escapeAttribute(safeImageUrl)}" alt="${escapeAttribute(cat.name || 'تصنيف')}" loading="lazy">`
       : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
 
     // عرض حقل الوصف المحدث وإخفاء الفراغ إذا لم يكتب الأدمن وصفاً
-    const descText = cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً';
+    const descText = safeDescription;
 
     return `
-      <a href="category.html?id=${cat.id}" class="game-card">
+      <a href="category.html?id=${encodeURIComponent(cat.id || '')}" class="game-card">
         <div class="game-thumb">
           ${imgHtml}
         </div>
         <div class="game-info">
-          <div class="game-name">${cat.name}</div>
+          <div class="game-name">${safeName}</div>
           <div class="game-desc" title="${descText}">${descText}</div>
           <span class="card-trust"><i class="fas fa-bolt"></i> تسليم فوري ومضمون 100%</span>
           <div class="game-btn">

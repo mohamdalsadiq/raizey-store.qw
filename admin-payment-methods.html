@@ -140,14 +140,14 @@ function render() {
     <div class="manage-item">
       <div class="manage-item-info">
         <div class="manage-item-name">
-          ${m.name}
+          ${escapeHtml(m.name || '')}
           ${!m.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
         </div>
-        <div class="manage-item-sub">${m.account_name || ''} — ${m.account_number || ''}</div>
+        <div class="manage-item-sub">${escapeHtml(m.account_name || '')} — ${escapeHtml(m.account_number || '')}</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${m.id}"><i class="fas fa-trash-can"></i></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${safeDataAttr(m.id || '')}"><i class="fas fa-pen"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${safeDataAttr(m.id || '')}"><i class="fas fa-trash-can"></i></button>
       </div>
     </div>
   `).join('');

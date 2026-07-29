@@ -225,7 +225,7 @@ function renderOrderCard(o) {
     ? Object.entries(o.field_values).map(([k, v]) => `
         <div class="copyable-row">
           <span>${escapeHtml(v)}</span>
-          <button type="button" class="mini-copy-btn" data-copy="${escapeHtml(v)}">نسخ</button>
+          <button type="button" class="mini-copy-btn" data-copy="${safeDataAttr(v)}">نسخ</button>
         </div>
       `).join('')
     : '';
@@ -239,14 +239,17 @@ function renderOrderCard(o) {
   const refHtml = o.transaction_reference ? `
     <div class="copyable-row">
       <span>رقم العملية: ${escapeHtml(o.transaction_reference)}</span>
-      <button type="button" class="mini-copy-btn" data-copy="${escapeHtml(o.transaction_reference)}">نسخ</button>
+      <button type="button" class="mini-copy-btn" data-copy="${safeTransactionReference}">نسخ</button>
     </div>
   ` : '';
 
   const customerName = escapeHtml(o.profiles?.full_name || 'بدون اسم');
   const customerWhatsapp = escapeHtml(o.profiles?.whatsapp_number || '—');
-  const safeOrderId = escapeHtml(o.id);
-  const safeStatus = escapeHtml(o.status);
+  const safeOrderId = safeDataAttr(o.id || '');
+  const safeStatus = safeDataAttr(o.status || '');
+  const receiptUrl = sanitizeUrl(o.receipt_url);
+  const safeTransactionReference = safeDataAttr(o.transaction_reference || '');
+  const safeWhatsappCopy = safeDataAttr(o.profiles?.whatsapp_number || '');
 
   let actions = '';
   if (o.status === 'pending_review') {
@@ -274,7 +277,7 @@ function renderOrderCard(o) {
 
       <div class="customer-info">
         <span>${customerName} — ${customerWhatsapp}</span>
-        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsapp}">نسخ الرقم</button>
+        <button type="button" class="mini-copy-btn" data-copy="${safeWhatsappCopy}">نسخ الرقم</button>
       </div>
 
       <div class="order-details">
@@ -283,7 +286,7 @@ function renderOrderCard(o) {
         ${optionHtml}
         ${fieldsHtml}
         ${refHtml}
-        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
 
       ${o.status === 'rejected' && o.rejection_reason ? `

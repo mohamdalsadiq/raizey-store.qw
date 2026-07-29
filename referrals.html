@@ -132,7 +132,7 @@ async function renderMilestones(successCount) {
       <div class="order-card">
         <div class="order-top">
           <div>
-            <div class="order-product">${m.label || 'مستوى'} (${m.threshold} إحالة)</div>
+            <div class="order-product">${escapeHtml(m.label || 'مستوى')} (${m.threshold} إحالة)</div>
             <div class="order-date">مكافأة: ${formatSDG(m.bonus)} ج.س</div>
           </div>
           <span class="status-badge ${achieved ? 'status-completed' : 'status-pending_review'}">
@@ -156,7 +156,7 @@ function renderReferrals(list) {
     return `
       <div class="mini-list-item">
         <div>
-          <div class="name">${r.full_name || 'مستخدم جديد'}</div>
+          <div class="name">${escapeHtml(r.full_name || 'مستخدم جديد')}</div>
           <div class="sub">سجل في ${date}</div>
         </div>
         <span class="status-badge ${r.referral_rewarded ? 'status-completed' : 'status-pending_review'}">
@@ -186,8 +186,8 @@ async function loadEarnings() {
     return `
       <div class="mini-list-item">
         <div>
-          <div class="name">${n.title}</div>
-          <div class="sub">${n.message}</div>
+          <div class="name">${escapeHtml(n.title || '')}</div>
+          <div class="sub">${escapeHtml(n.message || '')}</div>
         </div>
         <div class="sub">${date}</div>
       </div>

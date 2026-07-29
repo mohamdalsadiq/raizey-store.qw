@@ -369,7 +369,7 @@ function renderCheckout() {
   }
 
   const methodPickerGrid = document.getElementById('methodPickerGrid');
-  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeHtml(m.id)}">${escapeHtml(m.name)}</div>`).join('');
+  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeAttribute(m.id || '')}">${escapeHtml(m.name)}</div>`).join('');
   methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       methodPickerGrid.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
@@ -381,11 +381,11 @@ function renderCheckout() {
         <div class="selected-method-box">
           <div class="bank-account-row">
             <span>اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_name || '')}">نسخ</button>
+            <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_name || '')}">نسخ</button>
           </div>
           <div class="bank-account-row" style="margin-bottom:0;">
             <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_number || '')}">نسخ</button>
+            <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_number || '')}">نسخ</button>
           </div>
           ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${escapeHtml(m.instructions)}</div>` : ''}
         </div>

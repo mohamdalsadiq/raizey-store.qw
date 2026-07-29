@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npx --yes serve . -p 3000",
+    "test": "node tests/security-hardening.test.js",
     "build": "mkdir -p dist && cp -r ./* dist/ 2>/dev/null || true",
     "start": "npx --yes serve . -p 3000"
   },
