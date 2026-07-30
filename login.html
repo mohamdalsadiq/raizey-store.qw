@@ -90,7 +90,15 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  window.location.href = 'index.html';
+  // إذا كان المستخدم جاي من صفحة تسوّق (مثلاً category.html) ووُقف طلبه
+  // بسبب تسجيل الدخول، نرجّعه لنفس الصفحة بدل ما نرسله دايماً للرئيسية
+  const savedRedirect = sessionStorage.getItem('redirect_after_login');
+  sessionStorage.removeItem('redirect_after_login');
+  if (savedRedirect && savedRedirect.startsWith(window.location.origin)) {
+    window.location.href = savedRedirect;
+  } else {
+    window.location.href = 'index.html';
+  }
 });
 
 document.getElementById('forgotLink').addEventListener('click', () => {

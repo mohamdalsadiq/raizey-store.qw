@@ -199,13 +199,20 @@ function renderTopupCard(t) {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const customerName = t.profiles?.full_name || 'بدون اسم';
-  const customerWhatsapp = t.profiles?.whatsapp_number || '—';
+  const customerName = escapeHtml(t.profiles?.full_name || 'بدون اسم');
+  const customerWhatsapp = escapeHtml(t.profiles?.whatsapp_number || '—');
+  const customerWhatsappCopy = safeDataAttr(t.profiles?.whatsapp_number || '');
+  const transactionReference = escapeHtml(t.transaction_reference || '');
+  const transactionReferenceCopy = safeDataAttr(t.transaction_reference || '');
+  const receiptUrl = sanitizeUrl(t.receipt_url);
+  const safeTopupId = safeDataAttr(t.id || '');
+  const rejectionReason = escapeHtml(t.rejection_reason || '');
+  const statusLabel = escapeHtml(statusLabels[t.status] || t.status || '');
 
   const actions = t.status === 'pending' ? `
     <div class="admin-order-actions">
-      <button class="admin-btn btn-confirm" data-action="confirm" data-topup-id="${t.id}">تأكيد</button>
-      <button class="admin-btn btn-reject" data-action="reject" data-topup-id="${t.id}">رفض</button>
+      <button class="admin-btn btn-confirm" data-action="confirm" data-topup-id="${safeTopupId}">تأكيد</button>
+      <button class="admin-btn btn-reject" data-action="reject" data-topup-id="${safeTopupId}">رفض</button>
     </div>` : '';
 
   return `
@@ -215,22 +222,22 @@ function renderTopupCard(t) {
           <div class="order-product">${formatSDG(t.amount)} ج.س</div>
           <div class="order-date">${date}</div>
         </div>
-        <span class="status-badge status-${t.status}">${statusLabels[t.status] || t.status}</span>
+        <span class="status-badge status-${safeDataAttr(t.status || '')}">${statusLabel}</span>
       </div>
       <div class="customer-info">
         <span>${customerName} — ${customerWhatsapp}</span>
-        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsapp}">نسخ الرقم</button>
+        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsappCopy}">نسخ الرقم</button>
       </div>
       <div class="order-details">
         ${t.transaction_reference ? `
           <div class="copyable-row">
-            <span>رقم العملية: ${t.transaction_reference}</span>
-            <button type="button" class="mini-copy-btn" data-copy="${t.transaction_reference}">نسخ</button>
+            <span>رقم العملية: ${transactionReference}</span>
+            <button type="button" class="mini-copy-btn" data-copy="${transactionReferenceCopy}">نسخ</button>
           </div>
         ` : ''}
-        ${t.receipt_url ? `<div><a href="${t.receipt_url}" target="_blank" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
-      ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${t.rejection_reason}</div>` : ''}
+      ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${rejectionReason}</div>` : ''}
       ${actions}
     </div>
   `;
@@ -241,18 +248,11 @@ async function handleAction(action, topupId) {
     const topup = allTopups.find(t => t.id === topupId);
     if (!topup) return;
 
-    const { data: wallet } = await supabaseClient
-      .from('wallets').select('balance').eq('user_id', topup.user_id).single();
-
-    const newBalance = (wallet ? Number(wallet.balance) : 0) + Number(topup.amount);
-
-    await supabaseClient.from('wallets')
-      .update({ balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_id', topup.user_id);
-
-    await supabaseClient.from('wallet_topups')
-      .update({ status: 'confirmed', reviewed_at: new Date().toISOString() })
-      .eq('id', topupId);
+    // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، وتضيف
+    // الرصيد بعملية واحدة — بدل قراءة الرصيد ثم كتابته من المتصفح (كان
+    // معرّضاً لفقدان أو تكرار الشحن لو صار نقر مزدوج أو تزامن)
+    const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId });
+    if (error) { await loadTopups(); return; }
 
     await notifyCustomer(topup.user_id, 'تم شحن محفظتك', `تم إضافة ${formatSDG(topup.amount)} ج.س لرصيدك.`);
     await logAudit('تأكيد شحن محفظة', { topup_id: topupId, amount: topup.amount, user_id: topup.user_id });

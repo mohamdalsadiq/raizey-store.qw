@@ -111,10 +111,24 @@ document.getElementById('modalCancelBtn').addEventListener('click', closeRejectM
 
 modalConfirmBtn.addEventListener('click', async () => {
   if (!selectedReason || !rejectingOrderId) return;
+  modalConfirmBtn.disabled = true;
   const order = allOrders.find(o => o.id === rejectingOrderId);
-  await supabaseClient.from('orders')
+
+  // نشترط أن يكون الطلب لا يزال بحالة pending_review — هذا يمنع تكرار
+  // عملية الرفض والاسترجاع مرتين لو حصل نقر مزدوج على الزر
+  const { data: updatedRows } = await supabaseClient.from('orders')
     .update({ status: 'rejected', rejection_reason: selectedReason })
-    .eq('id', rejectingOrderId);
+    .eq('id', rejectingOrderId)
+    .eq('status', 'pending_review')
+    .select('id');
+
+  if (!updatedRows || updatedRows.length === 0) {
+    // الطلب كان مرفوضاً بالفعل (أو تغيّرت حالته) — لا نكرر الاسترجاع
+    closeRejectModal();
+    await loadOrders();
+    return;
+  }
+
   if (order) {
     let refundNote = '';
     if (order.payment_type === 'wallet') {
@@ -306,7 +320,12 @@ async function handleAction(action, orderId) {
   if (!order) return;
 
   if (action === 'confirm') {
-    await supabaseClient.from('orders').update({ status: 'in_progress' }).eq('id', orderId);
+    const { data: updatedRows } = await supabaseClient.from('orders')
+      .update({ status: 'in_progress' })
+      .eq('id', orderId)
+      .eq('status', 'pending_review')
+      .select('id');
+    if (!updatedRows || updatedRows.length === 0) { await loadOrders(); return; }
     await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
     await logAudit('تأكيد طلب', { order_id: orderId, product: order.product_name_snapshot });
     await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
