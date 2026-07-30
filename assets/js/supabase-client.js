@@ -1,8 +1,73 @@
 // =========================================================
 // RAIZEY STORE — Supabase Client
 // =========================================================
-const SUPABASE_URL = "https://rglbfizqolrenwfsndyv.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
+
+// =========================================================
+// Rate Limiter — منع الإرسال المتكرر
+// =========================================================
+const rateLimiter = (() => {
+  const store = {};
+  return {
+    check(key, maxAttempts, windowMs) {
+      const now = Date.now();
+      if (!store[key]) store[key] = [];
+      store[key] = store[key].filter(t => now - t < windowMs);
+      if (store[key].length >= maxAttempts) return false;
+      store[key].push(now);
+      return true;
+    },
+    reset(key) {
+      delete store[key];
+    }
+  };
+})();
+
+// =========================================================
+// Dev Logging Helpers — آمن في الإنتاج
+// =========================================================
+const _isDev = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.includes('.repl.co') ||
+  window.location.hostname.includes('.replit.dev') ||
+  window.location.hostname.includes('vercel.app')
+);
+
+function devLog(...args) {
+  if (_isDev) console.log(...args);
+}
+
+function devWarn(...args) {
+  if (_isDev) console.warn(...args);
+}
+
+// =========================================================
+// رسائل خطأ مناسبة للمستخدم
+// =========================================================
+function getFriendlyError(errMsg) {
+  if (!errMsg) return 'حصل خطأ غير متوقع. يرجى المحاولة مجدداً.';
+  const msg = String(errMsg).toLowerCase();
+  if (msg.includes('insufficient_balance'))
+    return 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
+  if (msg.includes('product_not_found'))
+    return 'أحد المنتجات في سلتك لم يعد متاحاً.';
+  if (msg.includes('price_calculation'))
+    return 'خطأ في حساب السعر، يرجى تحديث الصفحة والمحاولة مجدداً.';
+  if (msg.includes('coupon') || msg.includes('discount'))
+    return 'انتهت صلاحية كود الخصم أو نفدت كميته.';
+  if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('violates'))
+    return 'تم استخدام هذا الإيصال أو رقم العملية من قبل في طلب آخر.';
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch'))
+    return 'فشل الاتصال بالخادم. تحقق من الإنترنت وأعد المحاولة.';
+  if (msg.includes('permission') || msg.includes('unauthorized') || msg.includes('403'))
+    return 'غير مصرح بهذا الإجراء. يرجى تسجيل الدخول مجدداً.';
+  if (msg.includes('timeout') || msg.includes('timed out'))
+    return 'انتهت مهلة الاتصال. يرجى المحاولة مجدداً.';
+  return 'حصل خطأ أثناء إتمام الطلب. يرجى المحاولة مجدداً أو التواصل مع الدعم.';
+}
+const runtimeSupabaseConfig = window.__SUPABASE_CONFIG__ || {};
+const SUPABASE_URL = runtimeSupabaseConfig.url || "https://rglbfizqolrenwfsndyv.supabase.co";
+const SUPABASE_ANON_KEY = runtimeSupabaseConfig.anonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -50,6 +115,8 @@ async function hashFile(file) {
 // فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
 async function checkDuplicateReceipt(table, hashOrRef) {
   if (!hashOrRef) return false;
+  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
+  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
   const cleanVal = String(hashOrRef).trim();
 
   try {
@@ -86,6 +153,8 @@ async function checkDuplicateReceipt(table, hashOrRef) {
 // فحص منفصل لتكرار رقم العملية (transaction_reference) فقط
 async function checkDuplicateTransactionRef(table, transactionRef) {
   if (!transactionRef) return false;
+  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
+  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
   const cleanRef = String(transactionRef).replace(/[\r\n\s\-_]+/g, '');
   if (!cleanRef) return false;
 
@@ -113,6 +182,30 @@ function escapeHtml(str) {
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#x27;');
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, '&#x60;');
+}
+
+function safeDataAttr(value) {
+  return escapeAttribute(value).replace(/\n/g, ' ').replace(/\r/g, ' ');
+}
+
+function sanitizeUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    return url.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+function safeText(value, fallback = '') {
+  if (value === null || value === undefined || value === '') return fallback;
+  return escapeHtml(value);
 }
 
 // =========================================================
@@ -161,10 +254,10 @@ async function validateReceiptImage(file) {
 // =========================================================
 // فحص محتوى الإيصال بـ OCR (Tesseract.js) — نظام الإبلاغ فقط
 //
-// ⚠️  لا يوقف هذا الكود أي طلب أبداً.
-//     النتيجة دائماً passed: true.
-//     ocr_status / amount_verified تُحفظ في قاعدة البيانات
-//     لتظهر للأدمن كـ 🟢 أو 🟡 فقط.
+// لا يوقف هذا الكود أي طلب أبداً.
+// النتيجة دائماً passed: true.
+// ocr_status / amount_verified تُحفظ في قاعدة البيانات
+// لتظهر للأدمن كمؤشر فقط.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
   // الحالة الافتراضية: تمرير الطلب + طلب مراجعة يدوية
@@ -177,16 +270,22 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
   }
 
   return new Promise(async (resolve) => {
-    // مهلة 20 ثانية — إذا انتهت نمرّر الطلب للمراجعة
+    // مهلة 12 ثانية — إذا انتهت نمرّر الطلب للمراجعة اليدوية
+    // (خُفِّضت من 20 إلى 12 ثانية حتى لا ينتظر المستخدم طويلاً على الإنترنت البطيء)
     const timeout = setTimeout(() => {
       console.log('[RAIZEY OCR] Timeout — soft pass');
       resolve(SOFT_PASS);
-    }, 20000);
+    }, 12000);
 
     try {
       if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
 
-      const result = await Tesseract.recognize(fileOrUrl, 'ara+eng', { logger: () => {} });
+      // نستخدم 'eng' فقط بدل 'ara+eng' — الفحص هنا يعتمد فقط على استخراج
+      // الأرقام (رقم العملية والمبلغ) وليس قراءة نص عربي، وبيانات اللغة
+      // العربية لـ Tesseract حجمها كبير جداً (+10 ميجابايت) وتُحمَّل من
+      // الإنترنت في كل مرة — ما تُستخدم فعلياً، وهي السبب الرئيسي في تعليق
+      // الفحص لفترة طويلة عند ضعف الاتصال بالإنترنت.
+      const result = await Tesseract.recognize(fileOrUrl, 'eng', { logger: () => {} });
       clearTimeout(timeout);
 
       const text = (result.data.text || '').trim();
