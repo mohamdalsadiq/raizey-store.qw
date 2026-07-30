@@ -241,15 +241,7 @@ function safeFormatSDG(val) {
   return Math.round(val).toLocaleString('ar-EG');
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+
 
 async function init() {
   try {
@@ -331,7 +323,9 @@ function renderCheckout() {
     if (item.field_values && Object.keys(item.field_values).length > 0) {
       fieldsHtml = `<div class="checkout-item-fields">`;
       for (const [key, value] of Object.entries(item.field_values)) {
-        fieldsHtml += `<div>• <strong>${escapeHtml(key)}:</strong> ${escapeHtml(value)}</div>`;
+        // عرض الاسم الحقيقي للحقل بدلاً من المعرّف الخام
+        const label = (item.field_labels && item.field_labels[key]) ? item.field_labels[key] : key;
+        fieldsHtml += `<div>• <strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`;
       }
       fieldsHtml += `</div>`;
     }
@@ -344,7 +338,7 @@ function renderCheckout() {
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
+          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
@@ -369,7 +363,7 @@ function renderCheckout() {
   }
 
   const methodPickerGrid = document.getElementById('methodPickerGrid');
-  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeHtml(m.id)}">${escapeHtml(m.name)}</div>`).join('');
+  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeAttribute(m.id || '')}">${escapeHtml(m.name)}</div>`).join('');
   methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       methodPickerGrid.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
@@ -381,11 +375,11 @@ function renderCheckout() {
         <div class="selected-method-box">
           <div class="bank-account-row">
             <span>اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_name || '')}">نسخ</button>
+            <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_name || '')}">نسخ</button>
           </div>
           <div class="bank-account-row" style="margin-bottom:0;">
             <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeHtml(m.account_number || '')}">نسخ</button>
+            <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_number || '')}">نسخ</button>
           </div>
           ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${escapeHtml(m.instructions)}</div>` : ''}
         </div>
@@ -512,6 +506,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
           const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
             p_product_id: item.product_id,
             p_field_values: item.field_values,
+            p_field_labels: item.field_labels || {},
             p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null,
             p_selected_option_id: item.selected_option ? item.selected_option.id : null
           });
@@ -647,6 +642,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         product_name_snapshot: item.name,
         price_sdg_snapshot:    Math.round(itemPrice),
         field_values:          item.field_values,
+        field_labels:          item.field_labels || {},
         selected_option:       item.selected_option || null,
         payment_type:          'bank',
         payment_method_id:     selectedMethodId,

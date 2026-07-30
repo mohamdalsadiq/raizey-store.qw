@@ -425,7 +425,7 @@ function render() {
   let htmlContent = `
     <div class="product-hero">
       <div class="product-hero-thumb">
-        ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : 'لا توجد صورة'}
+        ${product.image_url ? `<img src="${escapeAttribute(sanitizeUrl(product.image_url))}" alt="${escapeAttribute(product.name)}">` : 'لا توجد صورة'}
       </div>
       <div class="product-hero-info">
         <h1>${product.name}</h1>
@@ -663,7 +663,7 @@ function attachEvents() {
       if (!validation.valid) {
         fileInput.value = ''; receiptFile = null; fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال`; document.getElementById('formError').textContent = validation.message; return;
       }
-      receiptFile = file; document.getElementById('formError').textContent = ''; fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);"></i> ${escapeHtml(receiptFile.name)}`; fileBox.classList.add('has-file');
+      receiptFile = file; document.getElementById('formError').textContent = ''; fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);" aria-hidden="true"></i> ${escapeHtml(receiptFile.name)}`; fileBox.classList.add('has-file');
     }
   });
 
@@ -678,6 +678,10 @@ function attachEvents() {
     const fieldValues = collectFieldValues();
     if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'املأ البيانات المطلوبة!'; return; }
 
+    // بناء خريطة field_labels لعرض الأسماء الحقيقية بدلاً من المعرفات الخام
+    const fieldLabels = {};
+    (product.required_fields || []).forEach(f => { if (f.key) fieldLabels[f.key] = f.label; });
+
     let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
     const cartItem = {
       cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -686,7 +690,8 @@ function attachEvents() {
       price_sdg: getSelectedPriceSdg(),
       image_url: product.image_url,
       selected_option: { id: selectedOption.id, label: selectedMainCat + ' - ' + selectedOption.display_label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() },
-      field_values: fieldValues
+      field_values: fieldValues,
+      field_labels: fieldLabels
     };
     cart.push(cartItem); localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
     updateCartBadgeGlobal();
@@ -722,12 +727,12 @@ async function applyCoupon() {
 // فحص الإجبارية للمستويين
 function validateSelection(errorBox) {
   if (hasOptions() && !selectedMainCat) {
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الباقة الأساسية أولاً!'; document.getElementById('mainCategoryGrid')?.classList.add('selection-shake');
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الباقة الأساسية أولاً.'; document.getElementById('mainCategoryGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('mainCategoryGrid')?.classList.remove('selection-shake'), 500); return false;
   }
   // إذا كانت الفئة تحتوي على خيارات فرعية، أو كانت فئة واحدة، نتحقق من اختيار خيار.
   if (hasOptions() && !selectedOption) {
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = '⚠️ اختر الخيار المطلوب أولاً!';
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الخيار المطلوب أولاً.';
     document.getElementById('subOptionsGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('subOptionsGrid')?.classList.remove('selection-shake'), 500); return false;
   }
@@ -754,8 +759,11 @@ async function submitOrder(errorBox, submitBtn) {
 
   // دفع المحفظة
   if (selectedPayment === 'wallet') {
+    const fieldLabels = {};
+    (product.required_fields || []).forEach(f => { if (f.key) fieldLabels[f.key] = f.label; });
     const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
       p_product_id: productId, p_field_values: fieldValues,
+      p_field_labels: fieldLabels,
       p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null,
       p_selected_option_id: selectedOption.id
     });
@@ -805,6 +813,7 @@ async function submitOrder(errorBox, submitBtn) {
   const orderPayload = {
     user_id: currentUser.id, product_id: productId, product_name_snapshot: productNameSnapshot,
     price_sdg_snapshot: currentPrice(), field_values: fieldValues,
+    field_labels: (() => { const fl = {}; (product.required_fields || []).forEach(f => { if (f.key) fl[f.key] = f.label; }); return fl; })(),
     selected_option: { id: selectedOption.id, label: selectedMainCat + ' - ' + selectedOption.display_label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() },
     payment_type: 'bank', status: 'pending_review', receipt_hash: receiptHash, receipt_url: receiptUrl
   };

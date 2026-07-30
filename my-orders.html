@@ -191,9 +191,10 @@ function renderOrderCard(o) {
   if (o.field_values && Object.keys(o.field_values).length > 0) {
     fieldsHtml = `
       <div class="order-fields-list">
-        ${Object.entries(o.field_values).map(([k, v]) =>
-          `<div><strong style="color:var(--text-muted);">${escapeHtml(k)}:</strong> ${escapeHtml(v)}</div>`
-        ).join('')}
+        ${Object.entries(o.field_values).map(([k, v]) => {
+          const label = (o.field_labels && o.field_labels[k]) ? o.field_labels[k] : k;
+          return `<div><strong style="color:var(--text-muted);">${escapeHtml(label)}:</strong> ${escapeHtml(v)}</div>`;
+        }).join('')}
       </div>
     `;
   }

@@ -306,9 +306,10 @@ function renderReceipt(o) {
       <div class="receipt-row">
         <span class="label">بيانات الطلب</span>
         <div class="receipt-fields-list">
-          ${Object.entries(o.field_values).map(([k, v]) =>
-            `<div><span class="fkey">${escapeHtml(k)}:</span> ${escapeHtml(v)}</div>`
-          ).join('')}
+          ${Object.entries(o.field_values).map(([k, v]) => {
+            const label = (o.field_labels && o.field_labels[k]) ? o.field_labels[k] : k;
+            return `<div><span class="fkey">${escapeHtml(label)}:</span> ${escapeHtml(v)}</div>`;
+          }).join('')}
         </div>
       </div>
     `;
