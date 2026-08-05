@@ -69,6 +69,11 @@
   <div id="topupsList">
     <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
   </div>
+
+  <div class="section-label">حركات الرصيد</div>
+  <div id="transactionsList">
+    <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -79,6 +84,16 @@ let paymentMethods = [];
 let receiptFile = null;
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
+
+const txSourceLabels = {
+  topup_confirmed: 'شحن رصيد مؤكد',
+  gift_card:       'استبدال كود هدية',
+  order_payment:   'دفع طلب',
+  order_refund:    'استرجاع مبلغ طلب',
+  admin_refund:    'استرجاع من الإدارة',
+  referral_commission: 'عمولة إحالة',
+  loyalty_redeem:  'استبدال نقاط الولاء'
+};
 
 async function init() {
   try {
@@ -93,7 +108,7 @@ async function init() {
     return;
   }
 
-  await Promise.all([loadBalance(), loadPaymentMethods(), loadTopups()]);
+  await Promise.all([loadBalance(), loadPaymentMethods(), loadTopups(), loadTransactions()]);
 
   document.getElementById('toggleFormBtn').addEventListener('click', () => {
     document.getElementById('topupForm').classList.toggle('show');
@@ -146,7 +161,8 @@ async function init() {
       return;
     }
     receiptFile = file;
-    fileBox.textContent = escapeHtml(receiptFile.name);
+    // textContent آمن أصلاً — استخدام escapeHtml معه يسبب ترميزاً مزدوجاً
+    fileBox.textContent = receiptFile.name;
     fileBox.classList.add('has-file');
   });
 
@@ -165,24 +181,51 @@ async function redeemGiftCard() {
     return;
   }
 
+  // حد للمحاولات (5 محاولات كل دقيقة) لمنع تخمين أكواد الهدايا
+  if (typeof rateLimiter !== 'undefined' &&
+      !rateLimiter.check('redeem_gift', 5, 60 * 1000)) {
+    msgBox.style.color = 'var(--danger)';
+    msgBox.textContent = 'محاولات كثيرة. انتظر دقيقة ثم حاول مجدداً.';
+    return;
+  }
+
+  const btn = document.getElementById('redeemGiftBtn');
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = '...';
+
   try {
     const { data, error } = await supabaseClient.rpc('redeem_gift_card', { p_code: code });
 
     if (error) {
+      const raw = (error.message || '');
       msgBox.style.color = 'var(--danger)';
-      msgBox.textContent = (error.message || '').includes('already_redeemed')
-        ? 'الكود ده مستخدم بالفعل'
-        : 'الكود غير صحيح';
+      msgBox.textContent = raw.includes('access_denied')
+        ? 'حسابك غير مسموح له بهذه العملية.'
+        : (raw.includes('مستهلك') || raw.includes('already_redeemed'))
+          ? 'الكود ده مستخدم بالفعل أو غير صحيح'
+          : 'الكود غير صحيح';
       return;
     }
 
+    // الـ RPC يرجع صفوفاً: [{ amount }] — لا يصح تمريره مباشرة لـ formatSDG
+    const rows = Array.isArray(data) ? data : (data ? [data] : []);
+    const creditedAmount = Number(
+      rows.length ? (rows[0] && typeof rows[0] === 'object' ? rows[0].amount : rows[0]) : 0
+    );
+
     msgBox.style.color = 'var(--primary)';
-    msgBox.textContent = `تم إضافة ${formatSDG(data)} ج.س لرصيدك`;
+    msgBox.textContent = Number.isFinite(creditedAmount) && creditedAmount > 0
+      ? `تم إضافة ${formatSDG(creditedAmount)} ج.س لرصيدك`
+      : 'تم استبدال الكود بنجاح';
     document.getElementById('giftCodeInput').value = '';
-    await loadBalance();
+    await Promise.all([loadBalance(), loadTransactions()]);
   } catch (e) {
     msgBox.style.color = 'var(--danger)';
     msgBox.textContent = 'حصل خطأ أثناء استبدال الكود، حاول مرة أخرى.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 
@@ -196,6 +239,53 @@ async function loadBalance() {
     document.getElementById('balanceAmount').innerHTML = `${formatSDG(data ? data.balance : 0)} <small>ج.س</small>`;
   } catch (e) {
     document.getElementById('balanceAmount').textContent = '—';
+  }
+}
+
+// سجل حركات الرصيد — يُكتب في القاعدة فقط عبر دوال SECURITY DEFINER،
+// والعميل يقرأه للقراءة فقط (لا يمكن تعديله أو حذفه من المتصفح)
+async function loadTransactions() {
+  const container = document.getElementById('transactionsList');
+  try {
+    const { data, error } = await supabaseClient
+      .from('wallet_transactions')
+      .select('amount, direction, balance_after, source, created_at')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد حركات على رصيدك بعد</div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(tx => {
+      const date = new Date(tx.created_at).toLocaleDateString('ar-EG', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      const isCredit = tx.direction === 'credit';
+      const sign = isCredit ? '+' : '−';
+      const color = isCredit ? 'var(--primary)' : 'var(--danger)';
+      const label = txSourceLabels[tx.source] || 'حركة رصيد';
+      const balanceAfter = (tx.balance_after === null || tx.balance_after === undefined)
+        ? '' : `<div class="order-date">الرصيد بعدها: ${formatSDG(tx.balance_after)} ج.س</div>`;
+      return `
+        <div class="order-card">
+          <div class="order-top">
+            <div>
+              <div class="order-product">${escapeHtml(label)}</div>
+              <div class="order-date">${escapeHtml(date)}</div>
+              ${balanceAfter}
+            </div>
+            <span style="font-family:var(--font-mono); font-weight:700; color:${color};">${sign}${formatSDG(Math.abs(Number(tx.amount) || 0))}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">تعذّر تحميل حركات الرصيد.</div>`;
   }
 }
 
@@ -262,13 +352,19 @@ async function submitTopup() {
   const errorBox = document.getElementById('formError');
   const fileError = document.getElementById('fileError');
   errorBox.textContent = '';
+  errorBox.style.color = '';
   fileError.textContent = '';
 
   const amount = parseFloat(document.getElementById('amountInput').value);
   const methodId = document.getElementById('methodSelect').value;
 
-  if (!amount || amount <= 0) {
+  if (!Number.isFinite(amount) || amount <= 0) {
     errorBox.textContent = 'أدخل مبلغ صحيح';
+    return;
+  }
+  // نفس الحد المفروض في سياسة قاعدة البيانات — رسالة أوضح للمستخدم
+  if (amount > 10000000) {
+    errorBox.textContent = 'المبلغ أكبر من الحد المسموح.';
     return;
   }
   if (!methodId) {
@@ -289,6 +385,13 @@ async function submitTopup() {
   const validation = await validateReceiptImage(receiptFile);
   if (!validation.valid) {
     fileError.textContent = validation.message;
+    return;
+  }
+
+  // حد للإرسال (3 طلبات كل 5 دقائق) لمنع إغراق طاولة الشحن
+  if (typeof rateLimiter !== 'undefined' &&
+      !rateLimiter.check('submit_topup', 3, 5 * 60 * 1000)) {
+    errorBox.textContent = 'أرسلت طلبات كثيرة. انتظر قليلاً ثم حاول مجدداً.';
     return;
   }
 
@@ -390,6 +493,7 @@ async function submitTopup() {
   fBox.textContent = 'اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
   fBox.classList.remove('has-file');
   receiptFile = null;
+  document.getElementById('receiptInput').value = '';
   submitBtn.disabled = false;
   submitBtn.textContent = 'إرسال طلب الشحن';
 

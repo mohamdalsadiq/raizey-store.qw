@@ -28,6 +28,8 @@
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
+    <a href="admin-coupons.html">الكوبونات</a>
+    <a href="admin-giftcards.html">كروت الهدايا</a>
   </div>
 
   <div class="categories" style="padding:0 0 16px;" id="filterRow">
@@ -72,6 +74,50 @@ let currentAdminId = null;
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
 
+// رسائل مفهومة لأخطاء دوال المحفظة في القاعدة
+function mapTopupError(msg) {
+  const m = String(msg || '').toLowerCase();
+  if (m.includes('already_processed')) return 'هذا الطلب تمت معالجته بالفعل. تم تحديث القائمة.';
+  if (m.includes('topup_not_found'))   return 'الطلب غير موجود.';
+  if (m.includes('reason_required'))   return 'يجب كتابة سبب الرفض.';
+  if (m.includes('invalid_amount'))    return 'مبلغ الطلب غير صالح.';
+  if (m.includes('manage_wallets'))    return 'ليست لديك صلاحية إدارة المحافظ.';
+  if (m.includes('access_denied'))     return 'غير مصرح بهذا الإجراء.';
+  return 'تعذّر تنفيذ العملية. حاول مجدداً.';
+}
+
+// استخراج مسار الملف داخل bucket "receipts" من رابط Storage المحفوظ
+function extractReceiptPath(url) {
+  const clean = sanitizeUrl(url);
+  if (!clean) return '';
+  try {
+    const { pathname } = new URL(clean);
+    const marker = '/receipts/';
+    const idx = pathname.indexOf(marker);
+    if (idx === -1) return '';
+    const path = decodeURIComponent(pathname.slice(idx + marker.length));
+    return path.includes('..') ? '' : path;
+  } catch (e) {
+    return '';
+  }
+}
+
+// تنبيه بسيط بدل تجاهل الأخطاء بصمت
+function showToast(message) {
+  let box = document.getElementById('adminToast');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'adminToast';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg-card); color:var(--ink); border:1px solid var(--border); border-radius:12px; padding:12px 16px; font-size:13px; z-index:9999; max-width:90vw; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,.35);';
+    document.body.appendChild(box);
+  }
+  box.textContent = message;
+  box.style.display = 'block';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { box.style.display = 'none'; }, 4000);
+}
+
 const rejectModal = document.getElementById('rejectModal');
 const customReasonInput = document.getElementById('customReasonInput');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
@@ -100,14 +146,29 @@ document.getElementById('modalCancelBtn').addEventListener('click', closeRejectM
 
 modalConfirmBtn.addEventListener('click', async () => {
   if (!selectedReason || !rejectingTopupId) return;
-  const topup = allTopups.find(t => t.id === rejectingTopupId);
-  await supabaseClient.from('wallet_topups')
-    .update({ status: 'rejected', rejection_reason: selectedReason, reviewed_at: new Date().toISOString() })
-    .eq('id', rejectingTopupId);
-  if (topup) {
-    await notifyCustomer(topup.user_id, 'تم رفض طلب الشحن', `طلب شحن ${formatSDG(topup.amount)} ج.س رُفض. السبب: ${selectedReason}`);
-    await logAudit('رفض شحن محفظة', { topup_id: rejectingTopupId, amount: topup.amount, reason: selectedReason });
+
+  const topupId = rejectingTopupId;
+  modalConfirmBtn.disabled = true;
+  const originalLabel = modalConfirmBtn.textContent;
+  modalConfirmBtn.textContent = 'جارِ التنفيذ...';
+
+  // RPC ذرّية: تقفل الصف، تتأكد أنه لا يزال pending (فلا يمكن رفض طلب
+  // تم تأكيده وأُضيف رصيده)، وتسجّل الإشعار وسجل النشاط في السيرفر
+  const { error } = await supabaseClient.rpc('admin_reject_topup', {
+    p_topup_id: topupId,
+    p_reason: selectedReason
+  });
+
+  modalConfirmBtn.textContent = originalLabel;
+
+  if (error) {
+    showToast(mapTopupError(error.message));
+    modalConfirmBtn.disabled = false;
+    closeRejectModal();
+    await loadTopups();
+    return;
   }
+
   closeRejectModal();
   await loadTopups();
 });
@@ -131,10 +192,20 @@ async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
 
-  const { data: profile } = await supabaseClient
-    .from('profiles').select('role').eq('id', session.user.id).single();
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles').select('role, is_banned').eq('id', session.user.id).maybeSingle();
 
-  if (!profile || profile.role !== 'admin') {
+  if (profileError || !profile || profile.role !== 'admin' || profile.is_banned === true) {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  // التحقق من صلاحية إدارة المحافظ في السيرفر (نفس الشرط المفروض داخل
+  // دوال admin_confirm_topup / admin_reject_topup)
+  const { data: canManageWallets, error: permError } = await supabaseClient
+    .rpc('has_admin_permission', { permission_key: 'manage_wallets' });
+
+  if (permError || canManageWallets !== true) {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
@@ -156,10 +227,16 @@ async function init() {
 }
 
 async function loadTopups() {
-  const { data } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from('wallet_topups')
     .select('*, profiles(full_name, whatsapp_number)')
     .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('topupsList').innerHTML =
+      `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">تعذّر تحميل طلبات الشحن. حدّث الصفحة وحاول مجدداً.</div>`;
+    return;
+  }
 
   allTopups = data || [];
   render();
@@ -180,6 +257,21 @@ function render() {
 
   container.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.topupId));
+  });
+
+  // روابط الإيصالات محفوظة كـ Signed URL بمدة محدودة — نولّد رابطاً جديداً
+  // عند الفتح حتى لا يختفي الإيصال بعد انتهاء صلاحية الرابط القديم
+  container.querySelectorAll('.receipt-link').forEach(link => {
+    link.addEventListener('click', async (e) => {
+      const path = extractReceiptPath(link.dataset.receiptUrl);
+      if (!path) return; // اترك الرابط الأصلي يعمل
+      e.preventDefault();
+      const { data, error } = await supabaseClient.storage
+        .from('receipts')
+        .createSignedUrl(path, 60 * 10);
+      const fresh = (!error && data) ? sanitizeUrl(data.signedUrl) : '';
+      window.open(fresh || link.dataset.receiptUrl, '_blank', 'noopener');
+    });
   });
 
   container.querySelectorAll('.mini-copy-btn').forEach(btn => {
@@ -226,7 +318,7 @@ function renderTopupCard(t) {
       </div>
       <div class="customer-info">
         <span>${customerName} — ${customerWhatsapp}</span>
-        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsappCopy}">نسخ الرقم</button>
+        <button type="button" class="mini-copy-btn" data-copy="${customerWhatsappCopy}">ن��خ الرقم</button>
       </div>
       <div class="order-details">
         ${t.transaction_reference ? `
@@ -235,7 +327,7 @@ function renderTopupCard(t) {
             <button type="button" class="mini-copy-btn" data-copy="${transactionReferenceCopy}">نسخ</button>
           </div>
         ` : ''}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" class="receipt-link" data-receipt-url="${escapeAttribute(receiptUrl)}" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
       ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${rejectionReason}</div>` : ''}
       ${actions}
@@ -243,32 +335,35 @@ function renderTopupCard(t) {
   `;
 }
 
+let actionInFlight = false;
+
 async function handleAction(action, topupId) {
   if (action === 'confirm') {
     const topup = allTopups.find(t => t.id === topupId);
     if (!topup) return;
+    if (actionInFlight) return; // منع النقر المزدوج
 
-    // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، وتضيف
-    // الرصيد بعملية واحدة — بدل قراءة الرصيد ثم كتابته من المتصفح (كان
-    // معرّضاً لفقدان أو تكرار الشحن لو صار نقر مزدوج أو تزامن)
+    actionInFlight = true;
+    const btn = document.querySelector(`[data-action="confirm"][data-topup-id="${CSS.escape(topupId)}"]`);
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+    // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، تضيف
+    // الرصيد، وتكتب سجل الحركة (wallet_transactions) وسجل النشاط
+    // والإشعار — كل ذلك في السيرفر بمعاملة واحدة
     const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId });
-    if (error) { await loadTopups(); return; }
 
-    await notifyCustomer(topup.user_id, 'تم شحن محفظتك', `تم إضافة ${formatSDG(topup.amount)} ج.س لرصيدك.`);
-    await logAudit('تأكيد شحن محفظة', { topup_id: topupId, amount: topup.amount, user_id: topup.user_id });
+    actionInFlight = false;
+    if (error) {
+      showToast(mapTopupError(error.message));
+      await loadTopups();
+      return;
+    }
 
+    showToast(`تم شحن ${formatSDG(topup.amount)} ج.س لمحفظة العميل.`);
     await loadTopups();
   } else if (action === 'reject') {
     openRejectModal(topupId);
   }
-}
-
-async function notifyCustomer(userId, title, message) {
-  await supabaseClient.from('notifications').insert({ user_id: userId, title, message, type: 'wallet' });
-}
-
-async function logAudit(action, details) {
-  await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
 }
 
 init();

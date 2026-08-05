@@ -6,6 +6,7 @@
 <title>وسائل الدفع — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
@@ -93,6 +94,29 @@
 <script>
 let methods = [];
 let editingId = null;
+let currentAdminId = null;
+
+// سجل نشاط للأدمن — يُكتب في القاعدة عبر دالة SECURITY DEFINER
+async function logAudit(action, targetId, details) {
+  try {
+    const { error } = await supabaseClient.rpc('append_admin_audit_log', {
+      p_action: action,
+      p_target_table: 'payment_methods',
+      p_target_id: targetId ? String(targetId) : null,
+      p_details: details || {}
+    });
+    if (error) throw error;
+  } catch (e) {
+    // السجل الاحتياطي في audit_logs حتى لا تمر العملية بدون تسجيل
+    try {
+      await supabaseClient.from('audit_logs').insert({
+        admin_id: currentAdminId, action, details: { payment_method_id: targetId, ...(details || {}) }
+      });
+    } catch (err) {
+      devWarn('[RAIZEY] audit log failed');
+    }
+  }
+}
 
 const formModal = document.getElementById('formModal');
 const nameInput = document.getElementById('nameInput');
@@ -107,13 +131,24 @@ async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
 
-  const { data: profile } = await supabaseClient
-    .from('profiles').select('role').eq('id', session.user.id).single();
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles').select('role, is_banned').eq('id', session.user.id).maybeSingle();
 
-  if (!profile || profile.role !== 'admin') {
+  if (profileError || !profile || profile.role !== 'admin' || profile.is_banned === true) {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
+
+  // وسائل الدفع جزء من إعدادات المتجر — نتحقق من الصلاحية في السيرفر
+  const { data: canManageSettings, error: permError } = await supabaseClient
+    .rpc('has_admin_permission', { permission_key: 'manage_settings' });
+
+  if (permError || canManageSettings !== true) {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  currentAdminId = session.user.id;
 
   document.getElementById('adminPage').style.display = 'block';
   document.getElementById('addNewBtn').addEventListener('click', () => openForm(null));
@@ -124,7 +159,12 @@ async function init() {
 }
 
 async function loadMethods() {
-  const { data } = await supabaseClient.from('payment_methods').select('*').order('display_order');
+  const { data, error } = await supabaseClient.from('payment_methods').select('*').order('display_order');
+  if (error) {
+    document.getElementById('methodsList').innerHTML =
+      `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">تعذّر تحميل وسائل الدفع. حدّث الصفحة وحاول مجدداً.</div>`;
+    return;
+  }
   methods = data || [];
   render();
 }
@@ -136,18 +176,19 @@ function render() {
     return;
   }
 
+  // كل القيم تُمرّر عبر escapeHtml / safeDataAttr لمنع XSS المخزَّن
   container.innerHTML = methods.map(m => `
     <div class="manage-item">
       <div class="manage-item-info">
         <div class="manage-item-name">
-          ${m.name}
+          ${escapeHtml(m.name || '')}
           ${!m.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
         </div>
-        <div class="manage-item-sub">${m.account_name || ''} — ${m.account_number || ''}</div>
+        <div class="manage-item-sub">${escapeHtml(m.account_name || '')} — ${escapeHtml(m.account_number || '')}</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${m.id}"><i class="fas fa-trash-can"></i></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${safeDataAttr(m.id || '')}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen" aria-hidden="true"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${safeDataAttr(m.id || '')}" aria-label="حذف" title="حذف"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
       </div>
     </div>
   `).join('');
@@ -164,15 +205,22 @@ function openForm(id) {
   editingId = id;
   formError.textContent = '';
 
-  if (id) {
-    const m = methods.find(x => x.id === id);
+  const m = id ? methods.find(x => x.id === id) : null;
+
+  if (id && !m) { // الصف حُذف أو تغيّر من جهاز آخر
+    editingId = null;
+    loadMethods();
+    return;
+  }
+
+  if (m) {
     document.getElementById('formModalTitle').textContent = 'تعديل وسيلة الدفع';
-    nameInput.value = m.name;
+    nameInput.value = m.name || '';
     accountNameInput.value = m.account_name || '';
     accountNumberInput.value = m.account_number || '';
     instructionsInput.value = m.instructions || '';
-    orderInput.value = m.display_order;
-    activeInput.value = String(m.is_active);
+    orderInput.value = m.display_order ?? 0;
+    activeInput.value = String(m.is_active === true);
   } else {
     document.getElementById('formModalTitle').textContent = 'وسيلة دفع جديدة';
     nameInput.value = '';
@@ -209,22 +257,52 @@ async function saveMethod() {
     is_active: activeInput.value === 'true'
   };
 
-  const { error } = editingId
-    ? await supabaseClient.from('payment_methods').update(payload).eq('id', editingId)
-    : await supabaseClient.from('payment_methods').insert(payload);
+  const saveBtn = document.getElementById('formSaveBtn');
+  saveBtn.disabled = true;
+  const originalLabel = saveBtn.textContent;
+  saveBtn.textContent = 'جارِ الحفظ...';
+
+  const wasEditing = editingId;
+  const { data, error } = wasEditing
+    ? await supabaseClient.from('payment_methods').update(payload).eq('id', wasEditing).select('id').maybeSingle()
+    : await supabaseClient.from('payment_methods').insert(payload).select('id').maybeSingle();
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = originalLabel;
 
   if (error) {
-    formError.textContent = 'حصل خطأ، حاول تاني';
+    formError.textContent = typeof getFriendlyError === 'function'
+      ? getFriendlyError(error.message)
+      : 'حصل خطأ، حاول تاني';
     return;
   }
+
+  // لا نُسجّل رقم الحساب كاملاً في السجل — آخر 4 خانات فقط
+  await logAudit(
+    wasEditing ? 'تعديل وسيلة دفع' : 'إضافة وسيلة دفع',
+    wasEditing || (data && data.id),
+    { name, account_name: accountName, account_number_last4: accountNumber.slice(-4), is_active: payload.is_active }
+  );
 
   closeForm();
   await loadMethods();
 }
 
 async function deleteMethod(id) {
+  const m = methods.find(x => x.id === id);
   if (!confirm('متأكد عايز تحذف وسيلة الدفع دي؟')) return;
-  await supabaseClient.from('payment_methods').delete().eq('id', id);
+
+  const { error } = await supabaseClient.from('payment_methods').delete().eq('id', id);
+  if (error) {
+    alert('تعذّر حذف وسيلة الدفع. قد تكون مرتبطة بطلبات أو شحنات سابقة — يمكنك إخفاؤها بدل حذفها.');
+    return;
+  }
+
+  await logAudit('حذف وسيلة دفع', id, {
+    name: m ? m.name : null,
+    account_number_last4: m && m.account_number ? String(m.account_number).slice(-4) : null
+  });
+
   await loadMethods();
 }
 
