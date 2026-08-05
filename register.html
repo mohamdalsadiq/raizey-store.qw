@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff6a1a">
+<meta name="robots" content="noindex, nofollow">
 <title>إنشاء حساب — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -12,168 +15,209 @@
 </head>
 <body>
 
-<div class="auth-page">
+<main class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">RAIZEY <span>STORE</span></div>
     <h1 class="auth-title">إنشاء حساب جديد</h1>
     <p class="auth-sub">سجل عشان تقدر تشحن وتتابع طلباتك</p>
 
-    <form id="registerForm">
+    <form id="registerForm" novalidate>
       <div class="field">
-        <label>الاسم الكامل</label>
-        <input type="text" id="fullName" required placeholder="اسمك">
+        <label for="fullName">الاسم الكامل</label>
+        <input type="text" id="fullName" name="name" required autocomplete="name"
+               maxlength="120" placeholder="اسمك">
       </div>
 
       <div class="field">
-        <label>البريد الإلكتروني</label>
-        <input type="email" id="email" required placeholder="example@email.com">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" required autocomplete="email"
+               inputmode="email" spellcheck="false" placeholder="example@email.com">
       </div>
 
       <div class="field">
-        <label>رقم الواتساب</label>
-        <input type="tel" id="whatsapp" required placeholder="+2499XXXXXXXX">
+        <label for="whatsapp">رقم الواتساب</label>
+        <input type="tel" id="whatsapp" name="tel" required autocomplete="tel"
+               inputmode="tel" maxlength="20" placeholder="+2499XXXXXXXX">
       </div>
 
-      <div class="field">
-        <label>كلمة السر</label>
-        <input type="password" id="password" required placeholder="8 أحرف على الأقل" minlength="8" oninput="updatePwStrength()">
-        <div class="pw-strength-bar"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
-        <div class="pw-strength-label" id="pwStrengthLabel"></div>
+      <div class="field field-pw">
+        <label for="password">كلمة السر</label>
+        <input type="password" id="password" name="new-password" required
+               autocomplete="new-password" placeholder="كلمة سر قوية">
+        <button type="button" class="pw-toggle" data-target="password"
+                aria-label="إظهار كلمة السر" aria-pressed="false">
+          <i class="fa-regular fa-eye" aria-hidden="true"></i>
+        </button>
+        <div class="pw-strength-bar" aria-hidden="true"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
+        <div class="pw-strength-label" id="pwStrengthLabel" aria-live="polite"></div>
+        <ul class="pw-rules" id="pwRules"></ul>
       </div>
 
-      <div class="field">
-        <label>تأكيد كلمة السر</label>
-        <input type="password" id="confirmPassword" required placeholder="أعد كتابة كلمة السر">
+      <div class="field field-pw">
+        <label for="confirmPassword">تأكيد كلمة السر</label>
+        <input type="password" id="confirmPassword" name="confirm-password" required
+               autocomplete="new-password" placeholder="أعد كتابة كلمة السر">
+        <button type="button" class="pw-toggle" data-target="confirmPassword"
+                aria-label="إظهار كلمة السر" aria-pressed="false">
+          <i class="fa-regular fa-eye" aria-hidden="true"></i>
+        </button>
       </div>
 
-      <div class="form-error" id="formError"></div>
+      <div class="form-error" id="formError" role="alert" aria-live="assertive"></div>
 
       <button type="submit" class="auth-btn" id="submitBtn">إنشاء الحساب</button>
     </form>
+
+    <p class="auth-note" id="refNote" hidden></p>
 
     <p class="auth-switch">عندك حساب بالفعل؟ <a href="login.html">سجّل دخولك</a></p>
 
     <div class="auth-divider">أو</div>
     <div class="social-login-row">
-      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()"><i class="fab fa-facebook-f"></i> فيسبوك</button>
-      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()"><i class="fab fa-google"></i> جوجل</button>
+      <button type="button" class="social-btn fb-btn" data-social="facebook"><i class="fab fa-facebook-f" aria-hidden="true"></i> فيسبوك</button>
+      <button type="button" class="social-btn google-btn" data-social="google"><i class="fab fa-google" aria-hidden="true"></i> جوجل</button>
     </div>
-    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;"></p>
+    <p class="auth-state" id="socialSoonMsg" role="status" aria-live="polite" style="min-height:0;"></p>
   </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-utils.js"></script>
 <script>
-const form = document.getElementById('registerForm');
-const errorBox = document.getElementById('formError');
-const submitBtn = document.getElementById('submitBtn');
+(() => {
+  'use strict';
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorBox.textContent = '';
+  const form        = document.getElementById('registerForm');
+  const errorBox    = document.getElementById('formError');
+  const submitBtn   = document.getElementById('submitBtn');
+  const nameInput   = document.getElementById('fullName');
+  const emailInput  = document.getElementById('email');
+  const waInput     = document.getElementById('whatsapp');
+  const pwInput     = document.getElementById('password');
+  const pw2Input    = document.getElementById('confirmPassword');
+  const pwRules     = document.getElementById('pwRules');
+  const strengthFil = document.getElementById('pwStrengthFill');
+  const strengthLbl = document.getElementById('pwStrengthLabel');
 
-  const fullName = document.getElementById('fullName').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const whatsapp = document.getElementById('whatsapp').value.trim();
-  const password = document.getElementById('password').value;
-  const confirmPassword = document.getElementById('confirmPassword').value;
+  AuthUI.initPasswordToggles();
+  AuthUI.renderPasswordRules(pwRules, '');
 
-  if (password !== confirmPassword) {
-    errorBox.textContent = 'كلمة السر غير متطابقة';
-    return;
+  pwInput.addEventListener('input', () => {
+    AuthUI.renderPasswordRules(pwRules, pwInput.value);
+    AuthUI.renderPasswordStrength(strengthFil, strengthLbl, pwInput.value);
+  });
+
+  // كود الإحالة يُقرأ من الرابط ويُمرَّر مع التسجيل — يُحلّ على السيرفر
+  // (RLS يمنع العميل من قراءة بروفايلات الآخرين، فالبحث من المتصفح كان يفشل دائماً)
+  const refCode = (new URLSearchParams(window.location.search).get('ref') || '')
+    .trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+
+  if (refCode) {
+    const note = document.getElementById('refNote');
+    note.hidden = false;
+    note.textContent = 'تسجّل من خلال كود إحالة: ' + refCode; // textContent = آمن من XSS
   }
-  if (password.length < 8) {
-    errorBox.textContent = 'كلمة السر لازم تكون 8 أحرف على الأقل';
-    return;
+
+  function fail(input, message) {
+    if (input) {
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+    }
+    AuthUI.setMessage(errorBox, message);
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'جارِ الإنشاء...';
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    AuthUI.clearMessages(errorBox);
+    [nameInput, emailInput, waInput, pwInput, pw2Input]
+      .forEach((el) => el.setAttribute('aria-invalid', 'false'));
 
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName }
+    if (!window.supabaseClient) {
+      AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
+      return;
+    }
+
+    const fullName = nameInput.value.trim().replace(/\s+/g, ' ');
+    const email    = emailInput.value.trim().toLowerCase();
+    const whatsapp = AuthUI.normalizePhone(waInput.value);
+    const password = pwInput.value;
+    const confirm  = pw2Input.value;
+
+    if (fullName.length < 3) return fail(nameInput, 'اكتب اسمك الكامل (3 أحرف على الأقل).');
+    if (!AuthUI.isValidEmail(email)) return fail(emailInput, 'أدخل بريداً إلكترونياً صحيحاً.');
+    if (!whatsapp) return fail(waInput, 'أدخل رقم واتساب صحيح مع مفتاح الدولة، مثال: +249912345678');
+
+    const pwCheck = AuthUI.validatePassword(password);
+    if (!pwCheck.valid) return fail(pwInput, pwCheck.message);
+
+    if (password !== confirm) return fail(pw2Input, 'كلمتا السر غير متطابقتين.');
+
+    if (password.toLowerCase().includes(email.split('@')[0].toLowerCase()) &&
+        email.split('@')[0].length >= 4) {
+      return fail(pwInput, 'كلمة السر ما تكون جزءاً من بريدك الإلكتروني.');
+    }
+
+    if (!rateLimiter.check('signup', 4, 10 * 60 * 1000)) {
+      AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. انتظر عشر دقايق وحاول مجدداً.');
+      return;
+    }
+
+    const restore = AuthUI.startLoading(submitBtn, 'جارِ الإنشاء...');
+
+    try {
+      // كل البيانات الإضافية تُمرَّر في raw_user_meta_data ويعالجها
+      // trigger على السيرفر (handle_new_user) — لأن التسجيل لا يُنشئ session
+      // فوراً (تأكيد البريد مطلوب) وبالتالي أي UPDATE من المتصفح يفشل بصمت.
+      const metadata = { full_name: fullName, whatsapp_number: whatsapp };
+      if (refCode) metadata.referral_code_used = refCode;
+
+      const { error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: metadata,
+          emailRedirectTo: new URL('verify.html', window.location.href).href
+        }
+      });
+
+      if (error) {
+        const msg = String(error.message || '').toLowerCase();
+        if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('security purposes')) {
+          AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. حاول بعد شوية.');
+        } else if (msg.includes('password')) {
+          AuthUI.setMessage(errorBox, 'كلمة السر ما بتحقق الشروط المطلوبة أعلاه.');
+        } else if (msg.includes('invalid') && msg.includes('email')) {
+          AuthUI.setMessage(errorBox, 'البريد الإلكتروني غير صالح.');
+        } else if (msg.includes('failed to fetch') || msg.includes('network')) {
+          AuthUI.setMessage(errorBox, 'فشل الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.');
+        } else {
+          // "already registered" وغيرها → رسالة موحّدة تمنع كشف البُرد المسجّلة
+          AuthUI.setMessage(errorBox, 'ما قدرنا نكمل التسجيل بالبيانات دي. لو عندك حساب بالفعل سجّل دخولك أو استخدم "نسيت كلمة السر".');
+        }
+        restore();
+        return;
+      }
+
+      // Supabase لا يفرّق في الاستجابة بين بريد جديد وبريد مسجّل مسبقاً
+      // (حماية مدمجة ضد enumeration) — لذلك نوجّه للتحقق في الحالتين.
+      try { sessionStorage.setItem('pending_email', email); } catch (e) { /* تجاهل */ }
+      window.location.replace('verify.html');
+    } catch (err) {
+      AuthUI.setMessage(errorBox, 'حصل خطأ غير متوقع. حاول مجدداً.');
+      restore();
     }
   });
 
-  if (error) {
-    errorBox.textContent = translateError(error.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إنشاء الحساب';
-    return;
-  }
-
-  // حفظ رقم الواتساب في البروفايل بعد إنشاء الحساب
-  if (data.user) {
-    await supabaseClient
-      .from('profiles')
-      .update({ whatsapp_number: whatsapp })
-      .eq('id', data.user.id);
-
-    const refCode = new URLSearchParams(window.location.search).get('ref');
-    if (refCode) {
-      const { data: referrer } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', refCode.toUpperCase())
-        .single();
-
-      if (referrer && referrer.id !== data.user.id) {
-        await supabaseClient
-          .from('profiles')
-          .update({ referred_by: referrer.id })
-          .eq('id', data.user.id);
-      }
-    }
-  }
-
-  // تخزين الإيميل مؤقتاً عشان نستخدمه في صفحة التحقق
-  sessionStorage.setItem('pending_email', email);
-  window.location.href = 'verify.html';
-});
-
-function translateError(msg) {
-  if (msg.includes('already registered')) return 'الإيميل ده مسجل بالفعل، جرب تسجل دخول';
-  if (msg.includes('Password')) return 'كلمة السر ضعيفة أو قصيرة جداً';
-  if (msg.includes('rate limit')) return 'محاولات كتيرة، حاول بعد شوية';
-  return 'حصل خطأ، حاول تاني';
-}
-
-function updatePwStrength() {
-  const pw = document.getElementById('password').value;
-  const fill = document.getElementById('pwStrengthFill');
-  const label = document.getElementById('pwStrengthLabel');
-  if (!pw) { fill.style.width = '0%'; label.textContent = ''; return; }
-
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-
-  const levels = [
-    { pct: 20,  color: 'var(--danger)',      text: 'ضعيفة جداً' },
-    { pct: 40,  color: 'var(--danger)',      text: 'ضعيفة' },
-    { pct: 60,  color: 'var(--warning)',     text: 'متوسطة' },
-    { pct: 80,  color: '#65a30d',            text: 'قوية' },
-    { pct: 100, color: 'var(--success)',     text: 'قوية جداً' },
-  ];
-  const lvl = levels[Math.min(score, levels.length - 1)];
-  fill.style.width = lvl.pct + '%';
-  fill.style.background = lvl.color;
-  label.textContent = 'قوة كلمة السر: ' + lvl.text;
-  label.style.color = lvl.color;
-}
-
-function showSocialSoon() {
-  const msg = document.getElementById('socialSoonMsg');
-  msg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً';
-  setTimeout(() => { msg.textContent = ''; }, 3000);
-}
+  const socialMsg = document.getElementById('socialSoonMsg');
+  document.querySelectorAll('[data-social]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      socialMsg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً.';
+      clearTimeout(socialMsg._t);
+      socialMsg._t = setTimeout(() => { socialMsg.textContent = ''; }, 3000);
+    });
+  });
+})();
 </script>
 </body>
 </html>

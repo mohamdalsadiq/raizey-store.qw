@@ -3,32 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff6a1a">
+<meta name="robots" content="noindex, nofollow">
 <title>تأكيد الحساب — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body>
 
-<div class="auth-page">
+<main class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">RAIZEY <span>STORE</span></div>
     <h1 class="auth-title">تأكيد الحساب</h1>
     <p class="auth-sub" id="subText">أدخل الكود اللي وصلك على إيميلك</p>
 
-    <form id="verifyForm">
-      <div class="otp-inputs">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
-        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+    <form id="verifyForm" novalidate>
+      <div class="otp-inputs" id="otpGroup" role="group" aria-label="كود التأكيد المكوّن من 6 أرقام">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" class="otp-digit" aria-label="الرقم 1">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="otp-digit" aria-label="الرقم 2">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="otp-digit" aria-label="الرقم 3">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="otp-digit" aria-label="الرقم 4">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="otp-digit" aria-label="الرقم 5">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="otp-digit" aria-label="الرقم 6">
       </div>
 
-      <div class="form-error" id="formError"></div>
-      <div class="form-success" id="formSuccess"></div>
+      <div class="form-error" id="formError" role="alert" aria-live="assertive"></div>
+      <div class="form-success" id="formSuccess" role="status" aria-live="polite"></div>
 
       <button type="submit" class="auth-btn" id="submitBtn">تأكيد</button>
     </form>
@@ -37,82 +40,224 @@
       ما وصلك الكود؟
       <button id="resendBtn" type="button">أعد الإرسال</button>
     </p>
+
+    <p class="auth-note">
+      الكود صالح لمدة 30 دقيقة ويُستخدم مرة واحدة فقط. راجع مجلد الرسائل المزعجة (Spam) لو ما وصلك.
+    </p>
+
+    <p class="auth-switch">
+      إيميل غلط؟ <a href="register.html">ارجع وسجّل من جديد</a>
+    </p>
   </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-utils.js"></script>
 <script>
-const email = sessionStorage.getItem('pending_email');
-if (!email) {
-  window.location.href = 'register.html';
-}
-document.getElementById('subText').textContent = `أدخل الكود اللي وصلك على ${email}`;
+(() => {
+  'use strict';
 
-const digits = document.querySelectorAll('.otp-digit');
-digits.forEach((input, idx) => {
-  input.addEventListener('input', () => {
-    if (input.value && idx < digits.length - 1) digits[idx + 1].focus();
-  });
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Backspace' && !input.value && idx > 0) digits[idx - 1].focus();
-  });
-});
+  let email = null;
+  try { email = sessionStorage.getItem('pending_email'); } catch (e) { /* تجاهل */ }
 
-const form = document.getElementById('verifyForm');
-const errorBox = document.getElementById('formError');
-const successBox = document.getElementById('formSuccess');
-const submitBtn = document.getElementById('submitBtn');
-const resendBtn = document.getElementById('resendBtn');
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorBox.textContent = '';
-  const code = [...digits].map(d => d.value).join('');
-
-  if (code.length !== 6) {
-    errorBox.textContent = 'أدخل الكود كاملاً (6 أرقام)';
+  // البق القديم: كان التنفيذ يستمر بعد التوجيه فيطبع "null" ويرمي أخطاء كونسول.
+  if (!email || !AuthUI.isValidEmail(email)) {
+    window.location.replace('register.html');
     return;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'جارِ التحقق...';
+  const form       = document.getElementById('verifyForm');
+  const errorBox   = document.getElementById('formError');
+  const successBox = document.getElementById('formSuccess');
+  const submitBtn  = document.getElementById('submitBtn');
+  const resendBtn  = document.getElementById('resendBtn');
+  const otpGroup   = document.getElementById('otpGroup');
+  const digits     = Array.from(document.querySelectorAll('.otp-digit'));
 
-  const { data, error } = await supabaseClient.auth.verifyOtp({
-    email,
-    token: code,
-    type: 'signup'
-  });
+  document.getElementById('subText').textContent = 'أدخل الكود اللي وصلك على ' + email;
 
-  if (error) {
-    errorBox.textContent = 'الكود غير صحيح أو منتهي الصلاحية';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد';
-    return;
+  // ---------- إدارة خانات الكود ----------
+  function currentCode() {
+    return digits.map((d) => d.value).join('');
   }
 
-  sessionStorage.removeItem('pending_email');
-  window.location.href = 'index.html';
-});
-
-resendBtn.addEventListener('click', async () => {
-  resendBtn.disabled = true;
-  successBox.textContent = '';
-  errorBox.textContent = '';
-
-  const { error } = await supabaseClient.auth.resend({
-    type: 'signup',
-    email
-  });
-
-  if (error) {
-    errorBox.textContent = 'حصل خطأ في إعادة الإرسال، حاول بعد شوية';
-  } else {
-    successBox.textContent = 'تم إرسال كود جديد';
+  function distribute(text, startIdx) {
+    const chars = String(text).replace(/\D/g, '').split('');
+    let i = startIdx;
+    while (chars.length && i < digits.length) {
+      digits[i].value = chars.shift();
+      i++;
+    }
+    digits[Math.min(i, digits.length - 1)].focus();
   }
 
-  setTimeout(() => { resendBtn.disabled = false; }, 30000);
-});
+  digits.forEach((input, idx) => {
+    input.addEventListener('input', () => {
+      otpGroup.classList.remove('is-invalid');
+      AuthUI.clearMessages(errorBox);
+      // لصق أو كتابة عدة أرقام في خانة واحدة → نوزّعها
+      if (input.value.length > 1) {
+        const val = input.value;
+        input.value = '';
+        distribute(val, idx);
+      } else {
+        input.value = input.value.replace(/\D/g, '');
+        if (input.value && idx < digits.length - 1) digits[idx + 1].focus();
+      }
+      if (currentCode().length === digits.length) {
+        form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && idx > 0) {
+        e.preventDefault();
+        digits[idx - 1].value = '';
+        digits[idx - 1].focus();
+      }
+      if (e.key === 'ArrowLeft' && idx < digits.length - 1) digits[idx + 1].focus();
+      if (e.key === 'ArrowRight' && idx > 0) digits[idx - 1].focus();
+    });
+
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      distribute(text, idx);
+      if (currentCode().length === digits.length) {
+        form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  });
+
+  digits[0].focus();
+
+  // ---------- تأكيد الكود ----------
+  let verifying = false;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (verifying) return; // حماية إضافية من الإرسال المتكرر
+    AuthUI.clearMessages(errorBox, successBox);
+
+    if (!window.supabaseClient) {
+      AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
+      return;
+    }
+
+    const code = currentCode();
+    if (!/^[0-9]{6}$/.test(code)) {
+      otpGroup.classList.add('is-invalid');
+      AuthUI.setMessage(errorBox, 'أدخل الكود كاملاً (6 أرقام).');
+      return;
+    }
+
+    if (!rateLimiter.check('verify:' + email, 8, 10 * 60 * 1000)) {
+      AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. اطلب كود جديد أو انتظر عشر دقايق.');
+      return;
+    }
+
+    verifying = true;
+    digits.forEach((d) => { d.disabled = true; });
+    const restore = AuthUI.startLoading(submitBtn, 'جارِ التحقق...');
+
+    try {
+      const { error } = await supabaseClient.auth.verifyOtp({
+        email: email,
+        token: code,
+        type: 'email' // يغطي تأكيد التسجيل وتغيير البريد
+      });
+
+      if (error) {
+        const msg = String(error.message || '').toLowerCase();
+        if (msg.includes('rate limit') || msg.includes('too many')) {
+          AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. حاول بعد شوية.');
+        } else if (msg.includes('failed to fetch') || msg.includes('network')) {
+          AuthUI.setMessage(errorBox, 'فشل الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.');
+        } else {
+          AuthUI.setMessage(errorBox, 'الكود غير صحيح أو انتهت صلاحيته. اطلب كود جديد.');
+        }
+        otpGroup.classList.add('is-invalid');
+        digits.forEach((d) => { d.disabled = false; d.value = ''; });
+        digits[0].focus();
+        restore();
+        verifying = false;
+        return;
+      }
+
+      AuthUI.setMessage(successBox, 'تم تأكيد حسابك بنجاح، جارِ تحويلك...');
+      try { sessionStorage.removeItem('pending_email'); } catch (e) { /* تجاهل */ }
+      rateLimiter.reset('verify:' + email);
+      setTimeout(() => { AuthUI.goToSafeRedirect(); }, 900);
+    } catch (err) {
+      AuthUI.setMessage(errorBox, 'حصل خطأ غير متوقع. حاول مجدداً.');
+      digits.forEach((d) => { d.disabled = false; });
+      restore();
+      verifying = false;
+    }
+  });
+
+  // ---------- إعادة إرسال الكود مع عدّاد مرئي ----------
+  const RESEND_COOLDOWN = 60;
+  let cooldownTimer = null;
+
+  function startCooldown(seconds) {
+    let left = seconds;
+    resendBtn.disabled = true;
+    const tick = () => {
+      resendBtn.textContent = left > 0 ? 'أعد الإرسال بعد ' + left + 'ث' : 'أعد الإرسال';
+      if (left <= 0) {
+        clearInterval(cooldownTimer);
+        resendBtn.disabled = false;
+        return;
+      }
+      left--;
+    };
+    tick();
+    clearInterval(cooldownTimer);
+    cooldownTimer = setInterval(tick, 1000);
+  }
+
+  resendBtn.addEventListener('click', async () => {
+    AuthUI.clearMessages(errorBox, successBox);
+
+    if (!window.supabaseClient) {
+      AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة.');
+      return;
+    }
+
+    if (!rateLimiter.check('resend:' + email, 3, 15 * 60 * 1000)) {
+      AuthUI.setMessage(errorBox, 'طلبت الكود عدة مرات. راجع بريدك أو انتظر ربع ساعة.');
+      return;
+    }
+
+    startCooldown(RESEND_COOLDOWN);
+
+    try {
+      const { error } = await supabaseClient.auth.resend({
+        type: 'signup',
+        email: email,
+        options: { emailRedirectTo: new URL('verify.html', window.location.href).href }
+      });
+
+      if (error) {
+        const msg = String(error.message || '').toLowerCase();
+        if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('security purposes')) {
+          AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. انتظر شوية وحاول مجدداً.');
+        } else {
+          AuthUI.setMessage(errorBox, 'ما قدرنا نرسل الكود الآن. حاول بعد شوية.');
+        }
+        return;
+      }
+
+      AuthUI.setMessage(successBox, 'تم إرسال كود جديد لبريدك.');
+      digits.forEach((d) => { d.value = ''; });
+      digits[0].focus();
+    } catch (e) {
+      AuthUI.setMessage(errorBox, 'فشل الاتصال. تحقق من الإنترنت وحاول مجدداً.');
+    }
+  });
+})();
 </script>
 </body>
 </html>

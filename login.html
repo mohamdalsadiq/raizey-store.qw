@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff6a1a">
+<meta name="robots" content="noindex, nofollow">
 <title>تسجيل الدخول — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -12,129 +15,218 @@
 </head>
 <body>
 
-<div class="auth-page">
+<main class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">RAIZEY <span>STORE</span></div>
     <h1 class="auth-title">تسجيل الدخول</h1>
     <p class="auth-sub">أهلاً بيك تاني في RAIZEY STORE</p>
 
-    <form id="loginForm">
+    <form id="loginForm" novalidate>
       <div class="field">
-        <label>البريد الإلكتروني</label>
-        <input type="email" id="email" required placeholder="example@email.com">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" required autocomplete="email"
+               inputmode="email" spellcheck="false" placeholder="example@email.com">
       </div>
 
-      <div class="field">
-        <label>كلمة السر</label>
-        <input type="password" id="password" required placeholder="كلمة السر">
+      <div class="field field-pw">
+        <label for="password">كلمة السر</label>
+        <input type="password" id="password" name="password" required
+               autocomplete="current-password" placeholder="كلمة السر">
+        <button type="button" class="pw-toggle" data-target="password"
+                aria-label="إظهار كلمة السر" aria-pressed="false">
+          <i class="fa-regular fa-eye" aria-hidden="true"></i>
+        </button>
       </div>
 
-      <div class="form-error" id="formError"></div>
+      <div class="form-error" id="formError" role="alert" aria-live="assertive"></div>
 
       <button type="submit" class="auth-btn" id="submitBtn">دخول</button>
     </form>
 
-    <p class="auth-switch" style="margin-top:12px;">
-      <a href="javascript:void(0)" id="forgotLink">نسيت كلمة السر؟</a>
+    <p class="auth-switch" style="margin-top:14px;">
+      <button type="button" id="forgotLink" aria-expanded="false" aria-controls="forgotBox">نسيت كلمة السر؟</button>
     </p>
 
-    <div id="forgotBox" style="display:none; margin-top:14px;">
+    <div id="forgotBox" class="hidden" style="margin-top:14px;">
       <div class="field">
-        <label>أدخل إيميلك لإرسال رابط إعادة التعيين</label>
-        <input type="email" id="forgotEmail" placeholder="example@email.com">
+        <label for="forgotEmail">أدخل إيميلك لإرسال رابط إعادة التعيين</label>
+        <input type="email" id="forgotEmail" autocomplete="email" inputmode="email"
+               spellcheck="false" placeholder="example@email.com">
       </div>
-      <div class="form-error" id="forgotError"></div>
-      <div class="form-success" id="forgotSuccess"></div>
-      <button class="auth-btn" id="forgotBtn" style="background:var(--bg-card); color:var(--ink); border:1px solid var(--border);">إرسال رابط إعادة التعيين</button>
+      <div class="form-error" id="forgotError" role="alert" aria-live="assertive"></div>
+      <div class="form-success" id="forgotSuccess" role="status" aria-live="polite"></div>
+      <button type="button" class="auth-btn auth-btn--ghost" id="forgotBtn">إرسال رابط إعادة التعيين</button>
     </div>
 
     <p class="auth-switch">ما عندك حساب؟ <a href="register.html">أنشئ حساب جديد</a></p>
 
     <div class="auth-divider">أو</div>
     <div class="social-login-row">
-      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()"><i class="fab fa-facebook-f"></i> فيسبوك</button>
-      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()"><i class="fab fa-google"></i> جوجل</button>
+      <button type="button" class="social-btn fb-btn" data-social="facebook"><i class="fab fa-facebook-f" aria-hidden="true"></i> فيسبوك</button>
+      <button type="button" class="social-btn google-btn" data-social="google"><i class="fab fa-google" aria-hidden="true"></i> جوجل</button>
     </div>
-    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;"></p>
+    <p class="auth-state" id="socialSoonMsg" role="status" aria-live="polite" style="min-height:0;"></p>
   </div>
-</div>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-utils.js"></script>
 <script>
-const form = document.getElementById('loginForm');
-const errorBox = document.getElementById('formError');
-const submitBtn = document.getElementById('submitBtn');
+(() => {
+  'use strict';
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorBox.textContent = '';
+  const form       = document.getElementById('loginForm');
+  const errorBox   = document.getElementById('formError');
+  const submitBtn  = document.getElementById('submitBtn');
+  const emailInput = document.getElementById('email');
+  const pwInput    = document.getElementById('password');
 
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+  AuthUI.initPasswordToggles();
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'جارِ الدخول...';
+  // لو المستخدم مسجّل دخول بالفعل نحوّله فوراً بدل ما يشوف فورم فاضي
+  (async () => {
+    if (!window.supabaseClient) return;
+    try {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data && data.session) AuthUI.goToSafeRedirect();
+    } catch (e) { /* نتجاهل — الفورم يظل متاحاً */ }
+  })();
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    AuthUI.clearMessages(errorBox);
+    emailInput.setAttribute('aria-invalid', 'false');
+    pwInput.setAttribute('aria-invalid', 'false');
 
-  if (error) {
-    if (error.message.includes('Email not confirmed')) {
-      sessionStorage.setItem('pending_email', email);
-      window.location.href = 'verify.html';
+    if (!window.supabaseClient) {
+      AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
       return;
     }
-    errorBox.textContent = 'الإيميل أو كلمة السر غير صحيحة';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'دخول';
-    return;
-  }
 
-  // إذا كان المستخدم جاي من صفحة تسوّق (مثلاً category.html) ووُقف طلبه
-  // بسبب تسجيل الدخول، نرجّعه لنفس الصفحة بدل ما نرسله دايماً للرئيسية
-  const savedRedirect = sessionStorage.getItem('redirect_after_login');
-  sessionStorage.removeItem('redirect_after_login');
-  if (savedRedirect && savedRedirect.startsWith(window.location.origin)) {
-    window.location.href = savedRedirect;
-  } else {
-    window.location.href = 'index.html';
-  }
-});
+    const email    = emailInput.value.trim().toLowerCase();
+    const password = pwInput.value;
 
-document.getElementById('forgotLink').addEventListener('click', () => {
-  document.getElementById('forgotBox').style.display =
-    document.getElementById('forgotBox').style.display === 'none' ? 'block' : 'none';
-});
+    if (!AuthUI.isValidEmail(email)) {
+      emailInput.setAttribute('aria-invalid', 'true');
+      AuthUI.setMessage(errorBox, 'أدخل بريداً إلكترونياً صحيحاً.');
+      emailInput.focus();
+      return;
+    }
+    if (!password) {
+      pwInput.setAttribute('aria-invalid', 'true');
+      AuthUI.setMessage(errorBox, 'أدخل كلمة السر.');
+      pwInput.focus();
+      return;
+    }
 
-document.getElementById('forgotBtn').addEventListener('click', async () => {
-  const forgotError = document.getElementById('forgotError');
-  const forgotSuccess = document.getElementById('forgotSuccess');
-  forgotError.textContent = '';
-  forgotSuccess.textContent = '';
+    // حد محلي للمحاولات: 6 محاولات كل 5 دقائق لكل بريد (Supabase عنده حد خاص به أيضاً)
+    if (!rateLimiter.check('login:' + email, 6, 5 * 60 * 1000)) {
+      AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. انتظر خمس دقايق وحاول مجدداً.');
+      return;
+    }
 
-  const email = document.getElementById('forgotEmail').value.trim();
-  if (!email) {
-    forgotError.textContent = 'أدخل إيميلك';
-    return;
-  }
+    const restore = AuthUI.startLoading(submitBtn, 'جارِ الدخول...');
 
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-password.html'
+    try {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        const msg = String(error.message || '').toLowerCase();
+
+        // حساب غير مؤكَّد → نوجّهه لصفحة التحقق (ليست معلومة حسّاسة لأنه أدخل كلمة السر الصحيحة)
+        if (msg.includes('not confirmed') || msg.includes('email_not_confirmed')) {
+          sessionStorage.setItem('pending_email', email);
+          window.location.href = 'verify.html';
+          return;
+        }
+        if (msg.includes('rate limit') || msg.includes('too many')) {
+          AuthUI.setMessage(errorBox, 'محاولات كتيرة جداً. حاول بعد شوية.');
+        } else if (msg.includes('failed to fetch') || msg.includes('network')) {
+          AuthUI.setMessage(errorBox, 'فشل الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً.');
+        } else {
+          // رسالة موحّدة — لا تكشف إن كان البريد مسجّلاً أو لا
+          AuthUI.setMessage(errorBox, 'البريد الإلكتروني أو كلمة السر غير صحيحة.');
+        }
+        restore();
+        return;
+      }
+
+      rateLimiter.reset('login:' + email);
+      AuthUI.goToSafeRedirect();
+    } catch (err) {
+      AuthUI.setMessage(errorBox, 'حصل خطأ غير متوقع. حاول مجدداً.');
+      restore();
+    }
   });
 
-  if (error) {
-    forgotError.textContent = 'حصل خطأ، حاول تاني';
-    return;
-  }
+  // ---------- نسيت كلمة السر ----------
+  const forgotLink    = document.getElementById('forgotLink');
+  const forgotBox     = document.getElementById('forgotBox');
+  const forgotBtn     = document.getElementById('forgotBtn');
+  const forgotError   = document.getElementById('forgotError');
+  const forgotSuccess = document.getElementById('forgotSuccess');
+  const forgotEmail   = document.getElementById('forgotEmail');
 
-  forgotSuccess.textContent = 'تم إرسال رابط إعادة التعيين لإيميلك، افتحه من نفس الجهاز';
-});
+  forgotLink.addEventListener('click', () => {
+    const willOpen = forgotBox.classList.contains('hidden');
+    forgotBox.classList.toggle('hidden', !willOpen);
+    forgotLink.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen) {
+      forgotEmail.value = emailInput.value.trim();
+      forgotEmail.focus();
+    }
+  });
 
-function showSocialSoon() {
-  const msg = document.getElementById('socialSoonMsg');
-  msg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً';
-  setTimeout(() => { msg.textContent = ''; }, 3000);
-}
+  forgotBtn.addEventListener('click', async () => {
+    AuthUI.clearMessages(forgotError, forgotSuccess);
+    forgotEmail.setAttribute('aria-invalid', 'false');
+
+    if (!window.supabaseClient) {
+      AuthUI.setMessage(forgotError, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة.');
+      return;
+    }
+
+    const email = forgotEmail.value.trim().toLowerCase();
+    if (!AuthUI.isValidEmail(email)) {
+      forgotEmail.setAttribute('aria-invalid', 'true');
+      AuthUI.setMessage(forgotError, 'أدخل بريداً إلكترونياً صحيحاً.');
+      return;
+    }
+
+    if (!rateLimiter.check('reset:' + email, 3, 15 * 60 * 1000)) {
+      AuthUI.setMessage(forgotError, 'طلبت الرابط عدة مرات. راجع بريدك أو انتظر ربع ساعة.');
+      return;
+    }
+
+    const restore = AuthUI.startLoading(forgotBtn, 'جارِ الإرسال...');
+
+    try {
+      await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: new URL('reset-password.html', window.location.href).href
+      });
+    } catch (e) { /* نتجاهل عن قصد */ }
+
+    // رسالة واحدة دائماً (نجاح أو فشل) — تمنع كشف البُرد المسجّلة
+    AuthUI.setMessage(
+      forgotSuccess,
+      'لو البريد ده مسجّل عندنا هيوصلك رابط إعادة التعيين خلال دقايق. الرابط صالح لمدة 30 دقيقة ويُستخدم مرة واحدة فقط.'
+    );
+    restore();
+    forgotBtn.disabled = true;
+    setTimeout(() => { forgotBtn.disabled = false; }, 45000);
+  });
+
+  // ---------- تسجيل دخول اجتماعي (لم يُفعَّل بعد) ----------
+  const socialMsg = document.getElementById('socialSoonMsg');
+  document.querySelectorAll('[data-social]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      socialMsg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً.';
+      clearTimeout(socialMsg._t);
+      socialMsg._t = setTimeout(() => { socialMsg.textContent = ''; }, 3000);
+    });
+  });
+})();
 </script>
 </body>
 </html>
