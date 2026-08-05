@@ -234,6 +234,32 @@
     opacity: 0.4;
     margin-bottom: 16px;
   }
+
+  .cart-notice {
+    background: rgba(255, 106, 26, 0.08);
+    border: 1px solid rgba(255, 106, 26, 0.28);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .cart-notice i { color: var(--primary); margin-left: 6px; }
+
+  .cart-item-row.unavailable { opacity: 0.55; border-color: rgba(239, 68, 68, 0.4); }
+  .cart-item-badge {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger, #ef4444);
+  }
+  .btn-proceed-checkout:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -249,11 +275,12 @@
   <h1 class="cart-title"><i class="fas fa-shopping-cart"></i> سلة المشتريات</h1>
 
   <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">
-    <i class="fas fa-circle-notch fa-spin style="font-size:24px; color:var(--primary); margin-bottom:10px;"></i>
+    <i class="fas fa-circle-notch fa-spin" style="font-size:24px; color:var(--primary); margin-bottom:10px;"></i>
     <div>جارِ تحميل السلة...</div>
   </div>
   
   <div id="cartContent" style="display:none;">
+    <div id="cartNotice" class="cart-notice" style="display:none;"></div>
     <div id="cartItemsList"></div>
 
     <div class="summary-box">
@@ -280,29 +307,53 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
+const MAX_QTY_PER_ITEM = 10;
+
 let currentUser = null;
 let cart = [];
 let grandTotal = 0;
+let hasBlockingIssue = false;
 
+/* ── دوال مساعدة احتياطية (المصدر الأساسي: assets/js/supabase-client.js) ── */
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
-  const num = Math.round(val || 0);
+  const num = Math.round(Number(val) || 0);
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
+function esc(str) {
+  if (typeof escapeHtml === 'function') return escapeHtml(str);
+  if (str === null || str === undefined) return '';
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function escAttr(str) {
+  if (typeof escapeAttribute === 'function') return escapeAttribute(str);
+  return esc(str);
+}
+
+function safeUrl(url) {
+  if (typeof sanitizeUrl === 'function') return sanitizeUrl(url) || '';
+  const s = String(url || '').trim();
+  return /^(https?:|\/|data:image\/)/i.test(s) ? s : '';
+}
+
+function showFatal(message) {
+  document.getElementById('loadingBox').innerHTML =
+    `<div style="color:var(--danger,#ef4444); font-weight:700;">${esc(message)}</div>
+     <button type="button" onclick="window.location.reload()"
+       style="margin-top:12px; padding:10px 20px; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-weight:700; cursor:pointer;">
+       إعادة المحاولة
+     </button>`;
+  document.getElementById('loadingBox').style.display = 'block';
 }
 
 async function init() {
   try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
     if (!session) {
       sessionStorage.setItem('redirect_after_login', window.location.href);
       window.location.href = 'login.html';
@@ -310,27 +361,134 @@ async function init() {
     }
     currentUser = session.user;
   } catch (e) {
-    console.error('[RAIZEY] Session check error:', e);
+    // فشل التحقق من الجلسة = لا نعرض بيانات ولا نسمح بالمتابعة
+    showFatal('تعذّر التحقق من جلستك. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.');
+    return;
   }
 
-  loadCartData();
+  await loadCartData();
 }
 
-function loadCartData() {
+async function loadCartData() {
   try {
-    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+    const raw = JSON.parse(localStorage.getItem('raizey_store_cart'));
+    cart = Array.isArray(raw) ? raw : [];
   } catch (e) {
     cart = [];
   }
-  
-  document.getElementById('loadingBox').style.display = 'none';
 
   if (!cart || cart.length === 0) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showEmptyCartState();
+    return;
+  }
+
+  // تطبيع الكميات قبل أي حساب
+  let normalized = false;
+  cart.forEach(item => {
+    const q = Math.floor(Number(item.quantity));
+    const safeQty = (Number.isFinite(q) && q >= 1) ? Math.min(q, MAX_QTY_PER_ITEM) : 1;
+    if (safeQty !== item.quantity) { item.quantity = safeQty; normalized = true; }
+  });
+  if (normalized) persistCart();
+
+  // ── إعادة تسعير موثوقة من قاعدة البيانات (لا نثق بأسعار localStorage) ──
+  try {
+    await revalidateCartPrices();
+  } catch (e) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showFatal('تعذّر التحقق من الأسعار الحالية. أعد المحاولة قبل إتمام الدفع.');
+    return;
+  }
+
+  document.getElementById('loadingBox').style.display = 'none';
+
+  if (cart.length === 0) {
     showEmptyCartState();
     return;
   }
 
   renderCart();
+}
+
+function persistCart() {
+  try {
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  } catch (e) {
+    console.error('[RAIZEY] Cart persist error:', e);
+  }
+}
+
+/**
+ * يعيد حساب سعر كل عنصر من products.price_usd مع سعر الصرف وهامش الربح
+ * المخزّنين في جدول settings — نفس المعادلة التي يتحقق بها تريجر قاعدة البيانات.
+ * أي عنصر غير متاح يُعلَّم ويمنع إتمام الدفع.
+ */
+async function revalidateCartPrices() {
+  const ids = [...new Set(cart.map(i => i.product_id).filter(Boolean))];
+  if (ids.length === 0) return;
+
+  const [{ data: products, error: prodErr }, { data: settings, error: setErr }] = await Promise.all([
+    supabaseClient.from('products').select('id, name, price_usd, options, is_active').in('id', ids),
+    supabaseClient.from('settings').select('key, value').in('key', ['usd_to_sdg_rate', 'profit_margin_percent'])
+  ]);
+  if (prodErr) throw prodErr;
+  if (setErr) throw setErr;
+
+  const settingsMap = {};
+  (settings || []).forEach(s => { settingsMap[s.key] = parseFloat(s.value); });
+  const rate = settingsMap.usd_to_sdg_rate;
+  const margin = Number.isFinite(settingsMap.profit_margin_percent) ? settingsMap.profit_margin_percent : 0;
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error('rate_unavailable');
+
+  const productMap = {};
+  (products || []).forEach(p => { productMap[p.id] = p; });
+
+  let priceChanged = false;
+  let removedCount = 0;
+
+  cart = cart.filter(item => {
+    const product = productMap[item.product_id];
+    if (!product || product.is_active !== true) {
+      removedCount++;
+      return false;
+    }
+
+    // سعر الخيار المختار له الأولوية (نفس منطق التريجر)
+    let priceUsd = parseFloat(product.price_usd) || 0;
+    if (item.selected_option && item.selected_option.id && Array.isArray(product.options)) {
+      const opt = product.options.find(o => String(o.id) === String(item.selected_option.id));
+      if (!opt) {
+        removedCount++;
+        return false;
+      }
+      const optUsd = parseFloat(opt.price_usd);
+      if (Number.isFinite(optUsd) && optUsd > 0) priceUsd = optUsd;
+      // تحديث تسمية/سعر الخيار من المصدر الموثوق
+      item.selected_option = { ...item.selected_option, label: opt.label ?? item.selected_option.label, price_usd: optUsd };
+    }
+
+    if (!(priceUsd > 0)) { removedCount++; return false; }
+
+    const authoritative = Math.round(priceUsd * rate * (1 + margin / 100));
+    const previous = Math.round(parseFloat(item.price_sdg) || 0);
+    if (previous !== authoritative) priceChanged = true;
+
+    item.price_sdg = authoritative;
+    item.name = product.name || item.name;
+    return true;
+  });
+
+  persistCart();
+
+  const notices = [];
+  if (removedCount > 0) notices.push(`تم حذف ${removedCount} عنصر لم يعد متاحاً في المتجر.`);
+  if (priceChanged) notices.push('تم تحديث الأسعار لتطابق أسعار المتجر الحالية.');
+  if (notices.length > 0) {
+    const box = document.getElementById('cartNotice');
+    box.innerHTML = `<i class="fas fa-circle-info"></i> ${notices.map(esc).join(' ')}`;
+    box.style.display = 'block';
+  }
 }
 
 function showEmptyCartState() {
@@ -347,32 +505,49 @@ function renderCart() {
   const listContainer = document.getElementById('cartItemsList');
   grandTotal = 0;
 
+  hasBlockingIssue = false;
+
   listContainer.innerHTML = cart.map((item, index) => {
     const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
     const unitPrice = parseFloat(item.price_sdg) || 0;
     const lineSubtotal = unitPrice * qty;
     grandTotal += lineSubtotal;
-    
+
+    const invalid = !(unitPrice > 0);
+    if (invalid) hasBlockingIssue = true;
+
     const metaText = Object.entries(item.field_values || {})
-      .map(([key, val]) => `${escapeHtml(key)}: <span>${escapeHtml(val)}</span>`)
+      .map(([key, val]) => {
+        const label = (item.field_labels && item.field_labels[key]) ? item.field_labels[key] : key;
+        return `${esc(label)}: <span>${esc(val)}</span>`;
+      })
       .join(' | ');
 
+    const optionText = (item.selected_option && item.selected_option.label)
+      ? `<div class="cart-item-meta">الخيار: <span>${esc(item.selected_option.label)}</span></div>`
+      : '';
+
+    const imgUrl = safeUrl(item.image_url);
+
     return `
-      <div class="cart-item-row">
+      <div class="cart-item-row${invalid ? ' unavailable' : ''}">
         <div class="cart-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<i class="fas fa-box-open" style="font-size:20px; color:var(--text-muted);"></i>'}
+          ${imgUrl ? `<img src="${escAttr(imgUrl)}" alt="${escAttr(item.name)}">` : '<i class="fas fa-box-open" style="font-size:20px; color:var(--text-muted);"></i>'}
         </div>
         <div class="cart-item-details">
-          <div class="cart-item-name">${escapeHtml(item.name)}</div>
+          <div class="cart-item-name">${esc(item.name)}</div>
+          ${optionText}
           ${metaText ? `<div class="cart-item-meta">${metaText}</div>` : ''}
-          <div class="cart-item-price">${safeFormatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${safeFormatSDG(lineSubtotal)} ج.س</strong></div>
+          ${invalid
+            ? '<div class="cart-item-badge">سعر غير صالح — يرجى حذف العنصر</div>'
+            : `<div class="cart-item-price">${safeFormatSDG(unitPrice)} ج.س &times; ${qty} = <strong>${safeFormatSDG(lineSubtotal)} ج.س</strong></div>`}
           <div class="cart-qty-stepper">
             <button type="button" onclick="changeQty(${index}, -1)" aria-label="إنقاص الكمية" ${qty <= 1 ? 'disabled' : ''}>&minus;</button>
             <span class="qty-value">${qty}</span>
-            <button type="button" onclick="changeQty(${index}, 1)" aria-label="زيادة الكمية">+</button>
+            <button type="button" onclick="changeQty(${index}, 1)" aria-label="زيادة الكمية" ${qty >= MAX_QTY_PER_ITEM ? 'disabled' : ''}>+</button>
           </div>
         </div>
-        <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف العنصر">
+        <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف العنصر" aria-label="حذف العنصر">
           <i class="fas fa-trash-can"></i>
         </button>
       </div>
@@ -381,15 +556,20 @@ function renderCart() {
 
   document.getElementById('cartGrandTotal').textContent = `${safeFormatSDG(grandTotal)} ج.س`;
 
-  document.getElementById('proceedToCheckoutBtn').onclick = () => {
+  const proceedBtn = document.getElementById('proceedToCheckoutBtn');
+  proceedBtn.disabled = hasBlockingIssue;
+  proceedBtn.title = hasBlockingIssue ? 'يوجد عنصر غير صالح في السلة' : '';
+  proceedBtn.onclick = () => {
+    if (hasBlockingIssue) return;
     window.location.href = 'checkout.html';
   };
 }
 
 function removeItem(index) {
+  if (index < 0 || index >= cart.length) return;
   cart.splice(index, 1);
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
-  
+  persistCart();
+
   if (cart.length === 0) {
     showEmptyCartState();
   } else {
@@ -398,9 +578,10 @@ function removeItem(index) {
 }
 
 function clearAllItems() {
-  if (confirm('هل أنت تأكد من رغبتك في تفريغ سلة المشتريات بالكامل؟')) {
+  if (confirm('هل أنت متأكد من رغبتك في تفريغ سلة المشتريات بالكامل؟')) {
     cart = [];
-    localStorage.removeItem('raizey_store_cart');
+    try { localStorage.removeItem('raizey_store_cart'); } catch (e) {}
+    document.getElementById('cartNotice').style.display = 'none';
     showEmptyCartState();
   }
 }
@@ -408,12 +589,12 @@ function clearAllItems() {
 function changeQty(index, delta) {
   const item = cart[index];
   if (!item) return;
-  let qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+  let qty = (item.quantity && item.quantity > 0) ? Math.floor(item.quantity) : 1;
   qty += delta;
   if (qty < 1) qty = 1;
-  if (qty > 99) qty = 99;
+  if (qty > MAX_QTY_PER_ITEM) qty = MAX_QTY_PER_ITEM;
   item.quantity = qty;
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  persistCart();
   renderCart();
 }
 

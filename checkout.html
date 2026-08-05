@@ -175,7 +175,7 @@
 
     <div class="section-label">هل لديك كود خصم؟</div>
     <div style="display:flex; gap:8px; margin-bottom:6px;">
-      <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
+      <input type="text" id="couponInput" placeholder="اكتب الكود هنا" maxlength="32" autocomplete="off" spellcheck="false">
       <button id="applyCouponBtn" type="button">تطبيق</button>
     </div>
     <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
@@ -227,6 +227,10 @@
 <script src="assets/js/supabase-client.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+const MAX_QTY_PER_ITEM = 10;
+const MAX_UNITS_PER_ORDER = 30;
+const MAX_COUPON_LEN = 32;
+
 let cart = [];
 let currentUser = null;
 let walletBalance = 0;
@@ -235,10 +239,87 @@ let selectedPayment = null;
 let selectedMethodId = null;
 let receiptFile = null;
 let appliedCoupon = null;
+let isSubmitting = false;
+let pricingContext = null; // { rate, margin }
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
-  return Math.round(val).toLocaleString('ar-EG');
+  return Math.round(Number(val) || 0).toLocaleString('ar-EG');
+}
+
+function safeUrl(url) {
+  if (typeof sanitizeUrl === 'function') return sanitizeUrl(url) || '';
+  const s = String(url || '').trim();
+  return /^(https?:|\/|data:image\/)/i.test(s) ? s : '';
+}
+
+function resetOrderButton(btn) {
+  isSubmitting = false;
+  btn.disabled = false;
+  btn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+}
+
+/**
+ * إعادة تسعير السلة من قاعدة البيانات بنفس معادلة تريجر
+ * verify_order_price_before_insert — الأسعار في localStorage لا يُعتمد عليها.
+ * ترجع رسالة خطأ نصية عند وجود مشكلة، أو null عند النجاح.
+ */
+async function revalidateCartPrices() {
+  const ids = [...new Set(cart.map(i => i.product_id).filter(Boolean))];
+  if (ids.length === 0) return 'سلة المشتريات فارغة أو غير صالحة.';
+
+  const [{ data: products, error: prodErr }, { data: settings, error: setErr }] = await Promise.all([
+    supabaseClient.from('products').select('id, name, price_usd, options, is_active').in('id', ids),
+    supabaseClient.from('settings').select('key, value').in('key', ['usd_to_sdg_rate', 'profit_margin_percent'])
+  ]);
+  if (prodErr || setErr) return 'تعذّر التحقق من الأسعار الحالية، حاول مجدداً.';
+
+  const settingsMap = {};
+  (settings || []).forEach(s => { settingsMap[s.key] = parseFloat(s.value); });
+  const rate = settingsMap.usd_to_sdg_rate;
+  const margin = Number.isFinite(settingsMap.profit_margin_percent) ? settingsMap.profit_margin_percent : 0;
+  if (!Number.isFinite(rate) || rate <= 0) return 'سعر الصرف غير مضبوط حالياً، يرجى المحاولة لاحقاً.';
+  pricingContext = { rate, margin };
+
+  const productMap = {};
+  (products || []).forEach(p => { productMap[p.id] = p; });
+
+  let removed = 0;
+  let changed = false;
+  let totalUnits = 0;
+
+  cart = cart.filter(item => {
+    const product = productMap[item.product_id];
+    if (!product || product.is_active !== true) { removed++; return false; }
+
+    let priceUsd = parseFloat(product.price_usd) || 0;
+    if (item.selected_option && item.selected_option.id && Array.isArray(product.options)) {
+      const opt = product.options.find(o => String(o.id) === String(item.selected_option.id));
+      if (!opt) { removed++; return false; }
+      const optUsd = parseFloat(opt.price_usd);
+      if (Number.isFinite(optUsd) && optUsd > 0) priceUsd = optUsd;
+      item.selected_option = { ...item.selected_option, label: opt.label ?? item.selected_option.label, price_usd: optUsd };
+    }
+    if (!(priceUsd > 0)) { removed++; return false; }
+
+    const qty = Math.floor(Number(item.quantity));
+    item.quantity = (Number.isFinite(qty) && qty >= 1) ? Math.min(qty, MAX_QTY_PER_ITEM) : 1;
+    totalUnits += item.quantity;
+
+    const authoritative = Math.round(priceUsd * rate * (1 + margin / 100));
+    if (Math.round(parseFloat(item.price_sdg) || 0) !== authoritative) changed = true;
+    item.price_sdg = authoritative;
+    item.name = product.name || item.name;
+    return true;
+  });
+
+  try { localStorage.setItem('raizey_store_cart', JSON.stringify(cart)); } catch (e) {}
+
+  if (cart.length === 0) return 'كل عناصر سلتك لم تعد متاحة. يرجى العودة للمتجر.';
+  if (totalUnits > MAX_UNITS_PER_ORDER) return `الحد الأقصى ${MAX_UNITS_PER_ORDER} وحدة في الطلب الواحد. يرجى تقليل الكميات.`;
+  if (removed > 0) return 'تم حذف عنصر أو أكثر لم يعد متاحاً — راجع سلتك ثم أعد المحاولة.';
+  if (changed) return 'تم تحديث الأسعار لتطابق أسعار المتجر الحالية — راجع الإجمالي ثم أعد المحاولة.';
+  return null;
 }
 
 
@@ -273,33 +354,65 @@ async function init() {
     return;
   }
 
+  // ── إعادة تسعير موثوقة قبل عرض أي مبلغ للمستخدم ──
+  let pricingNotice = null;
+  try {
+    pricingNotice = await revalidateCartPrices();
+  } catch (e) {
+    document.getElementById('loadingBox').textContent = 'تعذّر التحقق من الأسعار، يرجى تحديث الصفحة.';
+    return;
+  }
+
+  if (cart.length === 0) {
+    document.getElementById('loadingBox').innerHTML = `
+      <div style="text-align:center; padding:40px 0;">
+        <p style="color:var(--text-muted); margin-bottom:15px;">لم تبقَ عناصر متاحة في سلتك</p>
+        <a href="index.html" class="auth-btn" style="text-decoration:none; display:inline-block; padding:10px 20px;">تصفح المنتجات</a>
+      </div>`;
+    return;
+  }
+
   try {
     const [{ data: wallet, error: walletErr }, { data: methods, error: methodsErr }] = await Promise.all([
-      supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
+      supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle(),
       supabaseClient.from('payment_methods').select('*').eq('is_active', true)
     ]);
-    if (walletErr) console.warn('[RAIZEY] Wallet fetch error:', walletErr.message);
-    if (methodsErr) console.warn('[RAIZEY] Methods fetch error:', methodsErr.message);
-    walletBalance = wallet ? wallet.balance : 0;
+    if (walletErr) devWarn('[RAIZEY] Wallet fetch error:', walletErr.message);
+    if (methodsErr) devWarn('[RAIZEY] Methods fetch error:', methodsErr.message);
+    walletBalance = (wallet && Number.isFinite(parseFloat(wallet.balance))) ? parseFloat(wallet.balance) : 0;
     paymentMethods = methods || [];
   } catch (e) {
-    console.error('[RAIZEY] init data fetch error:', e);
+    devWarn('[RAIZEY] init data fetch error:', e.message || e);
+    walletBalance = 0;
+    paymentMethods = [];
   }
 
   renderCheckout();
+
+  if (pricingNotice) {
+    const errorBox = document.getElementById('formError');
+    errorBox.style.color = 'var(--primary)';
+    errorBox.textContent = pricingNotice;
+  }
 }
 
-function currentTotal() {
-  const raw = cart.reduce((sum, item) => {
-    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-    const price = parseFloat(item.price_sdg) || 0;
-    return sum + (price * qty);
-  }, 0);
+/** سعر الوحدة بعد الخصم — نفس التقريب المستخدم عند إدخال الطلب */
+function unitPriceAfterDiscount(item, discountPercent) {
+  const unit = parseFloat(item.price_sdg) || 0;
+  const pct = Number(discountPercent) || 0;
+  return Math.round(unit - (unit * pct / 100));
+}
 
-  if (appliedCoupon) {
-    return raw - (raw * appliedCoupon.discount_percent / 100);
-  }
-  return raw;
+/**
+ * الإجمالي = مجموع أسعار الوحدات المقرّبة (مطابق تماماً لما سيُسجّل في
+ * قاعدة البيانات) حتى لا يختلف المعروض عن المخصوم فعلياً.
+ */
+function currentTotal() {
+  const pct = appliedCoupon ? appliedCoupon.discount_percent : 0;
+  return cart.reduce((sum, item) => {
+    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+    return sum + (unitPriceAfterDiscount(item, pct) * qty);
+  }, 0);
 }
 
 function renderCheckout() {
@@ -338,7 +451,7 @@ function renderCheckout() {
           <i class="fas fa-trash-can"></i>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
+          ${safeUrl(item.image_url) ? `<img src="${escapeAttribute(safeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<i class="fas fa-box" style="font-size: 22px; color: var(--text-muted);"></i>'}
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
@@ -350,18 +463,6 @@ function renderCheckout() {
     `;
   }).join('');
 
-  const walletOption = document.getElementById('walletOption');
-  const walletText = document.getElementById('walletBalanceText');
-  const canUseWallet = walletBalance >= currentTotal();
-
-  if (canUseWallet) {
-    walletOption.classList.remove('disabled');
-    walletText.innerHTML = `رصيدك الحالي: ${safeFormatSDG(walletBalance)} ج.س (يكفي للدفع)`;
-  } else {
-    walletOption.classList.add('disabled');
-    walletText.innerHTML = `رصيدك غير كافٍ (${safeFormatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن هنا</a>`;
-  }
-
   const methodPickerGrid = document.getElementById('methodPickerGrid');
   methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeAttribute(m.id || '')}">${escapeHtml(m.name)}</div>`).join('');
   methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
@@ -371,6 +472,11 @@ function renderCheckout() {
       selectedMethodId = pill.dataset.methodId;
       const m = paymentMethods.find(x => x.id === selectedMethodId);
       const box = document.getElementById('selectedMethodDetails');
+      if (!m) {
+        selectedMethodId = null;
+        box.innerHTML = '<div class="selected-method-box" style="color:var(--danger);">تعذّر تحميل بيانات هذه الوسيلة، حدّث الصفحة وأعد المحاولة.</div>';
+        return;
+      }
       box.innerHTML = `
         <div class="selected-method-box">
           <div class="bank-account-row">
@@ -397,28 +503,77 @@ function renderCheckout() {
     });
   });
 
+  // يتولّى تحديث الإجمالي وحالة المحفظة وربط الأحداث (مصدر واحد للحقيقة)
+  refreshTotalDisplay();
+}
+
+function refreshTotalDisplay() {
+  document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س';
+  const walletText = document.getElementById('walletBalanceText');
+  const walletOption = document.getElementById('walletOption');
+  const canUseWallet = walletBalance >= currentTotal();
+  if (canUseWallet) {
+    walletOption.classList.remove('disabled');
+    walletText.innerHTML = `رصيدك الحالي: ${safeFormatSDG(walletBalance)} ج.س (يكفي للدفع)`;
+  } else {
+    walletOption.classList.add('disabled');
+    walletText.innerHTML = `رصيدك غير كافٍ (${safeFormatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن هنا</a>`;
+    if (selectedPayment === 'wallet') {
+      selectedPayment = null;
+      walletOption.classList.remove('selected');
+    }
+  }
   attachCheckoutEvents(canUseWallet);
 }
 
 async function applyCoupon() {
-  const code = document.getElementById('couponInput').value.trim().toUpperCase();
+  if (isSubmitting) return;
+  const input = document.getElementById('couponInput');
+  const btn = document.getElementById('applyCouponBtn');
   const msgBox = document.getElementById('couponMessage');
+  const code = input.value.trim().toUpperCase().slice(0, MAX_COUPON_LEN);
   msgBox.style.color = '';
-  if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'يرجى إدخال كود الخصم أولاً'; return; }
+
+  if (!code) {
+    appliedCoupon = null;
+    msgBox.style.color = 'var(--danger)';
+    msgBox.textContent = 'يرجى إدخال كود الخصم أولاً';
+    refreshTotalDisplay();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '...';
   try {
+    // التحقق من الصلاحية (تاريخ الانتهاء وعدد الاستخدامات) يتم داخل
+    // validate_coupon في قاعدة البيانات — وليس في المتصفح.
     const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
-    if (error || !data || data.length === 0) {
+    if (error) throw error;
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const pct = row ? Number(row.discount_percent) : NaN;
+
+    if (!row || !Number.isFinite(pct) || pct <= 0 || pct > 100) {
       appliedCoupon = null;
-      msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي الصلاحية';
-      document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س';
+      msgBox.style.color = 'var(--danger)';
+      msgBox.textContent = 'الكود غير صالح أو منتهي الصلاحية';
+      refreshTotalDisplay();
       return;
     }
-    appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
-    msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}% بنجاح!`;
-    document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س';
+
+    appliedCoupon = { coupon_id: row.coupon_id, discount_percent: pct, code };
+    msgBox.style.color = 'var(--primary)';
+    msgBox.textContent = `تم تطبيق خصم ${pct}% بنجاح! (يُعاد التحقق منه عند تأكيد الطلب)`;
+    refreshTotalDisplay();
   } catch (e) {
+    appliedCoupon = null;
+    devWarn('[RAIZEY] Coupon validate error:', e.message || e);
     msgBox.style.color = 'var(--danger)';
     msgBox.textContent = 'حصل خطأ أثناء التحقق من الكود، حاول مرة أخرى.';
+    refreshTotalDisplay();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'تطبيق';
   }
 }
 
@@ -483,7 +638,47 @@ window.removeItemFromCheckout = function(cartItemId) {
   }
 };
 
+/** يفكّ السلة إلى وحدات مفردة (وحدة = طلب واحد في قاعدة البيانات) */
+function buildOrderUnits() {
+  const units = [];
+  cart.forEach((item, itemIndex) => {
+    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+    for (let i = 0; i < qty; i++) units.push({ item, itemIndex });
+  });
+  return units;
+}
+
+/** يزيل من السلة الوحدات التي نُفّذت بنجاح فقط (حماية من الشراء المزدوج) */
+function consumeCompletedUnits(completedByIndex) {
+  cart = cart.map((item, idx) => {
+    const done = completedByIndex[idx] || 0;
+    if (done === 0) return item;
+    const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+    const remaining = qty - done;
+    return remaining > 0 ? { ...item, quantity: remaining } : null;
+  }).filter(Boolean);
+
+  try {
+    if (cart.length === 0) localStorage.removeItem('raizey_store_cart');
+    else localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  } catch (e) {}
+}
+
+function walletErrorMessage(msg) {
+  if (msg.includes('insufficient_balance')) return 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
+  if (msg.includes('product_not_found')) return 'أحد المنتجات في سلتك لم يعد متاحاً.';
+  if (msg.includes('price_calculation_error')) return 'خطأ في حساب السعر، يرجى تحديث الصفحة والمحاولة مجدداً.';
+  if (msg.includes('access_denied')) return 'لا تملك صلاحية إتمام هذا الطلب.';
+  if (msg.includes('الكود غير صالح') || msg.includes('صلاحيته')) return 'كود الخصم لم يعد صالحاً. أزل الكود ثم أعد المحاولة.';
+  if (typeof getFriendlyError === 'function') return getFriendlyError(msg);
+  return 'حصل خطأ أثناء الخصم من المحفظة، حاول مرة أخرى.';
+}
+
 async function handlePlaceOrder(errorBox, placeOrderBtn) {
+  // ── قفل ضد الضغط المتكرر / الإرسال المزدوج ──
+  if (isSubmitting) return;
+
+  errorBox.style.color = 'var(--danger)';
   errorBox.textContent = '';
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
 
@@ -494,67 +689,117 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
+  isSubmitting = true;
   placeOrderBtn.disabled = true;
-  placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+  placeOrderBtn.textContent = 'جارِ التحقق من الأسعار...';
+
+  // ── إعادة تسعير إلزامية قبل الإرسال: لا نثق بأي سعر من المتصفح ──
+  let pricingProblem = null;
+  try {
+    pricingProblem = await revalidateCartPrices();
+  } catch (e) {
+    devWarn('[RAIZEY] Revalidate error:', e.message || e);
+    pricingProblem = 'تعذّر التحقق من الأسعار الحالية، حاول مجدداً.';
+  }
+  if (pricingProblem) {
+    errorBox.textContent = pricingProblem;
+    renderCheckout();
+    resetOrderButton(placeOrderBtn);
+    return;
+  }
 
   if (selectedPayment === 'wallet') {
+    // يُعاد التحقق من الرصيد داخل create_wallet_order في قاعدة البيانات
+    if (walletBalance < currentTotal()) {
+      errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
+      renderCheckout();
+      resetOrderButton(placeOrderBtn);
+      return;
+    }
+
+    placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+
+    const units = buildOrderUnits();
+    const completedByIndex = {};
+    let lastOrderId = null;
+    let couponConsumed = false;
+
     try {
-      let lastOrderId = null;
-      for (const item of cart) {
-        const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-        for (let i = 0; i < qty; i++) {
-          const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
-            p_product_id: item.product_id,
-            p_field_values: item.field_values,
-            p_field_labels: item.field_labels || {},
-            p_coupon_code: appliedCoupon ? document.getElementById('couponInput').value.trim().toUpperCase() : null,
-            p_selected_option_id: item.selected_option ? item.selected_option.id : null
-          });
-          if (error) throw error;
-          if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
-        }
+      for (const unit of units) {
+        const { item, itemIndex } = unit;
+        // الكوبون يُمرَّر مرة واحدة فقط — الدالة تستهلكه ذرياً في قاعدة البيانات
+        const couponCode = (appliedCoupon && !couponConsumed) ? appliedCoupon.code : null;
+
+        const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_order', {
+          p_product_id: item.product_id,
+          p_field_values: item.field_values || {},
+          p_field_labels: item.field_labels || {},
+          p_coupon_code: couponCode,
+          p_selected_option_id: item.selected_option ? item.selected_option.id : null
+        });
+        if (error) throw error;
+
+        if (couponCode) couponConsumed = true;
+        completedByIndex[itemIndex] = (completedByIndex[itemIndex] || 0) + 1;
+        if (rpcData && rpcData.length > 0) lastOrderId = rpcData[0].id;
       }
-      localStorage.removeItem('raizey_store_cart');
+
+      consumeCompletedUnits(completedByIndex);
       window.location.href = lastOrderId
-        ? `receipt.html?order_id=${lastOrderId}`
+        ? `receipt.html?order_id=${encodeURIComponent(lastOrderId)}`
         : 'my-orders.html';
     } catch (err) {
       const msg = err.message || String(err);
-      if (msg.includes('insufficient_balance')) {
-        errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
-      } else if (msg.includes('product_not_found')) {
-        errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
-      } else if (msg.includes('price_calculation_error')) {
-        errorBox.textContent = 'خطأ في حساب السعر، يرجى تحديث الصفحة والمحاولة مجدداً.';
+      devWarn('[RAIZEY] Wallet order error:', msg);
+
+      // إزالة ما نُفّذ فعلاً حتى لا يُشترى مرتين عند إعادة المحاولة
+      const completedCount = Object.values(completedByIndex).reduce((a, b) => a + b, 0);
+      if (completedCount > 0) {
+        consumeCompletedUnits(completedByIndex);
+        errorBox.textContent = `تم تنفيذ ${completedCount} طلب بنجاح، ثم توقّف الباقي: ${walletErrorMessage(msg)} العناصر المتبقية فقط ما زالت في سلتك.`;
+        appliedCoupon = null;
+        document.getElementById('couponInput').value = '';
+        document.getElementById('couponMessage').textContent = '';
       } else {
-        errorBox.textContent = 'حصل خطأ أثناء الخصم من المحفظة، حاول مرة أخرى.';
+        errorBox.textContent = walletErrorMessage(msg);
       }
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+
+      try {
+        const { data: w } = await supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).maybeSingle();
+        walletBalance = (w && Number.isFinite(parseFloat(w.balance))) ? parseFloat(w.balance) : walletBalance;
+      } catch (e) {}
+
+      renderCheckout();
+      resetOrderButton(placeOrderBtn);
     }
     return;
   }
 
   if (!selectedMethodId || !receiptFile) {
     errorBox.textContent = !selectedMethodId ? 'الرجاء اختيار وسيلة التحويل البنكي!' : 'الرجاء رفع صورة الإيصال لتأكيد التحويل!';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) {
-    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+  const transactionRef = document.getElementById('transactionRefInput').value.trim().slice(0, 64);
+  if (!transactionRef || transactionRef.length < 4) {
+    errorBox.textContent = 'اكتب رقم العملية الصحيح من رسالة التحويل (4 أحرف على الأقل)';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
-  const preUploadCheck = await validateReceiptImage(receiptFile);
-  if (!preUploadCheck.valid) {
-    errorBox.textContent = preUploadCheck.message;
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+  let preUploadCheck;
+  try {
+    preUploadCheck = await validateReceiptImage(receiptFile);
+  } catch (e) {
+    devWarn('[RAIZEY] Receipt validation error:', e.message || e);
+    errorBox.textContent = 'تعذّر التحقق من صورة الإيصال، أعد اختيار الصورة وحاول مجدداً.';
+    resetOrderButton(placeOrderBtn);
+    return;
+  }
+  if (!preUploadCheck || !preUploadCheck.valid) {
+    errorBox.textContent = (preUploadCheck && preUploadCheck.message) || 'صورة الإيصال غير صالحة.';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
@@ -564,15 +809,24 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     receiptHash = await hashFile(receiptFile);
   } catch (e) {
     errorBox.textContent = 'فشل حساب بصمة الملف، يرجى المحاولة مجدداً.';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
-  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
-    checkDuplicateReceipt('orders', receiptHash),
-    checkDuplicateTransactionRef('orders', transactionRef)
-  ]);
+  // ── فحص التكرار: أي فشل شبكة هنا يوقف العملية بدل ترك الزر معلقاً ──
+  let isDuplicateHash = false;
+  let isDuplicateRef = false;
+  try {
+    [isDuplicateHash, isDuplicateRef] = await Promise.all([
+      checkDuplicateReceipt('orders', receiptHash),
+      checkDuplicateTransactionRef('orders', transactionRef)
+    ]);
+  } catch (e) {
+    devWarn('[RAIZEY] Duplicate check error:', e.message || e);
+    errorBox.textContent = 'تعذّر التحقق من تكرار الإيصال، تأكد من اتصالك ثم أعد المحاولة.';
+    resetOrderButton(placeOrderBtn);
+    return;
+  }
 
   if (isDuplicateHash || isDuplicateRef) {
     try {
@@ -582,66 +836,110 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
       });
     } catch (e) {}
-    errorBox.style.color = 'var(--danger)';
     errorBox.textContent = isDuplicateRef
       ? 'رقم العملية هذا تم استخدامه في طلب آخر من قبل!'
-      : 'هذا الإشعارات تم استخدامه من قبل في طلب آخر!';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+      : 'صورة الإيصال هذه تم استخدامها من قبل في طلب آخر!';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
   placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
+  const rawExt = (receiptFile.name.split('.').pop() || '').toLowerCase();
+  const fileExt = ['jpg', 'jpeg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
 
-  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
-    contentType: receiptFile.type,
-    upsert: false
-  });
+  let uploadError = null;
+  try {
+    const res = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
+      contentType: receiptFile.type,
+      upsert: false
+    });
+    uploadError = res.error;
+  } catch (e) {
+    uploadError = e;
+  }
   if (uploadError) {
-    const errMsg = uploadError.message || JSON.stringify(uploadError);
-    console.error('[RAIZEY] Storage upload error:', uploadError);
-    devWarn('[RAIZEY] Storage upload error:', errMsg);
+    devWarn('[RAIZEY] Storage upload error:', uploadError.message || JSON.stringify(uploadError));
     errorBox.textContent = 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    resetOrderButton(placeOrderBtn);
     return;
   }
 
   // ── رابط الإيصال الآمن (Signed URL — مؤقت وغير مكشوف) ──
-  const { data: signedData, error: signedErr } = await supabaseClient.storage
-    .from('receipts')
-    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 يوم
-  if (signedErr || !signedData) {
+  let receiptSignedUrl = null;
+  try {
+    const { data: signedData, error: signedErr } = await supabaseClient.storage
+      .from('receipts')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 يوم
+    if (signedErr || !signedData) throw signedErr || new Error('no_signed_url');
+    receiptSignedUrl = signedData.signedUrl;
+  } catch (e) {
+    devWarn('[RAIZEY] Signed URL error:', e.message || e);
     errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    resetOrderButton(placeOrderBtn);
     return;
   }
-  const receiptSignedUrl = signedData.signedUrl;
 
+  // ── فحص OCR اختياري: فشله لا يجب أن يُسقط الطلب أو يجمّد الزر ──
   placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptSignedUrl, null, transactionRef, currentTotal());
-  devLog('[RAIZEY] Smart check response:', ocrResult.ocr_status);
+  let ocrResult = { ocr_status: 'needs_review', amount_verified: false };
+  try {
+    const res = await verifyReceiptContent(receiptSignedUrl, null, transactionRef, currentTotal());
+    if (res && typeof res === 'object') ocrResult = res;
+    devLog('[RAIZEY] Smart check response:', ocrResult.ocr_status);
+  } catch (e) {
+    devWarn('[RAIZEY] OCR check failed, falling back to manual review:', e.message || e);
+  }
 
   try {
     let lastInsertedOrderId = null;
-    
+
+    // ── استهلاك الكوبون ذرياً أولاً: قاعدة البيانات هي التي تتحقق من
+    //    تاريخ الانتهاء وعدد الاستخدامات، وهي التي تُرجع نسبة الخصم النهائية ──
+    let effectiveCouponId = null;
+    let effectiveDiscount = 0;
+
+    if (appliedCoupon) {
+      let couponRow = null;
+      try {
+        const { data, error } = await supabaseClient.rpc('use_coupon_atomic', { p_code: appliedCoupon.code });
+        if (error) throw error;
+        couponRow = Array.isArray(data) ? data[0] : data;
+      } catch (e) {
+        devWarn('[RAIZEY] Coupon atomic error:', e.message || e);
+      }
+
+      const serverPct = couponRow ? Number(couponRow.discount_percent) : NaN;
+      if (!couponRow || !Number.isFinite(serverPct) || serverPct <= 0 || serverPct > 100) {
+        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته. أزل الكود ثم أعد المحاولة.';
+        appliedCoupon = null;
+        document.getElementById('couponInput').value = '';
+        document.getElementById('couponMessage').textContent = '';
+        refreshTotalDisplay();
+        resetOrderButton(placeOrderBtn);
+        return;
+      }
+
+      // النسبة المعتمدة هي نسبة السيرفر — لا نسبة المتصفح
+      effectiveCouponId = couponRow.coupon_id;
+      effectiveDiscount = serverPct;
+      appliedCoupon.discount_percent = serverPct;
+      refreshTotalDisplay();
+    }
+
+    placeOrderBtn.disabled = true;
+    placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+
     const ordersToInsert = [];
     for (const item of cart) {
       const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-      const unitPrice = parseFloat(item.price_sdg) || 0;
-      const itemPrice = appliedCoupon
-        ? unitPrice - (unitPrice * appliedCoupon.discount_percent / 100)
-        : unitPrice;
 
       const baseRow = {
         user_id:               currentUser.id,
         product_id:            item.product_id,
         product_name_snapshot: item.name,
-        price_sdg_snapshot:    Math.round(itemPrice),
-        field_values:          item.field_values,
+        price_sdg_snapshot:    unitPriceAfterDiscount(item, effectiveDiscount),
+        field_values:          item.field_values || {},
         field_labels:          item.field_labels || {},
         selected_option:       item.selected_option || null,
         payment_type:          'bank',
@@ -650,24 +948,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         status:                'pending_review',
         receipt_hash:          receiptHash,
         receipt_url:           receiptSignedUrl,
+        // إرسال coupon_id ضروري: تريجر verify_order_price_before_insert
+        // يرفض أي سعر مخفَّض بدون كوبون مسجَّل على الطلب
+        coupon_id:             effectiveCouponId,
         ocr_status:            ocrResult.ocr_status  || 'needs_review',
         amount_verified:       ocrResult.amount_verified ?? false
       };
 
       for (let i = 0; i < qty; i++) {
         ordersToInsert.push({ ...baseRow });
-      }
-    }
-
-    // ── استخدام الكوبون ذرياً قبل إدخال الطلبات (لمنع Race Condition) ──
-    if (appliedCoupon) {
-      const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
-      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
-      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته. أعد المحاولة بدون الكود.';
-        placeOrderBtn.disabled = false;
-        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-        return;
       }
     }
 
@@ -678,10 +967,13 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
     if (orderError) {
       devWarn('[RAIZEY] Order insert error:', orderError.message);
-      errorBox.style.color = 'var(--danger)';
-      errorBox.textContent = getFriendlyError(orderError.message);
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+      errorBox.textContent = typeof getFriendlyError === 'function'
+        ? getFriendlyError(orderError.message)
+        : 'تعذّر إنشاء الطلب، حاول مجدداً.';
+      if (effectiveCouponId) {
+        errorBox.textContent += ' ملاحظة: تم احتساب استخدام كود الخصم، تواصل مع الدعم إذا تكرر الفشل.';
+      }
+      resetOrderButton(placeOrderBtn);
       return;
     }
 
@@ -689,19 +981,19 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       lastInsertedOrderId = insertedOrders[insertedOrders.length - 1].id;
     }
 
-    localStorage.removeItem('raizey_store_cart');
-    // الكوبون استُخدم ذرياً بواسطة use_coupon_atomic أعلاه — لا حاجة لاستدعاء إضافي
+    // نجاح مؤكد → تفريغ السلة (لا تفريغ قبل التأكيد لمنع فقدان الطلب)
+    try { localStorage.removeItem('raizey_store_cart'); } catch (e) {}
 
     window.location.href = lastInsertedOrderId
-      ? `receipt.html?order_id=${lastInsertedOrderId}`
+      ? `receipt.html?order_id=${encodeURIComponent(lastInsertedOrderId)}&ref=${encodeURIComponent(transactionRef)}`
       : 'my-orders.html';
   } catch (err) {
     const errMsg = err.message || String(err);
     devWarn('[RAIZEY] handlePlaceOrder error:', errMsg);
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = getFriendlyError(errMsg);
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    errorBox.textContent = typeof getFriendlyError === 'function'
+      ? getFriendlyError(errMsg)
+      : 'حصل خطأ غير متوقع، حاول مجدداً.';
+    resetOrderButton(placeOrderBtn);
   }
 }
 

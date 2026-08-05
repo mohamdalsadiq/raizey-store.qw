@@ -233,49 +233,119 @@ const paymentLabels = {
   bank: 'تحويل بنكك'
 };
 
+/* ── دوال احتياطية إذا فشل تحميل assets/js/supabase-client.js ── */
+function esc(str) {
+  if (typeof escapeHtml === 'function') return escapeHtml(str);
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function safeFormatSDG(val) {
+  if (typeof formatSDG === 'function') return formatSDG(val);
+  const num = Math.round(Number(val) || 0);
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function safeUrl(url) {
+  if (typeof sanitizeUrl === 'function') return sanitizeUrl(url) || '';
+  const s = String(url || '').trim();
+  return /^(https?:|\/)/i.test(s) ? s : '';
+}
+
 async function init() {
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('order_id') || params.get('id');
 
-  if (!orderId || !/^[0-9a-f-]{36}$/i.test(orderId)) {
-    showError();
+  if (!orderId || !/^[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+    showError('رقم الطلب في الرابط غير صالح.');
     return;
   }
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  let session;
+  try {
+    const res = await supabaseClient.auth.getSession();
+    if (res.error) throw res.error;
+    session = res.data.session;
+  } catch (e) {
+    showError('تعذّر التحقق من جلستك، تأكد من اتصالك ثم أعد المحاولة.');
+    return;
+  }
+
   if (!session) {
     sessionStorage.setItem('redirect_after_login', window.location.href);
     window.location.href = 'login.html';
     return;
   }
 
-  const { data: order, error } = await supabaseClient
-    .from('orders')
-    .select('*')
-    .eq('id', orderId)
-    .eq('user_id', session.user.id)
-    .single();
+  let order = null;
+  try {
+    // التصفية بـ user_id تضمن ألا يرى المستخدم إيصال غيره (بالإضافة إلى RLS)
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    if (error) throw error;
+    order = data;
+  } catch (e) {
+    showError('تعذّر تحميل بيانات الطلب، تأكد من اتصالك ثم أعد المحاولة.');
+    return;
+  }
 
-  if (error || !order) {
+  if (!order) {
     showError();
     return;
   }
 
-  renderReceipt(order);
+  // ── إجمالي المبلغ لكل الطلبات المرسلة بنفس عملية الدفع الواحدة ──
+  let groupInfo = null;
+  if (order.transaction_reference) {
+    try {
+      const { data: siblings, error: sibErr } = await supabaseClient
+        .from('orders')
+        .select('id, price_sdg_snapshot')
+        .eq('user_id', session.user.id)
+        .eq('transaction_reference', order.transaction_reference);
+      if (!sibErr && Array.isArray(siblings) && siblings.length > 1) {
+        groupInfo = {
+          count: siblings.length,
+          total: siblings.reduce((sum, o) => sum + (Number(o.price_sdg_snapshot) || 0), 0)
+        };
+      }
+    } catch (e) {
+      // معلومة إضافية فقط — لا تمنع عرض الإيصال
+    }
+  }
+
+  renderReceipt(order, groupInfo);
 }
 
-function showError() {
+function showError(message) {
   document.getElementById('loadingBox').style.display = 'none';
-  document.getElementById('errorBox').style.display = 'block';
+  const box = document.getElementById('errorBox');
+  if (message) {
+    const p = box.querySelector('p');
+    if (p) p.textContent = message;
+  }
+  box.style.display = 'block';
 }
 
-function renderReceipt(o) {
+function renderReceipt(o, groupInfo) {
   document.getElementById('loadingBox').style.display = 'none';
 
-  const date = new Date(o.created_at).toLocaleDateString('ar-EG', {
-    year: 'numeric', month: 'long', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  });
+  let date = '—';
+  try {
+    const d = new Date(o.created_at);
+    if (!isNaN(d.getTime())) {
+      date = d.toLocaleDateString('ar-EG', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+  } catch (e) {}
 
   let iconClass = 'pending';
   let iconName  = 'fa-clock';
@@ -293,7 +363,7 @@ function renderReceipt(o) {
   } else if (o.status === 'rejected') {
     iconClass = 'rejected'; iconName = 'fa-circle-xmark';
     titleText = 'تم رفض الطلب';
-    subText = o.rejection_reason ? `السبب: ${escapeHtml(o.rejection_reason)}` : 'تواصل مع الدعم لمزيد من التفاصيل.';
+    subText = o.rejection_reason ? `السبب: ${esc(o.rejection_reason)}` : 'تواصل مع الدعم لمزيد من التفاصيل.';
   } else if (o.status === 'cancelled') {
     iconClass = 'rejected'; iconName = 'fa-ban';
     titleText = 'تم إلغاء الطلب';
@@ -308,7 +378,7 @@ function renderReceipt(o) {
         <div class="receipt-fields-list">
           ${Object.entries(o.field_values).map(([k, v]) => {
             const label = (o.field_labels && o.field_labels[k]) ? o.field_labels[k] : k;
-            return `<div><span class="fkey">${escapeHtml(label)}:</span> ${escapeHtml(v)}</div>`;
+            return `<div><span class="fkey">${esc(label)}:</span> ${esc(v)}</div>`;
           }).join('')}
         </div>
       </div>
@@ -321,30 +391,42 @@ function renderReceipt(o) {
     optionHtml = `
       <div class="receipt-row">
         <span class="label">الخيار المختار</span>
-        <span class="value" style="color: var(--primary); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
+        <span class="value" style="color: var(--primary); font-weight: 700;">${esc(o.selected_option.label)}</span>
       </div>
     `;
   }
 
-  const receiptLinkHtml = o.receipt_url ? `
+  const safeReceiptUrl = safeUrl(o.receipt_url);
+  const receiptLinkHtml = safeReceiptUrl ? `
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
-      <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
+      <a href="${esc(safeReceiptUrl)}" target="_blank" rel="noopener noreferrer" class="receipt-receipt-img-link">
         <i class="fas fa-image"></i> عرض الإيصال
       </a>
+    </div>
+  ` : '';
+
+  const groupHtml = (groupInfo && groupInfo.count > 1) ? `
+    <div class="receipt-row" style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border);">
+      <span class="label">إجمالي عملية الدفع</span>
+      <span class="value price">${safeFormatSDG(groupInfo.total)} ج.س</span>
+    </div>
+    <div class="receipt-row">
+      <span class="label">عدد الطلبات في هذه العملية</span>
+      <span class="value">${groupInfo.count}</span>
     </div>
   ` : '';
 
   const transactionHtml = o.transaction_reference ? `
     <div class="receipt-row">
       <span class="label">رقم العملية</span>
-      <span class="value">${escapeHtml(o.transaction_reference)}</span>
+      <span class="value">${esc(o.transaction_reference)}</span>
     </div>
   ` : '';
 
   const rejectionHtml = (o.status === 'rejected' && o.rejection_reason) ? `
     <div style="background:rgba(229,72,77,0.08); border:1px solid rgba(229,72,77,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:13px; color:#e5484d;">
-      <strong>سبب الرفض:</strong> ${escapeHtml(o.rejection_reason)}
+      <strong>سبب الرفض:</strong> ${esc(o.rejection_reason)}
     </div>
   ` : '';
 
@@ -360,35 +442,36 @@ function renderReceipt(o) {
 
       <div class="receipt-row">
         <span class="label">المنتج</span>
-        <span class="value">${escapeHtml(o.product_name_snapshot)}</span>
+        <span class="value">${esc(o.product_name_snapshot)}</span>
       </div>
 
       ${optionHtml} <!-- عرض الخيار المختار هنا -->
 
       <div class="receipt-row">
-        <span class="label">المبلغ</span>
-        <span class="value price">${formatSDG(o.price_sdg_snapshot)} ج.س</span>
+        <span class="label">مبلغ هذا الطلب</span>
+        <span class="value price">${safeFormatSDG(o.price_sdg_snapshot)} ج.س</span>
       </div>
 
       <div class="receipt-row">
         <span class="label">طريقة الدفع</span>
-        <span class="value">${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</span>
+        <span class="value">${paymentLabels[o.payment_type] || esc(o.payment_type)}</span>
       </div>
 
       <div class="receipt-row">
         <span class="label">الحالة</span>
-        <span class="receipt-status-badge ${o.status}">
-          ${statusLabels[o.status] || escapeHtml(o.status)}
+        <span class="receipt-status-badge ${esc(String(o.status || '').replace(/[^a-z_]/gi, ''))}">
+          ${statusLabels[o.status] || esc(o.status)}
         </span>
       </div>
 
       ${fieldsHtml}
       ${transactionHtml}
       ${receiptLinkHtml}
+      ${groupHtml}
 
       <div class="receipt-row" style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border);">
-        <span class="label">رقم الطلب</span>
-        <span class="receipt-id">${escapeHtml(o.id)}</span>
+        <span class="label">ر��م الطلب</span>
+        <span class="receipt-id">${esc(o.id)}</span>
       </div>
 
       <div class="receipt-row">
