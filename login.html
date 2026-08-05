@@ -76,28 +76,41 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ الدخول...';
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    if (error.message.includes('Email not confirmed')) {
-      sessionStorage.setItem('pending_email', email);
-      window.location.href = 'verify.html';
+    if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        sessionStorage.setItem('pending_email', email);
+        window.location.href = 'verify.html';
+        return;
+      }
+      errorBox.textContent = error.status === 429
+        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
+        : 'الإيميل أو كلمة السر غير صحيحة';
       return;
     }
-    errorBox.textContent = 'الإيميل أو كلمة السر غير صحيحة';
+
+    const savedRedirect = sessionStorage.getItem('redirect_after_login');
+    sessionStorage.removeItem('redirect_after_login');
+
+    if (savedRedirect) {
+      try {
+        const redirectUrl = new URL(savedRedirect, window.location.origin);
+        if (redirectUrl.origin === window.location.origin) {
+          window.location.assign(redirectUrl.href);
+          return;
+        }
+      } catch (_) {
+        // تجاهل أي رابط غير صالح والعودة إلى الصفحة الرئيسية.
+      }
+    }
+    window.location.href = 'index.html';
+  } catch (_) {
+    errorBox.textContent = 'تعذر تسجيل الدخول الآن، حاول مرة أخرى';
+  } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'دخول';
-    return;
-  }
-
-  // إذا كان المستخدم جاي من صفحة تسوّق (مثلاً category.html) ووُقف طلبه
-  // بسبب تسجيل الدخول، نرجّعه لنفس الصفحة بدل ما نرسله دايماً للرئيسية
-  const savedRedirect = sessionStorage.getItem('redirect_after_login');
-  sessionStorage.removeItem('redirect_after_login');
-  if (savedRedirect && savedRedirect.startsWith(window.location.origin)) {
-    window.location.href = savedRedirect;
-  } else {
-    window.location.href = 'index.html';
   }
 });
 
@@ -107,6 +120,7 @@ document.getElementById('forgotLink').addEventListener('click', () => {
 });
 
 document.getElementById('forgotBtn').addEventListener('click', async () => {
+  const forgotBtn = document.getElementById('forgotBtn');
   const forgotError = document.getElementById('forgotError');
   const forgotSuccess = document.getElementById('forgotSuccess');
   forgotError.textContent = '';
@@ -114,20 +128,24 @@ document.getElementById('forgotBtn').addEventListener('click', async () => {
 
   const email = document.getElementById('forgotEmail').value.trim();
   if (!email) {
-    forgotError.textContent = 'أدخل إيميلك';
+    forgotError.textContent = 'أدخل بريدًا إلكترونيًا صالحًا';
     return;
   }
 
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-password.html'
-  });
+  forgotBtn.disabled = true;
+  forgotBtn.textContent = 'جارِ الإرسال...';
 
-  if (error) {
-    forgotError.textContent = 'حصل خطأ، حاول تاني';
-    return;
+  try {
+    await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: new URL('reset-password.html', window.location.href).href
+    });
+    forgotSuccess.textContent = 'إذا كان البريد مرتبطًا بحساب، سيصلك رابط إعادة التعيين';
+  } catch (_) {
+    forgotSuccess.textContent = 'إذا كان البريد مرتبطًا بحساب، سيصلك رابط إعادة التعيين';
+  } finally {
+    forgotBtn.disabled = false;
+    forgotBtn.textContent = 'إرسال رابط إعادة التعيين';
   }
-
-  forgotSuccess.textContent = 'تم إرسال رابط إعادة التعيين لإيميلك، افتحه من نفس الجهاز';
 });
 
 function showSocialSoon() {

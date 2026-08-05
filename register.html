@@ -83,63 +83,51 @@ form.addEventListener('submit', async (e) => {
     errorBox.textContent = 'كلمة السر غير متطابقة';
     return;
   }
-  if (password.length < 8) {
-    errorBox.textContent = 'كلمة السر لازم تكون 8 أحرف على الأقل';
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    errorBox.textContent = 'كلمة السر لازم تكون 8 أحرف على الأقل وتحتوي على حرف ورقم';
     return;
   }
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ الإنشاء...';
 
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName }
-    }
-  });
+  try {
+    const refCode = new URLSearchParams(window.location.search).get('ref');
+    const { error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName.slice(0, 120),
+          whatsapp_number: whatsapp,
+          referral_code_used: refCode ? refCode.trim().toUpperCase().slice(0, 32) : null
+        }
+      }
+    });
 
-  if (error) {
-    errorBox.textContent = translateError(error.message);
+    if (error) {
+      errorBox.textContent = translateError(error);
+      return;
+    }
+
+    sessionStorage.setItem('pending_email', email);
+    window.location.href = 'verify.html';
+  } catch (_) {
+    errorBox.textContent = 'تعذر إنشاء الحساب الآن، حاول مرة أخرى';
+  } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'إنشاء الحساب';
-    return;
   }
-
-  // حفظ رقم الواتساب في البروفايل بعد إنشاء الحساب
-  if (data.user) {
-    await supabaseClient
-      .from('profiles')
-      .update({ whatsapp_number: whatsapp })
-      .eq('id', data.user.id);
-
-    const refCode = new URLSearchParams(window.location.search).get('ref');
-    if (refCode) {
-      const { data: referrer } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', refCode.toUpperCase())
-        .single();
-
-      if (referrer && referrer.id !== data.user.id) {
-        await supabaseClient
-          .from('profiles')
-          .update({ referred_by: referrer.id })
-          .eq('id', data.user.id);
-      }
-    }
-  }
-
-  // تخزين الإيميل مؤقتاً عشان نستخدمه في صفحة التحقق
-  sessionStorage.setItem('pending_email', email);
-  window.location.href = 'verify.html';
 });
 
-function translateError(msg) {
-  if (msg.includes('already registered')) return 'الإيميل ده مسجل بالفعل، جرب تسجل دخول';
-  if (msg.includes('Password')) return 'كلمة السر ضعيفة أو قصيرة جداً';
-  if (msg.includes('rate limit')) return 'محاولات كتيرة، حاول بعد شوية';
-  return 'حصل خطأ، حاول تاني';
+function translateError(error) {
+  if (error.status === 429 || error.message.includes('rate limit')) {
+    return 'محاولات كثيرة، حاول مرة أخرى بعد قليل';
+  }
+  if (error.message.toLowerCase().includes('password')) {
+    return 'كلمة السر لا تستوفي متطلبات الأمان';
+  }
+  return 'تعذر إنشاء الحساب بهذه البيانات، تحقق منها أو سجّل الدخول';
 }
 
 function updatePwStrength() {

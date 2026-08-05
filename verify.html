@@ -52,10 +52,20 @@ document.getElementById('subText').textContent = `أدخل الكود اللي �
 const digits = document.querySelectorAll('.otp-digit');
 digits.forEach((input, idx) => {
   input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 1);
     if (input.value && idx < digits.length - 1) digits[idx + 1].focus();
   });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Backspace' && !input.value && idx > 0) digits[idx - 1].focus();
+  });
+  input.addEventListener('paste', (e) => {
+    const pastedCode = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pastedCode) return;
+    e.preventDefault();
+    pastedCode.split('').forEach((value, digitIndex) => {
+      if (digits[digitIndex]) digits[digitIndex].value = value;
+    });
+    digits[Math.min(pastedCode.length, digits.length) - 1].focus();
   });
 });
 
@@ -78,21 +88,28 @@ form.addEventListener('submit', async (e) => {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ التحقق...';
 
-  const { data, error } = await supabaseClient.auth.verifyOtp({
-    email,
-    token: code,
-    type: 'signup'
-  });
+  try {
+    const { error } = await supabaseClient.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'signup'
+    });
 
-  if (error) {
-    errorBox.textContent = 'الكود غير صحيح أو منتهي الصلاحية';
+    if (error) {
+      errorBox.textContent = error.status === 429
+        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
+        : 'الكود غير صحيح أو منتهي الصلاحية';
+      return;
+    }
+
+    sessionStorage.removeItem('pending_email');
+    window.location.href = 'index.html';
+  } catch (_) {
+    errorBox.textContent = 'تعذر التحقق الآن، حاول مرة أخرى';
+  } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'تأكيد';
-    return;
   }
-
-  sessionStorage.removeItem('pending_email');
-  window.location.href = 'index.html';
 });
 
 resendBtn.addEventListener('click', async () => {
@@ -100,18 +117,22 @@ resendBtn.addEventListener('click', async () => {
   successBox.textContent = '';
   errorBox.textContent = '';
 
-  const { error } = await supabaseClient.auth.resend({
-    type: 'signup',
-    email
-  });
+  try {
+    const { error } = await supabaseClient.auth.resend({
+      type: 'signup',
+      email
+    });
 
-  if (error) {
-    errorBox.textContent = 'حصل خطأ في إعادة الإرسال، حاول بعد شوية';
-  } else {
-    successBox.textContent = 'تم إرسال كود جديد';
+    if (error) {
+      errorBox.textContent = 'تعذرت إعادة الإرسال، حاول بعد قليل';
+    } else {
+      successBox.textContent = 'إذا كان الحساب بانتظار التحقق، فسيصلك كود جديد';
+    }
+  } catch (_) {
+    errorBox.textContent = 'تعذرت إعادة الإرسال، حاول بعد قليل';
+  } finally {
+    setTimeout(() => { resendBtn.disabled = false; }, 30000);
   }
-
-  setTimeout(() => { resendBtn.disabled = false; }, 30000);
 });
 </script>
 </body>
