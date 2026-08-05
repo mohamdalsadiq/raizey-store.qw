@@ -565,6 +565,10 @@ CREATE POLICY "gift_cards_admin" ON gift_cards
   USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- الاستبدال يتم عبر هذه الدالة فقط (ذرّي + بلا كشف الأكواد)
+-- ملاحظة: النسخة القديمة في القاعدة ترجع نوعاً مختلفاً، و CREATE OR REPLACE
+-- لا تستطيع تغيير نوع الإرجاع (خطأ 42P13) → نحذف التوقيع القديم أولاً.
+DROP FUNCTION IF EXISTS public.redeem_gift_card(text);
+
 CREATE OR REPLACE FUNCTION public.redeem_gift_card(p_code text)
 RETURNS TABLE(amount numeric)
 LANGUAGE plpgsql SECURITY DEFINER
@@ -631,7 +635,7 @@ CREATE POLICY "referral_payouts_admin" ON referral_milestone_payouts
 -- ═══════════════════════════════════════════════════════════════════
 -- PART 14: coupons — تصحيح أسماء الأعمدة الفعلية
 -- ═══════════════════════════════════════════════════════════════════
--- 🔴 كل الملفات السابقة استخدمت usage_limit / usage_count، والأعمدة
+-- 🔴 كل الملفات السابقة استخ��مت usage_limit / usage_count، والأعمدة
 --    الحقيقية في قاعدة البيانات هي max_uses / uses_count → كل دوال
 --    الكوبونات كانت تفشل بخطأ "column does not exist".
 DROP POLICY IF EXISTS "coupons_select_admin_only" ON coupons;
@@ -841,7 +845,7 @@ $$;
 
 
 -- ═══════════════════════════════════════════════════════════════════
--- PART 16: عمولة الإحالة + تأكيد الشحن (أدمن فقط، بلا تكرار)
+-- PART 16: عمولة الإحالة + تأكيد الشحن (أدمن فقط، بلا تكرا��)
 -- ═══════════════════════════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION public.process_referral_commission(
   p_user_id  uuid,
@@ -1012,7 +1016,7 @@ CREATE INDEX IF NOT EXISTS idx_coupons_code        ON coupons(upper(code)) WHERE
 CREATE INDEX IF NOT EXISTS idx_gift_cards_code     ON gift_cards(upper(code)) WHERE is_redeemed = false;
 
 
--- ═══════════════════════════════════════════════════════════════════
+-- ═══════════════��═══════════════════════════════════════════════════
 -- PART 20: تحقق نهائي — شغّل هذه الاستعلامات وراجع النتائج
 -- ═══════════════════════════════════════════════════════════════════
 
