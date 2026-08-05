@@ -401,105 +401,202 @@ document.getElementById('closeDrawerBtn').addEventListener('click', () => {
 drawerOverlay.addEventListener('click', (e) => {
   if (e.target === drawerOverlay) drawerOverlay.classList.remove('show');
 });
-document.getElementById('drawerLogoutBtn').addEventListener('click', async () => {
-  await supabaseClient.auth.signOut();
-  window.location.href = 'index.html';
+document.getElementById('drawerLogoutBtn').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    window.location.href = 'index.html';
+  } catch (error) {
+    button.disabled = false;
+    alert('تعذر تسجيل الخروج حالياً. حاول مرة أخرى.');
+  }
 });
 
 async function loadDrawer() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const guestBox = document.getElementById('drawerGuestBox');
+  const userBox = document.getElementById('drawerUserBox');
+  const adminLinkBox = document.getElementById('adminLinkBox');
+  const adminDividerBox = document.getElementById('adminDividerBox');
 
-  if (!session) {
-    document.getElementById('drawerGuestBox').style.display = 'block';
-    document.getElementById('drawerUserBox').style.display = 'none';
-    return;
+  adminLinkBox.style.display = 'none';
+  adminDividerBox.style.display = 'none';
+
+  try {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    if (!session) {
+      guestBox.style.display = 'block';
+      userBox.style.display = 'none';
+      return;
+    }
+
+    guestBox.style.display = 'none';
+    userBox.style.display = 'block';
+    document.getElementById('drawerEmail').textContent = session.user.email || '';
+
+    const [{ data: profile, error: profileError }, { data: wallet, error: walletError }] = await Promise.all([
+      supabaseClient.from('profiles').select('full_name, role').eq('id', session.user.id).maybeSingle(),
+      supabaseClient.from('wallets').select('balance').eq('user_id', session.user.id).maybeSingle()
+    ]);
+
+    if (profileError || walletError) throw profileError || walletError;
+
+    document.getElementById('drawerGreeting').textContent = profile?.full_name
+      ? `مرحباً، ${profile.full_name}`
+      : 'مرحباً بك يا لاعب';
+
+    if (profile?.role === 'admin') {
+      adminLinkBox.style.display = 'block';
+      adminDividerBox.style.display = 'block';
+    }
+
+    document.getElementById('drawerBalance').textContent =
+      `${formatSDG(wallet?.balance ?? 0)} ج.س`;
+  } catch (error) {
+    guestBox.style.display = 'block';
+    userBox.style.display = 'none';
   }
-
-  document.getElementById('drawerGuestBox').style.display = 'none';
-  document.getElementById('drawerUserBox').style.display = 'block';
-  document.getElementById('drawerEmail').textContent = session.user.email;
-
-  const { data: profile } = await supabaseClient
-    .from('profiles').select('full_name, role').eq('id', session.user.id).single();
-
-  document.getElementById('drawerGreeting').textContent = profile?.full_name
-    ? `مرحباً، ${profile.full_name}`
-    : 'مرحباً بك يا لاعب';
-
-  if (profile?.role === 'admin') {
-    document.getElementById('adminLinkBox').style.display = 'block';
-    document.getElementById('adminDividerBox').style.display = 'block';
-  }
-
-  const { data: wallet } = await supabaseClient
-    .from('wallets').select('balance').eq('user_id', session.user.id).single();
-
-  document.getElementById('drawerBalance').textContent =
-    `${formatSDG(wallet ? wallet.balance : 0)} ج.س`;
 }
 
 // ---------- جلب وعرض كروت الألعاب الموحدة ----------
 async function init() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session) {
-    const { count } = await supabaseClient
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-      .eq('is_read', false);
-    if (count && count > 0) {
-      document.getElementById('notifDot').style.display = 'block';
+  try {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    if (session) {
+      const { count, error: notificationError } = await supabaseClient
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('is_read', false);
+
+      if (!notificationError && count > 0) {
+        document.getElementById('notifDot').style.display = 'block';
+      }
     }
+
+    // جلب الحقول اللازمة فقط للتقليل من حجم الاستجابة.
+    const { data: categories, error: categoriesError } = await supabaseClient
+      .from('categories')
+      .select('id, name, description, image_url')
+      .eq('is_active', true)
+      .order('display_order');
+
+    if (categoriesError) throw categoriesError;
+    renderCategories(categories || []);
+  } catch (error) {
+    renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
   }
+}
 
-  // جلب التصنيفات النشطة فقط مرتبة حسب اختيارك
-  const { data: categories } = await supabaseClient
-    .from('categories')
-    .select('*')
-    .eq('is_active', true)
-    .order('display_order');
+function renderMessage(title, description) {
+  const container = document.getElementById('categoriesContainer');
+  const state = document.createElement('div');
+  const heading = document.createElement('h3');
+  const text = document.createElement('p');
 
-  renderCategories(categories || []);
+  state.className = 'empty-state';
+  state.style.cssText = 'padding:40px 20px; text-align:center; grid-column:1 / -1;';
+  heading.textContent = title;
+  text.textContent = description;
+  text.style.color = 'var(--text-muted)';
+  state.append(heading, text);
+  container.replaceChildren(state);
+}
+
+function getSafeImageUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function createIcon(className, style) {
+  const icon = document.createElement('i');
+  icon.className = className;
+  if (style) icon.style.cssText = style;
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
 }
 
 function renderCategories(categories) {
   const container = document.getElementById('categoriesContainer');
 
   if (categories.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state" style="padding:40px 20px; text-align:center; grid-column: 1 / -1;">
-        <h3>لا توجد ألعاب أو تصنيفات متاحة حالياً</h3>
-        <p style="color:var(--text-muted);">تابعنا قريباً — بنجهز عروض فخمة ليك</p>
-      </div>`;
+    renderMessage('لا توجد ألعاب أو تصنيفات متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
     return;
   }
 
-  container.innerHTML = categories.map(cat => {
-    // تجهيز الصورة أو الأيقونة الافتراضية
-    const imgHtml = cat.image_url 
-      ? `<img src="${cat.image_url}" alt="${cat.name}" loading="lazy">`
-      : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
+  const fragment = document.createDocumentFragment();
 
-    // عرض حقل الوصف المحدث وإخفاء الفراغ إذا لم يكتب الأدمن وصفاً
-    const descText = cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً';
+  categories.forEach((cat) => {
+    if (cat.id === null || cat.id === undefined) return;
 
-    return `
-      <a href="category.html?id=${cat.id}" class="game-card">
-        <div class="game-thumb">
-          ${imgHtml}
-        </div>
-        <div class="game-info">
-          <div class="game-name">${cat.name}</div>
-          <div class="game-desc" title="${descText}">${descText}</div>
-          <span class="card-trust"><i class="fas fa-bolt"></i> تسليم فوري ومضمون 100%</span>
-          <div class="game-btn">
-            <span>عرض الباقات</span>
-            <i class="fas fa-chevron-left" style="font-size:10px;"></i>
-          </div>
-        </div>
-      </a>
-    `;
-  }).join('');
+    const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
+    const description = typeof cat.description === 'string' && cat.description.trim()
+      ? cat.description.trim()
+      : 'تصفح الباقات والشدات المتوفرة حصرياً';
+    const imageUrl = getSafeImageUrl(cat.image_url);
+    const card = document.createElement('a');
+    const thumb = document.createElement('div');
+    const info = document.createElement('div');
+    const nameElement = document.createElement('div');
+    const descriptionElement = document.createElement('div');
+    const trust = document.createElement('span');
+    const button = document.createElement('div');
+    const buttonText = document.createElement('span');
+
+    card.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
+    card.className = 'game-card';
+    thumb.className = 'game-thumb';
+
+    if (imageUrl) {
+      const image = document.createElement('img');
+      image.src = imageUrl;
+      image.alt = name;
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      image.addEventListener('error', () => {
+        thumb.replaceChildren(createIcon('fas fa-gamepad'));
+        thumb.style.cssText = 'color:#7a7468; font-size:32px;';
+      }, { once: true });
+      thumb.appendChild(image);
+    } else {
+      thumb.style.cssText = 'color:#7a7468; font-size:32px;';
+      thumb.appendChild(createIcon('fas fa-gamepad'));
+    }
+
+    info.className = 'game-info';
+    nameElement.className = 'game-name';
+    nameElement.textContent = name;
+    descriptionElement.className = 'game-desc';
+    descriptionElement.textContent = description;
+    descriptionElement.title = description;
+    trust.className = 'card-trust';
+    trust.append(createIcon('fas fa-bolt'), document.createTextNode(' تسليم فوري ومضمون 100%'));
+    button.className = 'game-btn';
+    buttonText.textContent = 'عرض الباقات';
+    button.append(buttonText, createIcon('fas fa-chevron-left', 'font-size:10px;'));
+    info.append(nameElement, descriptionElement, trust, button);
+    card.append(thumb, info);
+    fragment.appendChild(card);
+  });
+
+  if (!fragment.childNodes.length) {
+    renderMessage('لا توجد ألعاب أو تصنيفات متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
+    return;
+  }
+
+  container.replaceChildren(fragment);
 }
 
 init();
