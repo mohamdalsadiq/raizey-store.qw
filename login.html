@@ -86,7 +86,7 @@
 
   // لو المستخدم مسجّل دخول بالفعل نحوّله فوراً بدل ما يشوف فورم فاضي
   (async () => {
-    if (!window.supabaseClient) return;
+    if (!AuthUI.isClientReady()) return;
     try {
       const { data } = await supabaseClient.auth.getSession();
       if (data && data.session) AuthUI.goToSafeRedirect();
@@ -99,7 +99,7 @@
     emailInput.setAttribute('aria-invalid', 'false');
     pwInput.setAttribute('aria-invalid', 'false');
 
-    if (!window.supabaseClient) {
+    if (!AuthUI.isClientReady()) {
       AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
       return;
     }
@@ -182,7 +182,7 @@
     AuthUI.clearMessages(forgotError, forgotSuccess);
     forgotEmail.setAttribute('aria-invalid', 'false');
 
-    if (!window.supabaseClient) {
+    if (!AuthUI.isClientReady()) {
       AuthUI.setMessage(forgotError, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة.');
       return;
     }

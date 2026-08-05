@@ -133,7 +133,7 @@
     [nameInput, emailInput, waInput, pwInput, pw2Input]
       .forEach((el) => el.setAttribute('aria-invalid', 'false'));
 
-    if (!window.supabaseClient) {
+    if (!AuthUI.isClientReady()) {
       AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
       return;
     }

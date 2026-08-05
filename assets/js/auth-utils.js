@@ -182,6 +182,8 @@
   }
 
   global.AuthUI = {
+    isClientReady: isClientReady,
+    getClient: getClient,
     setMessage: setMessage,
     clearMessages: clearMessages,
     startLoading: startLoading,

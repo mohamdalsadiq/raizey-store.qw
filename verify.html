@@ -140,7 +140,7 @@
     if (verifying) return; // حماية إضافية من الإرسال المتكرر
     AuthUI.clearMessages(errorBox, successBox);
 
-    if (!window.supabaseClient) {
+    if (!AuthUI.isClientReady()) {
       AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة وحاول مجدداً.');
       return;
     }
@@ -221,7 +221,7 @@
   resendBtn.addEventListener('click', async () => {
     AuthUI.clearMessages(errorBox, successBox);
 
-    if (!window.supabaseClient) {
+    if (!AuthUI.isClientReady()) {
       AuthUI.setMessage(errorBox, 'تعذّر الاتصال بالخادم. أعد تحميل الصفحة.');
       return;
     }
