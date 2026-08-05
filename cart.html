@@ -463,9 +463,14 @@ async function revalidateCartPrices() {
         return false;
       }
       const optUsd = parseFloat(opt.price_usd);
-      if (Number.isFinite(optUsd) && optUsd > 0) priceUsd = optUsd;
-      // تحديث تسمية/سعر الخيار من المصدر الموثوق
-      item.selected_option = { ...item.selected_option, label: opt.label ?? item.selected_option.label, price_usd: optUsd };
+      // تحديث تسمية/سعر الخيار من المصدر الموثوق (price_usd هو المفتاح الذي يقرأه التريجر)
+      item.selected_option = { ...item.selected_option, label: opt.label ?? item.selected_option.label };
+      if (Number.isFinite(optUsd) && optUsd > 0) {
+        priceUsd = optUsd;
+        item.selected_option.price_usd = optUsd;
+      } else {
+        delete item.selected_option.price_usd;
+      }
     }
 
     if (!(priceUsd > 0)) { removedCount++; return false; }

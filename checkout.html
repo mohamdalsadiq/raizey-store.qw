@@ -604,24 +604,38 @@ function attachCheckoutEvents(canUseWallet) {
     bankDetails.classList.add('show');
   };
 
-  fileBox.onclick = () => fileInput.click();
+  fileBox.onclick = () => { if (!isSubmitting) fileInput.click(); };
   fileInput.onchange = async () => {
-    if (fileInput.files.length > 0) {
-      const file = fileInput.files[0];
-      const validation = await validateReceiptImage(file);
-      if (!validation.valid) {
-        fileInput.value = '';
-        receiptFile = null;
-        fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
-        fileBox.classList.remove('has-file');
-        document.getElementById('formError').textContent = validation.message;
-        return;
-      }
-      receiptFile = file;
-      document.getElementById('formError').textContent = '';
-      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(receiptFile.name)}`;
-      fileBox.classList.add('has-file');
+    if (!fileInput.files || fileInput.files.length === 0) return;
+
+    const file = fileInput.files[0];
+    const rejectFile = (message) => {
+      fileInput.value = '';
+      receiptFile = null;
+      fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
+      fileBox.classList.remove('has-file');
+      errorBox.style.color = 'var(--danger)';
+      errorBox.textContent = message;
+    };
+
+    let validation;
+    try {
+      validation = await validateReceiptImage(file);
+    } catch (e) {
+      devWarn('[RAIZEY] validateReceiptImage error:', e.message || e);
+      rejectFile('تعذّر فحص الصورة، حاول اختيار صورة أخرى.');
+      return;
     }
+
+    if (!validation || !validation.valid) {
+      rejectFile((validation && validation.message) || 'صورة الإيصال غير صالحة.');
+      return;
+    }
+
+    receiptFile = file;
+    errorBox.textContent = '';
+    fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(file.name)}`;
+    fileBox.classList.add('has-file');
   };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
