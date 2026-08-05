@@ -252,12 +252,22 @@
 <script>
 let rate = 0;
 let searchTimeout = null;
+let latestSearchId = 0;
+
+function sanitizeSearchTerm(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[\u0000-\u001F\u007F<>%_\\,()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+}
 
 async function init() {
   rate = await getExchangeRate();
 
   const params = new URLSearchParams(window.location.search);
-  const initialQuery = params.get('q') || '';
+  const initialQuery = sanitizeSearchTerm(params.get('q'));
   document.getElementById('searchInput').value = initialQuery;
 
   if (initialQuery) await search(initialQuery);
@@ -276,8 +286,10 @@ async function search(query) {
   const categoriesGrid = document.getElementById('categoriesGrid');
   const resultsTitle = document.getElementById('resultsTitle');
   const categoriesTitle = document.getElementById('categoriesTitle');
+  const safeQuery = sanitizeSearchTerm(query);
+  const searchId = ++latestSearchId;
 
-  if (!query.trim()) {
+  if (!safeQuery) {
     resultsTitle.textContent = 'اكتب اسم اللعبة أو الباقة اللي تدور عليها';
     categoriesTitle.style.display = 'none';
     productsGrid.innerHTML = '';
@@ -290,23 +302,27 @@ async function search(query) {
   categoriesGrid.innerHTML = '';
 
   try {
-    // 1⃣ البحث الفوري في جدول التصنيفات (الألعاب)
-    const { data: categories } = await supabaseClient
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .ilike('name', `%${query}%`)
-      .order('display_order');
+    const [categoriesResponse, productsResponse] = await Promise.all([
+      supabaseClient
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .ilike('name', `%${safeQuery}%`)
+        .order('display_order'),
+      supabaseClient
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .ilike('name', `%${safeQuery}%`)
+        .order('display_order')
+    ]);
 
-    // 2⃣ البحث الفوري في جدول المنتجات الفردية
-    const { data: products } = await supabaseClient
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .ilike('name', `%${query}%`)
-      .order('display_order');
+    if (searchId !== latestSearchId) return;
+    if (categoriesResponse.error || productsResponse.error) throw new Error('search_failed');
 
-    const productResults = (products || []).map(p => ({ ...p, price_sdg: p.price_usd * rate }));
+    const categories = categoriesResponse.data;
+    const products = productsResponse.data;
+    const productResults = (products || []).map(p => ({ ...p, price_sdg: Number(p.price_usd) * Number(rate) }));
     const categoryResults = categories || [];
 
     // إعداد وضبط عناوين النتائج والمجاميع
@@ -323,7 +339,7 @@ async function search(query) {
       
       categoriesGrid.innerHTML = categoryResults.map(cat => {
         const imgHtml = cat.image_url 
-          ? `<img src="${escapeHtml(cat.image_url)}" alt="${escapeHtml(cat.name)}" loading="lazy">`
+          ? `<img src="${escapeAttribute(sanitizeUrl(cat.image_url))}" alt="${escapeAttribute(cat.name)}" loading="lazy">`
           : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
         const descText = escapeHtml(cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً');
 
@@ -350,7 +366,7 @@ async function search(query) {
         <a href="category.html?id=${encodeURIComponent(p.category_id)}" class="voucher-card">
           <div class="voucher-top">
             <div class="voucher-thumb">
-              ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
+              ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
             </div>
             <div class="voucher-name">${escapeHtml(p.name)}</div>
           </div>

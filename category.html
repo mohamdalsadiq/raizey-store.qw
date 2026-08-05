@@ -143,19 +143,24 @@ async function init() {
   currentUser = session.user;
   exchangeRate = rate;
 
-  const [
-    { data: cat },
-    { data: products },
-    { data: related }
-  ] = await Promise.all([
-    supabaseClient.from('categories').select('*').eq('id', categoryId).single(),
+  const [categoryResponse, productsResponse, relatedResponse] = await Promise.all([
+    supabaseClient.from('categories').select('*').eq('id', categoryId).eq('is_active', true).single(),
     supabaseClient.from('products').select('*').eq('category_id', categoryId).eq('is_active', true).order('display_order'),
     supabaseClient.from('products').select('*').eq('is_active', true).neq('category_id', categoryId).limit(6)
   ]);
 
-  category = cat;
-  variants = products || [];
-  relatedProducts = (related || []).map(p => ({ ...p, price_sdg: p.price_usd * exchangeRate }));
+  if (categoryResponse.error || !categoryResponse.data) {
+    document.getElementById('loadingBox').textContent = 'التصنيف غير موجود أو غير متاح حالياً';
+    return;
+  }
+  if (productsResponse.error || relatedResponse.error) {
+    document.getElementById('loadingBox').textContent = 'تعذر تحميل المنتجات، حاول مرة أخرى';
+    return;
+  }
+
+  category = categoryResponse.data;
+  variants = productsResponse.data || [];
+  relatedProducts = (relatedResponse.data || []).map(p => ({ ...p, price_sdg: Number(p.price_usd) * Number(exchangeRate) }));
 
   if (variants.length === 0) {
     document.getElementById('loadingBox').textContent = 'لا توجد باقات متاحة في هذا القسم حالياً';
@@ -178,7 +183,7 @@ function render() {
       <div class="product-hero-thumb">
         ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}">` : (category && category.image_url ? `<img src="${escapeAttribute(sanitizeUrl(category.image_url))}" alt="${escapeAttribute(category.name)}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
       </div>
-      <div class="product-hero-info"><h1>${category ? category.name : p.name}</h1></div>
+      <div class="product-hero-info"><h1>${escapeHtml(category ? category.name : p.name)}</h1></div>
     </div>
 
     <div class="trust-badges">
@@ -187,13 +192,13 @@ function render() {
       <span class="trust-badge-item"><i class="fas fa-headset"></i> دعم فني على مدار الساعة</span>
     </div>
 
-    ${category && category.description ? `<div class="category-sub">${category.description}</div>` : ''}
+    ${category && category.description ? `<div class="category-sub">${escapeHtml(category.description)}</div>` : ''}
 
     <div class="section-label">اختر الباقة الأساسية</div>
     <div class="variant-grid" id="mainVariantsGrid">
       ${variants.map((v, i) => `
-        <button class="variant-btn" data-index="${i}" data-product-id="${v.id}">
-          <div class="v-name">${v.name}</div>
+        <button class="variant-btn" data-index="${i}" data-product-id="${escapeAttribute(v.id)}">
+          <div class="v-name">${escapeHtml(v.name)}</div>
         </button>
       `).join('')}
     </div>
@@ -210,8 +215,8 @@ function render() {
       <div class="section-label">بيانات الطلب المطلوبة</div>
       ${fields.map(f => `
         <div class="field">
-          <label>${f.label} *</label>
-          <input type="text" data-field-key="${f.key}" data-field-label="${escapeAttribute(f.label)}" required placeholder="${f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`}">
+          <label>${escapeHtml(f.label)} *</label>
+          <input type="text" data-field-key="${escapeAttribute(f.key)}" data-field-label="${escapeAttribute(f.label)}" required maxlength="500" placeholder="${escapeAttribute(f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`)}">
         </div>
       `).join('')}
     ` : ''}
@@ -238,7 +243,7 @@ function render() {
     ${p.instructions ? `
       <div class="product-instructions-box">
         <div class="product-instructions-title"><i class="fas fa-circle-info"></i> تفاصيل وطريقة استلام المنتج:</div>
-        ${p.instructions}
+        ${escapeHtml(p.instructions).replace(/\n/g, '<br>')}
       </div>
     ` : ''}
 

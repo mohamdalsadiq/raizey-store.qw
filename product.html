@@ -322,6 +322,7 @@ async function init() {
     .from('products')
     .select('*')
     .eq('id', productId)
+    .eq('is_active', true)
     .single();
 
   if (error || !p) {
@@ -332,6 +333,15 @@ async function init() {
   product = p;
   selectedMainCat = null;
   selectedOption = null;
+  if (!hasOptions()) {
+    selectedMainCat = String(product.name || 'المنتج');
+    selectedOption = {
+      id: 'main',
+      label: selectedMainCat,
+      display_label: selectedMainCat,
+      price_usd: product.price_usd
+    };
+  }
 
   const { data: wallet } = await supabaseClient
     .from('wallets')
@@ -349,7 +359,7 @@ async function init() {
   if (myProfile && myProfile.referred_by && !myProfile.referral_discount_used) {
     const { data: discountRow } = await supabaseClient
       .from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
-    welcomeDiscount = discountRow ? parseFloat(discountRow.value) : 0;
+    welcomeDiscount = discountRow ? Math.min(100, Math.max(0, Number(discountRow.value) || 0)) : 0;
   }
 
   const { data: methods } = await supabaseClient
@@ -399,14 +409,14 @@ function render() {
   if (hasOptions()) {
     product.options.forEach(opt => {
       let cat = 'الخيارات المتاحة';
-      let label = opt.label;
+      let label = String(opt.label || 'خيار');
       // إذا كان الاسم يحتوي على " - "، نقسمه (فئة - خيار)
-      if (opt.label.includes(' - ')) {
-        const parts = opt.label.split(' - ');
+      if (label.includes(' - ')) {
+        const parts = label.split(' - ');
         cat = parts[0].trim();
         label = parts.slice(1).join(' - '); 
-      } else if (opt.label.includes('-')) {
-        const parts = opt.label.split('-');
+      } else if (label.includes('-')) {
+        const parts = label.split('-');
         cat = parts[0].trim();
         label = parts.slice(1).join('-');
       }
@@ -428,8 +438,8 @@ function render() {
         ${product.image_url ? `<img src="${escapeAttribute(sanitizeUrl(product.image_url))}" alt="${escapeAttribute(product.name)}">` : 'لا توجد صورة'}
       </div>
       <div class="product-hero-info">
-        <h1>${product.name}</h1>
-        <div class="product-hero-price" id="heroPriceDisplay">${heroPriceText}</div>
+        <h1>${escapeHtml(product.name)}</h1>
+        <div class="product-hero-price" id="heroPriceDisplay">${escapeHtml(heroPriceText)}</div>
       </div>
     </div>
   `;
@@ -442,7 +452,7 @@ function render() {
       </div>
       <div class="main-category-grid" id="mainCategoryGrid">
         ${mainCategories.map(cat => `
-          <div class="main-cat-btn" data-main-cat="${escapeHtml(cat)}">
+          <div class="main-cat-btn" data-main-cat="${escapeAttribute(cat)}">
             ${escapeHtml(cat)}
           </div>
         `).join('')}
@@ -466,7 +476,7 @@ function render() {
     ${product.instructions ? `
       <div class="product-instructions-box">
         <div class="product-instructions-title"><i class="fas fa-circle-info"></i> تفاصيل وطريقة استلام المنتج:</div>
-        ${product.instructions}
+        ${escapeHtml(product.instructions).replace(/\n/g, '<br>')}
       </div>
     ` : ''}
 
@@ -474,8 +484,8 @@ function render() {
       <div class="section-label"><i class="fas fa-pen-to-square" style="color:var(--accent-gold);"></i> بيانات الطلب</div>
       ${fields.map(f => `
           <div class="field">
-            <label>${f.label}</label>
-            <input type="text" data-field-key="${f.key}" required placeholder="${f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`}">
+            <label>${escapeHtml(f.label)}</label>
+            <input type="text" data-field-key="${escapeAttribute(f.key)}" required maxlength="500" placeholder="${escapeAttribute(f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`)}">
           </div>
         `).join('')}
     ` : ''}
@@ -506,14 +516,14 @@ function render() {
       ${paymentMethods.map(m => `
         <div style="margin-bottom:14px; font-size:14px; line-height:1.5;">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-            <span><strong style="color:var(--accent-gold);">${m.name}</strong> — اسم الحساب: ${m.account_name || ''}</span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_name || ''}">نسخ</button>
+            <span><strong style="color:var(--accent-gold);">${escapeHtml(m.name)}</strong> — اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
+            <button type="button" class="copy-account-btn" data-copy="${escapeAttribute(m.account_name || '')}">نسخ</button>
           </div>
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <span>رقم الحساب: ${m.account_number || ''}</span>
-            <button type="button" class="copy-account-btn" data-copy="${m.account_number || ''}">نسخ</button>
+            <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
+            <button type="button" class="copy-account-btn" data-copy="${escapeAttribute(m.account_number || '')}">نسخ</button>
           </div>
-          ${m.instructions ? `<span style="color:var(--text-muted); font-size:13px;">${m.instructions}</span>` : ''}
+          ${m.instructions ? `<span style="color:var(--text-muted); font-size:13px;">${escapeHtml(m.instructions)}</span>` : ''}
         </div>
       `).join('')}
       <div class="field" style="margin-top:14px;">
@@ -524,7 +534,7 @@ function render() {
         <label>اختر وسيلة التحويل</label>
         <select id="methodSelect">
           <option value="">-- اختر --</option>
-          ${paymentMethods.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+          ${paymentMethods.map(m => `<option value="${escapeAttribute(m.id)}">${escapeHtml(m.name)}</option>`).join('')}
         </select>
       </div>
       <div class="file-upload" id="fileUploadBox">
@@ -595,7 +605,7 @@ function attachEvents() {
           if (subLabel) subLabel.style.display = 'block';
           if (subGrid) {
             subGrid.innerHTML = subOptions.map(opt => `
-              <div class="option-card" data-option-id="${opt.id}">
+              <div class="option-card" data-option-id="${escapeAttribute(opt.id)}">
                 <i class="fas fa-circle-check opt-check"></i>
                 <div class="opt-title">${escapeHtml(opt.display_label)}</div>
                 <div class="opt-price-tag">${formatSDG(opt.price_usd * exchangeRate)} ج.س</div>
@@ -706,10 +716,13 @@ function attachEvents() {
 // --- دوال المساعدة ---
 function currentPrice() {
   if (!selectedOption) return 0;
-  let base = getSelectedPriceSdg();
-  if (appliedCoupon) base = base - (base * appliedCoupon.discount_percent / 100);
-  if (welcomeDiscount) base = base - (base * welcomeDiscount / 100);
-  return base;
+  let base = Number(getSelectedPriceSdg());
+  if (!Number.isFinite(base) || base < 0) return 0;
+  const couponPercent = appliedCoupon ? Math.min(100, Math.max(0, Number(appliedCoupon.discount_percent) || 0)) : 0;
+  const welcomePercent = Math.min(100, Math.max(0, Number(welcomeDiscount) || 0));
+  if (couponPercent) base -= base * couponPercent / 100;
+  if (welcomePercent) base -= base * welcomePercent / 100;
+  return Math.max(0, base);
 }
 function updateSummary() { document.getElementById('summaryTotal').textContent = selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الخيار'; }
 
@@ -720,7 +733,10 @@ async function applyCoupon() {
   if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'اكتب الكود الأول'; return; }
   const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
   if (error || !data || data.length === 0) { appliedCoupon = null; msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح'; updateSummary(); return; }
-  appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
+  appliedCoupon = {
+    coupon_id: data[0].coupon_id,
+    discount_percent: Math.min(100, Math.max(0, Number(data[0].discount_percent) || 0))
+  };
   msgBox.style.color = 'var(--accent-gold)'; msgBox.textContent = `خصم ${appliedCoupon.discount_percent}%`; updateSummary();
 }
 
@@ -749,6 +765,27 @@ function collectFieldValues() {
 async function submitOrder(errorBox, submitBtn) {
   errorBox.textContent = '';
   if (!validateSelection(errorBox)) return;
+
+  const selectedOptionId = String(selectedOption.id);
+  const productHadOptions = hasOptions();
+  const { data: freshProduct, error: refreshError } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('id', productId)
+    .eq('is_active', true)
+    .single();
+  const freshOption = (freshProduct?.options || []).find(option => String(option.id) === selectedOptionId);
+  if (refreshError || !freshProduct || (productHadOptions && !freshOption)) {
+    errorBox.textContent = 'المنتج أو الخيار لم يعد متاحاً، حدّث الصفحة وحاول مرة أخرى';
+    return;
+  }
+  product = freshProduct;
+  selectedOption = freshOption
+    ? { ...freshOption, display_label: selectedOption.display_label }
+    : { ...selectedOption, price_usd: freshProduct.price_usd };
+  updateSummary();
+  updateFixedPriceBar();
+
   const fieldValues = collectFieldValues();
   if (fieldValues === null) { errorBox.textContent = 'املأ البيانات'; return; }
   if (!selectedPayment) { errorBox.textContent = 'اختر طريقة الدفع'; return; }
