@@ -26,12 +26,23 @@
 }
 
 .auth-logo {
-  text-align: center;
-  font-weight: 800;
-  font-size: 20px;
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+  line-height: 0;
 }
-.auth-logo span { color: var(--primary); }
+
+.auth-logo img {
+  width: 208px;
+  height: 53px;
+  object-fit: contain;
+}
+
+.auth-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 5px;
+  border-radius: 4px;
+}
 
 .auth-title {
   font-size: 20px;

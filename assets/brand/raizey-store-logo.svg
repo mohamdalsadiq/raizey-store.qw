@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="112" viewBox="0 0 440 112" role="img" aria-labelledby="title desc">
+  <title id="title">RAIZEY STORE</title>
+  <desc id="desc">RAIZEY STORE wordmark with an angular RZ monogram</desc>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M56 5 102 31v50L56 107 10 81V31Z" fill="#1A1D29" stroke="#1A1D29" stroke-width="4"/>
+    <path d="M31 78V32h24c13 0 20 7 20 17 0 9-7 16-18 16H31m24 0 21 17" stroke="#FF6A1A" stroke-width="8"/>
+    <path d="M74 32h14L68 56h20" stroke="#FFFFFF" stroke-width="5"/>
+    <path d="M14 88 4 94M98 18l10-6" stroke="#FF6A1A" stroke-width="4"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="start">
+    <text x="127" y="64" fill="#1A1D29" font-size="43" font-weight="900" letter-spacing="2">RAIZEY</text>
+    <path d="M130 75h294" stroke="#1A1D29" stroke-width="2"/>
+    <text x="130" y="96" fill="#FF6A1A" font-size="17" font-weight="800" letter-spacing="9">STORE</text>
+    <path d="M302 89h122" stroke="#FF6A1A" stroke-width="2"/>
+  </g>
+</svg>

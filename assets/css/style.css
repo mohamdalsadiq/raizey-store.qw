@@ -72,12 +72,32 @@ button { font-family: inherit; cursor: pointer; border: none; }
   padding: 16px 20px;
 }
 
-.logo {
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
 }
-.logo span { color: var(--primary); }
+
+.brand-logo img {
+  width: 172px;
+  height: 44px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.brand-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+@media (max-width: 430px) {
+  .brand-logo img {
+    width: 142px;
+    height: 38px;
+  }
+}
 
 .header-actions {
   display: flex;

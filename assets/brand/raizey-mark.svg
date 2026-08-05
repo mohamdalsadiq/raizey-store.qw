@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">RAIZEY STORE</title>
+  <desc id="desc">Angular RZ monogram</desc>
+  <rect width="128" height="128" rx="22" fill="#FFFFFF"/>
+  <g fill="none" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M64 8 116 37v56l-52 29L12 93V37Z" fill="#1A1D29" stroke="#1A1D29" stroke-width="4"/>
+    <path d="M36 88V37h27c15 0 23 8 23 19 0 10-8 18-20 18H36m27 0 23 19" stroke="#FF6A1A" stroke-width="9"/>
+    <path d="M84 37h16L77 64h23" stroke="#FFFFFF" stroke-width="6"/>
+    <path d="M17 101 6 108M111 27l11-7" stroke="#FF6A1A" stroke-width="5"/>
+  </g>
+</svg>
