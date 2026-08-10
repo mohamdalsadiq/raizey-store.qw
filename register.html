@@ -55,10 +55,9 @@
 
     <div class="auth-divider">أو</div>
     <div class="social-login-row">
-      <button type="button" class="social-btn fb-btn" onclick="showSocialSoon()"><i class="fab fa-facebook-f"></i> فيسبوك</button>
-      <button type="button" class="social-btn google-btn" onclick="showSocialSoon()"><i class="fab fa-google"></i> جوجل</button>
+      <button type="button" class="social-btn google-btn" id="googleLoginBtn"><i class="fab fa-google" aria-hidden="true"></i> التسجيل باستخدام جوجل</button>
     </div>
-    <p class="form-error" id="socialSoonMsg" style="text-align:center; margin-top:10px;"></p>
+    <p class="form-error" id="socialError" style="text-align:center; margin-top:10px;"></p>
   </div>
 </div>
 
@@ -157,11 +156,28 @@ function updatePwStrength() {
   label.style.color = lvl.color;
 }
 
-function showSocialSoon() {
-  const msg = document.getElementById('socialSoonMsg');
-  msg.textContent = 'تسجيل الدخول عبر هذه الطريقة هيتفعّل قريباً';
-  setTimeout(() => { msg.textContent = ''; }, 3000);
-}
+document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+  const googleBtn = document.getElementById('googleLoginBtn');
+  const socialError = document.getElementById('socialError');
+  socialError.textContent = '';
+  googleBtn.disabled = true;
+  googleBtn.textContent = 'جارِ التحويل إلى جوجل...';
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: new URL('index.html', window.location.href).href,
+        queryParams: { prompt: 'select_account' }
+      }
+    });
+    if (error) throw error;
+  } catch (_) {
+    socialError.textContent = 'تعذر بدء التسجيل بجوجل، حاول مرة أخرى';
+    googleBtn.disabled = false;
+    googleBtn.textContent = 'التسجيل باستخدام جوجل';
+  }
+});
 </script>
 </body>
 </html>

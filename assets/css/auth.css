@@ -155,7 +155,6 @@
 }
 .social-btn:active { transform: scale(0.98); }
 .social-btn i { font-size: 15px; }
-.social-btn.fb-btn i { color: #1877F2; }
 .social-btn.google-btn i { color: #EA4335; }
 
 .pw-strength-bar {
