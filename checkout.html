@@ -152,6 +152,26 @@
   .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
   .selected-method-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+  .inline-action-row { display:flex; gap:8px; align-items:stretch; }
+  .inline-action-row input { flex:1; }
+  .save-ref-btn {
+    min-width: 92px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--ink);
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0 14px;
+  }
+  .save-ref-btn.saved {
+    border-color: var(--success, #10b981);
+    color: var(--success, #10b981);
+  }
+  .upload-disabled {
+    opacity: 0.65;
+    border-style: dashed;
+  }
 </style>
 </head>
 <body>
@@ -203,11 +223,15 @@
 
       <div class="field" style="margin-top:12px;">
         <label>رقم العملية (من رسالة التحويل) *</label>
-        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+        <div class="inline-action-row">
+          <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+          <button type="button" id="saveTransactionRefBtn" class="save-ref-btn">حفظ</button>
+        </div>
+        <div id="transactionRefStatus" style="font-size:12px; margin-top:8px; color:var(--text-muted);">احفظ رقم العملية أولاً، وبعدها سيظهر لك رفع الإيصال.</div>
       </div>
 
-      <div class="file-upload" id="fileUploadBox">
-        <i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل
+      <div class="file-upload upload-disabled" id="fileUploadBox">
+        <i class="fas fa-lock"></i> احفظ رقم العملية أولاً ثم ارفع صورة إيصال التحويل
         <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
       </div>
     </div>
@@ -235,6 +259,8 @@ let selectedPayment = null;
 let selectedMethodId = null;
 let receiptFile = null;
 let appliedCoupon = null;
+let savedTransactionRef = '';
+let receiptScanResult = null;
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
@@ -300,6 +326,123 @@ function currentTotal() {
     return raw - (raw * appliedCoupon.discount_percent / 100);
   }
   return raw;
+}
+
+function getCheckoutFileBoxDefaultText() {
+  return savedTransactionRef
+    ? '<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل'
+    : '<i class="fas fa-lock"></i> احفظ رقم العملية أولاً ثم ارفع صورة إيصال التحويل';
+}
+
+function resetSelectedReceipt() {
+  receiptFile = null;
+  receiptScanResult = null;
+  const fileInput = document.getElementById('receiptInput');
+  const fileBox = document.getElementById('fileUploadBox');
+  if (fileInput) fileInput.value = '';
+  if (fileBox) {
+    fileBox.innerHTML = getCheckoutFileBoxDefaultText();
+    fileBox.classList.remove('has-file');
+  }
+}
+
+function setReceiptUploadEnabled(enabled) {
+  const fileInput = document.getElementById('receiptInput');
+  const fileBox = document.getElementById('fileUploadBox');
+  if (!fileInput || !fileBox) return;
+  fileInput.disabled = !enabled;
+  fileBox.classList.toggle('upload-disabled', !enabled);
+  if (!receiptFile) fileBox.innerHTML = getCheckoutFileBoxDefaultText();
+}
+
+function resetSavedTransactionReference(showHint = true) {
+  savedTransactionRef = '';
+  receiptScanResult = null;
+  resetSelectedReceipt();
+  setReceiptUploadEnabled(false);
+  const saveBtn = document.getElementById('saveTransactionRefBtn');
+  const statusBox = document.getElementById('transactionRefStatus');
+  if (saveBtn) {
+    saveBtn.textContent = 'حفظ';
+    saveBtn.classList.remove('saved');
+    saveBtn.disabled = false;
+  }
+  if (statusBox && showHint) {
+    statusBox.style.color = 'var(--text-muted)';
+    statusBox.textContent = 'احفظ رقم العملية أولاً، وبعدها سيظهر لك رفع الإيصال.';
+  }
+}
+
+async function validateCartItemsAgainstCatalog() {
+  const uniqueIds = [...new Set(cart.map(item => item.product_id).filter(Boolean))];
+  if (!uniqueIds.length) {
+    return { valid: false, message: 'لا توجد منتجات صالحة داخل السلة.' };
+  }
+
+  const { data: products, error } = await supabaseClient
+    .from('products')
+    .select('id, name, is_active, options')
+    .in('id', uniqueIds);
+
+  if (error) {
+    return { valid: false, message: 'تعذّر تحديث بيانات المنتجات. حدّث الصفحة ثم حاول مجدداً.' };
+  }
+
+  const productMap = new Map((products || []).map(product => [product.id, product]));
+  for (const item of cart) {
+    const freshProduct = productMap.get(item.product_id);
+    if (!freshProduct || !freshProduct.is_active) {
+      return { valid: false, message: `المنتج "${item.name}" لم يعد متاحاً حالياً.` };
+    }
+
+    const options = Array.isArray(freshProduct.options) ? freshProduct.options : [];
+    if (options.length > 0) {
+      const selectedOptionId = item?.selected_option?.id ? String(item.selected_option.id) : '';
+      const optionExists = options.some(option => String(option.id) === selectedOptionId);
+      if (!optionExists) {
+        return { valid: false, message: `الخيار المختار للمنتج "${item.name}" لم يعد متاحاً. احذف المنتج وأعد اختياره.` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
+async function saveTransactionReference(errorBox) {
+  const input = document.getElementById('transactionRefInput');
+  const statusBox = document.getElementById('transactionRefStatus');
+  const saveBtn = document.getElementById('saveTransactionRefBtn');
+  const normalizedRef = normalizeTransactionReference(input.value);
+
+  errorBox.textContent = '';
+  if (normalizedRef.length < 6) {
+    statusBox.style.color = 'var(--danger)';
+    statusBox.textContent = 'رقم العملية غير واضح. اكتبه كما ظهر في رسالة التحويل ثم احفظه.';
+    return false;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'جارِ الحفظ...';
+
+  const duplicateRef = await checkDuplicateTransactionRef('orders', normalizedRef);
+  if (duplicateRef) {
+    statusBox.style.color = 'var(--danger)';
+    statusBox.textContent = 'رقم العملية هذا مستخدم من قبل في طلب أو شحن سابق.';
+    errorBox.textContent = 'رقم العملية هذا مستخدم من قبل في طلب أو شحن سابق.';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'حفظ';
+    return false;
+  }
+
+  savedTransactionRef = normalizedRef;
+  input.value = normalizedRef;
+  statusBox.style.color = 'var(--success, #10b981)';
+  statusBox.textContent = 'تم حفظ رقم العملية بنجاح. يمكنك الآن رفع صورة الإيصال للفحص الذكي.';
+  saveBtn.textContent = 'تم الحفظ';
+  saveBtn.classList.add('saved');
+  saveBtn.disabled = false;
+  setReceiptUploadEnabled(true);
+  return true;
 }
 
 function renderCheckout() {
@@ -406,7 +549,7 @@ async function applyCoupon() {
   msgBox.style.color = '';
   if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'يرجى إدخال كود الخصم أولاً'; return; }
   try {
-    const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
+    const { data, error } = await validateCouponCompat(code, currentTotal());
     if (error || !data || data.length === 0) {
       appliedCoupon = null;
       msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي الصلاحية';
@@ -430,6 +573,11 @@ function attachCheckoutEvents(canUseWallet) {
   const fileInput = document.getElementById('receiptInput');
   const placeOrderBtn = document.getElementById('placeOrderBtn');
   const errorBox = document.getElementById('formError');
+  const saveRefBtn = document.getElementById('saveTransactionRefBtn');
+  const refInput = document.getElementById('transactionRefInput');
+  const refStatus = document.getElementById('transactionRefStatus');
+
+  setReceiptUploadEnabled(false);
 
   if (canUseWallet) {
     walletOption.onclick = () => {
@@ -449,23 +597,64 @@ function attachCheckoutEvents(canUseWallet) {
     bankDetails.classList.add('show');
   };
 
-  fileBox.onclick = () => fileInput.click();
+  saveRefBtn.onclick = () => saveTransactionReference(errorBox);
+
+  refInput.addEventListener('input', () => {
+    const normalizedRef = normalizeTransactionReference(refInput.value);
+    if (savedTransactionRef && normalizedRef !== savedTransactionRef) {
+      resetSavedTransactionReference(false);
+      refStatus.style.color = 'var(--primary)';
+      refStatus.textContent = 'تم تعديل رقم العملية. اضغط "حفظ" مرة أخرى قبل رفع الإيصال.';
+    }
+  });
+
+  fileBox.onclick = () => {
+    if (!savedTransactionRef) {
+      errorBox.textContent = 'احفظ رقم العملية أولاً قبل رفع الإيصال.';
+      return;
+    }
+    fileInput.click();
+  };
   fileInput.onchange = async () => {
     if (fileInput.files.length > 0) {
+      if (!savedTransactionRef) {
+        fileInput.value = '';
+        errorBox.textContent = 'احفظ رقم العملية أولاً قبل رفع الإيصال.';
+        return;
+      }
+
       const file = fileInput.files[0];
       const validation = await validateReceiptImage(file);
       if (!validation.valid) {
-        fileInput.value = '';
-        receiptFile = null;
-        fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
-        fileBox.classList.remove('has-file');
+        resetSelectedReceipt();
         document.getElementById('formError').textContent = validation.message;
         return;
       }
+
+      errorBox.style.color = 'var(--text-muted)';
+      const smartScan = await verifyReceiptContent(file, (message) => {
+        fileBox.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${escapeHtml(message)}`;
+      }, savedTransactionRef, currentTotal());
+
+      if (!smartScan.passed) {
+        resetSelectedReceipt();
+        errorBox.style.color = 'var(--danger)';
+        errorBox.textContent = smartScan.message || 'فشل التحقق الذكي من صورة الإيصال.';
+        return;
+      }
+
       receiptFile = file;
+      receiptScanResult = smartScan;
       document.getElementById('formError').textContent = '';
-      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(receiptFile.name)}`;
+      fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> ${escapeHtml(receiptFile.name)}${smartScan.provider ? ` — ${escapeHtml(smartScan.scan_data.provider_label || smartScan.provider)}` : ''}`;
       fileBox.classList.add('has-file');
+      if (smartScan.message) {
+        errorBox.style.color = 'var(--primary)';
+        errorBox.textContent = smartScan.message;
+      } else {
+        errorBox.style.color = 'var(--success, #10b981)';
+        errorBox.textContent = 'تم التحقق من الإيصال وربطه برقم العملية المحفوظ.';
+      }
     }
   };
 
@@ -486,6 +675,12 @@ window.removeItemFromCheckout = function(cartItemId) {
 async function handlePlaceOrder(errorBox, placeOrderBtn) {
   errorBox.textContent = '';
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
+
+  const cartValidation = await validateCartItemsAgainstCatalog();
+  if (!cartValidation.valid) {
+    errorBox.textContent = cartValidation.message;
+    return;
+  }
 
   // ── Rate Limiting: منع إرسال طلبات متكررة بشكل مفرط ──
   const rlKey = `checkout_${currentUser?.id || 'guest'}`;
@@ -522,6 +717,10 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       const msg = err.message || String(err);
       if (msg.includes('insufficient_balance')) {
         errorBox.textContent = 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
+      } else if (msg.includes('option_required') || msg.includes('option_not_found')) {
+        errorBox.textContent = 'الخيار المختار لأحد المنتجات لم يعد متاحاً. حدّث السلة وأعد المحاولة.';
+      } else if (msg.includes('maintenance_mode')) {
+        errorBox.textContent = 'المتجر في وضع الصيانة حالياً. حاول لاحقاً.';
       } else if (msg.includes('product_not_found')) {
         errorBox.textContent = 'أحد المنتجات في سلتك لم يعد متاحاً.';
       } else if (msg.includes('price_calculation_error')) {
@@ -542,9 +741,10 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) {
-    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
+  const transactionRefRaw = document.getElementById('transactionRefInput').value.trim();
+  const transactionRef = normalizeTransactionReference(transactionRefRaw);
+  if (!transactionRef || transactionRef !== savedTransactionRef) {
+    errorBox.textContent = 'احفظ رقم العملية أولاً قبل إرسال الطلب.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
@@ -557,6 +757,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
+
+  const smartScan = receiptScanResult || await verifyReceiptContent(receiptFile, null, transactionRef, currentTotal());
+  if (!smartScan.passed) {
+    errorBox.textContent = smartScan.message || 'فشل التحقق الذكي من الإيصال.';
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    return;
+  }
+  receiptScanResult = smartScan;
 
   placeOrderBtn.textContent = 'جارِ التحقق من الإيصال...';
   let receiptHash = null;
@@ -620,10 +829,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
   const receiptSignedUrl = signedData.signedUrl;
-
-  placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptSignedUrl, null, transactionRef, currentTotal());
-  devLog('[RAIZEY] Smart check response:', ocrResult.ocr_status);
+  devLog('[RAIZEY] Smart check response:', smartScan.ocr_status);
 
   try {
     let lastInsertedOrderId = null;
@@ -650,8 +856,10 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         status:                'pending_review',
         receipt_hash:          receiptHash,
         receipt_url:           receiptSignedUrl,
-        ocr_status:            ocrResult.ocr_status  || 'needs_review',
-        amount_verified:       ocrResult.amount_verified ?? false
+        ocr_status:            smartScan.ocr_status  || 'needs_review',
+        amount_verified:       smartScan.amount_verified ?? false,
+        receipt_provider:      smartScan.provider || null,
+        receipt_scan_data:     smartScan.scan_data || null
       };
 
       for (let i = 0; i < qty; i++) {
@@ -662,7 +870,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     // ── استخدام الكوبون ذرياً قبل إدخال الطلبات (لمنع Race Condition) ──
     if (appliedCoupon) {
       const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
-      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
+      const { data: couponAtomicData, error: couponAtomicErr } = await useCouponAtomicCompat(couponCode, currentTotal());
       if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
         errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته. أعد المحاولة بدون الكود.';
         placeOrderBtn.disabled = false;
@@ -671,10 +879,12 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       }
     }
 
-    const { data: insertedOrders, error: orderError } = await supabaseClient
-      .from('orders')
-      .insert(ordersToInsert)
-      .select('id');
+    const { data: insertedOrders, error: orderError } = await insertWithOptionalColumns(
+      'orders',
+      ordersToInsert,
+      ['receipt_provider', 'receipt_scan_data'],
+      'id'
+    );
 
     if (orderError) {
       devWarn('[RAIZEY] Order insert error:', orderError.message);

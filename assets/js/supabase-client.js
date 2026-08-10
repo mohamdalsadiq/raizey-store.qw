@@ -174,63 +174,116 @@ async function hashFile(file) {
   }
 }
 
-// فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
-async function checkDuplicateReceipt(table, hashOrRef) {
-  if (!hashOrRef) return false;
-  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
-  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
-  const cleanVal = String(hashOrRef).trim();
-
-  try {
-    // 1. فحص بعمود receipt_hash
-    const { data: dataHash } = await requireClient()
-      .from(table)
-      .select('id')
-      .eq('receipt_hash', cleanVal)
-      .limit(1)
-      .maybeSingle();
-
-    if (dataHash) return true;
-  } catch (e) {
-    devWarn('[RAIZEY] checkDuplicateReceipt (hash) error:', e);
-  }
-
-  // 2. فحص بعمود transaction_reference احتياطياً إن وجد
-  try {
-    const { data: dataRef } = await requireClient()
-      .from(table)
-      .select('id')
-      .eq('transaction_reference', cleanVal)
-      .limit(1)
-      .maybeSingle();
-
-    if (dataRef) return true;
-  } catch (e) {
-    // تتجاهل الخطأ في حال عدم وجود العمود
-  }
-
-  return false;
+function normalizeArabicDigits(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
 }
 
-// فحص منفصل لتكرار رقم العملية (transaction_reference) فقط
+function normalizeWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeTransactionReference(value) {
+  const normalized = normalizeArabicDigits(value)
+    .toUpperCase()
+    .replace(/[\r\n\s\-_:/\\.,]+/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+  return normalized;
+}
+
+function isMissingColumnError(error) {
+  const msg = String(error?.message || error || '').toLowerCase();
+  return msg.includes('column') && (msg.includes('does not exist') || msg.includes('could not find'));
+}
+
+function isRpcSignatureError(error) {
+  const msg = String(error?.message || error || '').toLowerCase();
+  return (
+    msg.includes('could not find the function') ||
+    msg.includes('function is not unique') ||
+    msg.includes('no function matches') ||
+    msg.includes('pgrst202')
+  );
+}
+
+async function rpcWithFallback(functionName, primaryArgs, fallbackArgsList = []) {
+  const client = requireClient();
+  const first = await client.rpc(functionName, primaryArgs);
+  if (!first.error || !isRpcSignatureError(first.error) || fallbackArgsList.length === 0) {
+    return first;
+  }
+
+  for (const fallbackArgs of fallbackArgsList) {
+    const fallback = await client.rpc(functionName, fallbackArgs);
+    if (!fallback.error || !isRpcSignatureError(fallback.error)) {
+      return fallback;
+    }
+  }
+
+  return first;
+}
+
+async function validateCouponCompat(code, amountSdg = 0) {
+  return rpcWithFallback(
+    'validate_coupon',
+    { p_code: code, p_amount_sdg: Math.round(Number(amountSdg) || 0) },
+    [{ p_code: code }]
+  );
+}
+
+async function useCouponAtomicCompat(code, amountSdg = 0) {
+  return rpcWithFallback(
+    'use_coupon_atomic',
+    { p_code: code, p_amount_sdg: Math.round(Number(amountSdg) || 0) },
+    [{ p_code: code }]
+  );
+}
+
+async function findExistingPaymentRecord(column, rawValue) {
+  const cleanValue = String(rawValue || '').trim();
+  if (!cleanValue) return null;
+
+  const lookups = ['orders', 'wallet_topups'].map(async (table) => {
+    try {
+      const { data, error } = await requireClient()
+        .from(table)
+        .select('id')
+        .eq(column, cleanValue)
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data ? { table, id: data.id } : null;
+    } catch (error) {
+      return null;
+    }
+  });
+
+  const results = await Promise.all(lookups);
+  return results.find(Boolean) || null;
+}
+
+// فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في أي مسار دفع
+async function checkDuplicateReceipt(table, hashOrRef) {
+  void table;
+  if (!hashOrRef) return false;
+  const cleanHash = String(hashOrRef).trim();
+  if (!cleanHash) return false;
+  return !!(await findExistingPaymentRecord('receipt_hash', cleanHash));
+}
+
+// فحص منفصل لتكرار رقم العملية (transaction_reference) على مستوى الطلبات والشحن
 async function checkDuplicateTransactionRef(table, transactionRef) {
-  if (!transactionRef) return false;
-  const ALLOWED_DUPLICATE_TABLES = new Set(['orders', 'wallet_topups']);
-  if (!ALLOWED_DUPLICATE_TABLES.has(table)) return false;
-  const cleanRef = String(transactionRef).replace(/[\r\n\s\-_]+/g, '');
+  void table;
+  const cleanRef = normalizeTransactionReference(transactionRef);
   if (!cleanRef) return false;
 
-  try {
-    const { data } = await requireClient()
-      .from(table)
-      .select('id')
-      .eq('transaction_reference', cleanRef)
-      .limit(1)
-      .maybeSingle();
-    return !!data;
-  } catch (e) {
-    return false;
-  }
+  const directMatch = await findExistingPaymentRecord('transaction_reference', cleanRef);
+  if (directMatch) return true;
+
+  const normalizedColumnMatch = await findExistingPaymentRecord('transaction_reference_norm', cleanRef);
+  return !!normalizedColumnMatch;
 }
 
 // =========================================================
@@ -268,6 +321,34 @@ function sanitizeUrl(value) {
 function safeText(value, fallback = '') {
   if (value === null || value === undefined || value === '') return fallback;
   return escapeHtml(value);
+}
+
+function stripKeysFromPayload(payload, keysToStrip = []) {
+  if (!keysToStrip.length) return payload;
+  if (Array.isArray(payload)) {
+    return payload.map(row => stripKeysFromPayload(row, keysToStrip));
+  }
+  if (!payload || typeof payload !== 'object') return payload;
+  const cloned = { ...payload };
+  keysToStrip.forEach(key => { delete cloned[key]; });
+  return cloned;
+}
+
+async function insertWithOptionalColumns(table, payload, optionalKeys = [], selectClause = '*', useSingle = false) {
+  const runInsert = async (body) => {
+    let query = requireClient().from(table).insert(body);
+    if (selectClause) query = query.select(selectClause);
+    if (useSingle) query = query.single();
+    return query;
+  };
+
+  let response = await runInsert(payload);
+  if (!response.error || !optionalKeys.length || !isMissingColumnError(response.error)) {
+    return response;
+  }
+
+  response = await runInsert(stripKeysFromPayload(payload, optionalKeys));
+  return response;
 }
 
 // =========================================================
@@ -313,98 +394,380 @@ async function validateReceiptImage(file) {
   return { valid: true };
 }
 
-// =========================================================
-// فحص محتوى الإيصال بـ OCR (Tesseract.js) — نظام الإبلاغ فقط
-//
-// لا يوقف هذا الكود أي طلب أبداً.
-// النتيجة دائماً passed: true.
-// ocr_status / amount_verified تُحفظ في قاعدة البيانات
-// لتظهر للأدمن كمؤشر فقط.
-// =========================================================
-async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
-  // الحالة الافتراضية: تمرير الطلب + طلب مراجعة يدوية
-  const SOFT_PASS = { passed: true, ocr_status: 'needs_review', amount_verified: false };
+const RECEIPT_PROVIDERS = [
+  {
+    key: 'bankak',
+    label: 'بنكك',
+    keywords: ['bankak', 'بنكك', 'bank of khartoum', 'بنك الخرطوم'],
+  },
+  {
+    key: 'okash',
+    label: 'أوكاش',
+    keywords: ['okash', 'اوكاش', 'أوكاش', 'ok cash'],
+  },
+  {
+    key: 'fawry',
+    label: 'فوري',
+    keywords: ['fawry', 'فوري', 'faury'],
+  }
+];
 
-  // إذا لم تُحمَّل Tesseract — نمرّر الطلب ونضعه للمراجعة
-  if (typeof Tesseract === 'undefined') {
-    devLog('[RAIZEY OCR] Tesseract not loaded — soft pass');
-    return SOFT_PASS;
+const RECEIPT_LABELS = {
+  reference: ['transaction id', 'transaction no', 'transaction number', 'reference', 'reference no', 'ref no', 'txn id', 'رقم العملية', 'رقم الحركة', 'الرقم المرجعي', 'رقم المرجع'],
+  amount: ['amount', 'total', 'paid', 'received', 'المبلغ', 'المبلغ المحول', 'الإجمالي', 'المبلغ المدفوع', 'المحول'],
+  date: ['date', 'time', 'التاريخ', 'الوقت', 'بتاريخ'],
+  success: ['successful', 'success', 'completed', 'تم بنجاح', 'تمت بنجاح', 'ناجح', 'نجحت العملية', 'successful transfer'],
+  failure: ['failed', 'failure', 'rejected', 'cancelled', 'declined', 'فشل', 'فاشلة', 'مرفوض', 'ملغي', 'لم تنجح'],
+  sender: ['from', 'sender', 'المرسل', 'من حساب', 'من'],
+  receiver: ['to', 'receiver', 'recipient', 'المستلم', 'إلى', 'لحساب'],
+  receipt: ['receipt', 'payment', 'transfer', 'transaction', 'bank', 'wallet', 'إيصال', 'اشعار', 'إشعار', 'تحويل', 'دفع', 'عملية']
+};
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseReceiptLines(text) {
+  return normalizeArabicDigits(text)
+    .replace(/\u200f|\u200e/g, '')
+    .split(/\r?\n/)
+    .map(line => normalizeWhitespace(line))
+    .filter(Boolean);
+}
+
+function detectReceiptProvider(text) {
+  const haystack = normalizeArabicDigits(text).toLowerCase();
+  let best = null;
+
+  for (const provider of RECEIPT_PROVIDERS) {
+    const score = provider.keywords.reduce((total, keyword) => {
+      return total + (haystack.includes(normalizeArabicDigits(keyword).toLowerCase()) ? 1 : 0);
+    }, 0);
+    if (!best || score > best.score) {
+      best = { provider, score };
+    }
   }
 
-  return new Promise(async (resolve) => {
-    // مهلة 12 ثانية — إذا انتهت نمرّر الطلب للمراجعة اليدوية
-    // (خُفِّضت من 20 إلى 12 ثانية حتى لا ينتظر المستخدم طويلاً على الإنترنت البطيء)
-    const timeout = setTimeout(() => {
-      devLog('[RAIZEY OCR] Timeout — soft pass');
-      resolve(SOFT_PASS);
-    }, 12000);
+  return best && best.score > 0 ? best.provider : null;
+}
 
-    try {
-      if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
+function lineHasAnyKeyword(line, keywords = []) {
+  const normalizedLine = normalizeArabicDigits(line).toLowerCase();
+  return keywords.some(keyword => normalizedLine.includes(normalizeArabicDigits(keyword).toLowerCase()));
+}
 
-      // نستخدم 'eng' فقط بدل 'ara+eng' — الفحص هنا يعتمد فقط على استخراج
-      // الأرقام (رقم العملية والمبلغ) وليس قراءة نص عربي، وبيانات اللغة
-      // العربية لـ Tesseract حجمها كبير جداً (+10 ميجابايت) وتُحمَّل من
-      // الإنترنت في كل مرة — ما تُستخدم فعلياً، وهي السبب الرئيسي في تعليق
-      // الفحص لفترة طويلة عند ضعف الاتصال بالإنترنت.
-      const result = await Tesseract.recognize(fileOrUrl, 'eng', { logger: () => {} });
-      clearTimeout(timeout);
+function extractTextAfterLabel(line, labels = []) {
+  for (const label of labels) {
+    const pattern = new RegExp(`${escapeRegex(normalizeArabicDigits(label))}\\s*[:#\\-]?\s*(.+)$`, 'i');
+    const match = normalizeArabicDigits(line).match(pattern);
+    if (match && match[1]) return normalizeWhitespace(match[1]);
+  }
+  return '';
+}
 
-      const text = (result.data.text || '').trim();
-      devLog('[RAIZEY OCR] Extracted text length:', text.length);
+function collectReferenceCandidates(lines) {
+  const candidates = [];
 
-      // إذا كان النص قصير جداً → لا يمكن التحقق → مراجعة يدوية
-      if (text.length < 10) {
-        devLog('[RAIZEY OCR] Text too short — needs_review');
-        resolve(SOFT_PASS);
-        return;
-      }
-
-      // ── 1. فحص رقم العملية (للإبلاغ فقط) ──
-      let refMatched = false;
-      if (transactionRef && transactionRef.trim()) {
-        const userDigits = transactionRef.replace(/\D/g, '');
-        const ocrDigits  = text.replace(/\D/g, '');
-        if (userDigits.length > 0) {
-          const fullMatch    = ocrDigits.includes(userDigits);
-          const partialMatch = userDigits.length > 4 && ocrDigits.includes(userDigits.slice(0, -1));
-          refMatched = fullMatch || partialMatch;
-          devLog('[RAIZEY OCR] Ref check — userDigits:', userDigits, '| matched:', refMatched);
-        }
-      } else {
-        // لا يوجد رقم عملية لمقارنته → نعتبره غير محقَّق
-        refMatched = false;
-      }
-
-      // ── 2. فحص المبلغ (للإبلاغ فقط) ──
-      let amountMatched = false;
-      if (expectedAmountSDG && expectedAmountSDG > 0) {
-        // استخراج كل الأرقام الموجودة في النص (بما فيها الأرقام العربية)
-        const normalised = text
-          .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-          .replace(/,/g, '');
-        const amounts = [...normalised.matchAll(/\d[\d.]*\d|\d/g)]
-          .map(m => parseFloat(m[0]))
-          .filter(n => !isNaN(n) && n > 0);
-
-        const rounded = Math.round(expectedAmountSDG);
-        // نقبل تطابقاً بهامش ±1%
-        amountMatched = amounts.some(a => Math.abs(a - rounded) / rounded <= 0.01);
-        devLog('[RAIZEY OCR] Amount check — expected:', rounded, '| found amounts:', amounts, '| matched:', amountMatched);
-      }
-
-      // ── 3. القرار النهائي ──
-      // passed دائماً true — فقط ocr_status و amount_verified تتغير
-      if (refMatched && (!expectedAmountSDG || amountMatched)) {
-        resolve({ passed: true, ocr_status: 'passed', amount_verified: amountMatched });
-      } else {
-        resolve({ passed: true, ocr_status: 'needs_review', amount_verified: amountMatched });
-      }
-
-    } catch (e) {
-      clearTimeout(timeout);
-      devWarn('[RAIZEY OCR] Error — soft pass:', e.message);
-      resolve(SOFT_PASS);
+  lines.forEach((line, index) => {
+    const normalizedLine = normalizeArabicDigits(line);
+    if (lineHasAnyKeyword(line, RECEIPT_LABELS.reference)) {
+      const direct = extractTextAfterLabel(normalizedLine, RECEIPT_LABELS.reference);
+      if (direct) candidates.push(direct);
+      if (lines[index + 1]) candidates.push(lines[index + 1]);
     }
+
+    const genericMatches = normalizedLine.match(/(?:[A-Z]{1,4}\d{5,18}|\d{8,20}|[A-Z0-9]{8,24})/gi) || [];
+    genericMatches.forEach(match => candidates.push(match));
   });
+
+  const normalizedCandidates = candidates
+    .map(candidate => normalizeTransactionReference(candidate))
+    .filter(candidate => candidate.length >= 6)
+    .filter(candidate => !/^\d{1,6}$/.test(candidate));
+
+  const weighted = normalizedCandidates
+    .map(candidate => ({
+      candidate,
+      score: (/^[A-Z]+\d+$/.test(candidate) ? 4 : 0) + (/\d{8,}/.test(candidate) ? 3 : 0) + Math.min(candidate.length, 12)
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  return weighted.map(item => item.candidate);
+}
+
+function parseAmountToken(value) {
+  const normalized = normalizeArabicDigits(value)
+    .replace(/[^\d.,]/g, '')
+    .replace(/,/g, '');
+  const amount = parseFloat(normalized);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function collectAmountCandidates(lines, expectedAmountSDG = 0) {
+  const candidates = [];
+  const expectedRounded = Math.round(Number(expectedAmountSDG) || 0);
+
+  lines.forEach((line) => {
+    const normalizedLine = normalizeArabicDigits(line);
+    const lineHasAmountLabel = lineHasAnyKeyword(normalizedLine, RECEIPT_LABELS.amount);
+    const numericMatches = normalizedLine.match(/\d[\d,\.]{0,15}/g) || [];
+    numericMatches.forEach(match => {
+      const parsed = parseAmountToken(match);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      const rounded = Math.round(parsed);
+      const distance = expectedRounded > 0 ? Math.abs(rounded - expectedRounded) : 999999;
+      candidates.push({
+        amount: parsed,
+        rounded,
+        confident: lineHasAmountLabel,
+        distance
+      });
+    });
+  });
+
+  candidates.sort((a, b) => {
+    if (a.confident !== b.confident) return a.confident ? -1 : 1;
+    return a.distance - b.distance;
+  });
+
+  return candidates;
+}
+
+function extractReceiptDateTime(lines) {
+  const joined = lines.join(' ');
+  const match = normalizeArabicDigits(joined).match(/(\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/);
+  return match ? match[1] : null;
+}
+
+function extractAccountDetails(lines, labels) {
+  for (const line of lines) {
+    if (!lineHasAnyKeyword(line, labels)) continue;
+    const direct = extractTextAfterLabel(line, labels);
+    if (direct) return direct;
+  }
+  return null;
+}
+
+function analyzeReceiptText(text, transactionRef, expectedAmountSDG = 0) {
+  const lines = parseReceiptLines(text);
+  const provider = detectReceiptProvider(text);
+  const referenceCandidates = collectReferenceCandidates(lines);
+  const extractedReference = referenceCandidates[0] || null;
+  const extractedReferenceNorm = normalizeTransactionReference(extractedReference);
+  const manualReferenceNorm = normalizeTransactionReference(transactionRef);
+  const amountCandidates = collectAmountCandidates(lines, expectedAmountSDG);
+  const bestAmount = amountCandidates[0] || null;
+  const expectedRounded = Math.round(Number(expectedAmountSDG) || 0);
+  const amountVerified = !!(bestAmount && expectedRounded > 0 && Math.abs(bestAmount.rounded - expectedRounded) <= 1);
+  const status = lines.some(line => lineHasAnyKeyword(line, RECEIPT_LABELS.failure))
+    ? 'failed'
+    : (lines.some(line => lineHasAnyKeyword(line, RECEIPT_LABELS.success)) ? 'success' : 'unknown');
+  const hasReceiptKeywords = lines.some(line => lineHasAnyKeyword(line, RECEIPT_LABELS.receipt));
+  const hasReferenceLabel = lines.some(line => lineHasAnyKeyword(line, RECEIPT_LABELS.reference));
+  const hasDate = !!extractReceiptDateTime(lines);
+  const matchesManualReference = !!(manualReferenceNorm && extractedReferenceNorm && manualReferenceNorm === extractedReferenceNorm);
+  const referenceConflict = !!(manualReferenceNorm && extractedReferenceNorm && manualReferenceNorm !== extractedReferenceNorm);
+
+  const isReceiptLike = !!(
+    provider &&
+    hasReceiptKeywords &&
+    ((hasReferenceLabel && extractedReferenceNorm) || bestAmount || hasDate)
+  );
+
+  return {
+    raw_text: normalizeWhitespace(text).slice(0, 4000),
+    provider: provider ? provider.key : null,
+    provider_label: provider ? provider.label : null,
+    extracted_transaction_reference: extractedReference,
+    extracted_transaction_reference_norm: extractedReferenceNorm || null,
+    extracted_amount: bestAmount ? bestAmount.rounded : null,
+    amount_confident: !!(bestAmount && bestAmount.confident),
+    amount_verified: amountVerified,
+    status,
+    is_receipt_like: isReceiptLike,
+    matches_manual_reference: matchesManualReference,
+    reference_conflict: referenceConflict,
+    extracted_date_time: extractReceiptDateTime(lines),
+    sender_account: extractAccountDetails(lines, RECEIPT_LABELS.sender),
+    receiver_account: extractAccountDetails(lines, RECEIPT_LABELS.receiver)
+  };
+}
+
+async function prepareImageForOCR(fileOrUrl) {
+  const sourceUrl = typeof fileOrUrl === 'string' ? fileOrUrl : URL.createObjectURL(fileOrUrl);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('image_load_failed'));
+      img.src = sourceUrl;
+    });
+
+    const maxWidth = 1600;
+    const scale = image.width > maxWidth ? (maxWidth / image.width) : 1;
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(image, 0, 0, width, height);
+
+    const imageData = context.getImageData(0, 0, width, height);
+    const { data } = imageData;
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.min(255, Math.max(0, (data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114)));
+      const boosted = gray > 170 ? 255 : gray < 90 ? 0 : gray;
+      data[i] = boosted;
+      data[i + 1] = boosted;
+      data[i + 2] = boosted;
+    }
+    context.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  } finally {
+    if (typeof fileOrUrl !== 'string') {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  }
+}
+
+async function runTesseractPass(source, languages, timeoutMs) {
+  if (typeof Tesseract === 'undefined') {
+    return { text: '', language: languages, timed_out: false, error: 'tesseract_unavailable' };
+  }
+
+  let timer = null;
+  try {
+    const result = await Promise.race([
+      Tesseract.recognize(source, languages, { logger: () => {} }),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('ocr_timeout')), timeoutMs);
+      })
+    ]);
+    return {
+      text: result?.data?.text || '',
+      language: languages,
+      timed_out: false,
+      error: null
+    };
+  } catch (error) {
+    return {
+      text: '',
+      language: languages,
+      timed_out: String(error?.message || error) === 'ocr_timeout',
+      error: String(error?.message || error || 'ocr_failed')
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function buildReceiptDecision(scan, expectedAmountSDG) {
+  if (!scan.is_receipt_like || !scan.provider) {
+    return {
+      passed: false,
+      ocr_status: 'rejected_non_receipt',
+      amount_verified: false,
+      message: 'الصورة المرفوعة لا تبدو كإشعار تحويل معتمد من بنكك أو أوكاش أو فوري.'
+    };
+  }
+
+  if (scan.status === 'failed') {
+    return {
+      passed: false,
+      ocr_status: 'rejected_failed_transfer',
+      amount_verified: false,
+      message: 'الإيصال المرفوع يوضح أن العملية غير ناجحة، لذلك تم رفضه.'
+    };
+  }
+
+  if (scan.reference_conflict) {
+    return {
+      passed: false,
+      ocr_status: 'rejected_reference_mismatch',
+      amount_verified: false,
+      message: 'رقم العملية المكتوب لا يطابق الرقم الظاهر داخل صورة الإيصال.'
+    };
+  }
+
+  if (scan.extracted_amount !== null && expectedAmountSDG > 0 && !scan.amount_verified) {
+    return {
+      passed: false,
+      ocr_status: 'rejected_amount_mismatch',
+      amount_verified: false,
+      message: 'المبلغ الظاهر في الإيصال لا يطابق إجمالي الطلب.'
+    };
+  }
+
+  if (!scan.extracted_transaction_reference_norm || scan.status === 'unknown' || !scan.amount_confident) {
+    return {
+      passed: true,
+      ocr_status: 'needs_review',
+      amount_verified: scan.amount_verified,
+      message: 'تم قبول الإيصال مبدئياً، لكن سيخضع لمراجعة إضافية بسبب ضعف جودة القراءة.'
+    };
+  }
+
+  return {
+    passed: true,
+    ocr_status: 'passed',
+    amount_verified: scan.amount_verified,
+    message: ''
+  };
+}
+
+// =========================================================
+// فحص محتوى الإيصال بـ OCR + تصنيف نوعه واستخراج الحقول المهمة
+// =========================================================
+async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
+  const defaultResult = {
+    passed: false,
+    ocr_status: 'rejected_unreadable',
+    amount_verified: false,
+    message: 'تعذر قراءة الإيصال بوضوح. ارفع لقطة شاشة أو صورة أوضح لإشعار التحويل.',
+    provider: null,
+    scan_data: {
+      provider: null,
+      is_receipt_like: false,
+      status: 'unknown'
+    }
+  };
+
+  try {
+    const preparedSource = await prepareImageForOCR(fileOrUrl).catch(() => fileOrUrl);
+    const passes = [];
+    const collectedTexts = [];
+
+    if (statusCallback) statusCallback('جارِ تحليل صورة الإيصال...');
+    const fastPass = await runTesseractPass(preparedSource, 'eng', 7000);
+    passes.push({ language: fastPass.language, timed_out: fastPass.timed_out, error: fastPass.error });
+    if (fastPass.text) collectedTexts.push(fastPass.text);
+
+    let analysis = analyzeReceiptText(collectedTexts.join('\n'), transactionRef, expectedAmountSDG);
+    const needsArabicPass = !analysis.provider || !analysis.is_receipt_like || !analysis.extracted_transaction_reference_norm;
+
+    if (needsArabicPass) {
+      if (statusCallback) statusCallback('جارِ التحقق من نوع الإيصال وبياناته...');
+      const arabicPass = await runTesseractPass(preparedSource, 'ara+eng', 14000);
+      passes.push({ language: arabicPass.language, timed_out: arabicPass.timed_out, error: arabicPass.error });
+      if (arabicPass.text) collectedTexts.push(arabicPass.text);
+      analysis = analyzeReceiptText(collectedTexts.join('\n'), transactionRef, expectedAmountSDG);
+    }
+
+    const decision = buildReceiptDecision(analysis, expectedAmountSDG);
+    return {
+      ...decision,
+      provider: analysis.provider,
+      scan_data: {
+        ...analysis,
+        expected_amount: Math.round(Number(expectedAmountSDG) || 0),
+        manual_transaction_reference: normalizeTransactionReference(transactionRef),
+        ocr_passes: passes
+      }
+    };
+  } catch (error) {
+    devWarn('[RAIZEY OCR] Fatal error:', error?.message || error);
+    return defaultResult;
+  }
 }
