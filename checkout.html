@@ -152,6 +152,27 @@
   .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
   .selected-method-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+  #saveTxRefBtn {
+    flex-shrink: 0;
+    min-width: 84px;
+    padding: 0 20px;
+    border-radius: 12px;
+    border: none;
+    background: var(--primary);
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  #saveTxRefBtn:hover { opacity: 0.9; }
+  #saveTxRefBtn:active { opacity: 0.8; }
+  .field-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
@@ -208,6 +229,7 @@
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">حفظ</button>
         </div>
+        <div class="field-hint">اكتب رقم العملية كما ورد في إشعار التحويل، ثم اضغط "حفظ" — بعدها تظهر لك خطوة رفع صورة الإشعار.</div>
         <div id="txRefMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
       </div>
 
