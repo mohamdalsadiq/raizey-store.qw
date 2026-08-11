@@ -638,30 +638,16 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  if (!selectedMethodId || !receiptFile) {
-    errorBox.textContent = !selectedMethodId ? 'الرجاء اختيار وسيلة التحويل البنكي!' : 'الرجاء رفع صورة الإيصال لتأكيد التحويل!';
+  if (!selectedMethodId || !receiptFile || !savedTxRef || !scanResult) {
+    if (!selectedMethodId) errorBox.textContent = 'الرجاء اختيار وسيلة التحويل البنكي!';
+    else if (!savedTxRef) errorBox.textContent = 'اكتب رقم العملية واضغط "حفظ" أولاً (الخطوة 1).';
+    else errorBox.textContent = 'الرجاء رفع صورة الإيصال ليتم فحصها (الخطوة 2).';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
 
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
-  if (!transactionRef) {
-    errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-    return;
-  }
-
-  const preUploadCheck = await validateReceiptImage(receiptFile);
-  if (!preUploadCheck.valid) {
-    errorBox.textContent = preUploadCheck.message;
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-    return;
-  }
-
-  placeOrderBtn.textContent = 'جارِ التحقق من الإيصال...';
+  placeOrderBtn.textContent = 'جارِ حساب بصمة الملف...';
   let receiptHash = null;
   try {
     receiptHash = await hashFile(receiptFile);
@@ -671,24 +657,8 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
-
-  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
-    checkDuplicateReceipt('orders', receiptHash),
-    checkDuplicateTransactionRef('orders', transactionRef)
-  ]);
-
-  if (isDuplicateHash || isDuplicateRef) {
-    try {
-      await supabaseClient.from('audit_logs').insert({
-        admin_id: null,
-        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر مكتشف تلقائياً (checkout)',
-        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
-      });
-    } catch (e) {}
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = isDuplicateRef
-      ? 'رقم العملية هذا تم استخدامه في طلب آخر من قبل!'
-      : 'هذا الإشعارات تم استخدامه من قبل في طلب آخر!';
+  if (!receiptHash) {
+    errorBox.textContent = 'تعذّر معالجة صورة الإيصال، جرّب صورة أخرى.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
@@ -712,25 +682,64 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  // ── رابط الإيصال الآمن (Signed URL — مؤقت وغير مكشوف) ──
-  const { data: signedData, error: signedErr } = await supabaseClient.storage
-    .from('receipts')
-    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 يوم
-  if (signedErr || !signedData) {
-    errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.';
+  // ── الحجز الذرّي للإيصال: الحاجز الحقيقي ضد التكرار (لا يمكن تجاوزه من المتصفح) ──
+  placeOrderBtn.textContent = 'جارِ تسجيل الإيصال...';
+  let receiptId = null;
+  try {
+    const { data: claimData, error: claimErr } = await supabaseClient.rpc('claim_payment_receipt', {
+      p_purpose:           'order',
+      p_tx_ref:             savedTxRef,
+      p_receipt_hash:       receiptHash,
+      p_receipt_path:       filePath,
+      p_provider:           scanResult.provider || null,
+      p_payment_method_id:  selectedMethodId,
+      p_amount_expected:    currentTotal(),
+      p_amount_detected:    scanResult.extracted ? scanResult.extracted.amount : null,
+      p_tx_ref_ocr:         scanResult.extracted ? scanResult.extracted.txRef : null,
+      p_ocr_status:         scanResult.ocrStatus || 'needs_review',
+      p_ocr_confidence:     scanResult.confidence ?? null,
+      p_risk_flags:         scanResult.riskFlags || [],
+      p_ocr_data:           scanResult.extracted || {}
+    });
+    if (claimErr) throw claimErr;
+    receiptId = claimData && claimData.length ? claimData[0].id : null;
+    if (!receiptId) throw new Error('receipt_claim_failed');
+  } catch (err) {
+    const msg = err.message || String(err);
+    devWarn('[RAIZEY] claim_payment_receipt error:', msg);
+    errorBox.style.color = 'var(--danger)';
+    if (msg.includes('duplicate_transaction_ref')) {
+      errorBox.textContent = 'رقم العملية هذا تم استخدامه من قبل في طلب آخر!';
+    } else if (msg.includes('duplicate_receipt_image')) {
+      errorBox.textContent = 'صورة هذا الإيصال تم استخدامها من قبل في طلب آخر!';
+    } else if (msg.includes('receipt_rejected')) {
+      errorBox.textContent = 'تم رفض هذا الإيصال من الفحص الذكي. راجع صورة الإشعار وأعد المحاولة.';
+    } else {
+      errorBox.textContent = getFriendlyError(msg);
+    }
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
   }
-  const receiptSignedUrl = signedData.signedUrl;
-
-  placeOrderBtn.textContent = 'جارِ فحص صورة الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptSignedUrl, null, transactionRef, currentTotal());
-  devLog('[RAIZEY] Smart check response:', ocrResult.ocr_status);
 
   try {
     let lastInsertedOrderId = null;
-    
+
+    // ── استخدام الكوبون ذرياً (بعد نجاح حجز الإيصال، قبل إدخال الطلبات) ──
+    if (appliedCoupon) {
+      const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
+      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', {
+        p_code: couponCode,
+        p_order_total: currentTotal()
+      });
+      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
+        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.';
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+        return;
+      }
+    }
+
     const ordersToInsert = [];
     for (const item of cart) {
       const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
@@ -749,28 +758,12 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         selected_option:       item.selected_option || null,
         payment_type:          'bank',
         payment_method_id:     selectedMethodId,
-        transaction_reference: transactionRef,
-        status:                'pending_review',
-        receipt_hash:          receiptHash,
-        receipt_url:           receiptSignedUrl,
-        ocr_status:            ocrResult.ocr_status  || 'needs_review',
-        amount_verified:       ocrResult.amount_verified ?? false
+        receipt_id:            receiptId,
+        status:                'pending_review'
       };
 
       for (let i = 0; i < qty; i++) {
         ordersToInsert.push({ ...baseRow });
-      }
-    }
-
-    // ── استخدام الكوبون ذرياً قبل إدخال الطلبات (لمنع Race Condition) ──
-    if (appliedCoupon) {
-      const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
-      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
-      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته. أعد المحاولة بدون الكود.';
-        placeOrderBtn.disabled = false;
-        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-        return;
       }
     }
 
@@ -793,7 +786,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     }
 
     localStorage.removeItem('raizey_store_cart');
-    // الكوبون استُخدم ذرياً بواسطة use_coupon_atomic أعلاه — لا حاجة لاستدعاء إضافي
 
     window.location.href = lastInsertedOrderId
       ? `receipt.html?order_id=${lastInsertedOrderId}`
