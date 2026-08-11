@@ -38,11 +38,17 @@
   // 1) الإعدادات
   // ═══════════════════════════════════════════════════════════════════
   const CONFIG = {
-    passTimeoutMs:     25000,  // مهلة كل مرحلة قراءة على حدة
-    totalBudgetMs:     70000,  // سقف زمني كلي لكل المراحل
-    engineTimeoutMs:   30000,  // مهلة تجهيز المحرك بالعربية+الإنجليزية
-    engineFallbackMs:  25000,  // مهلة تجهيز المحرك بالإنجليزية فقط
-    hardDeadlineMs:    90000,  // سقف مطلق: analyze() لا تتجاوزه أبداً
+    passTimeoutMs:     45000,  // مهلة كل مرحلة قراءة على حدة
+    totalBudgetMs:     150000, // سقف زمني كلي لكل مراحل القراءة
+    // تجهيز المحرك: تحميل نواة + بيانات اللغة (مرة واحدة ثم يُخزَّن محلياً).
+    // المهلة هنا ليست مهلة ثابتة قصيرة — بل: سقف مطلق كبير + كشف "توقّف
+    // التقدّم" (stall). الاتصال البطيء الذي يتقدّم فعلاً لا يُقتل، والاتصال
+    // الميت الذي لا ينزل منه بايت واحد يُكتشف بسرعة.
+    engineTotalMs:     180000, // سقف مطلق لتجهيز المحرك
+    engineStallMs:     35000,  // بلا أي تقدّم لهذه المدة → اتصال متوقف فعلاً
+    langStallMs:       25000,  // بلا أي بايت جديد من بيانات اللغة لهذه المدة
+    hardDeadlineMs:    300000, // سقف مطلق مطلق: analyze() لا تتجاوزه أبداً
+    scanStallMs:       75000,  // بلا أي تحديث حالة داخلي → تعليق حقيقي
     fileCheckMs:       8000,   // مهلة فحص صلاحية الملف
     editorCheckMs:     8000,   // مهلة فحص بصمات التعديل
     imageLoadMs:       15000,  // مهلة تحميل/معالجة الصورة
@@ -523,6 +529,14 @@
   let currentProgressHandler = null;   // نسبة تقدّم القراءة
   let currentEngineHandler = null;     // نسبة تقدّم تجهيز المحرك (تحميل النواة/اللغة)
   let workerPromise = null;            // لا يُخزَّن إلا بعد نجاح التجهيز فعلياً
+  let enginePromise = null;            // تجهيز جارٍ الآن (يُشارَك بين المستدعين)
+  let lastEngineActivity = 0;          // آخر إشارة تقدّم من المحرك (لكشف التوقف)
+  let lastScanActivity = 0;            // آخر تحديث حالة للواجهة (لكشف التعليق)
+
+  function markEngineActivity() {
+    lastEngineActivity = Date.now();
+    lastScanActivity = lastEngineActivity;
+  }
 
   /**
    * سبب المشكلة الجذري كان هنا: كل انتظار في هذا الملف كان بلا مهلة، فإذا
@@ -558,12 +572,183 @@
 
   function engineLogger(m) {
     if (!m) return;
+    markEngineActivity();
     if (m.status === 'recognizing text') {
       if (currentProgressHandler) currentProgressHandler(Math.round((m.progress || 0) * 100));
       return;
     }
     if (currentEngineHandler) {
       currentEngineHandler(Math.round((m.progress || 0) * 100), String(m.status || ''));
+    }
+  }
+
+  /**
+   * انتظار مع سقف مطلق + كشف توقّف التقدّم.
+   * هذا هو جوهر إصلاح "التعليق اللانهائي" و"الفشل الكاذب":
+   *  • المهلة الثابتة القصيرة كانت تقتل تحميلاً سليماً بطيئاً → رسالة
+   *    "تعذّر تشغيل محرك الفحص" مع أن الاتصال يعمل.
+   *  • غياب كشف التوقف كان يترك الواجهة معلّقة على 0% إلى الأبد.
+   * الآن: ما دام هناك تقدّم فعلي ننتظر، وإذا توقّف التقدّم تماماً نفشل بسرعة
+   * وبرسالة صحيحة.
+   */
+  function waitWithStall(promise, absoluteMs, stallMs, tag) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const startedAt = Date.now();
+      markEngineActivity();
+
+      const finish = (fn, val) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(ticker);
+        fn(val);
+      };
+
+      const ticker = setInterval(() => {
+        if (settled) return;
+        if (Date.now() - startedAt > absoluteMs) {
+          finish(reject, new Error('timeout:' + (tag || 'absolute')));
+        } else if (Date.now() - lastEngineActivity > stallMs) {
+          finish(reject, new Error('stalled:' + (tag || '')));
+        }
+      }, 1000);
+
+      Promise.resolve(promise).then(
+        (v) => finish(resolve, v),
+        (e) => finish(reject, e || new Error('failed:' + (tag || '')))
+      );
+    });
+  }
+
+  function fmtMB(bytes) {
+    return (bytes / (1024 * 1024)).toFixed(1);
+  }
+
+  /**
+   * تنزيل ملف مع تقدّم حقيقي بالبايت وكشف توقّف التدفق.
+   *
+   * السبب الجذري الثاني للمشكلة: tesseract.js لا يرسل أي حدث تقدّم أثناء
+   * تنزيل بيانات اللغة، فتبقى الواجهة على نفس النسبة (0% / 5%) طوال التنزيل
+   * ولا يمكن التمييز بين "ينزل ببطء" و"متوقف تماماً". لذلك ننزّل بيانات
+   * اللغة بأنفسنا أولاً (فتصبح النسبة حقيقية ويصبح كشف التوقف ممكناً)، ثم
+   * ننشئ المحرك فيقرأها من كاش المتصفح فوراً.
+   */
+  function fetchWithProgress(url, onProgress, stallMs) {
+    return new Promise((resolve, reject) => {
+      if (typeof fetch !== 'function') { resolve(false); return; }
+
+      let ctrl = null;
+      try { ctrl = new AbortController(); } catch (e) { ctrl = null; }
+
+      let lastByteAt = Date.now();
+      let done = false;
+      const watch = setInterval(() => {
+        if (done) return;
+        if (Date.now() - lastByteAt > stallMs) {
+          done = true;
+          clearInterval(watch);
+          try { if (ctrl) ctrl.abort(); } catch (e) {}
+          reject(new Error('stalled:download'));
+        }
+      }, 2000);
+
+      const settleOk = (v) => {
+        if (done) return;
+        done = true; clearInterval(watch); resolve(v);
+      };
+      const settleErr = (e) => {
+        if (done) return;
+        done = true; clearInterval(watch); reject(e);
+      };
+
+      fetch(url, ctrl ? { signal: ctrl.signal, credentials: 'omit' } : { credentials: 'omit' })
+        .then(async (res) => {
+          if (!res || !res.ok) throw new Error('http_' + (res ? res.status : 'no_response'));
+          const total = Number(res.headers.get('content-length')) || 0;
+
+          if (!res.body || typeof res.body.getReader !== 'function') {
+            // متصفح بلا streams: ننتظر الملف كاملاً (بلا تقدّم تفصيلي)
+            await res.arrayBuffer();
+            markEngineActivity();
+            settleOk(true);
+            return;
+          }
+
+          const reader = res.body.getReader();
+          let received = 0;
+          for (;;) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+            received += chunk.value ? chunk.value.length : 0;
+            lastByteAt = Date.now();
+            markEngineActivity();
+            if (onProgress) { try { onProgress(received, total); } catch (e) {} }
+          }
+          settleOk(true);
+        })
+        .catch(settleErr);
+    });
+  }
+
+  /**
+   * مصادر التحميل: الأولوية لملفات اللغة "fast" (‏~2.7 ميجابايت للعربية
+   * والإنجليزية معاً) بدلاً من المسار الافتراضي في tesseract.js الذي يحمّل
+   * نماذج "best" بحجم ‏~12.6 ميجابايت — وهذا وحده كان يجعل التجهيز مستحيلاً
+   * على اتصال متوسط ويُنهي كل المهل قبل أن يكتمل.
+   */
+  const MIRRORS = [
+    {
+      id: 'naptha',
+      lang: 'https://tessdata.projectnaptha.com/4.0.0_fast',
+      core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
+      worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js'
+    },
+    {
+      id: 'jsdelivr',
+      lang: 'https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0_fast',
+      core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
+      worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js'
+    },
+    {
+      id: 'unpkg',
+      lang: 'https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0_fast',
+      core: 'https://unpkg.com/tesseract.js-core@5',
+      worker: 'https://unpkg.com/tesseract.js@5/dist/worker.min.js'
+    }
+  ];
+
+  const MIRROR_MEMO_KEY = 'raizey_ocr_mirror';
+
+  function rememberMirror(id) {
+    try { localStorage.setItem(MIRROR_MEMO_KEY, String(id)); } catch (e) {}
+  }
+  function orderedMirrors() {
+    let preferred = null;
+    try { preferred = localStorage.getItem(MIRROR_MEMO_KEY); } catch (e) {}
+    if (!preferred) return MIRRORS.slice();
+    const hit = MIRRORS.filter(m => m.id === preferred);
+    return hit.length ? hit.concat(MIRRORS.filter(m => m.id !== preferred)) : MIRRORS.slice();
+  }
+
+  // تنزيل بيانات اللغة مسبقاً بتقدّم حقيقي
+  async function prefetchLanguages(langPath, langs, say) {
+    const list = String(langs || '').split('+').filter(Boolean);
+    // أحجام تقريبية لملفات fast (لحساب نسبة كلية معقولة قبل ورود content-length)
+    const APPROX = { eng: 1984273, ara: 725639 };
+    const totalApprox = list.reduce((s, l) => s + (APPROX[l] || 1200000), 0);
+    let doneBytes = 0;
+
+    for (const lang of list) {
+      const url = langPath + '/' + lang + '.traineddata.gz';
+      const base = doneBytes;
+      await fetchWithProgress(url, (received) => {
+        const pct = Math.min(99, Math.round(((base + received) / totalApprox) * 100));
+        if (say) {
+          say('تحميل بيانات القراءة (مرة واحدة فقط)... ' + pct + '%' +
+              ' — ' + fmtMB(base + received) + ' من ' + fmtMB(totalApprox) + ' م.ب');
+        }
+      }, CONFIG.langStallMs);
+      doneBytes += (APPROX[lang] || 1200000);
     }
   }
 
@@ -629,31 +814,43 @@
    *   2) eng فقط (أصغر وأسرع — يكفي للأرقام)
    * أي فشل/مهلة لا يُخزَّن في الكاش، فتنجح المحاولة التالية بمحرك نظيف.
    */
-  async function getWorker() {
-    if (workerPromise) {
-      try {
-        const cached = await withTimeout(workerPromise, 5000, 'engine_cache');
-        if (cached && !cached.__dead) return cached;
-        resetEngine(cached);
-      } catch (e) {
-        workerPromise = null;
-      }
+  async function buildEngine(say) {
+    await waitWithStall(ensureTesseract(), 60000, 30000, 'library');
+
+    const attempts = [];
+    for (const mirror of orderedMirrors()) {
+      attempts.push({ mirror, langs: 'ara+eng' });
     }
-
-    await ensureTesseract();
-
-    const attempts = [
-      { langs: 'ara+eng', ms: CONFIG.engineTimeoutMs },
-      { langs: 'eng', ms: CONFIG.engineFallbackMs }
-    ];
+    // آخر فرصة: الإنجليزية فقط (أصغر ملف) — تكفي لقراءة الأرقام والمبالغ
+    attempts.push({ mirror: orderedMirrors()[0], langs: 'eng', degraded: true });
 
     let lastError = null;
+
     for (const attempt of attempts) {
+      const { mirror } = attempt;
+
+      // 1) بيانات اللغة أولاً: تقدّم حقيقي + كشف توقّف التنزيل
+      try {
+        if (say) say('تحميل بيانات القراءة (مرة واحدة فقط)... 0%');
+        await prefetchLanguages(mirror.lang, attempt.langs, say);
+      } catch (e) {
+        // فشل/توقّف التنزيل من هذا المصدر → جرّب المصدر التالي.
+        // لا نتوقف: قد ينجح المحرك من كاش IndexedDB لتحميل سابق.
+        lastError = e;
+      }
+
+      // 2) إنشاء المحرك (يقرأ اللغة من كاش المتصفح/IndexedDB الآن)
+      if (say) say('جارِ تجهيز محرك القراءة...');
       let raw = null;
       try {
         raw = Tesseract.createWorker(attempt.langs, 1, {
           logger: engineLogger,
-          errorHandler: () => {}
+          errorHandler: () => {},
+          langPath: mirror.lang,
+          workerPath: mirror.worker,
+          corePath: mirror.core,
+          gzip: true,
+          cacheMethod: 'write'
         });
       } catch (e) {
         lastError = e;
@@ -661,12 +858,13 @@
       }
 
       try {
-        const worker = await withTimeout(raw, attempt.ms, 'engine');
+        const worker = await waitWithStall(raw, CONFIG.engineTotalMs, CONFIG.engineStallMs, 'engine');
         if (!worker || typeof worker.recognize !== 'function') throw new Error('engine_invalid');
         worker.__langs = attempt.langs;
         worker.__arabicUnavailable = attempt.langs.indexOf('ara') === -1;
         worker.__dead = false;
         workerPromise = Promise.resolve(worker);
+        rememberMirror(mirror.id);
         return worker;
       } catch (e) {
         lastError = e;
@@ -676,6 +874,53 @@
     }
 
     throw lastError || new Error('engine_unavailable');
+  }
+
+  /**
+   * تجهيز المحرك مرة واحدة فقط ومشاركته: أي استدعاء متزامن ينتظر نفس
+   * العملية بدلاً من بدء تحميل ثانٍ يزاحمه على الشبكة (كان هذا يضاعف
+   * زمن التجهيز على الاتصال الضعيف).
+   */
+  function getWorker(say) {
+    if (say) {
+      currentEngineHandler = (pct, status) => {
+        const label = (status || '').indexOf('language') !== -1
+          ? 'تحميل بيانات اللغة'
+          : 'تجهيز محرك القراءة';
+        say(label + '... ' + Math.min(99, Math.max(0, pct)) + '%');
+      };
+    }
+
+    const release = () => { currentEngineHandler = null; };
+
+    const start = (async () => {
+      if (workerPromise) {
+        try {
+          const cached = await withTimeout(workerPromise, 5000, 'engine_cache');
+          if (cached && !cached.__dead) return cached;
+          resetEngine(cached);
+        } catch (e) {
+          workerPromise = null;
+        }
+      }
+      if (!enginePromise) {
+        enginePromise = buildEngine(say).finally(() => { enginePromise = null; });
+      }
+      return enginePromise;
+    })();
+
+    return start.then(
+      (w) => { release(); return w; },
+      (e) => { release(); throw e; }
+    );
+  }
+
+  /**
+   * تجهيز مسبق: يُستدعى من الصفحة بمجرد اختيار "تحويل بنكي" حتى ينتهي
+   * التحميل قبل أن يرفع العميل الصورة، فلا يعلق منتظراً.
+   */
+  function prewarm(say) {
+    return getWorker(say || null).then(() => true, () => false);
   }
 
   async function setParams(worker, params) {
@@ -1413,7 +1658,10 @@
     const manualRef = options.manualRef || '';
     const expectedAccount = digitsOnly(options.expectedAccount || '');
     const startedAt = Date.now();
-    const say = (t) => { if (onStatus) { try { onStatus(t); } catch (e) {} } };
+    const say = (t) => {
+      lastScanActivity = Date.now();
+      if (onStatus) { try { onStatus(t); } catch (e) {} }
+    };
     const remaining = () => CONFIG.totalBudgetMs - (Date.now() - startedAt);
 
     const result = blankResult();
@@ -1455,35 +1703,32 @@
       return result;
     }
 
-    // ── محرك القراءة متاح؟ ──
-    if (typeof Tesseract === 'undefined') {
-      result.decision = 'review';
-      result.message = 'تم استلام الإيصال وسيُراجع يدوياً من الإدارة.';
-      result.riskFlags.push('ocr_unavailable');
-      return result;
-    }
-
+    // ── تجهيز محرك القراءة ──
+    // ملاحظة مهمة: لا نفحص `typeof Tesseract` هنا للخروج المبكر. الفحص القديم
+    // كان يُسقط الميزة فوراً إذا تأخر/فشل وسم <script> الخاص بالمكتبة، ويمنع
+    // أداة التحميل الاحتياطية من العمل نهائياً — وهذا سبب ظهور رسالة
+    // "تعذّر تشغيل محرك الفحص" حتى مع اتصال جيد. الآن ensureTesseract()
+    // تتولّى تحميل المكتبة من عدة مصادر عند الحاجة.
     say('جارِ تجهيز محرك القراءة...');
     let worker;
-    currentEngineHandler = (pct, status) => {
-      const label = (status || '').indexOf('language') !== -1
-        ? 'تحميل بيانات اللغة'
-        : 'تجهيز محرك القراءة';
-      say(`${label}... ${Math.min(99, Math.max(0, pct))}%`);
-    };
     try {
-      worker = await getWorker();
+      worker = await getWorker(say);
     } catch (e) {
-      currentEngineHandler = null;
+      const reason = String((e && e.message) || '');
+      const stalled = reason.indexOf('stalled') === 0;
+      const timedOut = reason.indexOf('timeout') === 0;
       result.decision = 'review';
       result.ocrStatus = 'needs_review';
-      result.message = 'تعذّر تشغيل محرك الفحص الآلي (غالباً بسبب الاتصال بالإنترنت). تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.';
+      result.message = stalled
+        ? 'توقّف تحميل بيانات الفحص الآلي — الاتصال بالإنترنت انقطع أو ضعيف جداً. تم استلام إيصالك وسيُراجع يدوياً من الإدارة، ويمكنك إكمال الطلب الآن.'
+        : (timedOut
+            ? 'استغرق تجهيز محرك الفحص الآلي وقتاً أطول من المسموح على هذا الاتصال. تم استلام إيصالك وسيُراجع يدوياً من الإدارة، ويمكنك إكمال الطلب الآن.'
+            : 'تعذّر تشغيل محرك الفحص الآلي على هذا المتصفح. تم استلام إيصالك وسيُراجع يدوياً من الإدارة، ويمكنك إكمال الطلب الآن.');
       result.riskFlags.push(
-        String(e && e.message || '').indexOf('timeout') === 0 ? 'ocr_engine_timeout' : 'ocr_engine_failed'
+        stalled ? 'ocr_engine_stalled' : (timedOut ? 'ocr_engine_timeout' : 'ocr_engine_failed')
       );
       return result;
     }
-    currentEngineHandler = null;
     if (worker.__arabicUnavailable) result.riskFlags.push('arabic_model_unavailable');
 
     // ── مراحل القراءة المتعددة ──
@@ -1591,21 +1836,32 @@
     const options = opts || {};
     let watchdog = null;
     let finished = false;
+    const startedAt = Date.now();
+    lastScanActivity = Date.now();
 
     const guard = new Promise((resolve) => {
-      watchdog = setTimeout(() => {
+      // حرس مزدوج: سقف مطلق كبير + كشف "توقّف كامل" (لا تقدّم ولا حالة جديدة).
+      // بهذا لا يبقى العميل معلّقاً على 0%، ولا يُقتل فحص سليم يتقدّم ببطء.
+      watchdog = setInterval(() => {
         if (finished) return;
+        const idle = Date.now() - lastScanActivity;
+        const total = Date.now() - startedAt;
+        if (idle < CONFIG.scanStallMs && total < CONFIG.hardDeadlineMs) return;
+
         // المحرك على الأغلب معلّق — نتخلّى عنه ليُبنى نظيفاً في المحاولة القادمة
         const stale = workerPromise;
         workerPromise = null;
+        enginePromise = null;
         currentProgressHandler = null;
         currentEngineHandler = null;
         abandon(stale);
         resolve(softReview(
-          'scan_watchdog_timeout',
-          'استغرق الفحص الآلي وقتاً أطول من المسموح، لذلك أُوقف تلقائياً. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.'
+          idle >= CONFIG.scanStallMs ? 'scan_stalled' : 'scan_watchdog_timeout',
+          idle >= CONFIG.scanStallMs
+            ? 'توقّف الفحص الآلي عن التقدّم (انقطاع في الاتصال بالإنترنت). تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.'
+            : 'استغرق الفحص الآلي وقتاً أطول من المسموح، لذلك أُوقف تلقائياً. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.'
         ));
-      }, CONFIG.hardDeadlineMs);
+      }, 2000);
     });
 
     const run = (async () => {
@@ -1624,7 +1880,7 @@
 
     return Promise.race([run, guard]).then((res) => {
       finished = true;
-      if (watchdog) clearTimeout(watchdog);
+      if (watchdog) clearInterval(watchdog);
       return res && typeof res === 'object'
         ? res
         : softReview('scan_error', 'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.');
@@ -1635,9 +1891,10 @@
   // 12) تصدير
   // ═══════════════════════════════════════════════════════════════════
   window.ReceiptIntel = {
-    VERSION: 3,
+    VERSION: 4,
     analyze: analyzeSafe,
     analyzeRaw: analyze,
+    prewarm,
     simulate,
     buildContext,
     judge,
