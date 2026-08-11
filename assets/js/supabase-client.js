@@ -50,12 +50,30 @@ function getFriendlyError(errMsg) {
   const msg = String(errMsg).toLowerCase();
   if (msg.includes('insufficient_balance'))
     return 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
-  if (msg.includes('product_not_found'))
-    return 'أحد المنتجات في سلتك لم يعد متاحاً.';
-  if (msg.includes('price_calculation'))
+  if (msg.includes('wallet_missing') || msg.includes('wallet_not_found'))
+    return 'لا توجد محفظة مرتبطة بحسابك، يرجى التواصل مع الدعم.';
+  if (msg.includes('product_not_found') || msg.includes('option_not_found') || msg.includes('option_required'))
+    return 'أحد المنتجات في سلتك لم يعد متاحاً أو يحتاج اختيار الخيار المطلوب.';
+  if (msg.includes('price_calculation') || msg.includes('price_tampered'))
     return 'خطأ في حساب السعر، يرجى تحديث الصفحة والمحاولة مجدداً.';
+  if (msg.includes('maintenance_mode'))
+    return 'المتجر متوقف مؤقتاً للصيانة، حاول لاحقاً.';
+  if (msg.includes('access_denied'))
+    return 'حسابك موقوف عن إتمام عمليات الشراء. تواصل مع الدعم.';
+  if (msg.includes('receipt_required') || msg.includes('receipt_not_owned'))
+    return 'لم يتم العثور على إيصال صالح لهذا الطلب، ابدأ من رفع الإيصال مجدداً.';
+  if (msg.includes('receipt_rejected') || msg.includes('invalid_receipt_input'))
+    return 'تعذّر قبول بيانات الإيصال، تأكد من رقم العملية والصورة وأعد المحاولة.';
+  if (msg.includes('coupon_already_used'))
+    return 'لقد استخدمت هذا الكود من قبل.';
+  if (msg.includes('coupon_min_order'))
+    return 'إجمالي طلبك أقل من الحد الأدنى المطلوب لهذا الكود.';
   if (msg.includes('coupon') || msg.includes('discount'))
-    return 'انتهت صلاحية كود الخصم أو نفدت كميته.';
+    return 'كود الخصم غير صالح أو منتهي الصلاحية أو نفدت كميته.';
+  if (msg.includes('duplicate_transaction_ref'))
+    return 'رقم العملية هذا تم استخدامه من قبل في طلب آخر.';
+  if (msg.includes('duplicate_receipt_image'))
+    return 'صورة هذا الإيصال تم استخدامها من قبل في طلب آخر.';
   if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('violates'))
     return 'تم استخدام هذا الإيصال أو رقم العملية من قبل في طلب آخر.';
   if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch'))
