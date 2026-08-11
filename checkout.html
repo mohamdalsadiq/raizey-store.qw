@@ -246,6 +246,10 @@
           <i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل
           <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
         </div>
+        <div class="field-hint" style="margin-top:6px;">
+          يقرأ الفحص الذكي الإشعارات بالعربية والإنجليزية (بنكك / أوكاش / فوري / كاشي)، والوضع الليلي والنهاري.
+          الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
+        </div>
         <div id="scanStatus" style="font-size:12px; margin-top:8px; font-weight:600; color:var(--text-muted);"></div>
         <div id="scanReport" style="display:none; margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.7;"></div>
       </div>
@@ -277,6 +281,7 @@ let receiptFile = null;
 let appliedCoupon = null;
 let savedTxRef = null;      // رقم العملية بعد الحفظ
 let scanResult = null;      // نتيجة الفحص الذكي للصورة الحالية
+let selectedMethodAccount = null;  // رقم حساب الوسيلة المختارة (للتحقق من جهة الإيداع)
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
@@ -412,6 +417,7 @@ function renderCheckout() {
       pill.classList.add('active');
       selectedMethodId = pill.dataset.methodId;
       const m = paymentMethods.find(x => x.id === selectedMethodId);
+      selectedMethodAccount = m ? (m.account_number || null) : null;
       const box = document.getElementById('selectedMethodDetails');
       box.innerHTML = `
         <div class="selected-method-box">
@@ -569,11 +575,25 @@ function attachCheckoutEvents(canUseWallet) {
     fileBox.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
 
-    const analysis = await ReceiptIntel.analyze(file, {
-      expectedAmount: currentTotal(),
-      manualRef: savedTxRef,
-      onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
-    });
+    let analysis;
+    try {
+      analysis = await ReceiptIntel.analyze(file, {
+        expectedAmount: currentTotal(),
+        manualRef: savedTxRef,
+        expectedAccount: selectedMethodAccount,
+        onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
+      });
+    } catch (err) {
+      // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
+      console.warn('[RAIZEY] receipt scan error:', err);
+      analysis = {
+        decision: 'review', ocrStatus: 'needs_review',
+        message: 'تعذّر إكمال الفحص الآلي. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.',
+        riskFlags: ['scan_error'], confidence: null, provider: null, providerName: null,
+        extracted: { txRef: null, amount: null, dateTime: null },
+        refVerified: false, amountVerified: false
+      };
+    }
 
     statusEl.textContent = '';
 
@@ -581,7 +601,13 @@ function attachCheckoutEvents(canUseWallet) {
       resetReceiptSelection();
       reportEl.style.display = 'block';
       reportEl.style.borderColor = 'var(--danger)';
-      reportEl.innerHTML = `<strong style="color:var(--danger);">تم رفض الصورة</strong><br>${escapeHtml(analysis.message)}`;
+      reportEl.innerHTML =
+        `<strong style="color:var(--danger);"><i class="fas fa-circle-xmark"></i> تم رفض الصورة</strong><br>` +
+        `${escapeHtml(analysis.message)}` +
+        `<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">` +
+        `المبلغ المطلوب تحويله: <strong>${safeFormatSDG(currentTotal())} ج.س</strong> — ` +
+        `ارفع لقطة شاشة لإشعار التحويل كما هي من التطبيق (بالعربية أو الإنجليزية، كلاهما مدعوم).` +
+        `</div>`;
       return;
     }
 
@@ -591,19 +617,24 @@ function attachCheckoutEvents(canUseWallet) {
     fileBox.classList.add('has-file');
 
     const rows = [];
-    if (analysis.providerName)          rows.push(`الجهة: ${analysis.providerName}`);
-    if (analysis.extracted.txRef)       rows.push(`رقم العملية المقروء: ${analysis.extracted.txRef}`);
-    if (analysis.extracted.amount)      rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
-    if (analysis.extracted.dateTime)    rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
-    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق' : 'غير مؤكد'}`);
-    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق' : 'غير مؤكد'}`);
+    if (analysis.providerName)       rows.push(`الجهة: ${analysis.providerName}`);
+    if (analysis.language === 'en')  rows.push('لغة الإشعار: إنجليزية');
+    if (analysis.language === 'ar')  rows.push('لغة الإشعار: عربية');
+    if (analysis.extracted.txRef)    rows.push(`رقم العملية المقروء: ${analysis.extracted.txRef}`);
+    if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
+    if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
+    rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
+    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
+    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
 
     const ok = analysis.decision === 'accept';
     reportEl.style.display = 'block';
     reportEl.style.borderColor = ok ? 'var(--primary)' : 'var(--border)';
     reportEl.innerHTML =
-      `<strong style="color:${ok ? 'var(--primary)' : 'var(--ink)'};">${escapeHtml(analysis.message)}</strong>` +
-      `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>`;
+      `<strong style="color:${ok ? 'var(--primary)' : 'var(--ink)'};">` +
+      `<i class="fas ${ok ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${escapeHtml(analysis.message)}</strong>` +
+      `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
+      (ok ? '' : `<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">يمكنك إكمال الطلب الآن — الفحص اليدوي لن يؤخر تسجيل طلبك.</div>`);
   };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
