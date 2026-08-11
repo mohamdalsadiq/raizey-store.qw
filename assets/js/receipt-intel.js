@@ -1282,20 +1282,20 @@
         }
       }
 
-      recompute();
+      ctx = buildContext(texts, judgeOptions);
 
       // شروط التوقف المبكر: عندنا ما يكفي للحكم
-      const refDone = !manualRef || refMatch.matched || refMatch.conflict;
-      const amtDone = !expectedAmount || amtMatch.matched;
-      if (refDone && amtDone && joined.length >= 40) break;
+      const refDone = !manualRef || ctx.refMatch.matched || ctx.refMatch.conflict;
+      const amtDone = !expectedAmount || ctx.amtMatch.matched;
+      if (refDone && amtDone && ctx.joined.length >= 40) break;
     }
 
     // إعادة ضبط الفلاتر لأي استخدام لاحق للمحرك
     await setParams(worker, { tessedit_char_whitelist: '' });
 
     result.confidence = bestConfidence;
-    result.textLength = joined.length;
-    result.language = detectLanguage(joined);
+    result.textLength = ctx.joined.length;
+    result.language = detectLanguage(ctx.joined);
 
     // كل المراحل انتهت بمهلة (اتصال/جهاز بطيء) → مراجعة يدوية، لا رفض
     if (timedOutAll || !texts.length) {
@@ -1307,151 +1307,8 @@
     }
 
     say('جارِ تحليل بيانات الإيصال...');
+    return judge(ctx, judgeOptions, result);
 
-    // ── التصنيف: هل هذه صورة إشعار تحويل؟ ──
-    const looksLikeReceipt =
-      (provider && provider.score >= 2) ||
-      fieldHits.hits >= 2 ||
-      refMatch.matched ||
-      amtMatch.matched ||
-      (refInfo.labelledValue && amountList.length > 0);
-
-    if (!looksLikeReceipt) {
-      if (joined.length >= CONFIG.minTextForReject && fieldHits.hits === 0 && !provider) {
-        // النص واضح وطويل ولا يحتوي أي مفردة من إشعارات التحويل بأي من
-        // اللغتين → الصورة فعلاً ليست إيصالاً
-        result.decision = 'reject';
-        result.ocrStatus = 'rejected';
-        result.riskFlags.push('not_a_receipt');
-        result.message = 'الصورة المرفوعة ليست إشعار تحويل بنكي أو محفظة. ارفع صورة إشعار التحويل من التطبيق (بنكك / أوكاش / فوري / كاشي) كاملة وواضحة.';
-        return result;
-      }
-      // قراءة ضعيفة → مراجعة يدوية (لا نطرد عميلاً حقيقياً)
-      result.decision = 'review';
-      result.ocrStatus = 'needs_review';
-      result.riskFlags.push('low_ocr_confidence');
-      result.message = 'تعذّر قراءة بعض بيانات الإيصال بوضوح. تم استلام طلبك وسيُراجع يدوياً من الإدارة — لنتيجة فورية جرّب رفع لقطة شاشة (سكرين شوت) للإشعار مباشرة من التطبيق.';
-      return result;
-    }
-
-    if (provider) {
-      result.provider = provider.key;
-      result.providerName = provider.name;
-    }
-
-    // ── تعبئة المستخرجات ──
-    const accounts = extractAccounts(joined);
-    result.extracted.txRef = refInfo.labelledValue || refInfo.value;
-    result.extracted.txRefCandidates = refInfo.all;
-    result.extracted.amountCandidates = amountList.slice(0, 12).map(a => a.value);
-    result.extracted.dateTime = extractDateTime(joined);
-    result.extracted.fromAccount = accounts.from;
-    result.extracted.toAccount = accounts.to;
-    result.extracted.phone = accounts.phone;
-
-    // ── حالة العملية (عربي/إنجليزي) ──
-    const okHits = countKeywordHits(joined, SUCCESS_KEYWORDS.map(normalizeText));
-    const failHits = countKeywordHits(joined, FAILURE_KEYWORDS.map(normalizeText));
-    result.extracted.statusOk = failHits.hits > 0 ? false : (okHits.hits > 0 ? true : null);
-
-    if (failHits.hits > 0 && okHits.hits === 0) {
-      result.decision = 'reject';
-      result.ocrStatus = 'rejected';
-      result.riskFlags.push('failed_transaction:' + failHits.found[0]);
-      result.message = 'الإيصال يوضح أن عملية التحويل لم تنجح (' + failHits.found[0] + '). أكمل التحويل بنجاح ثم ارفع الإشعار الجديد.';
-      return result;
-    }
-
-    result.refVerified = !!refMatch.matched;
-    result.amountVerified = !!amtMatch.matched;
-    result.extracted.amount = amtMatch.matched
-      ? (amtMatch.value !== null ? amtMatch.value : Math.round(expectedAmount))
-      : (amtMatch.value !== null ? amtMatch.value : null);
-
-    // ── تعارض رقم العملية (مصدره حقل موسوم) → رفض ──
-    if (refMatch.conflict) {
-      result.decision = 'reject';
-      result.ocrStatus = 'rejected';
-      result.riskFlags.push('ref_conflict');
-      result.message = `رقم العملية الذي كتبته (${normalizeRef(manualRef)}) لا يطابق الرقم الموجود في صورة الإيصال (${refMatch.ocrRef}). صحّح رقم العملية بالضغط على "تعديل" أو ارفع صورة الإشعار الصحيح.`;
-      return result;
-    }
-
-    // ── المبلغ لا يطابق إجمالي الطلب ──
-    if (amtMatch.checked && !amtMatch.matched) {
-      const best = amtMatch.best;
-      const target = Math.round(expectedAmount);
-
-      // ثقة عالية في قراءة المبلغ: قيمة موسومة بحقل "المبلغ/amount" أو بعملة،
-      // وليست رصيداً أو رسوماً، والقراءة العامة للإيصال معقولة
-      const readableReceipt = (provider && provider.score >= 2) || fieldHits.hits >= 3;
-      const highConfidence = !!best && best.weight >= 8 && !best.excluded && readableReceipt;
-
-      // فرق ناتج عن صيغة/كسور فقط (×10 ×100 ÷100) لا يُعتبر تلاعباً
-      const ratio = best && best.value ? best.value / target : 0;
-      const formattingArtifact = best && (
-        Math.abs(ratio - 100) < 0.02 || Math.abs(ratio - 0.01) < 0.0002 ||
-        Math.abs(ratio - 10) < 0.02 || Math.abs(ratio - 0.1) < 0.002 ||
-        Math.abs(ratio - 1000) < 0.2 || Math.abs(ratio - 0.001) < 0.00002
-      );
-
-      if (highConfidence && !formattingArtifact) {
-        const shortfall = target - best.value;
-        result.decision = 'reject';
-        result.ocrStatus = 'rejected';
-        result.riskFlags.push('amount_mismatch');
-        result.message =
-          `المبلغ في إشعار التحويل (${Math.round(best.value).toLocaleString('en-US')} ج.س) لا يطابق إجمالي الطلب المطلوب ` +
-          `(${target.toLocaleString('en-US')} ج.س)` +
-          (shortfall > 0
-            ? `. ناقص ${Math.round(shortfall).toLocaleString('en-US')} ج.س — حوّل المبلغ كاملاً ثم ارفع الإشعار الجديد.`
-            : `. تأكد من رفع إشعار التحويل الخاص بهذا الطلب بالمبلغ المطلوب بالضبط.`);
-        return result;
-      }
-      result.riskFlags.push('amount_unverified');
-    }
-
-    // ── إشارات إضافية (لا تُسبب رفضاً — للمراجعة والتقرير) ──
-    if (!refMatch.matched) result.riskFlags.push('ref_unverified');
-    if (refMatch.fuzzy) result.riskFlags.push('ref_fuzzy_match');
-    if (amtMatch.fuzzy) result.riskFlags.push('amount_fuzzy_match');
-    if (!provider) result.riskFlags.push('provider_unknown');
-
-    if (expectedAccount && expectedAccount.length >= 6) {
-      const acctSeen = flatDigits.includes(expectedAccount) ||
-                       (accounts.to && (accounts.to.includes(expectedAccount) || expectedAccount.includes(accounts.to)));
-      if (!acctSeen) result.riskFlags.push('destination_account_unverified');
-    }
-
-    const recDate = parseReceiptDate(result.extracted.dateTime);
-    if (recDate) {
-      const ageDays = (Date.now() - recDate.getTime()) / 86400000;
-      if (ageDays > CONFIG.staleReceiptDays) result.riskFlags.push('stale_receipt');
-      if (ageDays < -1) result.riskFlags.push('future_dated_receipt');
-    }
-
-    const needsManual = result.riskFlags.includes('stale_receipt') ||
-                        result.riskFlags.includes('future_dated_receipt');
-
-    if (result.refVerified && result.amountVerified && !needsManual) {
-      result.decision = 'accept';
-      result.ocrStatus = 'passed';
-      result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
-    } else {
-      result.decision = 'review';
-      result.ocrStatus = 'needs_review';
-      if (needsManual) {
-        result.message = 'تاريخ الإشعار غير متوافق مع وقت الطلب، لذلك سيُراجع طلبك يدوياً من الإدارة.';
-      } else if (result.amountVerified && !result.refVerified) {
-        result.message = 'المبلغ مطابق تماماً، لكن لم نتمكن من تأكيد رقم العملية من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
-      } else if (result.refVerified && !result.amountVerified) {
-        result.message = 'رقم العملية مطابق، لكن لم نتمكن من قراءة المبلغ بدقة من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
-      } else {
-        result.message = 'تم استلام الإيصال. بعض البيانات لم تُقرأ بدقة، لذلك سيُراجع طلبك يدوياً من الإدارة.';
-      }
-    }
-
-    return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1460,6 +1317,12 @@
   window.ReceiptIntel = {
     VERSION: 3,
     analyze,
+    simulate,
+    buildContext,
+    judge,
+    matchAmount,
+    matchRef,
+    detectLanguage,
     normalizeRef,
     normalizeText,
     digitsOnly,

@@ -761,7 +761,17 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       p_ocr_status:         scanResult.ocrStatus || 'needs_review',
       p_ocr_confidence:     scanResult.confidence ?? null,
       p_risk_flags:         scanResult.riskFlags || [],
-      p_ocr_data:           scanResult.extracted || {}
+      p_ocr_data:           Object.assign({}, scanResult.extracted || {}, {
+        engine_version:  scanResult.version || null,
+        language:        scanResult.language || null,
+        provider_name:   scanResult.providerName || null,
+        passes:          scanResult.passes || 0,
+        text_length:     scanResult.textLength || 0,
+        ref_verified:    !!scanResult.refVerified,
+        amount_verified: !!scanResult.amountVerified,
+        decision:        scanResult.decision || null,
+        scan_message:    scanResult.message || null
+      })
     });
     if (claimErr) throw claimErr;
     receiptId = claimData && claimData.length ? claimData[0].id : null;
