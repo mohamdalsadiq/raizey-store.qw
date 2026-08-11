@@ -228,7 +228,7 @@
 
       <!-- الخطوة 1: إدخال رقم العملية وحفظه -->
       <div class="field" style="margin-top:12px;">
-        <label>الخطوة 1 — رقم العملية (من إشعار ��لتحويل) *</label>
+        <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">حفظ</button>
@@ -286,6 +286,34 @@ let selectedMethodAccount = null;  // رقم حساب الوسيلة المخت�
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
   return Math.round(val).toLocaleString('ar-EG');
+}
+
+// ── تجهيز مسبق لمحرك الفحص الذكي ──
+// بيانات القراءة (~2.7 م.ب) تُحمَّل مرة واحدة وتُخزَّن في المتصفح. تشغيلها
+// مبكراً هو ما يجعل الفحص لحظياً بعد رفع الصورة بدل انتظار التحميل وقتها.
+let scanPrewarmStarted = false;
+let scanEngineReady = false;
+
+function prewarmScanEngine() {
+  if (scanPrewarmStarted) return;
+  if (!window.ReceiptIntel || typeof ReceiptIntel.prewarm !== 'function') return;
+  scanPrewarmStarted = true;
+
+  const statusEl = document.getElementById('scanStatus');
+  const show = (t) => {
+    // لا نكتب فوق حالة فحص جارٍ فعلاً
+    if (!statusEl || receiptFile) return;
+    statusEl.style.color = 'var(--text-muted)';
+    statusEl.textContent = t;
+  };
+
+  ReceiptIntel.prewarm(show).then((ok) => {
+    scanEngineReady = !!ok;
+    if (!statusEl || receiptFile) return;
+    statusEl.textContent = ok
+      ? 'محرك الفحص الذكي جاهز — ارفع صورة الإشعار وسيُفحص فوراً.'
+      : 'تعذّر تجهيز محرك الفحص الآلي على هذا الاتصال. يمكنك رفع الإيصال وسيُراجع يدوياً.';
+  });
 }
 
 
@@ -495,6 +523,10 @@ function attachCheckoutEvents(canUseWallet) {
     bankOption.classList.add('selected');
     walletOption.classList.remove('selected');
     bankDetails.classList.add('show');
+    // تجهيز محرك الفحص مبكراً (بمجرد اختيار التحويل البنكي) حتى يكتمل
+    // تحميل بيانات القراءة أثناء كتابة رقم العملية، فلا يقف العميل منتظراً
+    // بعد رفع الصورة. آمن: يعمل مرة واحدة ولا يعطّل الواجهة إن فشل.
+    prewarmScanEngine();
   };
 
   // ── الخطوة 1: حفظ رقم العملية قبل السماح برفع الصورة ──
@@ -585,9 +617,12 @@ function attachCheckoutEvents(canUseWallet) {
       refVerified: false, amountVerified: false
     });
 
-    // حرس زمني على مستوى الواجهة (حزام أمان ثانٍ فوق حرس المحرك نفسه):
-    // بعد 100 ثانية تنتهي حالة التحميل حتماً بنتيجة واضحة.
-    const UI_SCAN_DEADLINE_MS = 100000;
+    // حرس زمني على مستوى الواجهة — حزام أمان ثانٍ فوق حرس المحرك نفسه.
+    // مهم: يجب أن يكون **أطول** من سقف المحرك (ReceiptIntel.CONFIG.hardDeadlineMs)،
+    // وإلا اختطف فحصاً سليماً ما زال يتقدّم وأظهر رسالة فشل كاذبة — وهذا
+    // بالضبط ما كان يحدث سابقاً (100 ثانية هنا مقابل حرس أطول بالداخل).
+    const engineDeadline = (window.ReceiptIntel && ReceiptIntel.CONFIG && ReceiptIntel.CONFIG.hardDeadlineMs) || 300000;
+    const UI_SCAN_DEADLINE_MS = engineDeadline + 20000;
     let uiWatchdog = null;
     const uiGuard = new Promise(resolve => {
       uiWatchdog = setTimeout(() => resolve(softReview('ui_scan_timeout')), UI_SCAN_DEADLINE_MS);
@@ -651,8 +686,22 @@ function attachCheckoutEvents(canUseWallet) {
     if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
     if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
     rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
-    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
-    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
+    // سبب عدم التأكيد يُعرض صريحاً: "غير مؤكد" وحدها كانت مضلِّلة — لا تفرّق
+    // بين "المحرك لم يعمل بسبب الشبكة" و"المحرك عمل ولم يجد تطابقاً".
+    const flags = analysis.riskFlags || [];
+    const engineDown = flags.some(f =>
+      f.indexOf('ocr_engine') === 0 || f === 'ocr_unavailable' || f === 'ocr_timeout' ||
+      f === 'scan_stalled' || f === 'scan_watchdog_timeout' || f === 'ui_scan_timeout' ||
+      f === 'scan_error' || f === 'engine_missing' || f === 'ocr_pass_timeout' || f === 'ocr_empty');
+    const unverifiedNote = engineDown
+      ? 'لم يُنفّذ الفحص الآلي (مشكلة اتصال) — مراجعة يدوية'
+      : 'لم يُعثر على تطابق واضح في الصورة — مراجعة يدوية';
+
+    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : unverifiedNote}`);
+    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : unverifiedNote}`);
+    if (engineDown) {
+      rows.push('نصيحة: عند تحسّن الاتصال اضغط "تعديل" ثم أعد رفع الصورة للحصول على نتيجة فورية.');
+    }
 
     const ok = analysis.decision === 'accept';
     reportEl.style.display = 'block';
