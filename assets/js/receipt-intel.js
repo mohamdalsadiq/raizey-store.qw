@@ -58,7 +58,9 @@
       name: 'بنكك (بنك الخرطوم)',
       brand:  ['بنكك', 'bankak', 'بنك الخرطوم', 'bank of khartoum', 'bok'],
       labels: ['تحويلات', 'رقم العمليه', 'التاريخ و الزمن', 'اسم المرسل اليه',
-               'من حساب', 'الى حساب', 'رقم الموبايل'],
+               'من حساب', 'الى حساب', 'رقم الموبايل',
+               'transfers', 'transaction no', 'date & time', 'sent to name',
+               'from account', 'to account', 'mobile no'],
       refLen: [9, 14]
     },
     {
@@ -67,7 +69,10 @@
       brand:  ['اوكاش', 'او كاش', 'o-cash', 'ocash', 'لكل الناس',
                'بنك ام درمان', 'omdurman national bank', 'onb'],
       labels: ['تفاصيل الحركه', 'رقم الحركه', 'تاريخ الحركه', 'نوع الحركه',
-               'اسم العميل', 'رقم الهاتف المحمول', 'التحويل الى حساب مصرفي'],
+               'اسم العميل', 'رقم الهاتف المحمول', 'التحويل الى حساب مصرفي',
+               'transaction details', 'transaction number', 'transaction date',
+               'transaction type', 'customer name', 'mobile phone number',
+               'transfer to bank account'],
       refLen: [12, 22]
     },
     {
@@ -75,53 +80,64 @@
       name: 'فوري',
       brand:  ['فوري', 'fawry'],
       labels: ['الرقم المرجعي', 'اسم المستفيد', 'الى البطاقه رقم',
-               'من الحساب', 'اسم البنك'],
+               'من الحساب', 'اسم البنك',
+               'reference number', 'beneficiary name', 'to card number',
+               'from account', 'bank name'],
       refLen: [8, 16]
     },
     {
       key: 'mbok',
       name: 'ماي بنك / بنك الخرطوم',
       brand:  ['mbok', 'my bank', 'ماي بنك'],
-      labels: ['رقم العمليه', 'المبلغ', 'من حساب'],
+      labels: ['رقم العمليه', 'المبلغ', 'من حساب',
+               'transaction no', 'amount', 'from account'],
       refLen: [8, 20]
     },
     {
       key: 'cashi',
       name: 'كاشي',
       brand:  ['كاشي', 'cashi'],
-      labels: ['رقم العمليه', 'رقم المرجع', 'المبلغ'],
+      labels: ['رقم العمليه', 'رقم المرجع', 'المبلغ',
+               'transaction no', 'reference no', 'amount'],
       refLen: [8, 20]
     },
     {
       key: 'faisal',
       name: 'بنك فيصل الإسلامي',
       brand:  ['بنك فيصل', 'faisal islamic'],
-      labels: ['رقم العمليه', 'المبلغ', 'رقم الحساب'],
+      labels: ['رقم العمليه', 'المبلغ', 'رقم الحساب',
+               'transaction no', 'amount', 'account number'],
       refLen: [8, 20]
     }
   ];
 
-  // تسميات حقول عامة موجودة في أي إشعار تحويل تقريباً
+  // تسميات حقول عامة موجودة في أي إشعار تحويل تقريباً — عربي وإنجليزي معاً،
+  // لأن نفس التطبيق قد يكون مضبوطاً بأي من اللغتين وقت أخذ لقطة الشاشة
   const RECEIPT_FIELD_KEYWORDS = [
     'رقم العمليه', 'رقم الحركه', 'الرقم المرجعي', 'رقم المرجع', 'رقم الايصال',
     'المبلغ', 'مبلغ', 'من حساب', 'من الحساب', 'الى حساب', 'الى الحساب',
     'اسم المستفيد', 'اسم العميل', 'اسم المرسل', 'المرسل اليه',
     'تفاصيل الحركه', 'نوع الحركه', 'تاريخ الحركه', 'التاريخ و الزمن',
     'رقم الموبايل', 'رقم الهاتف', 'اسم البنك', 'التعليق', 'تعليقات',
-    'حواله', 'تحويل', 'رصيد', 'sdg',
-    'transaction', 'reference', 'amount', 'account', 'transfer',
-    'receipt', 'balance', 'beneficiary', 'successful'
+    'حواله', 'تحويل', 'رصيد', 'sdg', 'ج.س', 'جنيه',
+    'transaction', 'reference', 'amount', 'account', 'transfer', 'transfers',
+    'receipt', 'balance', 'beneficiary', 'successful', 'sender', 'recipient',
+    'sent to', 'from account', 'to account', 'status', 'date', 'time',
+    'mobile', 'phone number', 'bank name', 'remark', 'comment', 'narration'
   ];
 
   const SUCCESS_KEYWORDS = [
     'ناجح', 'ناجحه', 'تم بنجاح', 'تمت بنجاح', 'تمت العمليه بنجاح',
-    'عمليه ناجحه', 'مقبوله', 'successful', 'success', 'completed', 'approved'
+    'عمليه ناجحه', 'مقبوله',
+    'successful', 'success', 'completed', 'approved', 'transfer successful',
+    'transaction successful', 'done'
   ];
 
   const FAILURE_KEYWORDS = [
     'فشل', 'فشلت', 'غير ناجح', 'غير ناجحه', 'لم تكتمل', 'غير مكتمله',
     'مرفوض', 'مرفوضه', 'ملغيه', 'ملغاه', 'رصيد غير كاف',
-    'failed', 'failure', 'declined', 'rejected', 'unsuccessful', 'cancelled'
+    'failed', 'failure', 'declined', 'rejected', 'unsuccessful', 'cancelled',
+    'insufficient balance', 'error', 'not completed'
   ];
 
   // ───────────────────────────────────────────────────────────────────
@@ -690,16 +706,21 @@
       return result;
     }
 
-    // المبلغ لا يطابق إجمالي الطلب — نرفض فقط عندما تكون القراءة موثوقة
+    // المبلغ لا يطابق إجمالي الطلب
     if (amtMatch.checked && !amtMatch.matched) {
+      const refConfirmed      = refMatch.matched && !refMatch.fuzzy;
+      const foundConcreteAmount = amtMatch.value !== null;
       const highQuality = provider && provider.score >= 2 &&
                           amountList.length > 0 &&
                           ocr.text.length >= 40;
-      if (highQuality) {
+
+      // رقم العملية مؤكَّد = هذا الإيصال فعلاً لهذه العملية، فمطابقة المبلغ
+      // تصبح موثوقة حتى لو كانت جودة القراءة العامة للصورة متوسطة.
+      if (foundConcreteAmount && (refConfirmed || highQuality)) {
         result.decision = 'reject';
         result.ocrStatus = 'rejected';
         result.riskFlags.push('amount_mismatch');
-        result.message = `المبلغ في الإيصال لا يطابق إجمالي الطلب (${Math.round(expectedAmount).toLocaleString('en-US')} ج.س). راجع المبلغ المحوَّل أو ارفع الإيصال الصحيح.`;
+        result.message = `المبلغ في الإيصال (${Math.round(amtMatch.value).toLocaleString('en-US')} ج.س) لا يطابق إجمالي الطلب المطلوب (${Math.round(expectedAmount).toLocaleString('en-US')} ج.س). تأكد من تحويل المبلغ الصحيح بالكامل ثم ارفع إشعار التحويل الصحيح.`;
         return result;
       }
       result.riskFlags.push('amount_unverified');
