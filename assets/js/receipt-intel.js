@@ -38,8 +38,14 @@
   // 1) الإعدادات
   // ═══════════════════════════════════════════════════════════════════
   const CONFIG = {
-    passTimeoutMs:     45000,  // مهلة كل مرحلة قراءة على حدة
-    totalBudgetMs:     95000,  // سقف زمني كلي لكل المراحل
+    passTimeoutMs:     25000,  // مهلة كل مرحلة قراءة على حدة
+    totalBudgetMs:     70000,  // سقف زمني كلي لكل المراحل
+    engineTimeoutMs:   30000,  // مهلة تجهيز المحرك بالعربية+الإنجليزية
+    engineFallbackMs:  25000,  // مهلة تجهيز المحرك بالإنجليزية فقط
+    hardDeadlineMs:    90000,  // سقف مطلق: analyze() لا تتجاوزه أبداً
+    fileCheckMs:       8000,   // مهلة فحص صلاحية الملف
+    editorCheckMs:     8000,   // مهلة فحص بصمات التعديل
+    imageLoadMs:       15000,  // مهلة تحميل/معالجة الصورة
     maxDimension:      1800,   // أقصى بُعد قبل القراءة
     minDimension:      1200,   // نُكبّر الصور الصغيرة لتتضح الأرقام
     sharpDimension:    2400,   // بُعد مرحلة الأرقام (تكبير أكبر)
@@ -82,9 +88,13 @@
       labels: [
         'تفاصيل الحركه', 'رقم الحركه', 'تاريخ الحركه', 'نوع الحركه', 'قيمه الحركه',
         'اسم العميل', 'رقم الهاتف المحمول', 'التحويل الى حساب مصرفي', 'المبلغ',
+        'حركه ناجحه', 'مقدم الخدمه', 'نوع الخدمه', 'رقم السجل', 'اسم المشترك',
+        'رقم الحساب', 'الحساب المحلي', 'التحويل الى بنك داخل السودان',
         'transaction details', 'transaction number', 'transaction date',
         'transaction type', 'transaction amount', 'customer name',
-        'mobile phone number', 'transfer to bank account', 'amount'
+        'mobile phone number', 'transfer to bank account', 'amount',
+        'service provider', 'service type', 'subscriber name', 'record number',
+        'local account', 'successful transaction'
       ],
       refLen: [10, 24]
     },
@@ -94,9 +104,11 @@
       brand: ['فوري', 'fawry', 'fawri'],
       labels: [
         'الرقم المرجعي', 'اسم المستفيد', 'الى البطاقه رقم', 'من الحساب',
-        'اسم البنك', 'المبلغ', 'رقم العمليه',
+        'اسم البنك', 'المبلغ', 'رقم العمليه', 'رقم الهاتف', 'التاريخ', 'التعليق',
+        'ناجح', 'الى الحساب',
         'reference number', 'reference no', 'beneficiary name', 'to card number',
-        'from account', 'bank name', 'amount', 'transaction no'
+        'from account', 'bank name', 'amount', 'transaction no', 'phone number',
+        'date', 'comment', 'successful'
       ],
       refLen: [8, 18]
     },
@@ -152,6 +164,8 @@
     'التاريخ', 'الزمن', 'الوقت', 'رقم الموبايل', 'رقم الهاتف', 'اسم البنك',
     'التعليق', 'تعليقات', 'ملاحظات', 'حواله', 'تحويل', 'تحويلات', 'رصيد',
     'ايصال', 'اشعار', 'عمليه', 'محفظه', 'sdg', 'ج س', 'جنيه',
+    'مقدم الخدمه', 'نوع الخدمه', 'رقم السجل', 'اسم المشترك', 'الحساب المحلي',
+    'حركه', 'حركه ناجحه', 'رقم الحساب', 'الى البطاقه رقم',
     // إنجليزي
     'transaction', 'transactions', 'transfer', 'transfers', 'reference',
     'amount', 'account', 'receipt', 'balance', 'beneficiary', 'sender',
@@ -163,7 +177,7 @@
 
   const SUCCESS_KEYWORDS = [
     'ناجح', 'ناجحه', 'تم بنجاح', 'تمت بنجاح', 'تمت العمليه بنجاح',
-    'عمليه ناجحه', 'تم التحويل بنجاح', 'مقبوله', 'مكتمله', 'تم الدفع',
+    'عمليه ناجحه', 'حركه ناجحه', 'حركة ناجحة', 'تم التحويل بنجاح', 'مقبوله', 'مكتمله', 'تم الدفع',
     'تم بنجاح ارسال', 'تمت العملية',
     'successful', 'success', 'succeeded', 'completed', 'complete', 'approved',
     'transfer successful', 'transaction successful', 'payment successful',
@@ -340,8 +354,22 @@
       const img = new Image();
       img.crossOrigin = 'anonymous';
       const url = URL.createObjectURL(file);
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image_load_failed')); };
+      let settled = false;
+      const cleanup = () => { try { URL.revokeObjectURL(url); } catch (e) {} };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true; cleanup();
+        reject(new Error('image_load_timeout'));
+      }, CONFIG.imageLoadMs);
+      img.onload = () => {
+        if (settled) return;
+        settled = true; clearTimeout(timer); cleanup(); resolve(img);
+      };
+      img.onerror = () => {
+        if (settled) return;
+        settled = true; clearTimeout(timer); cleanup();
+        reject(new Error('image_load_failed'));
+      };
       img.src = url;
     });
   }
@@ -492,62 +520,211 @@
   // ═══════════════════════════════════════════════════════════════════
   // 6) محرك OCR — يُنشأ مرة واحدة ويُعاد استخدامه لكل المراحل
   // ═══════════════════════════════════════════════════════════════════
-  let currentProgressHandler = null;
-  let workerPromise = null;
+  let currentProgressHandler = null;   // نسبة تقدّم القراءة
+  let currentEngineHandler = null;     // نسبة تقدّم تجهيز المحرك (تحميل النواة/اللغة)
+  let workerPromise = null;            // لا يُخزَّن إلا بعد نجاح التجهيز فعلياً
 
-  function getWorker() {
-    if (workerPromise) return workerPromise;
-    workerPromise = (async () => {
-      const logger = (m) => {
-        if (currentProgressHandler && m && m.status === 'recognizing text') {
-          currentProgressHandler(Math.round((m.progress || 0) * 100));
-        }
-      };
-      let worker, arabicUnavailable = false;
-      try {
-        worker = await Tesseract.createWorker('ara+eng', 1, { logger });
-      } catch (e) {
-        // فشل تحميل بيانات العربية (شبكة بطيئة/محجوبة) — الإنجليزية تكفي
-        // لقراءة رقم العملية والمبلغ لأنهما أرقام
-        arabicUnavailable = true;
-        worker = await Tesseract.createWorker('eng', 1, { logger });
-      }
-      worker.__arabicUnavailable = arabicUnavailable;
-      return worker;
-    })();
-    return workerPromise;
+  /**
+   * سبب المشكلة الجذري كان هنا: كل انتظار في هذا الملف كان بلا مهلة، فإذا
+   * تعطّل تحميل نواة Tesseract أو بيانات اللغة من الشبكة، بقي الـ await
+   * معلّقاً للأبد ولم تصل الواجهة إلى نتيجة. الآن لا يوجد await واحد بلا مهلة.
+   */
+  function withTimeout(promise, ms, tag) {
+    let timer = null;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('timeout:' + (tag || ''))), ms);
+      })
+    ]).then(
+      (v) => { clearTimeout(timer); return v; },
+      (e) => { clearTimeout(timer); throw e; }
+    );
   }
 
-  async function setParams(worker, params) {
-    try { await worker.setParameters(params); } catch (e) { /* تجاهل */ }
+  // إنهاء محرك تخلّينا عنه بعد المهلة (حتى لا يستهلك الذاكرة عندما يكتمل لاحقاً)
+  function abandon(workerLike) {
+    if (!workerLike || typeof workerLike.then !== 'function') return;
+    workerLike.then(
+      (w) => { try { if (w && w.terminate) w.terminate(); } catch (e) {} },
+      () => {}
+    );
   }
 
-  function recognizeWithTimeout(worker, image) {
-    return new Promise((resolve) => {
+  function resetEngine(worker) {
+    workerPromise = null;
+    if (worker) { try { worker.terminate(); } catch (e) {} }
+  }
+
+  function engineLogger(m) {
+    if (!m) return;
+    if (m.status === 'recognizing text') {
+      if (currentProgressHandler) currentProgressHandler(Math.round((m.progress || 0) * 100));
+      return;
+    }
+    if (currentEngineHandler) {
+      currentEngineHandler(Math.round((m.progress || 0) * 100), String(m.status || ''));
+    }
+  }
+
+  /**
+   * تحميل مكتبة Tesseract نفسها إن لم تكن موجودة (وسم <script> فشل، أو
+   * الشبكة حجبت الـ CDN). نجرّب أكثر من مصدر، ولكل واحد مهلة صريحة.
+   */
+  const TESSERACT_SOURCES = [
+    'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+    'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js'
+  ];
+  let tesseractLoader = null;
+
+  function loadScriptOnce(src, ms) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
       let settled = false;
-      const done = (val) => { if (!settled) { settled = true; resolve(val); } };
-      const timer = setTimeout(() => done({ timedOut: true }), CONFIG.passTimeoutMs);
-      worker.recognize(image)
-        .then((res) => { clearTimeout(timer); done({ res, timedOut: false }); })
-        .catch(() => { clearTimeout(timer); done({ timedOut: true }); });
+      const finish = (ok, err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        ok ? resolve() : reject(err || new Error('script_failed'));
+      };
+      const timer = setTimeout(() => finish(false, new Error('timeout:script')), ms);
+      el.src = src;
+      el.async = true;
+      el.onload = () => finish(true);
+      el.onerror = () => finish(false, new Error('script_error'));
+      document.head.appendChild(el);
     });
   }
 
-  async function runPass(worker, image, psm, whitelist, onProgress) {
+  async function ensureTesseract() {
+    if (typeof Tesseract !== 'undefined' && Tesseract && Tesseract.createWorker) return;
+    if (tesseractLoader) return tesseractLoader;
+
+    tesseractLoader = (async () => {
+      let lastError = null;
+      for (const src of TESSERACT_SOURCES) {
+        try {
+          await loadScriptOnce(src, 15000);
+          if (typeof Tesseract !== 'undefined' && Tesseract && Tesseract.createWorker) return;
+          lastError = new Error('library_missing_after_load');
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      throw lastError || new Error('tesseract_unavailable');
+    })();
+
+    try {
+      await tesseractLoader;
+    } catch (e) {
+      tesseractLoader = null;   // نسمح بإعادة المحاولة لاحقاً
+      throw e;
+    }
+  }
+
+  /**
+   * تجهيز المحرك بمهلة صريحة وبتدرّج:
+   *   1) ara+eng (أفضل قراءة للتسميات العربية)
+   *   2) eng فقط (أصغر وأسرع — يكفي للأرقام)
+   * أي فشل/مهلة لا يُخزَّن في الكاش، فتنجح المحاولة التالية بمحرك نظيف.
+   */
+  async function getWorker() {
+    if (workerPromise) {
+      try {
+        const cached = await withTimeout(workerPromise, 5000, 'engine_cache');
+        if (cached && !cached.__dead) return cached;
+        resetEngine(cached);
+      } catch (e) {
+        workerPromise = null;
+      }
+    }
+
+    await ensureTesseract();
+
+    const attempts = [
+      { langs: 'ara+eng', ms: CONFIG.engineTimeoutMs },
+      { langs: 'eng', ms: CONFIG.engineFallbackMs }
+    ];
+
+    let lastError = null;
+    for (const attempt of attempts) {
+      let raw = null;
+      try {
+        raw = Tesseract.createWorker(attempt.langs, 1, {
+          logger: engineLogger,
+          errorHandler: () => {}
+        });
+      } catch (e) {
+        lastError = e;
+        continue;
+      }
+
+      try {
+        const worker = await withTimeout(raw, attempt.ms, 'engine');
+        if (!worker || typeof worker.recognize !== 'function') throw new Error('engine_invalid');
+        worker.__langs = attempt.langs;
+        worker.__arabicUnavailable = attempt.langs.indexOf('ara') === -1;
+        worker.__dead = false;
+        workerPromise = Promise.resolve(worker);
+        return worker;
+      } catch (e) {
+        lastError = e;
+        abandon(raw);           // المحاولة المعلّقة تُترك وتُنهى عند اكتمالها
+        workerPromise = null;
+      }
+    }
+
+    throw lastError || new Error('engine_unavailable');
+  }
+
+  async function setParams(worker, params) {
+    try { await withTimeout(worker.setParameters(params), 10000, 'set_params'); }
+    catch (e) { /* تجاهل — لا نوقف الفحص بسبب ضبط معاملات */ }
+  }
+
+  function recognizeWithTimeout(worker, image, ms) {
+    return new Promise((resolve) => {
+      let settled = false;
+      let timer = null;
+      const done = (val) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(val);
+      };
+      timer = setTimeout(() => done({ timedOut: true, fatal: true }), Math.max(3000, ms));
+      let p;
+      try {
+        p = worker.recognize(image);
+      } catch (e) {
+        done({ timedOut: true, fatal: true });
+        return;
+      }
+      Promise.resolve(p).then(
+        (res) => done({ res, timedOut: false }),
+        () => done({ timedOut: true, fatal: false })
+      );
+    });
+  }
+
+  async function runPass(worker, image, psm, whitelist, onProgress, ms) {
     await setParams(worker, {
       tessedit_pageseg_mode: String(psm),
       tessedit_char_whitelist: whitelist || '',
       preserve_interword_spaces: '1'
     });
     currentProgressHandler = onProgress || null;
-    const outcome = await recognizeWithTimeout(worker, image);
+    const outcome = await recognizeWithTimeout(worker, image, ms || CONFIG.passTimeoutMs);
     currentProgressHandler = null;
 
-    if (outcome.timedOut) return { text: '', confidence: null, timedOut: true };
+    if (outcome.timedOut) {
+      return { text: '', confidence: null, timedOut: true, fatal: !!outcome.fatal };
+    }
     const raw = outcome.res && outcome.res.data ? (outcome.res.data.text || '') : '';
     const conf = outcome.res && outcome.res.data && typeof outcome.res.data.confidence === 'number'
       ? outcome.res.data.confidence : null;
-    return { text: raw, confidence: conf, timedOut: false };
+    return { text: raw, confidence: conf, timedOut: false, fatal: false };
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -635,9 +812,20 @@
    * والمبالغ الملحقة بتسميات الرصيد/الرسوم تُعلَّم isExcluded حتى لا تُستخدم
    * في قرار الرفض.
    */
+  // أسطر لا تحتوي مبلغاً إطلاقاً: أرقام حسابات/بطاقات/هواتف/سجلات
+  const IDENTIFIER_LINE_LABELS = [
+    'من حساب', 'من الحساب', 'الى حساب', 'الى الحساب', 'رقم الحساب',
+    'الحساب المحلي', 'الى البطاقه رقم', 'رقم البطاقه', 'رقم السجل',
+    'رقم الموبايل', 'رقم الهاتف', 'رقم الجوال', 'المحفظه',
+    'from account', 'to account', 'account number', 'account no',
+    'card number', 'to card number', 'record number', 'mobile no',
+    'mobile number', 'phone number', 'wallet'
+  ];
+
   function extractAmounts(lines) {
     const amountLabels = AMOUNT_LABELS.map(normalizeText);
     const excludeLabels = NON_AMOUNT_LABELS.map(normalizeText);
+    const identifierLabels = IDENTIFIER_LINE_LABELS.map(normalizeText);
     const out = [];
 
     const push = (value, weight, opts) => {
@@ -653,6 +841,10 @@
       const labelHit = labelHitAt(line, amountLabels);
       const excluded = !!labelHitAt(line, excludeLabels);
       const hasCurrency = CURRENCY_RE.test(line);
+
+      // سطر رقم حساب/بطاقة/هاتف لا يُستخرَج منه مبلغ (إلا لو فيه تسمية "المبلغ" فعلاً)
+      const isIdentifierLine = !labelHit && !!labelHitAt(line, identifierLabels);
+      if (isIdentifierLine) continue;
 
       const tokens = line.match(NUM_TOKEN_RE) || [];
       for (const tok of tokens) {
@@ -766,11 +958,13 @@
                      'اغسطس', 'سبتمبر', 'اكتوبر', 'نوفمبر', 'ديسمبر'];
 
   function extractDateTime(text) {
+    // ترتيب مهم: صيغة السنة أولاً (2026-03-14) قبل صيغة اليوم أولاً (14-03-2026)،
+    // وإلا اقتُطع "26-03-14" من "2026-03-14" وفُهم أنه عام 2014 → إشعار "قديم" زائف.
     const patterns = [
       new RegExp('(\\d{1,2}[-/\\s](?:' + MONTHS_EN.join('|') + ')[a-z]*[-/\\s]\\d{2,4}(?:\\s+\\d{1,2}:\\d{2}(?::\\d{2})?(?:\\s*(?:am|pm))?)?)'),
       new RegExp('(\\d{1,2}\\s*(?:' + MONTHS_AR.join('|') + ')\\s*\\d{2,4}(?:\\s+\\d{1,2}:\\d{2}(?::\\d{2})?)?)'),
-      /(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:am|pm))?)?)/,
-      /(\d{4}[/.-]\d{1,2}[/.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/,
+      /(?:^|[^\d])(\d{4}[/.-]\d{1,2}[/.-]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/,
+      /(?:^|[^\d])(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:am|pm))?)?)/,
       /(\d{1,2}:\d{2}:\d{2}\s+\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})/
     ];
     for (const re of patterns) {
@@ -794,7 +988,12 @@
         return isNaN(d.getTime()) ? null : d;
       }
     }
-    m = s.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+    m = s.match(/(?:^|[^\d])(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})(?![\d])/);
+    if (m) {
+      const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+      if (!isNaN(d.getTime())) return d;
+    }
+    m = s.match(/(?:^|[^\d])(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})(?![\d])/);
     if (m) {
       let y = parseInt(m[3], 10);
       if (y < 100) y += 2000;
@@ -835,7 +1034,7 @@
     return Array.from(set);
   }
 
-  function matchAmount(candidates, expected, flatDigits) {
+  function matchAmount(candidates, expected, flatDigits, digitRuns) {
     if (!expected || expected <= 0) {
       return { matched: false, value: null, checked: false, best: null, labelledMismatch: false };
     }
@@ -866,25 +1065,39 @@
         }
       }
       // 5233200 مقسوماً على 100 يساوي المطلوب
-      if (Math.abs(c.value / 100 - target) <= tol || Math.abs(c.value * 100 - target) <= tol * 100) {
+      // (التفاوت يُقاس دائماً بالنسبة إلى المبلغ المطلوب — لا يُضخَّم بـ ×100،
+      //  وإلا صار أي رقم تقريباً "مطابقاً")
+      if (Math.abs(c.value / 100 - target) <= tol || Math.abs(c.value * 100 - target) <= tol) {
         return { matched: true, value: target, checked: true, via: 'scale', labelledMismatch: false };
       }
     }
 
-    // (ج) وجود سلسلة أرقام المبلغ في النص الكامل
-    if (targetDigits.length >= 4) {
+    // (ج) وجود سلسلة أرقام المبلغ في النص الكامل — مع احترام حدود الأرقام
+    //     حتى لا يُعتبر ظهور "5233" داخل رقم حساب طويل مطابقةً للمبلغ.
+    //     ومن 5 خانات فأكثر فقط: تطابق 4 خانات وارد جداً بالمصادفة داخل
+    //     مجموعات أرقام الحسابات (0033 0913 5108 0001).
+    if (targetDigits.length >= 5) {
+      const runs = Array.isArray(digitRuns) && digitRuns.length ? digitRuns : null;
       for (const v of amountVariants(target)) {
-        if (flatDigits.includes(v)) {
+        const seen = runs
+          ? runs.some(run => run === v || (run.length <= v.length + 2 && run.indexOf(v) !== -1))
+          : flatDigits.includes(v);
+        if (seen) {
           return { matched: true, value: target, checked: true, via: 'flat', labelledMismatch: false };
         }
       }
     }
 
     // (د) تسامح مع خطأ خانة واحدة في المبلغ (خصوصاً المبالغ الكبيرة)
+    //     شرط إضافي مهم: الفرق العددي الناتج يجب أن يكون صغيراً (≤ 10%)،
+    //     وإلا فإن 20,000 مقابل 50,000 (خانة واحدة مختلفة!) ستُعدّ مطابقة خطأً.
     if (targetDigits.length >= 5) {
       for (const c of candidates) {
         const cd = digitsOnly(c.value.toString());
-        if (cd.length === targetDigits.length && levenshtein(cd, targetDigits) <= 1) {
+        if (cd.length !== targetDigits.length) continue;
+        if (levenshtein(cd, targetDigits) > 1) continue;
+        const relative = Math.abs(c.value - target) / target;
+        if (relative <= 0.1) {
           return { matched: true, value: c.value, checked: true, via: 'fuzzy', fuzzy: true, labelledMismatch: false };
         }
       }
@@ -969,9 +1182,10 @@
     const fieldHits = countKeywordHits(joined, RECEIPT_FIELD_KEYWORDS.map(normalizeText));
     const refInfo = extractTxRef(lines, joined, provider);
     const amountList = extractAmounts(lines);
+    const digitRuns = latinizeDigits(joined).match(/\d+/g) || [];
     const refMatch = matchRef(options.manualRef, refInfo, joined);
-    const amtMatch = matchAmount(amountList, options.expectedAmount, flatDigits);
-    return { joined, lines, flatDigits, provider, fieldHits, refInfo, amountList, refMatch, amtMatch };
+    const amtMatch = matchAmount(amountList, options.expectedAmount, flatDigits, digitRuns);
+    return { joined, lines, flatDigits, digitRuns, provider, fieldHits, refInfo, amountList, refMatch, amtMatch };
   }
 
   const EMPTY_CONTEXT = {
@@ -1038,8 +1252,15 @@
     result.extracted.phone = accounts.phone;
 
     // ── حالة العملية (عربي/إنجليزي) ──
-    const okHits = countKeywordHits(joined, SUCCESS_KEYWORDS.map(normalizeText));
     const failHits = countKeywordHits(joined, FAILURE_KEYWORDS.map(normalizeText));
+
+    // نحذف عبارات الفشل من النص قبل عدّ كلمات النجاح، وإلا فإن
+    // "غير مكتملة" ستُحسب نجاحاً لأنها تحتوي كلمة "مكتملة".
+    let successScope = joined;
+    for (const phrase of failHits.found) {
+      successScope = successScope.split(phrase).join(' ');
+    }
+    const okHits = countKeywordHits(successScope, SUCCESS_KEYWORDS.map(normalizeText));
     result.extracted.statusOk = failHits.hits > 0 ? false : (okHits.hits > 0 ? true : null);
 
     if (failHits.hits > 0 && okHits.hits === 0) {
@@ -1192,14 +1413,23 @@
     const manualRef = options.manualRef || '';
     const expectedAccount = digitsOnly(options.expectedAccount || '');
     const startedAt = Date.now();
-    const say = (t) => { if (onStatus) onStatus(t); };
+    const say = (t) => { if (onStatus) { try { onStatus(t); } catch (e) {} } };
+    const remaining = () => CONFIG.totalBudgetMs - (Date.now() - startedAt);
 
     const result = blankResult();
 
     // ── المرحلة 0: صلاحية الملف ──
     if (typeof validateReceiptImage === 'function') {
-      const basic = await validateReceiptImage(file);
-      if (!basic.valid) {
+      let basic = { valid: true };
+      try {
+        basic = await withTimeout(
+          Promise.resolve(validateReceiptImage(file)), CONFIG.fileCheckMs, 'file_check'
+        );
+      } catch (e) {
+        basic = { valid: true };   // تعذّر الفحص السريع → نكمل، ولا نوقف العميل
+        result.riskFlags.push('file_check_timeout');
+      }
+      if (basic && !basic.valid) {
         result.decision = 'reject';
         result.ocrStatus = 'rejected';
         result.message = basic.message;
@@ -1210,7 +1440,13 @@
 
     // ── المرحلة 1: بصمات التعديل ──
     say('جارِ التحقق من أصالة الصورة...');
-    const editor = await detectImageEditing(file);
+    let editor = null;
+    try {
+      editor = await withTimeout(detectImageEditing(file), CONFIG.editorCheckMs, 'editor_check');
+    } catch (e) {
+      editor = null;
+      result.riskFlags.push('editor_check_timeout');
+    }
     if (editor) {
       result.decision = 'reject';
       result.ocrStatus = 'rejected';
@@ -1229,14 +1465,25 @@
 
     say('جارِ تجهيز محرك القراءة...');
     let worker;
+    currentEngineHandler = (pct, status) => {
+      const label = (status || '').indexOf('language') !== -1
+        ? 'تحميل بيانات اللغة'
+        : 'تجهيز محرك القراءة';
+      say(`${label}... ${Math.min(99, Math.max(0, pct))}%`);
+    };
     try {
       worker = await getWorker();
     } catch (e) {
+      currentEngineHandler = null;
       result.decision = 'review';
-      result.message = 'تعذّر تشغيل محرك الفحص الآلي. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.';
-      result.riskFlags.push('ocr_engine_failed');
+      result.ocrStatus = 'needs_review';
+      result.message = 'تعذّر تشغيل محرك الفحص الآلي (غالباً بسبب الاتصال بالإنترنت). تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.';
+      result.riskFlags.push(
+        String(e && e.message || '').indexOf('timeout') === 0 ? 'ocr_engine_timeout' : 'ocr_engine_failed'
+      );
       return result;
     }
+    currentEngineHandler = null;
     if (worker.__arabicUnavailable) result.riskFlags.push('arabic_model_unavailable');
 
     // ── مراحل القراءة المتعددة ──
@@ -1255,14 +1502,19 @@
     let ctx = EMPTY_CONTEXT;
     const judgeOptions = { expectedAmount, manualRef, expectedAccount };
 
+    let engineDead = false;
+
     for (let i = 0; i < PASSES.length; i++) {
       const pass = PASSES[i];
 
-      if (i > 0 && Date.now() - startedAt > CONFIG.totalBudgetMs) break;
+      // لا نبدأ مرحلة جديدة إذا لم يبقَ وقت كافٍ في الميزانية الكلية
+      if (i > 0 && remaining() < 8000) break;
 
       let image;
       try {
-        const pre = await preprocess(file, pass.variant, cachedImg);
+        const pre = await withTimeout(
+          preprocess(file, pass.variant, cachedImg), CONFIG.imageLoadMs + 5000, 'preprocess'
+        );
         image = pre.image;
         cachedImg = pre.img;
       } catch (e) {
@@ -1270,8 +1522,9 @@
       }
 
       say(`${pass.label} — جارِ قراءة الإيصال...`);
+      const passMs = Math.min(CONFIG.passTimeoutMs, Math.max(6000, remaining()));
       const out = await runPass(worker, image, pass.psm, pass.whitelist,
-        (p) => say(`${pass.label} — ${p}%`));
+        (p) => say(`${pass.label} — ${p}%`), passMs);
 
       if (!out.timedOut) {
         timedOutAll = false;
@@ -1280,6 +1533,13 @@
         if (out.confidence !== null && (bestConfidence === null || out.confidence > bestConfidence)) {
           bestConfidence = out.confidence;
         }
+      } else if (out.fatal) {
+        // المحرك لم يرد إطلاقاً → لا معنى لمراحل إضافية عليه، ونتخلّص منه
+        engineDead = true;
+        worker.__dead = true;
+        resetEngine(worker);
+        result.riskFlags.push('ocr_pass_timeout');
+        break;
       }
 
       ctx = buildContext(texts, judgeOptions);
@@ -1291,7 +1551,7 @@
     }
 
     // إعادة ضبط الفلاتر لأي استخدام لاحق للمحرك
-    await setParams(worker, { tessedit_char_whitelist: '' });
+    if (!engineDead) await setParams(worker, { tessedit_char_whitelist: '' });
 
     result.confidence = bestConfidence;
     result.textLength = ctx.joined.length;
@@ -1312,11 +1572,72 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // 11) تصدير
+  // 11.b) ضمان نهائي: analyze() لا تبقى معلّقة أبداً
+  // ═══════════════════════════════════════════════════════════════════
+  function softReview(flag, message) {
+    const r = blankResult();
+    r.decision = 'review';
+    r.ocrStatus = 'needs_review';
+    r.riskFlags.push(flag);
+    r.message = message;
+    return r;
+  }
+
+  /**
+   * الواجهة العامة الفعلية: تُرجع نتيجة دائماً — نجاح أو رفض أو مراجعة —
+   * وخلال CONFIG.hardDeadlineMs كحدٍّ أقصى مطلق، مهما تعطّل أي شيء بالداخل.
+   */
+  function analyzeSafe(file, opts) {
+    const options = opts || {};
+    let watchdog = null;
+    let finished = false;
+
+    const guard = new Promise((resolve) => {
+      watchdog = setTimeout(() => {
+        if (finished) return;
+        // المحرك على الأغلب معلّق — نتخلّى عنه ليُبنى نظيفاً في المحاولة القادمة
+        const stale = workerPromise;
+        workerPromise = null;
+        currentProgressHandler = null;
+        currentEngineHandler = null;
+        abandon(stale);
+        resolve(softReview(
+          'scan_watchdog_timeout',
+          'استغرق الفحص الآلي وقتاً أطول من المسموح، لذلك أُوقف تلقائياً. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.'
+        ));
+      }, CONFIG.hardDeadlineMs);
+    });
+
+    const run = (async () => {
+      try {
+        return await analyze(file, options);
+      } catch (err) {
+        try { console.warn('[RAIZEY] receipt analyze error:', err); } catch (e) {}
+        currentProgressHandler = null;
+        currentEngineHandler = null;
+        return softReview(
+          'scan_error',
+          'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.'
+        );
+      }
+    })();
+
+    return Promise.race([run, guard]).then((res) => {
+      finished = true;
+      if (watchdog) clearTimeout(watchdog);
+      return res && typeof res === 'object'
+        ? res
+        : softReview('scan_error', 'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.');
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 12) تصدير
   // ═══════════════════════════════════════════════════════════════════
   window.ReceiptIntel = {
     VERSION: 3,
-    analyze,
+    analyze: analyzeSafe,
+    analyzeRaw: analyze,
     simulate,
     buildContext,
     judge,
