@@ -173,6 +173,10 @@
     margin-top: 6px;
     line-height: 1.6;
   }
+  #transactionRefInput:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -506,6 +510,23 @@ function attachCheckoutEvents(canUseWallet) {
   }
 
   saveRefBtn.onclick = () => {
+    const isEditMode = saveRefBtn.dataset.mode === 'edit';
+
+    if (isEditMode) {
+      // فتح القفل للتعديل: يمسح أي فحص سابق ويطلب حفظاً جديداً قبل رفع صورة تانية
+      refInput.disabled = false;
+      refInput.focus();
+      savedTxRef = null;
+      receiptStep.style.display = 'none';
+      resetReceiptSelection();
+      saveRefBtn.textContent = 'حفظ';
+      saveRefBtn.dataset.mode = 'save';
+      refMsg.style.color = 'var(--text-muted)';
+      refMsg.textContent = 'عدّل رقم العملية ثم اضغط "حفظ" لتأكيده مجدداً.';
+      document.getElementById('formError').textContent = '';
+      return;
+    }
+
     const raw  = refInput.value.trim();
     const norm = window.ReceiptIntel ? ReceiptIntel.normalizeRef(raw) : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
@@ -518,26 +539,14 @@ function attachCheckoutEvents(canUseWallet) {
       return;
     }
 
-    // تغيير الرقم بعد رفع صورة يُلغي الفحص السابق لأنه صار غير مطابق
-    if (savedTxRef && ReceiptIntel.normalizeRef(savedTxRef) !== norm) resetReceiptSelection();
-
     savedTxRef = raw;
+    refInput.disabled = true;
+    saveRefBtn.textContent = 'تعديل';
+    saveRefBtn.dataset.mode = 'edit';
     refMsg.style.color = 'var(--primary)';
-    refMsg.textContent = 'تم حفظ رقم العملية. ارفع الآن صورة إشعار التحويل لمطابقتها.';
+    refMsg.textContent = 'تم حفظ رقم العملية ولا يمكن تعديله إلا بالضغط على "تعديل". ارفع الآن صورة إشعار التحويل لمطابقتها.';
     receiptStep.style.display = 'block';
     document.getElementById('formError').textContent = '';
-  };
-
-  // تعديل الرقم يدوياً يُلزم بالحفظ من جديد
-  refInput.oninput = () => {
-    if (!savedTxRef) return;
-    if (ReceiptIntel.normalizeRef(refInput.value) !== ReceiptIntel.normalizeRef(savedTxRef)) {
-      savedTxRef = null;
-      receiptStep.style.display = 'none';
-      resetReceiptSelection();
-      refMsg.style.color = 'var(--text-muted)';
-      refMsg.textContent = 'اضغط "حفظ" لتأكيد رقم العملية الجديد.';
-    }
   };
 
   // ── الخطوة 2: رفع الصورة + الفحص الذكي ──
