@@ -568,6 +568,62 @@
   }
 
   /**
+   * تحميل مكتبة Tesseract نفسها إن لم تكن موجودة (وسم <script> فشل، أو
+   * الشبكة حجبت الـ CDN). نجرّب أكثر من مصدر، ولكل واحد مهلة صريحة.
+   */
+  const TESSERACT_SOURCES = [
+    'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+    'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js'
+  ];
+  let tesseractLoader = null;
+
+  function loadScriptOnce(src, ms) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      let settled = false;
+      const finish = (ok, err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        ok ? resolve() : reject(err || new Error('script_failed'));
+      };
+      const timer = setTimeout(() => finish(false, new Error('timeout:script')), ms);
+      el.src = src;
+      el.async = true;
+      el.onload = () => finish(true);
+      el.onerror = () => finish(false, new Error('script_error'));
+      document.head.appendChild(el);
+    });
+  }
+
+  async function ensureTesseract() {
+    if (typeof Tesseract !== 'undefined' && Tesseract && Tesseract.createWorker) return;
+    if (tesseractLoader) return tesseractLoader;
+
+    tesseractLoader = (async () => {
+      let lastError = null;
+      for (const src of TESSERACT_SOURCES) {
+        try {
+          await loadScriptOnce(src, 15000);
+          if (typeof Tesseract !== 'undefined' && Tesseract && Tesseract.createWorker) return;
+          lastError = new Error('library_missing_after_load');
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      throw lastError || new Error('tesseract_unavailable');
+    })();
+
+    try {
+      await tesseractLoader;
+    } catch (e) {
+      tesseractLoader = null;   // نسمح بإعادة المحاولة لاحقاً
+      throw e;
+    }
+  }
+
+  /**
    * تجهيز المحرك بمهلة صريحة وبتدرّج:
    *   1) ara+eng (أفضل قراءة للتسميات العربية)
    *   2) eng فقط (أصغر وأسرع — يكفي للأرقام)
@@ -583,6 +639,8 @@
         workerPromise = null;
       }
     }
+
+    await ensureTesseract();
 
     const attempts = [
       { langs: 'ara+eng', ms: CONFIG.engineTimeoutMs },
