@@ -32,7 +32,7 @@
   // 1. إعدادات المحرك
   // ───────────────────────────────────────────────────────────────────
   const CONFIG = {
-    ocrTimeoutMs:      28000,   // مهلة كل محاولة قراءة
+    ocrTimeoutMs:      35000,   // مهلة القراءة (محاولة واحدة الآن بدل محاولتين متتاليتين)
     maxDimension:      1600,    // أقصى بُعد قبل القراءة (يوازن الدقة والسرعة)
     minDimension:      1000,    // نُكبّر الصور الصغيرة لتتضح الأرقام
     amountTolerance:   0.01,    // 1%
@@ -253,23 +253,53 @@
   }
 
   // ───────────────────────────────────────────────────────────────────
-  // 6. تشغيل OCR مع مهلة
+  // 6. تشغيل OCR مع مهلة — محرك واحد يُعاد استخدامه (أسرع بكثير من
+  //    تشغيل Tesseract.recognize() مرتين من الصفر لكل صورة)
   // ───────────────────────────────────────────────────────────────────
-  function recognizeWithTimeout(image, langs, onProgress) {
+  // PSM 6 = "كتلة نص موحّدة" — مناسب لبطاقات/جداول الإيصالات ويقرأ أسرع
+  // وأدق من الوضع الافتراضي (تحليل تخطيط تلقائي كامل للصفحة).
+  const TESS_PSM = '6';
+
+  // اللوجر يُضبط مرة واحدة عند إنشاء المحرك (قيد Tesseract.js)، لذلك
+  // نستخدم مؤشر دالة قابل لإعادة التوجيه لكل عملية قراءة على حدة
+  // حتى تستمر نسبة التقدّم بالظهور رغم إعادة استخدام نفس المحرك.
+  let currentProgressHandler = null;
+
+  let workerPromise = null;
+  function getWorker() {
+    if (workerPromise) return workerPromise;
+    workerPromise = (async () => {
+      let worker;
+      let arabicUnavailable = false;
+      const logger = (m) => {
+        if (currentProgressHandler && m && m.status === 'recognizing text') {
+          currentProgressHandler(Math.round((m.progress || 0) * 100));
+        }
+      };
+      try {
+        worker = await Tesseract.createWorker('ara+eng', 1, { logger });
+      } catch (e) {
+        // فشل تحميل بيانات اللغة العربية (شبكة بطيئة/محجوبة) — نكمل
+        // بالإنجليزية فقط، تكفي لقراءة رقم العملية والمبلغ (أرقام).
+        arabicUnavailable = true;
+        worker = await Tesseract.createWorker('eng', 1, { logger });
+      }
+      try { await worker.setParameters({ tessedit_pageseg_mode: TESS_PSM }); } catch (e) {}
+      worker.__arabicUnavailable = arabicUnavailable;
+      return worker;
+    })();
+    return workerPromise;
+  }
+
+  function recognizeWithTimeout(worker, image) {
     return new Promise((resolve) => {
       let settled = false;
       const done = (val) => { if (!settled) { settled = true; resolve(val); } };
-      const timer = setTimeout(() => done(null), CONFIG.ocrTimeoutMs);
+      const timer = setTimeout(() => done({ timedOut: true }), CONFIG.ocrTimeoutMs);
 
-      Tesseract.recognize(image, langs, {
-        logger: (m) => {
-          if (onProgress && m && m.status === 'recognizing text') {
-            onProgress(Math.round((m.progress || 0) * 100));
-          }
-        }
-      })
-        .then((res) => { clearTimeout(timer); done(res); })
-        .catch(() => { clearTimeout(timer); done(null); });
+      worker.recognize(image)
+        .then((res) => { clearTimeout(timer); done({ res, timedOut: false }); })
+        .catch(() => { clearTimeout(timer); done({ timedOut: true }); });
     });
   }
 
@@ -281,28 +311,27 @@
       image = file; // نمرّر الملف كما هو لو فشل التحسين
     }
 
-    // المحاولة الأولى: عربي + إنجليزي (تسميات الحقول عربية)
+    if (onStatus) onStatus('جارِ تجهيز محرك القراءة...');
+    const worker = await getWorker();
+
     if (onStatus) onStatus('جارِ قراءة الإيصال...');
-    let res = await recognizeWithTimeout(image, 'ara+eng',
-      (p) => onStatus && onStatus(`جارِ قراءة الإيصال... ${p}%`));
+    currentProgressHandler = (p) => onStatus && onStatus(`جارِ قراءة الإيصال... ${p}%`);
+    const outcome = await recognizeWithTimeout(worker, image);
+    currentProgressHandler = null;
 
-    let text = res && res.data ? (res.data.text || '') : '';
-
-    // خطة بديلة: إنجليزي فقط (أسرع وأخف، يكفي للأرقام)
-    if (normalizeText(text).length < CONFIG.minTextForReject) {
-      if (onStatus) onStatus('جارِ إعادة القراءة بدقة أعلى...');
-      const res2 = await recognizeWithTimeout(image, 'eng', null);
-      if (res2 && res2.data && (res2.data.text || '').length > text.length) {
-        res = res2;
-        text = res2.data.text || '';
-      }
+    if (outcome.timedOut) {
+      // انتهاء المهلة لا يعني أن الصورة تالفة أو غير صالحة — فقط أن
+      // الجهاز/الاتصال كان بطيئاً. يجب ألا يُعامَل كرفض للصورة.
+      return { raw: '', text: '', confidence: null, timedOut: true };
     }
 
+    const text = outcome.res && outcome.res.data ? (outcome.res.data.text || '') : '';
     return {
       raw: text,
       text: normalizeText(text),
-      confidence: res && res.data && typeof res.data.confidence === 'number'
-        ? res.data.confidence : null
+      confidence: outcome.res && outcome.res.data && typeof outcome.res.data.confidence === 'number'
+        ? outcome.res.data.confidence : null,
+      timedOut: false
     };
   }
 
@@ -572,6 +601,16 @@
     result.confidence = ocr.confidence;
     result.textLength = ocr.text.length;
 
+    // انتهت مهلة القراءة (اتصال بطيء/جهاز ضعيف) — هذا ليس دليلاً على أن
+    // الصورة تالفة، فنحوّل الطلب للمراجعة اليدوية بدل رفضه بسبب مضلِّل.
+    if (ocr.timedOut) {
+      result.decision = 'review';
+      result.ocrStatus = 'needs_review';
+      result.riskFlags.push('ocr_timeout');
+      result.message = 'استغرق فحص الصورة وقتاً أطول من المتوقع (غالباً بسبب بطء الاتصال). تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
+      return result;
+    }
+
     if (onStatus) onStatus('جارِ تحليل بيانات الإيصال...');
 
     // ── المرحلة 4: التصنيف — هل هذه صورة إشعار تحويل؟ ──
@@ -593,11 +632,13 @@
         result.message = 'الصورة المرفوعة ليست إشعار تحويل بنكي أو محفظة. ارفع صورة إشعار التحويل من تطبيق (بنكك / أوكاش / فوري) بشكل واضح وكامل.';
         return result;
       }
-      // النص غير مقروء أصلاً (تصوير ضعيف) → نطلب صورة أوضح
-      result.decision = 'reject';
-      result.ocrStatus = 'rejected';
-      result.riskFlags.push('unreadable_image');
-      result.message = 'تعذّر قراءة أي بيانات من الصورة. ارفع سكرين شوت واضح لإشعار التحويل بحيث يظهر رقم العملية والمبلغ.';
+      // النص غير مقروء بوضوح كافٍ (تصوير ضعيف/دقة منخفضة) — الصورة نفسها
+      // اجتازت فحص الصلاحية والتلاعب، فلا نرفضها نهائياً؛ نحوّلها لمراجعة
+      // يدوية حتى لا يُطرَد زبون حقيقي بسبب ضعف القراءة الآلية فقط.
+      result.decision = 'review';
+      result.ocrStatus = 'needs_review';
+      result.riskFlags.push('low_ocr_confidence');
+      result.message = 'تعذّر قراءة بعض بيانات الإيصال بوضوح. تم استلام طلبك وسيُراجع يدوياً من الإدارة — لصورة أدق حاول تكبير الإشعار قبل التصوير.';
       return result;
     }
 
