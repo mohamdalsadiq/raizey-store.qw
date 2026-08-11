@@ -228,7 +228,7 @@
 
       <!-- الخطوة 1: إدخال رقم العملية وحفظه -->
       <div class="field" style="margin-top:12px;">
-        <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
+        <label>الخطوة 1 — رقم العملية (من إشعار ��لتحويل) *</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">حفظ</button>
@@ -575,25 +575,52 @@ function attachCheckoutEvents(canUseWallet) {
     fileBox.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
 
+    // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
+    const softReview = (flag) => ({
+      decision: 'review', ocrStatus: 'needs_review',
+      message: 'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.',
+      riskFlags: [flag], confidence: null, provider: null, providerName: null, language: null,
+      passes: 0, textLength: 0, version: 3,
+      extracted: { txRef: null, amount: null, dateTime: null },
+      refVerified: false, amountVerified: false
+    });
+
+    // حرس زمني على مستوى الواجهة (حزام أمان ثانٍ فوق حرس المحرك نفسه):
+    // بعد 100 ثانية تنتهي حالة التحميل حتماً بنتيجة واضحة.
+    const UI_SCAN_DEADLINE_MS = 100000;
+    let uiWatchdog = null;
+    const uiGuard = new Promise(resolve => {
+      uiWatchdog = setTimeout(() => resolve(softReview('ui_scan_timeout')), UI_SCAN_DEADLINE_MS);
+    });
+
     let analysis;
     try {
-      analysis = await ReceiptIntel.analyze(file, {
-        expectedAmount: currentTotal(),
-        manualRef: savedTxRef,
-        expectedAccount: selectedMethodAccount,
-        onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
-      });
+      const scan = (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function')
+        ? ReceiptIntel.analyze(file, {
+            expectedAmount: currentTotal(),
+            manualRef: savedTxRef,
+            expectedAccount: selectedMethodAccount,
+            onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
+          }).catch(err => {
+            console.warn('[RAIZEY] receipt scan error:', err);
+            return softReview('scan_error');
+          })
+        : Promise.resolve(softReview('engine_missing'));
+
+      analysis = await Promise.race([scan, uiGuard]);
+      if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
     } catch (err) {
       // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
       console.warn('[RAIZEY] receipt scan error:', err);
-      analysis = {
-        decision: 'review', ocrStatus: 'needs_review',
-        message: 'تعذّر إكمال الفحص الآلي. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.',
-        riskFlags: ['scan_error'], confidence: null, provider: null, providerName: null,
-        extracted: { txRef: null, amount: null, dateTime: null },
-        refVerified: false, amountVerified: false
-      };
+      analysis = softReview('scan_error');
+    } finally {
+      if (uiWatchdog) clearTimeout(uiWatchdog);
     }
+
+    // ضمان إضافي: أي حقل ناقص في النتيجة لا يكسر عرض التقرير
+    analysis.extracted = analysis.extracted || { txRef: null, amount: null, dateTime: null };
+    analysis.riskFlags = analysis.riskFlags || [];
+    if (!analysis.message) analysis.message = 'تم استلام الإيصال وسيُراجع يدوياً من الإدارة.';
 
     statusEl.textContent = '';
 
