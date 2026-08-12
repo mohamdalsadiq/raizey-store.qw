@@ -228,7 +228,7 @@
 
       <!-- الخطوة 1: إدخال رقم العملية وحفظه -->
       <div class="field" style="margin-top:12px;">
-        <label>الخطوة 1 — رقم العملية (من إشعار اللتحويل) *</label>
+        <label>الخطوة 1 — رقم العملية (من إشعار ��للتحويل) *</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">حفظ</button>
@@ -677,7 +677,21 @@ function attachCheckoutEvents(canUseWallet) {
       return;
     }
 
-    hideSupportButton();
+    // فشل تقني في الفحص (شبكة/محرك/مهلة) انتهى بمراجعة يدوية:
+    // العميل يكمل طلبه، ونعرض زر الدعم أيضاً في حال رغب بمساعدة فورية.
+    const TECH_REVIEW_FLAGS = [
+      'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
+      'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
+      'ui_scan_timeout', 'engine_missing'
+    ];
+    const isTechReview = analysis.decision === 'review' &&
+      (analysis.riskFlags || []).some(f => TECH_REVIEW_FLAGS.includes(f));
+    if (isTechReview) {
+      showSupportButton('تعذّر إكمال الفحص الآلي — مراجعة يدوية');
+      logFraudAttempt('technical_failure', { risk_flags: analysis.riskFlags });
+    } else {
+      hideSupportButton();
+    }
 
     receiptFile = file;
     scanResult  = analysis;
