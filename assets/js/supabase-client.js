@@ -289,7 +289,7 @@ function safeText(value, fallback = '') {
 }
 
 // =========================================================
-// التحقق من صلاحية صورة الإي��ال (نوع + حجم + صحة الملف)
+// التحقق من صلاحية صورة الإيصال (نوع + حجم + صحة الملف)
 // =========================================================
 async function validateReceiptImage(file) {
   if (!file) {
@@ -332,100 +332,79 @@ async function validateReceiptImage(file) {
 }
 
 // =========================================================
+// تسجيل محاولة إيصال مشبوهة (تكرار/رفض/فشل تقني) في القاعدة
+// عبر RPC آمنة (SECURITY DEFINER). التسجيل ثانوي: لا يرمي خطأً
+// ولا يعطّل تدفق الدفع مهما فشل.
+// =========================================================
+async function logReceiptFraudAttempt({ reference, reason, provider, ocrExcerpt, orderAmount, metadata } = {}) {
+  try {
+    if (!supabaseClient) return null;
+    const { data } = await supabaseClient.rpc('log_receipt_fraud_attempt', {
+      p_entered_reference: reference || null,
+      p_reason:            reason || 'unknown',
+      p_provider:          provider || null,
+      p_ocr_excerpt:       ocrExcerpt ? String(ocrExcerpt).slice(0, 300) : null,
+      p_order_amount:      (typeof orderAmount === 'number') ? orderAmount : null,
+      p_metadata:          metadata || {}
+    });
+    return data || null;
+  } catch (e) {
+    // التسجيل ثانوي — لا نعطّل العميل بسببه
+    return null;
+  }
+}
+
 // =========================================================
 // ⚠️ مُستغنى عنها (DEPRECATED) — لا تستخدمها في أي كود جديد.
 //
-// كانت ترجع دائماً passed: true بغض النظر عن محتوى الصورة (نظام
-// إبلاغ فقط، لا يرفض شيئاً) — يخالف مبدأ Fail-Closed المعتمد الآن.
-// كل صفحات الدفع بالتحويل البنكي (checkout.html و product.html)
-// تعتمد حصراً على ReceiptIntel.analyze() + claim_payment_receipt
-// اللي بيرفض/يعلّق فعلياً بدل ما يمرّر كل شيء. الدالة باقية هنا فقط
-// لعدم كسر أي مرجع قديم، ولا يوجد أي استدعاء فعلي لها في المشروع.
+// كانت هذه الدالة ترجع دائماً passed: true بغض النظر عن محتوى الصورة
+// (نظام إبلاغ فقط، لا يرفض شيئاً) — وهو ما يخالف مبدأ Fail-Closed تماماً.
+// أُعيدت كتابتها الآن لتفوّض حصراً لمحرك الفحص الصارم ReceiptIntel.analyze()،
+// ولم تعد تُرجع passed:true إلا إذا كان قرار المحرك 'accept' فعلاً.
+// عند غياب المحرك أو أي فشل/غموض → تُرجع passed:false مع مراجعة يدوية
+// (لا قبول تلقائي أبداً).
+//
+// المسار الرسمي للدفع (checkout.html و product.html) يعتمد مباشرةً على
+// ReceiptIntel.analyze() + claim_payment_receipt، ولا يوجد أي استدعاء فعلي
+// لهذه الدالة في المشروع؛ تبقى هنا فقط لعدم كسر أي مرجع قديم.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
-  // الحالة الافتراضية: تمرير الطلب + طلب مراجعة يدوية
-  const SOFT_PASS = { passed: true, ocr_status: 'needs_review', amount_verified: false };
+  // Fail-Closed افتراضياً: تعليق للمراجعة اليدوية، لا قبول.
+  const NEEDS_REVIEW = { passed: false, ocr_status: 'needs_review', amount_verified: false };
 
-  // إذا لم تُحمَّل Tesseract — نمرّر الطلب ونضعه للمراجعة
-  if (typeof Tesseract === 'undefined') {
-    devLog('[RAIZEY OCR] Tesseract not loaded — soft pass');
-    return SOFT_PASS;
+  // نفوّض للمحرك الصارم الوحيد المعتمد. غيابه أو تعذّر الاستخدام = مراجعة يدوية.
+  const canDelegate =
+    typeof window !== 'undefined' &&
+    window.ReceiptIntel &&
+    typeof window.ReceiptIntel.analyze === 'function' &&
+    (typeof File !== 'undefined' && fileOrUrl instanceof Blob);
+
+  if (!canDelegate) {
+    devWarn('[RAIZEY OCR] verifyReceiptContent: تفويض غير متاح — مراجعة يدوية (fail-closed)');
+    return NEEDS_REVIEW;
   }
 
-  return new Promise(async (resolve) => {
-    // مهلة 12 ثانية — إذا انتهت نمرّر الطلب للمراجعة اليدوية
-    // (خُفِّضت من 20 إلى 12 ثانية حتى لا ينتظر المستخدم طويلاً على الإنترنت البطيء)
-    const timeout = setTimeout(() => {
-      devLog('[RAIZEY OCR] Timeout — soft pass');
-      resolve(SOFT_PASS);
-    }, 12000);
+  try {
+    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
+    const analysis = await window.ReceiptIntel.analyze(fileOrUrl, {
+      manualRef: transactionRef || '',
+      expectedAmount: Number(expectedAmountSDG) || 0,
+      onStatus: statusCallback || undefined
+    });
 
-    try {
-      if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
+    if (!analysis || typeof analysis !== 'object') return NEEDS_REVIEW;
 
-      // نستخدم 'eng' فقط بدل 'ara+eng' — الفحص هنا يعتمد فقط على استخراج
-      // الأرقام (رقم العملية والمبلغ) وليس قراءة نص عربي، وبيانات اللغة
-      // العربية لـ Tesseract حجمها كبير جداً (+10 ميجابايت) وتُحمَّل من
-      // الإنترنت في كل مرة — ما تُستخدم فعلياً، وهي السبب الرئيسي في تعليق
-      // الفحص لفترة طويلة عند ضعف الاتصال بالإنترنت.
-      const result = await Tesseract.recognize(fileOrUrl, 'eng', { logger: () => {} });
-      clearTimeout(timeout);
-
-      const text = (result.data.text || '').trim();
-      devLog('[RAIZEY OCR] Extracted text length:', text.length);
-
-      // إذا كان النص قصير جداً → لا يمكن التحقق → مراجعة يدوية
-      if (text.length < 10) {
-        devLog('[RAIZEY OCR] Text too short — needs_review');
-        resolve(SOFT_PASS);
-        return;
-      }
-
-      // ── 1. فحص رقم العملية (للإبلاغ فقط) ──
-      let refMatched = false;
-      if (transactionRef && transactionRef.trim()) {
-        const userDigits = transactionRef.replace(/\D/g, '');
-        const ocrDigits  = text.replace(/\D/g, '');
-        if (userDigits.length > 0) {
-          const fullMatch    = ocrDigits.includes(userDigits);
-          const partialMatch = userDigits.length > 4 && ocrDigits.includes(userDigits.slice(0, -1));
-          refMatched = fullMatch || partialMatch;
-          devLog('[RAIZEY OCR] Ref check — userDigits:', userDigits, '| matched:', refMatched);
-        }
-      } else {
-        // لا يوجد رقم عملية لمقارنته → نعتبره غير محقَّق
-        refMatched = false;
-      }
-
-      // ── 2. فحص المبلغ (للإبلاغ فقط) ──
-      let amountMatched = false;
-      if (expectedAmountSDG && expectedAmountSDG > 0) {
-        // استخراج كل الأرقام الموجودة في النص (بما فيها الأرقام العربية)
-        const normalised = text
-          .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-          .replace(/,/g, '');
-        const amounts = [...normalised.matchAll(/\d[\d.]*\d|\d/g)]
-          .map(m => parseFloat(m[0]))
-          .filter(n => !isNaN(n) && n > 0);
-
-        const rounded = Math.round(expectedAmountSDG);
-        // نقبل تطابقاً بهامش ±1%
-        amountMatched = amounts.some(a => Math.abs(a - rounded) / rounded <= 0.01);
-        devLog('[RAIZEY OCR] Amount check — expected:', rounded, '| found amounts:', amounts, '| matched:', amountMatched);
-      }
-
-      // ── 3. القرار النهائي ──
-      // passed دائماً true — فقط ocr_status و amount_verified تتغير
-      if (refMatched && (!expectedAmountSDG || amountMatched)) {
-        resolve({ passed: true, ocr_status: 'passed', amount_verified: amountMatched });
-      } else {
-        resolve({ passed: true, ocr_status: 'needs_review', amount_verified: amountMatched });
-      }
-
-    } catch (e) {
-      clearTimeout(timeout);
-      devWarn('[RAIZEY OCR] Error — soft pass:', e.message);
-      resolve(SOFT_PASS);
-    }
-  });
+    return {
+      // القبول التلقائي حصري بقرار المحرك 'accept' — لا مسار "يقبل كل شيء".
+      passed:          analysis.decision === 'accept',
+      ocr_status:      analysis.ocrStatus || (analysis.decision === 'reject' ? 'rejected' : 'needs_review'),
+      amount_verified: !!analysis.amountVerified,
+      ref_verified:    !!analysis.refVerified,
+      decision:        analysis.decision || 'review',
+      message:         analysis.message || ''
+    };
+  } catch (e) {
+    devWarn('[RAIZEY OCR] verifyReceiptContent delegate error — مراجعة يدوية:', e && e.message);
+    return NEEDS_REVIEW;
+  }
 }
