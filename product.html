@@ -818,31 +818,43 @@ async function submitOrder(errorBox, submitBtn) {
   const preCheck = await validateReceiptImage(receiptFile);
   if (!preCheck.valid) { errorBox.textContent = preCheck.message; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
+  submitBtn.textContent = 'جارِ حساب بصمة الملف...';
+  const receiptHash = await hashFile(receiptFile);
+  if (!receiptHash) { errorBox.textContent = 'تعذّر معالجة صورة الإيصال، جرّب صورة أخرى.'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
+
   submitBtn.textContent = 'جارِ رفع الإيصال...';
   const fileExt = receiptFile.name.split('.').pop().toLowerCase();
   const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
   const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile);
   if (uploadError) { errorBox.textContent = 'فشل رفع الإيصال، تأكد من الاتصال وحجم الصورة.'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
 
-  // ── رابط الإيصال الآمن (Signed URL — 30 يوم) ──
-  const { data: signedData, error: signedErr } = await supabaseClient.storage
-    .from('receipts').createSignedUrl(filePath, 60 * 60 * 24 * 30);
-  if (signedErr || !signedData) { errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
-  const receiptUrl = signedData.signedUrl;
+  // ── الحجز الذرّي للإيصال (نفس حاجز checkout.html) — لا يوجد فحص OCR في
+  // هذه الصفحة بعد، لذلك يُعلَّم الطلب دائماً "قيد المراجعة اليدوية" ولا
+  // يُقبل تلقائياً أبداً، لكن التكرار يُمنع فوراً على مستوى القاعدة. ──
+  submitBtn.textContent = 'جارِ تسجيل الإيصال...';
+  let receiptId = null;
+  try {
+    const { data: claimData, error: claimErr } = await supabaseClient.rpc('claim_payment_receipt', {
+      p_purpose: 'order', p_tx_ref: transactionRef, p_receipt_hash: receiptHash,
+      p_receipt_path: filePath, p_provider: null, p_payment_method_id: selectedMethodId,
+      p_amount_expected: currentPrice(), p_amount_detected: null, p_tx_ref_ocr: null,
+      p_ocr_status: 'needs_review', p_ocr_confidence: null, p_risk_flags: ['no_ocr_engine_on_this_page'], p_ocr_data: {}
+    });
+    if (claimErr) throw claimErr;
+    receiptId = claimData && claimData.length ? claimData[0].id : null;
+    if (!receiptId) throw new Error('receipt_claim_failed');
+  } catch (err) {
+    const msg = err.message || String(err);
+    errorBox.textContent = getFriendlyError(msg);
+    submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return;
+  }
 
-  const receiptHash = await hashFile(receiptFile);
-  const isDuplicate = await checkDuplicateReceipt('orders', receiptHash);
-  if (isDuplicate) { errorBox.textContent = 'الإيصال مستخدم من قبل!'; submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return; }
-
-  submitBtn.textContent = 'جارِ فحص الإيصال...';
-  const ocrResult = await verifyReceiptContent(receiptUrl, null, transactionRef);
-
-  // ── استخدام الكوبون ذرياً قبل إدخال الطلب (لمنع Race Condition) ──
+  // ── استخدام الكوبون ذرياً بعد نجاح حجز الإيصال (لمنع Race Condition) ──
   if (appliedCoupon) {
     const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
-    const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode });
+    const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', { p_code: couponCode, p_order_total: currentPrice() });
     if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-      errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته، أعد المحاولة بدون الكود.';
+      errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.';
       submitBtn.disabled = false; submitBtn.textContent = 'تأكيد الطلب'; return;
     }
   }
@@ -852,7 +864,7 @@ async function submitOrder(errorBox, submitBtn) {
     price_sdg_snapshot: currentPrice(), field_values: fieldValues,
     field_labels: (() => { const fl = {}; (product.required_fields || []).forEach(f => { if (f.key) fl[f.key] = f.label; }); return fl; })(),
     selected_option: { id: selectedOption.id, label: selectedMainCat + ' - ' + selectedOption.display_label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() },
-    payment_type: 'bank', status: 'pending_review', receipt_hash: receiptHash, receipt_url: receiptUrl
+    payment_type: 'bank', payment_method_id: selectedMethodId, receipt_id: receiptId
   };
 
   const { data: insertedOrder, error: orderError } = await supabaseClient.from('orders').insert(orderPayload).select('id').single();
