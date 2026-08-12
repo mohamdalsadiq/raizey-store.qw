@@ -388,7 +388,7 @@ function renderReceipt(o) {
 
       <div class="receipt-row" style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border);">
         <span class="label">رقم الطلب</span>
-        <span class="receipt-id">${escapeHtml(o.id)}</span>
+        <span class="receipt-id">${escapeHtml(o.order_code || o.id)}</span>
       </div>
 
       <div class="receipt-row">
