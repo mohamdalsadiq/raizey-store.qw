@@ -589,6 +589,56 @@ function attachCheckoutEvents(canUseWallet) {
   };
 
   // ── الخطوة 2: رفع الصورة + الفحص الذكي ──
+  // ── تحويل الملف إلى base64 خام (بلا بادئة data:...) لإرساله للسيرفر ──
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const s = String(reader.result || '');
+        const idx = s.indexOf(',');
+        resolve(idx !== -1 ? s.slice(idx + 1) : s);
+      };
+      reader.onerror = () => reject(reader.error || new Error('file_read_error'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ── الفحص من السيرفر (Gemini) — أسرع وأثبت من فحص المتصفح ──
+  // يرمي استثناءً في أي حالة يجب فيها الرجوع لمحرك المتصفح (Tesseract)
+  // كخطة بديلة: عدم توفر مفتاح Gemini، انقطاع اتصال، أو أي خطأ سيرفر.
+  const SERVER_FALLBACK_FLAGS = [
+    'gemini_not_configured', 'server_ocr_failed', 'server_ocr_timeout',
+    'judge_error', 'missing_image', 'image_too_large', 'method_not_allowed'
+  ];
+  async function serverVerify(file, opts) {
+    const base64 = await fileToBase64(file);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 14000);
+    try {
+      const resp = await fetch('/api/verify-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType: file.type || 'image/jpeg',
+          expectedAmount: opts.expectedAmount,
+          manualRef: opts.manualRef,
+          expectedAccount: opts.expectedAccount
+        }),
+        signal: controller.signal
+      });
+      if (!resp.ok) throw new Error('server_http_' + resp.status);
+      const data = await resp.json();
+      if (data && Array.isArray(data.riskFlags) &&
+          data.riskFlags.some(f => SERVER_FALLBACK_FLAGS.includes(f))) {
+        throw new Error('server_needs_fallback:' + data.riskFlags[0]);
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   fileBox.onclick = () => { if (savedTxRef) fileInput.click(); };
   fileInput.onchange = async () => {
     if (!fileInput.files.length) return;
@@ -628,17 +678,40 @@ function attachCheckoutEvents(canUseWallet) {
 
     let analysis;
     try {
-      const scan = (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function')
-        ? ReceiptIntel.analyze(file, {
-            expectedAmount: currentTotal(),
-            manualRef: savedTxRef,
-            expectedAccount: selectedMethodAccount,
-            onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
-          }).catch(err => {
-            console.warn('[RAIZEY] receipt scan error:', err);
+      const scanOpts = {
+        expectedAmount: currentTotal(),
+        manualRef: savedTxRef,
+        expectedAccount: selectedMethodAccount
+      };
+
+      // (1) نجرب السيرفر أولاً (Gemini) — أسرع وأثبت من فحص المتصفح.
+      // (2) لو تعذّر (مفتاح غير مُعد، انقطاع اتصال، مهلة) → ننتقل تلقائياً
+      //     لمحرك المتصفح (Tesseract) كخطة بديلة، دون أن يشعر العميل بفرق.
+      const scan = (async () => {
+        statusEl.style.color = 'var(--text-muted)';
+        statusEl.textContent = 'جارِ فحص الصورة...';
+        try {
+          const serverResult = await serverVerify(file, scanOpts);
+          return serverResult;
+        } catch (serverErr) {
+          console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:', serverErr);
+        }
+
+        if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
+          try {
+            return await ReceiptIntel.analyze(file, {
+              expectedAmount: scanOpts.expectedAmount,
+              manualRef: scanOpts.manualRef,
+              expectedAccount: scanOpts.expectedAccount,
+              onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
+            });
+          } catch (clientErr) {
+            console.warn('[RAIZEY] receipt scan error:', clientErr);
             return softReview('scan_error');
-          })
-        : Promise.resolve(softReview('engine_missing'));
+          }
+        }
+        return softReview('engine_missing');
+      })();
 
       analysis = await Promise.race([scan, uiGuard]);
       if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
