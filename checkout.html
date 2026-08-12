@@ -88,14 +88,16 @@
   .remove-item-btn:hover {
     transform: scale(1.1);
   }
+  /* الصندوق المعطَّل نفسه غير قابل للضغط؛ فقط رابط "اشحن محفظتك الآن"
+     جواه هو القابل للضغط (pointer-events:auto مطبّقة عليه هو تحديداً
+     في assets/css/style.css عبر .recharge-highlight-link). */
   .payment-option.disabled {
-    pointer-events: auto !important; 
-    cursor: pointer !important;
+    pointer-events: none !important;
+    cursor: default !important;
   }
   .recharge-highlight-link {
-    color: var(--primary) !important;
-    font-weight: 800 !important;
-    text-decoration: underline !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
   }
   .file-upload i {
     font-size: 16px;
@@ -407,7 +409,7 @@ function renderCheckout() {
     walletText.innerHTML = `رصيدك الحالي: ${safeFormatSDG(walletBalance)} ج.س (يكفي للدفع)`;
   } else {
     walletOption.classList.add('disabled');
-    walletText.innerHTML = `رصيدك غير كافٍ (${safeFormatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن هنا</a>`;
+    walletText.innerHTML = `رصيدك غير كافٍ (${safeFormatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link" onclick="event.stopPropagation();">اشحن محفظتك الآن</a>`;
   }
 
   const methodPickerGrid = document.getElementById('methodPickerGrid');
@@ -488,7 +490,9 @@ function attachCheckoutEvents(canUseWallet) {
       bankDetails.classList.remove('show');
     };
   } else {
-    walletOption.onclick = () => { window.location.href = 'wallet.html'; };
+    // الصندوق نفسه معطّل الضغط (pointer-events:none في CSS)؛ الوحيد
+    // القابل للضغط هو رابط "اشحن محفظتك الآن" (له href مباشر + pointer-events:auto).
+    walletOption.onclick = null;
   }
 
   bankOption.onclick = () => {
