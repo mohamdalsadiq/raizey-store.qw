@@ -550,12 +550,24 @@ button { font-family: inherit; cursor: pointer; border: none; }
   background: rgba(255, 106, 26,0.06);
 }
 .payment-option.disabled {
-  opacity: 0.45;
+  cursor: default;
   pointer-events: none;
+}
+.payment-option.disabled .payment-option-title,
+.payment-option.disabled .payment-option-title i {
+  color: var(--text-muted) !important;
 }
 .payment-option-info { flex: 1; }
 .payment-option-title { font-weight: 700; font-size: 14px; }
 .payment-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.recharge-highlight-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.recharge-highlight-link:hover { color: var(--primary-dim); }
 
 .bank-details {
   background: var(--bg);
