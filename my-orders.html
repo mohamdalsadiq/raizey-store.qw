@@ -215,6 +215,7 @@ function renderOrderCard(o) {
         <div>
           <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
           <div class="order-date"><i class="far fa-clock" style="margin-left:4px;"></i>${date}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">طلب #${escapeHtml(o.order_code || o.id.slice(0, 8))}</div>
         </div>
         <span class="status-badge status-${escapeHtml(o.status)}">${statusLabels[o.status] || escapeHtml(o.status)}</span>
       </div>
