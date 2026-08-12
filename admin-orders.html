@@ -32,6 +32,11 @@
 <a href="admin-giftcards.html">كروت الهدايا</a>
   </div>
 
+  <div style="padding:0 0 12px;">
+    <input type="text" id="orderSearchInput" placeholder="ابحث برقم الطلب، اسم العميل، أو رقم العملية..."
+      style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:14px; font-family:inherit;">
+  </div>
+
   <div class="categories" style="padding:0 0 16px;" id="filterRow">
     <button class="chip active" data-filter="all">الكل</button>
     <button class="chip" data-filter="pending_review">قيد المراجعة</button>
@@ -70,6 +75,7 @@
 <script>
 let allOrders = [];
 let currentFilter = 'all';
+let currentSearch = '';
 let rejectingOrderId = null;
 let selectedReason = null;
 let currentAdminId = null;
@@ -179,13 +185,9 @@ async function init() {
 
   document.getElementById('adminPage').style.display = 'block';
 
-  document.querySelectorAll('#filterRow .chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#filterRow .chip').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      currentFilter = btn.dataset.filter;
-      render();
-    });
+  document.getElementById('orderSearchInput').addEventListener('input', (e) => {
+    currentSearch = e.target.value.trim().toLowerCase();
+    render();
   });
 
   await loadOrders();
@@ -203,12 +205,22 @@ async function loadOrders() {
 
 function render() {
   const container = document.getElementById('ordersList');
-  const filtered = currentFilter === 'all'
+  let filtered = currentFilter === 'all'
     ? allOrders
     : allOrders.filter(o => o.status === currentFilter);
 
+  if (currentSearch) {
+    filtered = filtered.filter(o => {
+      const haystack = [
+        o.order_code, o.id, o.transaction_reference,
+        o.profiles?.full_name, o.profiles?.whatsapp_number, o.product_name_snapshot
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(currentSearch);
+    });
+  }
+
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد طلبات في هذا التصنيف</div>`;
+    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد طلبات مطابقة</div>`;
     return;
   }
 
@@ -234,6 +246,10 @@ function renderOrderCard(o) {
   const date = new Date(o.created_at).toLocaleDateString('ar-EG', {
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+
+  // يجب التصريح بها هنا قبل استخدامها في refHtml بالأسفل — كانت مُصرَّحة
+  // بعد استخدامها بالخطأ (Temporal Dead Zone) فتكسر عرض أي طلب بتحويل بنكي
+  const safeTransactionReference = safeDataAttr(o.transaction_reference || '');
 
   const fieldsHtml = o.field_values && Object.keys(o.field_values).length > 0
     ? Object.entries(o.field_values).map(([k, v]) => {
@@ -265,7 +281,6 @@ function renderOrderCard(o) {
   const safeOrderId = safeDataAttr(o.id || '');
   const safeStatus = safeDataAttr(o.status || '');
   const receiptUrl = sanitizeUrl(o.receipt_url);
-  const safeTransactionReference = safeDataAttr(o.transaction_reference || '');
   const safeWhatsappCopy = safeDataAttr(o.profiles?.whatsapp_number || '');
 
   let actions = '';
@@ -287,6 +302,7 @@ function renderOrderCard(o) {
       <div class="order-top">
         <div>
           <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
+          <div style="font-size:12px; color:var(--primary); font-weight:700; margin-top:2px;">طلب #${escapeHtml(o.order_code || o.id.slice(0, 8))}</div>
           <div class="order-date">${date}</div>
         </div>
         <span class="status-badge status-${safeStatus}">${statusLabels[o.status] || safeStatus}</span>
