@@ -162,6 +162,9 @@ async function callGeminiModel(model, base64Data, mimeType, apiKey) {
       (data && data.promptFeedback && data.promptFeedback.blockReason) || 'no_text';
     const err = new Error('gemini_empty_response:' + reason);
     err.status = 200;
+    // الموديل أكمل الرد طبيعياً وقال إن الصورة بلا نص ⇒ ليست إشعار تحويل.
+    // (أما STOP بسبب SAFETY / MAX_TOKENS / حجب فهو فشل تقني ⇒ مراجعة يدوية.)
+    if (reason === 'STOP' || reason === 'no_text') err.code = 'no_visible_text';
     throw err;
   }
 
@@ -184,6 +187,8 @@ async function extractTextWithGemini(base64Data, mimeType, apiKey) {
     } catch (err) {
       lastErr = err;
       const msg = String((err && err.message) || '');
+      // صورة بلا أي نص ظاهر: قراءة مؤكدة، لا فائدة من موديل آخر
+      if (err && err.code === 'no_visible_text') throw err;
       // مهلة أو خطأ مصادقة/حصة ⇒ لا فائدة من تجربة موديل آخر
       if (msg.indexOf('timeout') === 0) throw err;
       if (err.status === 401 || err.status === 403 || err.status === 429) throw err;
@@ -262,7 +267,10 @@ module.exports = async function handler(req, res) {
   const options = {
     expectedAmount: Number(expectedAmount) || 0,
     manualRef: manualRef || '',
-    expectedAccount: expectedAccount || ''
+    expectedAccount: expectedAccount || '',
+    // قراءة السيرفر دقيقة ⇒ محرك القرار يرفض "ليست إيصالاً" بلا حد أدنى للنص
+    ocrSource: 'server',
+    trustedOcr: true
   };
 
   let rawText = '';
@@ -273,6 +281,21 @@ module.exports = async function handler(req, res) {
     usedModel = out.model;
   } catch (err) {
     const tag = String((err && err.message) || 'unknown');
+
+    // ── صورة بلا أي نص ظاهر ⇒ رفض مؤكد (ليست إشعار تحويل) ──
+    if (err && err.code === 'no_visible_text') {
+      const r = ReceiptJudgeCore.blankResult();
+      r.decision = 'reject';
+      r.ocrStatus = 'rejected';
+      r.riskFlags.push('not_a_receipt');
+      r.source = 'server';
+      r.textLength = 0;
+      r.message = 'الصورة المرفوعة لا تحتوي على أي نص — إذاً هي ليست إشعار تحويل. ' +
+        'ارفع لقطة شاشة لإشعار التحويل من التطبيق (بنكك / أوكاش / فوري / كاشي) كاملة وواضحة.';
+      res.status(200).json(r);
+      return;
+    }
+
     console.error('[RAIZEY] gemini ocr failed:', tag);
     const flag = tag.indexOf('timeout') === 0 ? 'server_ocr_timeout' : 'server_ocr_failed';
     res.status(200).json(softReview(flag,
