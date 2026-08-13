@@ -230,7 +230,7 @@
 
       <!-- الخطوة 1: إدخال رقم العملية وحفظه -->
       <div class="field" style="margin-top:12px;">
-        <label>الخطوة 1 — رقم العملية (من إشعار ��للتحويل) *</label>
+        <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">حفظ</button>
@@ -289,6 +289,30 @@ let selectedMethodAccount = null;  // رقم حساب الوسيلة المخت�
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
   return Math.round(val).toLocaleString('ar-EG');
+}
+
+// ── حرس زمني على كل استدعاء شبكة ──
+// سبب وجوده: أي await على الشبكة بدون مهلة قد ينتظر للأبد (شبكة معلّقة،
+// استجابة لا تصل) فيبقى الزر عالقاً على "جارِ تسجيل الإيصال..." بلا نهاية.
+// الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
+// ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
+const NET_TIMEOUT_MS = {
+  upload:  45000,   // رفع صورة قد يكون بطيئاً على شبكة الجوال
+  signUrl: 20000,
+  rpc:     25000
+};
+
+function withNetTimeout(promise, ms, tag) {
+  let timer = null;
+  const guard = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error('network_timeout:' + tag);
+      err.isTimeout = true;
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([Promise.resolve(promise), guard])
+    .finally(() => { if (timer) clearTimeout(timer); });
 }
 
 
@@ -533,6 +557,15 @@ function attachCheckoutEvents(canUseWallet) {
     } catch (e) { /* التسجيل ثانوي، لا نعطّل العميل بسببه */ }
   }
 
+  // 🔴 إصلاح جذري لتعليق الزر:
+  // handlePlaceOrder دالة خارج نطاق attachCheckoutEvents، وكانت تنادي
+  // showSupportButton / logFraudAttempt وهما محليتان هنا ⇒ ReferenceError
+  // داخل بلوك catch يقطع التنفيذ قبل السطرين اللذين يُرجعان الزر لحالته،
+  // فيبقى الزر عالقاً على "جارِ تسجيل الإيصال..." للأبد. نُصدّرهما الآن.
+  window.__raizeyShowSupport = showSupportButton;
+  window.__raizeyHideSupport = hideSupportButton;
+  window.__raizeyLogFraud    = logFraudAttempt;
+
 
   const refInput   = document.getElementById('transactionRefInput');
   const refMsg     = document.getElementById('txRefMessage');
@@ -552,7 +585,7 @@ function attachCheckoutEvents(canUseWallet) {
     rep.innerHTML = '';
   }
 
-  saveRefBtn.onclick = () => {
+  saveRefBtn.onclick = async () => {
     const isEditMode = saveRefBtn.dataset.mode === 'edit';
 
     if (isEditMode) {
@@ -581,6 +614,39 @@ function attachCheckoutEvents(canUseWallet) {
       resetReceiptSelection();
       return;
     }
+
+    // ── تحقق مبكر (قراءة فقط، بلا حجز): هل الرقم مستخدم من قبل؟ ──
+    // الحجز الحقيقي يبقى ذرّياً لحظة إنشاء الطلب (create_bank_orders_bulk)،
+    // فهذا الفحص لتجربة الاستخدام فقط ولا يمكن التلاعب به لتجاوز الحماية.
+    saveRefBtn.disabled = true;
+    const prevBtnText = saveRefBtn.textContent;
+    saveRefBtn.textContent = 'جارِ التحقق...';
+    refMsg.style.color = 'var(--text-muted)';
+    refMsg.textContent = 'جارِ التحقق من رقم العملية...';
+    try {
+      const { data: availData, error: availErr } = await withNetTimeout(
+        supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: raw }),
+        NET_TIMEOUT_MS.rpc, 'check_tx_ref'
+      );
+      // الدالة غير منشورة بعد أو تعذّر الوصول ⇒ نكمل بصمت (الحجز الذرّي يحمينا)
+      if (!availErr && availData && availData.length && availData[0].available === false) {
+        saveRefBtn.disabled = false;
+        saveRefBtn.textContent = prevBtnText;
+        refMsg.style.color = 'var(--danger)';
+        refMsg.textContent = availData[0].reason === 'invalid_tx_ref'
+          ? 'رقم العملية غير صحيح. انسخه كما هو من إشعار التحويل.'
+          : 'رقم العملية هذا مستخدم من قبل في طلب آخر. اكتب رقم العملية الصحيح لتحويلك.';
+        savedTxRef = null;
+        receiptStep.style.display = 'none';
+        resetReceiptSelection();
+        return;
+      }
+    } catch (e) {
+      // مهلة/انقطاع: لا نمنع العميل — الحجز الذرّي عند الإرسال هو الحاجز الحقيقي
+      devWarn('[RAIZEY] check_tx_ref_available skipped:', (e && e.message) || e);
+    }
+    saveRefBtn.disabled = false;
+    saveRefBtn.textContent = prevBtnText;
 
     savedTxRef = raw;
     refInput.disabled = true;
@@ -780,7 +846,7 @@ function attachCheckoutEvents(canUseWallet) {
       analysis = await Promise.race([scan, uiGuard]);
       if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
     } catch (err) {
-      // ��طأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
+      // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
       console.warn('[RAIZEY] receipt scan error:', err);
       analysis = softReview('scan_error');
     } finally {
@@ -951,96 +1017,213 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     return;
   }
 
-  placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
+  // ══════════════════════════════════════════════════════════════════
+  // مسار التحويل البنكي — كل خطوة لها مهلة صريحة، ولا حجز بلا طلب فعلي
+  // ══════════════════════════════════════════════════════════════════
 
-  const { error: uploadError } = await supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
-    contentType: receiptFile.type,
-    upsert: false
-  });
-  if (uploadError) {
-    const errMsg = uploadError.message || JSON.stringify(uploadError);
-    console.error('[RAIZEY] Storage upload error:', uploadError);
-    devWarn('[RAIZEY] Storage upload error:', errMsg);
-    errorBox.textContent = 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.';
+  // إنهاء موحّد للفشل: يُرجع الزر لحالته دائماً (لا تعليق أبداً)
+  const failOrder = (message, opts) => {
+    const o = opts || {};
+    errorBox.style.color = 'var(--danger)';
+    errorBox.textContent = message;
+    if (o.support && window.__raizeyShowSupport) {
+      try { window.__raizeyShowSupport(o.support); } catch (e) {}
+    }
+    if (o.fraud && window.__raizeyLogFraud) {
+      try { window.__raizeyLogFraud(o.fraud, o.fraudExtra || {}); } catch (e) {}
+    }
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+  };
+
+  // ترجمة أخطاء القاعدة إلى رسائل واضحة للعميل
+  const failFromError = (err) => {
+    const msg = (err && (err.message || err.hint || err.details)) || String(err);
+    devWarn('[RAIZEY] bank order error:', msg);
+
+    if (err && err.isTimeout) {
+      failOrder('تعذّر إكمال الطلب — الاتصال بطيء أو متوقف. لم يُسجّل أي طلب ورقم عمليتك ما زال متاحاً؛ تحقق من الشبكة ثم أعد المحاولة.',
+        { support: 'انقطاع اتصال أثناء تسجيل الطلب' });
+      return;
+    }
+    if (msg.includes('duplicate_transaction_ref')) {
+      failOrder('رقم العملية هذا تم استخدامه من قبل في طلب آخر!',
+        { support: 'رقم العملية مستخدم من قبل', fraud: 'duplicate_transaction_ref' });
+      return;
+    }
+    if (msg.includes('duplicate_receipt_image')) {
+      failOrder('صورة هذا الإيصال تم استخدامها من قبل في طلب آخر!',
+        { support: 'صورة الإيصال مستخدمة من قبل', fraud: 'duplicate_receipt_image' });
+      return;
+    }
+    if (msg.includes('receipt_rejected')) {
+      failOrder('تم رفض هذا الإيصال من الفحص الذكي. راجع صورة الإشعار وأعد المحاولة.',
+        { support: 'تم رفض الإيصال من الفحص الذكي', fraud: 'receipt_rejected',
+          fraudExtra: { scan_message: scanResult && scanResult.message } });
+      return;
+    }
+    if (msg.includes('coupon_already_used') || msg.includes('coupon_invalid') || msg.includes('coupon_min_order')) {
+      failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل. أزل الكود وأعد المحاولة.');
+      return;
+    }
+    failOrder(getFriendlyError(msg),
+      { support: 'خطأ تقني أثناء تسجيل الطلب', fraud: 'technical_failure', fraudExtra: { raw_error: msg } });
+  };
+
+  // ── (1) رفع صورة الإيصال — بمهلة صريحة وداخل try/catch ──
+  placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
+  const fileExt  = (receiptFile.name.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
+
+  try {
+    const { error: uploadError } = await withNetTimeout(
+      supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
+        contentType: receiptFile.type,
+        upsert: false
+      }),
+      NET_TIMEOUT_MS.upload, 'receipt_upload'
+    );
+    if (uploadError) throw uploadError;
+  } catch (err) {
+    devWarn('[RAIZEY] Storage upload error:', (err && err.message) || err);
+    failOrder(err && err.isTimeout
+      ? 'تعذّر رفع صورة الإيصال — الاتصال بطيء أو متوقف. تحقق من الشبكة ثم اضغط "تأكيد الدفع" مجدداً (رقم عمليتك ما زال متاحاً).'
+      : 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.');
     return;
   }
 
-  // ── الحجز الذرّي للإيصال: الحاجز الحقيقي ضد التكرار (لا يمكن تجاوزه من المتصفح) ──
+  // ── (2) رابط موقّع للإيصال (ليظهر للإدارة) — غير حرج، فشله لا يوقف الطلب ──
+  let receiptUrl = null;
+  try {
+    const { data: signed } = await withNetTimeout(
+      supabaseClient.storage.from('receipts').createSignedUrl(filePath, 60 * 60 * 24 * 30),
+      NET_TIMEOUT_MS.signUrl, 'receipt_signed_url'
+    );
+    receiptUrl = signed ? signed.signedUrl : null;
+  } catch (e) {
+    devWarn('[RAIZEY] signed url skipped:', (e && e.message) || e);
+  }
+
+  // ── (3) الطلب كامل في معاملة واحدة ذرّية ──
+  // حجز رقم العملية + استهلاك الكوبون + إدخال صفوف الطلب تحدث كلها معاً
+  // داخل القاعدة: إما تنجح جميعها أو ترجع جميعها (ROLLBACK). لذلك لم يعد
+  // ممكناً أن يُقفل رقم العملية بينما لا يوجد طلب مكتمل.
+  placeOrderBtn.textContent = 'جارِ تسجيل طلبك...';
+
+  const bankItems = cart.map(item => ({
+    product_id:   item.product_id,
+    option_id:    item.selected_option ? item.selected_option.id : null,
+    quantity:     (item.quantity && item.quantity > 0) ? item.quantity : 1,
+    field_values: item.field_values || {},
+    field_labels: item.field_labels || {}
+  }));
+
+  const couponCode = appliedCoupon
+    ? document.getElementById('couponInput').value.trim().toUpperCase()
+    : null;
+
+  const receiptPayload = {
+    tx_ref:            savedTxRef,
+    receipt_hash:      receiptHash,
+    receipt_path:      filePath,
+    receipt_url:       receiptUrl,
+    provider:          scanResult.provider || null,
+    payment_method_id: selectedMethodId,
+    amount_detected:   scanResult.extracted ? scanResult.extracted.amount : null,
+    tx_ref_ocr:        scanResult.extracted ? scanResult.extracted.txRef : null,
+    ocr_status:        scanResult.ocrStatus || 'needs_review',
+    ocr_confidence:    scanResult.confidence ?? null,
+    risk_flags:        scanResult.riskFlags || [],
+    ocr_data: Object.assign({}, scanResult.extracted || {}, {
+      engine_version:  scanResult.version || null,
+      engine_source:   scanResult.source || 'browser',
+      language:        scanResult.language || null,
+      provider_name:   scanResult.providerName || null,
+      passes:          scanResult.passes || 0,
+      text_length:     scanResult.textLength || 0,
+      ref_verified:    !!scanResult.refVerified,
+      amount_verified: !!scanResult.amountVerified,
+      decision:        scanResult.decision || null,
+      scan_message:    scanResult.message || null
+    })
+  };
+
+  const finishSuccess = (rows) => {
+    const list = Array.isArray(rows) ? rows : [];
+    const lastId = list.length ? list[list.length - 1].id : null;
+    localStorage.removeItem('raizey_store_cart');
+    window.location.href = lastId
+      ? `receipt.html?order_id=${lastId}`
+      : 'my-orders.html';
+  };
+
+  let needsLegacyPath = false;
+  try {
+    const { data, error } = await withNetTimeout(
+      supabaseClient.rpc('create_bank_orders_bulk', {
+        p_items:       bankItems,
+        p_receipt:     receiptPayload,
+        p_coupon_code: couponCode
+      }),
+      NET_TIMEOUT_MS.rpc, 'create_bank_orders'
+    );
+    if (error) throw error;
+    finishSuccess(data);
+    return;
+  } catch (err) {
+    const msg  = (err && (err.message || err.hint || err.details)) || String(err);
+    const code = (err && err.code) || '';
+    // الدالة الذرّية غير منشورة بعد (لم يُشغّل supabase-critical-fixes-6.sql)
+    needsLegacyPath = code === 'PGRST202' ||
+      (/create_bank_orders_bulk/i.test(msg) &&
+       /(does not exist|could not find|schema cache)/i.test(msg));
+    if (!needsLegacyPath) { failFromError(err); return; }
+    devWarn('[RAIZEY] create_bank_orders_bulk missing — using legacy path. Run supabase-critical-fixes-6.sql');
+  }
+
+  // ── (4) مسار احتياطي مؤقت: يعمل فقط قبل تشغيل supabase-critical-fixes-6.sql ──
+  // ملاحظة: هذا المسار خطوتان (حجز ثم إدخال) وهو سبب "قفل رقم العملية"
+  // القديم؛ يبقى هنا فقط لضمان عمل المتجر حتى تُنشر الدالة الذرّية.
   placeOrderBtn.textContent = 'جارِ تسجيل الإيصال...';
   let receiptId = null;
   try {
-    const { data: claimData, error: claimErr } = await supabaseClient.rpc('claim_payment_receipt', {
-      p_purpose:           'order',
-      p_tx_ref:             savedTxRef,
-      p_receipt_hash:       receiptHash,
-      p_receipt_path:       filePath,
-      p_provider:           scanResult.provider || null,
-      p_payment_method_id:  selectedMethodId,
-      p_amount_expected:    currentTotal(),
-      p_amount_detected:    scanResult.extracted ? scanResult.extracted.amount : null,
-      p_tx_ref_ocr:         scanResult.extracted ? scanResult.extracted.txRef : null,
-      p_ocr_status:         scanResult.ocrStatus || 'needs_review',
-      p_ocr_confidence:     scanResult.confidence ?? null,
-      p_risk_flags:         scanResult.riskFlags || [],
-      p_ocr_data:           Object.assign({}, scanResult.extracted || {}, {
-        engine_version:  scanResult.version || null,
-        language:        scanResult.language || null,
-        provider_name:   scanResult.providerName || null,
-        passes:          scanResult.passes || 0,
-        text_length:     scanResult.textLength || 0,
-        ref_verified:    !!scanResult.refVerified,
-        amount_verified: !!scanResult.amountVerified,
-        decision:        scanResult.decision || null,
-        scan_message:    scanResult.message || null
-      })
-    });
+    const { data: claimData, error: claimErr } = await withNetTimeout(
+      supabaseClient.rpc('claim_payment_receipt', {
+        p_purpose:           'order',
+        p_tx_ref:             savedTxRef,
+        p_receipt_hash:       receiptHash,
+        p_receipt_path:       filePath,
+        p_provider:           receiptPayload.provider,
+        p_payment_method_id:  selectedMethodId,
+        p_amount_expected:    currentTotal(),
+        p_amount_detected:    receiptPayload.amount_detected,
+        p_tx_ref_ocr:         receiptPayload.tx_ref_ocr,
+        p_ocr_status:         receiptPayload.ocr_status,
+        p_ocr_confidence:     receiptPayload.ocr_confidence,
+        p_risk_flags:         receiptPayload.risk_flags,
+        p_ocr_data:           receiptPayload.ocr_data
+      }),
+      NET_TIMEOUT_MS.rpc, 'claim_receipt'
+    );
     if (claimErr) throw claimErr;
     receiptId = claimData && claimData.length ? claimData[0].id : null;
     if (!receiptId) throw new Error('receipt_claim_failed');
   } catch (err) {
-    const msg = err.message || String(err);
-    devWarn('[RAIZEY] claim_payment_receipt error:', msg);
-    errorBox.style.color = 'var(--danger)';
-    if (msg.includes('duplicate_transaction_ref')) {
-      errorBox.textContent = 'رقم العملية هذا تم استخدامه من قبل في طلب آخر!';
-      logFraudAttempt('duplicate_transaction_ref');
-      showSupportButton('رقم العملية مستخدم من قبل');
-    } else if (msg.includes('duplicate_receipt_image')) {
-      errorBox.textContent = 'صورة هذا الإيصال تم استخدامها من قبل في طلب آخر!';
-      logFraudAttempt('duplicate_receipt_image');
-      showSupportButton('صورة الإيصال مستخدمة من قبل');
-    } else if (msg.includes('receipt_rejected')) {
-      errorBox.textContent = 'تم رفض هذا الإيصال من الفحص الذكي. راجع صورة الإشعار وأعد المحاولة.';
-      logFraudAttempt('receipt_rejected', { scan_message: scanResult && scanResult.message });
-      showSupportButton('تم رفض الإيصال من الفحص الذكي');
-    } else {
-      errorBox.textContent = getFriendlyError(msg);
-      logFraudAttempt('technical_failure', { raw_error: msg });
-      showSupportButton('خطأ تقني أثناء تسجيل الإيصال');
-    }
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    failFromError(err);
     return;
   }
 
   try {
-    let lastInsertedOrderId = null;
-
-    // ── استخدام الكوبون ذرياً (بعد نجاح حجز الإيصال، قبل إدخال الطلبات) ──
-    if (appliedCoupon) {
-      const couponCode = document.getElementById('couponInput').value.trim().toUpperCase();
-      const { data: couponAtomicData, error: couponAtomicErr } = await supabaseClient.rpc('use_coupon_atomic', {
-        p_code: couponCode,
-        p_order_total: currentTotal()
-      });
+    if (appliedCoupon && couponCode) {
+      const { data: couponAtomicData, error: couponAtomicErr } = await withNetTimeout(
+        supabaseClient.rpc('use_coupon_atomic', {
+          p_code: couponCode,
+          p_order_total: currentTotal()
+        }),
+        NET_TIMEOUT_MS.rpc, 'use_coupon'
+      );
       if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-        errorBox.textContent = 'انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.';
-        placeOrderBtn.disabled = false;
-        placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+        failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.');
         return;
       }
     }
@@ -1064,44 +1247,22 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         payment_type:          'bank',
         payment_method_id:     selectedMethodId,
         receipt_id:            receiptId,
+        receipt_url:           receiptUrl,
         status:                'pending_review'
       };
 
-      for (let i = 0; i < qty; i++) {
-        ordersToInsert.push({ ...baseRow });
-      }
+      for (let i = 0; i < qty; i++) ordersToInsert.push({ ...baseRow });
     }
 
-    const { data: insertedOrders, error: orderError } = await supabaseClient
-      .from('orders')
-      .insert(ordersToInsert)
-      .select('id');
+    const { data: insertedOrders, error: orderError } = await withNetTimeout(
+      supabaseClient.from('orders').insert(ordersToInsert).select('id'),
+      NET_TIMEOUT_MS.rpc, 'insert_orders'
+    );
+    if (orderError) throw orderError;
 
-    if (orderError) {
-      devWarn('[RAIZEY] Order insert error:', orderError.message);
-      errorBox.style.color = 'var(--danger)';
-      errorBox.textContent = getFriendlyError(orderError.message);
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-      return;
-    }
-
-    if (insertedOrders && insertedOrders.length > 0) {
-      lastInsertedOrderId = insertedOrders[insertedOrders.length - 1].id;
-    }
-
-    localStorage.removeItem('raizey_store_cart');
-
-    window.location.href = lastInsertedOrderId
-      ? `receipt.html?order_id=${lastInsertedOrderId}`
-      : 'my-orders.html';
+    finishSuccess(insertedOrders);
   } catch (err) {
-    const errMsg = err.message || String(err);
-    devWarn('[RAIZEY] handlePlaceOrder error:', errMsg);
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = getFriendlyError(errMsg);
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    failFromError(err);
   }
 }
 

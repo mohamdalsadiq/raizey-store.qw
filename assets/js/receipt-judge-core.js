@@ -42,7 +42,13 @@
     sharpDimension:    2400,   // بُعد مرحلة الأرقام (تكبير أكبر)
     amountTolerance:   0.01,   // 1%
     amountMinAbsolute: 2,      // أو 2 جنيه، أيهما أكبر
-    minTextForReject:  60,     // أقل من ذلك لا يصح الرفض بحجة "ليست إيصالاً"
+    minTextForReject:  60,     // أقل من ذلك لا يصح الرفض بحجة "ليست إيصالاً" (قراءة المتصفح)
+    // قراءة موثوقة (Gemini على السيرفر): الحد الأدنى للنص لا معنى له هنا.
+    // Tesseract في المتصفح قد يقرأ نصاً قصيراً من إيصال حقيقي ضبابي، لذلك
+    // كان شرط 60 حرفاً ضرورياً حينها. أما القراءة من السيرفر فدقيقة جداً:
+    // إذا لم تُرجِع أي مفردة من مفردات الإشعارات ولا اسم مزوّد فالصورة
+    // فعلاً ليست إشعار تحويل ⇒ رفض فوري بلا حد أدنى للطول.
+    minTextForTrustedReject: 1,
     staleReceiptDays:  10      // إشعار أقدم من ذلك → مراجعة يدوية (ليس رفضاً)
   };
 
@@ -784,7 +790,7 @@
 
   // ═══════════════════════════════════════════════════════════════════
   // 10) بناء السياق من النصوص المقروءة + محرك القرار
-  // ═══════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════���═════════════
   function buildContext(texts, options) {
     const joined = texts.map(t => normalizeText(t)).join(' \n ');
     const lines = toLines(texts.join('\n'));
@@ -830,7 +836,13 @@
       (refInfo.labelledValue && amountList.length > 0);
 
     if (!looksLikeReceipt) {
-      if (joined.length >= CONFIG.minTextForReject && fieldHits.hits === 0 && !provider) {
+      // مصدر النص موثوق (قراءة السيرفر عبر Gemini) ⇒ لا حد أدنى لطول النص
+      // قبل الرفض. صورة لا تحتوي أي مفردة إشعار ولا مزوّداً ليست إيصالاً.
+      const rejectFloor = (options.trustedOcr || options.ocrSource === 'server')
+        ? CONFIG.minTextForTrustedReject
+        : CONFIG.minTextForReject;
+
+      if (joined.length >= rejectFloor && fieldHits.hits === 0 && !provider) {
         // النص واضح وطويل ولا يحتوي أي مفردة من إشعارات التحويل بأي من
         // اللغتين → الصورة فعلاً ليست إيصالاً
         result.decision = 'reject';
