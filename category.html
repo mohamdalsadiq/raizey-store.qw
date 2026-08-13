@@ -428,10 +428,16 @@ function attachEvents() {
       return;
     }
     
-    let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
-    cart.push(buildCartItem(fieldValues));
-    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
-    updateCartBadgeGlobal();
+    // ── شراء مباشر: لا يُضاف للسلة إطلاقاً ولا يُدمج معها ──
+    try {
+      sessionStorage.setItem('raizey_direct_buy', JSON.stringify({
+        created_at: Date.now(),
+        items: [buildCartItem(fieldValues)]
+      }));
+    } catch (e) {
+      errorBox.textContent = 'تعذّر بدء الشراء المباشر. حدّث الصفحة وحاول مجدداً.';
+      return;
+    }
 
     buyNowBtn.disabled = true;
     buyNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ التوجيه للدفع...';
