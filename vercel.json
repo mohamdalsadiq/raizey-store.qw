@@ -1,8 +1,13 @@
 {
   "framework": null,
-  "buildCommand": "",
-  "outputDirectory": ".",
   "trailingSlash": false,
+  "functions": {
+    "api/verify-receipt.js": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "includeFiles": "assets/js/receipt-judge-core.js"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

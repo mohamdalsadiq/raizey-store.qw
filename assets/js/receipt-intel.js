@@ -243,7 +243,7 @@
       .replace(/[ىئي]/g, 'ي')
       .replace(/ة/g, 'ه')
       .replace(/ؤ/g, 'و')
-      .replace(/\u066C/g, ',')                   // فاصلة الآلاف العربية
+      .replace(/\u066C/g, ',')                   // فاصلة الآلاف العر��ية
       .replace(/\u066B/g, '.')                   // الفاصلة العشرية العربية
       .replace(/[\u060C;؛]/g, ' ')
       .replace(/[|_\u200f\u200e\u202a-\u202e]/g, ' ')
@@ -1022,7 +1022,7 @@
     };
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // ��══════════════════════════════════════════════════════════════════
   // 9) المطابقة
   // ═══════════════════════════════════════════════════════════════════
   function amountVariants(target) {
@@ -1351,7 +1351,7 @@
       if (needsManual) {
         result.message = 'تاريخ الإشعار غير متوافق مع وقت الطلب، لذلك سيُراجع طلبك يدوياً من الإدارة.';
       } else if (result.amountVerified && !result.refVerified) {
-        result.message = 'المبلغ مطابق تماماً، لكن لم نتمكن من تأكيد رقم العملية من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
+        result.message = 'المبلغ مطابق تماماً، لكن لم نتمكن من ��أكيد رقم العملية من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
       } else if (result.refVerified && !result.amountVerified) {
         result.message = 'رقم العملية مطابق، لكن لم نتمكن من قراءة المبلغ بدقة من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
       } else {
@@ -1433,6 +1433,16 @@
         result.ocrStatus = 'rejected';
         result.message = basic.message;
         result.riskFlags.push('invalid_file');
+        return result;
+      }
+      // صالح لكن تعذّر فك ترميزه/أبعاده صغيرة ⇒ مراجعة يدوية فوراً (Fail-Closed)
+      // لا نُشغّل OCR على ملف لا يستطيع المتصفح فك ترميزه أصلاً.
+      if (basic && basic.needsManualReview) {
+        result.decision = 'review';
+        result.ocrStatus = 'needs_review';
+        result.message = basic.message ||
+          'تعذّر معاينة الصورة في هذا المتصفح. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب.';
+        result.riskFlags.push('file_decode_' + (basic.reason || 'unknown'));
         return result;
       }
     }

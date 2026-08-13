@@ -297,11 +297,26 @@ async function validateReceiptImage(file) {
   }
 
   // 1. فحص نوع MIME + الامتداد
-  const allowedMime = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+  // ملاحظة: بعض هواتف أندرويد/آيفون ترسل الصورة بامتداد .jpg ونوع فارغ أو
+  // image/heic. لذلك نقبل امتداداً معروفاً مع نوع فارغ، ونقبل HEIC/HEIF
+  // (الخادم يقرأها بلا مشكلة) — بدل رفض العميل كلياً.
+  const allowedMime = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+    'image/heic', 'image/heif', 'image/heic-sequence'
+  ];
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
   const fileExt     = (file.name.split('.').pop() || '').toLowerCase();
+  const mime        = String(file.type || '').toLowerCase().split(';')[0].trim();
 
-  if (!allowedMime.includes(file.type.toLowerCase()) || !allowedExts.includes(fileExt)) {
+  const mimeOk = mime ? allowedMime.includes(mime) : false;
+  const extOk  = allowedExts.includes(fileExt);
+
+  // نرفض فقط إذا فشل الاثنان (لا نوع معروف ولا امتداد معروف)
+  if (!mimeOk && !extOk) {
+    return { valid: false, message: 'نوع الملف غير مدعوم. استخدم JPG أو PNG أو WEBP فقط.' };
+  }
+  // نوع صريح غير صورة (PDF مثلاً) يُرفض حتى لو الامتداد مضلِّل
+  if (mime && !mime.startsWith('image/')) {
     return { valid: false, message: 'نوع الملف غير مدعوم. استخدم JPG أو PNG أو WEBP فقط.' };
   }
 
@@ -315,20 +330,50 @@ async function validateReceiptImage(file) {
     return { valid: false, message: 'الصورة صغيرة جداً. تأكد من رفع صورة واضحة للإيصال.' };
   }
 
-  // 4. تحقق من أن الملف صورة حقيقية قابلة للتحميل
-  const isValidImage = await new Promise(resolve => {
+  // 4. محاولة فك ترميز الصورة في المتصفح — تشخيصية فقط (Fail-Open)
+  //    فشل هذه الخطوة لا يعني أن الملف مزيّف: قد يكون HEIC غير مدعوم في هذا
+  //    المتصفح، أو صورة ضخمة الأبعاد على جهاز ضعيف، أو خطأ فك ترميز عابر.
+  //    قواعد المشروع: خطأ تقني ⇒ مراجعة يدوية، لا منع العميل من إكمال الطلب.
+  const decode = await new Promise(resolve => {
+    let done = false;
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload  = () => { URL.revokeObjectURL(url); resolve(true);  };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish({ ok: false, reason: 'decode_timeout' }), 7000);
+    img.onload  = () => finish({ ok: true, width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => finish({ ok: false, reason: 'decode_error' });
     img.src = url;
   });
 
-  if (!isValidImage) {
-    return { valid: false, message: 'الملف المرفوع ليس صورة صالحة. يرجى التحقق من الملف وإعادة المحاولة.' };
+  if (!decode.ok) {
+    // لا نُرجع valid:false — نُرجع صلاحية مع علامة تستدعي مراجعة يدوية
+    return {
+      valid: true,
+      needsManualReview: true,
+      reason: decode.reason,
+      message: 'تعذّر معاينة الصورة في هذا المتصفح. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب.'
+    };
   }
 
-  return { valid: true };
+  // أبعاد صغيرة جداً: تحذير يستدعي مراجعة يدوية، وليس رفضاً
+  if (decode.width < 200 || decode.height < 200) {
+    return {
+      valid: true,
+      needsManualReview: true,
+      reason: 'dimensions_too_small',
+      width: decode.width,
+      height: decode.height,
+      message: 'أبعاد الصورة صغيرة وقد تكون غير واضحة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة.'
+    };
+  }
+
+  return { valid: true, width: decode.width, height: decode.height };
 }
 
 // =========================================================
