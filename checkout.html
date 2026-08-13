@@ -233,9 +233,9 @@
         <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
         <div style="display:flex; gap:8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
-          <button type="button" id="saveTxRefBtn">حفظ</button>
+          <button type="button" id="saveTxRefBtn">تحقق</button>
         </div>
-        <div class="field-hint">اكتب رقم العملية كما ورد في إشعار التحويل، ثم اضغط "حفظ" — بعدها تظهر لك خطوة رفع صورة الإشعار.</div>
+        <div class="field-hint">اكتب رقم العملية كما ورد في إشعار التحويل، ثم اضغط "تحقق" — لن تظهر خطوة رفع الصورة إلا بعد نجاح التحقق.</div>
         <div id="txRefMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
       </div>
 
@@ -251,6 +251,15 @@
         <div class="field-hint" style="margin-top:6px;">
           يقرأ الفحص الذكي الإشعارات بالعربية والإنجليزية (بنكك / أوكاش / فوري / كاشي)، والوضع الليلي والنهاري.
           الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
+        </div>
+        <div id="extraReceiptWrap" style="display:none; margin-top:10px;">
+          <label style="display:block; font-size:12.5px; font-weight:700; margin-bottom:6px;">
+            صورة إضافية للإشعار (اختياري — لإكمال البيانات الناقصة)
+          </label>
+          <div class="file-upload" id="fileUploadBox2">
+            <i class="fas fa-paperclip"></i> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)
+            <input type="file" id="receiptInput2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+          </div>
         </div>
         <div id="scanStatus" style="font-size:12px; margin-top:8px; font-weight:600; color:var(--text-muted);"></div>
         <div id="scanReport" style="display:none; margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.7;"></div>
@@ -284,6 +293,7 @@ let receiptFile = null;
 let appliedCoupon = null;
 let savedTxRef = null;      // رقم العملية بعد الحفظ
 let scanResult = null;      // نتيجة الفحص الذكي للصورة الحالية
+let isDirectBuy = false;    // شراء مباشر (زر "اشترِ الآن") — لا علاقة له بالسلة
 let selectedMethodAccount = null;  // رقم حساب الوسيلة المختارة (للتحقق من جهة الإيداع)
 
 function safeFormatSDG(val) {
@@ -318,10 +328,27 @@ function withNetTimeout(promise, ms, tag) {
 
 
 async function init() {
+  // ── وضع الشراء المباشر: منفصل تماماً عن سلة المشتريات ولا يُدمج معها ──
   try {
-    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
-  } catch (e) {
-    cart = [];
+    const raw = sessionStorage.getItem('raizey_direct_buy');
+    if (raw) {
+      const d = JSON.parse(raw);
+      const fresh = d && d.created_at && (Date.now() - d.created_at) < 30 * 60 * 1000;
+      if (fresh && Array.isArray(d.items) && d.items.length) {
+        cart = d.items;
+        isDirectBuy = true;
+      } else {
+        sessionStorage.removeItem('raizey_direct_buy');
+      }
+    }
+  } catch (e) { sessionStorage.removeItem('raizey_direct_buy'); }
+
+  if (!isDirectBuy) {
+    try {
+      cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+    } catch (e) {
+      cart = [];
+    }
   }
 
   if (cart.length === 0) {
@@ -576,6 +603,14 @@ function attachCheckoutEvents(canUseWallet) {
     receiptFile = null;
     scanResult  = null;
     fileInput.value = '';
+    try {
+      const _w = document.getElementById('extraReceiptWrap');
+      const _i2 = document.getElementById('receiptInput2');
+      const _b2 = document.getElementById('fileUploadBox2');
+      if (_i2) _i2.value = '';
+      if (_w) _w.style.display = 'none';
+      if (_b2) _b2.innerHTML = `<i class="fas fa-paperclip"></i> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)`;
+    } catch (e) {}
     fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
     fileBox.classList.remove('has-file');
     hideSupportButton();
@@ -595,10 +630,10 @@ function attachCheckoutEvents(canUseWallet) {
       savedTxRef = null;
       receiptStep.style.display = 'none';
       resetReceiptSelection();
-      saveRefBtn.textContent = 'حفظ';
+      saveRefBtn.textContent = 'تحقق';
       saveRefBtn.dataset.mode = 'save';
       refMsg.style.color = 'var(--text-muted)';
-      refMsg.textContent = 'عدّل رقم العملية ثم اضغط "حفظ" لتأكيده مجدداً.';
+      refMsg.textContent = 'عدّل رقم العملية ثم اضغط "تحقق" لتأكيده مجدداً.';
       document.getElementById('formError').textContent = '';
       return;
     }
@@ -628,8 +663,9 @@ function attachCheckoutEvents(canUseWallet) {
         supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: raw }),
         NET_TIMEOUT_MS.rpc, 'check_tx_ref'
       );
-      // الدالة غير منشورة بعد أو تعذّر الوصول ⇒ نكمل بصمت (الحجز الذرّي يحمينا)
-      if (!availErr && availData && availData.length && availData[0].available === false) {
+      if (availErr) throw availErr;
+      if (!availData || !availData.length) throw new Error('check_tx_ref_empty');
+      if (availData[0].available === false) {
         saveRefBtn.disabled = false;
         saveRefBtn.textContent = prevBtnText;
         refMsg.style.color = 'var(--danger)';
@@ -642,8 +678,15 @@ function attachCheckoutEvents(canUseWallet) {
         return;
       }
     } catch (e) {
-      // مهلة/انقطاع: لا نمنع العميل — الحجز الذرّي عند الإرسال هو الحاجز الحقيقي
-      devWarn('[RAIZEY] check_tx_ref_available skipped:', (e && e.message) || e);
+      devWarn('[RAIZEY] check_tx_ref_available failed:', (e && e.message) || e);
+      saveRefBtn.disabled = false;
+      saveRefBtn.textContent = prevBtnText;
+      refMsg.style.color = 'var(--danger)';
+      refMsg.textContent = 'تعذّر التحقق من رقم العملية (اتصال ضعيف). حاول مرة أخرى قبل رفع الصورة.';
+      savedTxRef = null;
+      receiptStep.style.display = 'none';
+      resetReceiptSelection();
+      return;
     }
     saveRefBtn.disabled = false;
     saveRefBtn.textContent = prevBtnText;
@@ -653,7 +696,7 @@ function attachCheckoutEvents(canUseWallet) {
     saveRefBtn.textContent = 'تعديل';
     saveRefBtn.dataset.mode = 'edit';
     refMsg.style.color = 'var(--primary)';
-    refMsg.textContent = 'تم حفظ رقم العملية ولا يمكن تعديله إلا بالضغط على "تعديل". ارفع الآن صورة إشعار التحويل لمطابقتها.';
+    refMsg.textContent = 'تم التحقق من رقم العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
     receiptStep.style.display = 'block';
     document.getElementById('formError').textContent = '';
   };
@@ -732,9 +775,15 @@ function attachCheckoutEvents(canUseWallet) {
     'gemini_not_configured', 'server_ocr_failed', 'server_ocr_timeout',
     'judge_error', 'missing_image', 'image_too_large', 'method_not_allowed'
   ];
-  async function serverVerify(file, opts) {
+  async function serverVerify(file, opts, extraFile) {
     const shrunk = await compressForServer(file);
     const base64 = shrunk.base64 || await fileToBase64(file);
+    let base64b = null, mimeB = null;
+    if (extraFile) {
+      const sh2 = await compressForServer(extraFile);
+      base64b = sh2.base64 || await fileToBase64(extraFile);
+      mimeB = sh2.mimeType || extraFile.type || 'image/jpeg';
+    }
     const controller = new AbortController();
     // مهلة أطول من مهلة Gemini على السيرفر (24 ث) حتى لا نُلغي طلباً كان سينجح
     const timer = setTimeout(() => controller.abort(), 32000);
@@ -745,6 +794,8 @@ function attachCheckoutEvents(canUseWallet) {
         body: JSON.stringify({
           imageBase64: base64,
           mimeType: shrunk.mimeType || file.type || 'image/jpeg',
+          imageBase64Extra: base64b,
+          mimeTypeExtra: mimeB,
           expectedAmount: opts.expectedAmount,
           manualRef: opts.manualRef,
           expectedAccount: opts.expectedAccount
@@ -767,16 +818,33 @@ function attachCheckoutEvents(canUseWallet) {
     }
   }
 
+  let extraFile = null;
+  const extraWrap  = document.getElementById('extraReceiptWrap');
+  const fileBox2   = document.getElementById('fileUploadBox2');
+  const fileInput2 = document.getElementById('receiptInput2');
+
+  fileBox2.onclick = () => { if (savedTxRef && fileInput.files.length) fileInput2.click(); };
+  fileInput2.onchange = () => {
+    if (!fileInput2.files.length) return;
+    extraFile = fileInput2.files[0];
+    fileBox2.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> صورة إضافية: ${escapeHtml(extraFile.name)}`;
+    runScan(fileInput.files[0], extraFile);
+  };
+
   fileBox.onclick = () => { if (savedTxRef) fileInput.click(); };
   fileInput.onchange = async () => {
     if (!fileInput.files.length) return;
     if (!savedTxRef) {
-      document.getElementById('formError').textContent = 'احفظ رقم العملية أولاً قبل رفع الصورة.';
+      document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع الصورة.';
       fileInput.value = '';
       return;
     }
+    extraFile = null;
+    await runScan(fileInput.files[0], null);
+  };
 
-    const file = fileInput.files[0];
+  async function runScan(file, secondFile) {
+    if (!file) return;
     const statusEl = document.getElementById('scanStatus');
     const reportEl = document.getElementById('scanReport');
 
@@ -819,7 +887,7 @@ function attachCheckoutEvents(canUseWallet) {
         statusEl.style.color = 'var(--text-muted)';
         statusEl.textContent = 'جارِ فحص الصورة...';
         try {
-          const serverResult = await serverVerify(file, scanOpts);
+          const serverResult = await serverVerify(file, scanOpts, secondFile);
           return serverResult;
         } catch (serverErr) {
           console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:',
@@ -880,28 +948,6 @@ function attachCheckoutEvents(canUseWallet) {
       return;
     }
 
-    // فشل تقني في الفحص (شبكة/محرك/مهلة) انتهى بمراجعة يدوية:
-    // العميل يكمل طلبه، ونعرض زر الدعم أيضاً في حال رغب بمساعدة فورية.
-    const TECH_REVIEW_FLAGS = [
-      'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
-      'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
-      'ui_scan_timeout', 'engine_missing',
-      // فشل فك ترميز الصورة في المتصفح — مراجعة يدوية، لا رفض (Fail-Closed)
-      'file_decode_decode_error', 'file_decode_decode_timeout',
-      'file_decode_dimensions_too_small', 'file_decode_unknown', 'file_check_timeout',
-      // أعلام السيرفر
-      'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
-      'judge_error', 'missing_image', 'image_too_large'
-    ];
-    const isTechReview = analysis.decision === 'review' &&
-      (analysis.riskFlags || []).some(f => TECH_REVIEW_FLAGS.includes(f));
-    if (isTechReview) {
-      showSupportButton('تعذّر إكمال الفحص الآلي — مراجعة يدوية');
-      logFraudAttempt('technical_failure', { risk_flags: analysis.riskFlags });
-    } else {
-      hideSupportButton();
-    }
-
     receiptFile = file;
     scanResult  = analysis;
     fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(file.name)}`;
@@ -915,26 +961,105 @@ function attachCheckoutEvents(canUseWallet) {
     if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
     if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
     rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
-    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
-    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مؤكد (مراجعة يدوية)'}`);
+    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
+    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
 
-    const ok = analysis.decision === 'accept';
+    const ok = analysis.decision === 'accept' && analysis.refVerified === true && analysis.amountVerified === true;
+
+    // ── فشل تقني بحت في محرك الفحص (Gemini واقع/مهلة/شبكة) — هذا عطل في
+    // أداتنا نحن، وليس مشكلة في إيصال العميل. لا يجوز أن يوقفه تماماً ولا
+    // أن نطرده لخدمة العملاء يدوياً في كل مرة. الطلب يُسجَّل كـ"قيد
+    // المراجعة اليدوية" (بدون ✓ تلقائي)، ويبقى الحاجز الذري لمنع تكرار
+    // رقم العملية/الصورة فعّالاً كالمعتاد، والأدمن يراجع يدوياً قبل أي
+    // تسليم فعلي — يعني سلاسة للعميل الحقيقي، وصرامة كاملة ضد الاحتيال. ──
+    const TECH_FLAGS = [
+      'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
+      'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
+      'ui_scan_timeout', 'engine_missing',
+      'file_decode_decode_error', 'file_decode_decode_timeout',
+      'file_decode_dimensions_too_small', 'file_decode_unknown', 'file_check_timeout',
+      'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
+      'judge_error', 'missing_image', 'image_too_large'
+    ];
+    const isTechReview = !ok && analysis.decision === 'review' &&
+      (analysis.riskFlags || []).some(f => TECH_FLAGS.includes(f));
+
+    if (isTechReview) {
+      // نُبقي receiptFile و scanResult كما هما ليكمل العميل طلبه بسلاسة —
+      // القرار الفعلي (ocr_status: needs_review) يُحفظ مع الطلب فيراه
+      // الأدمن بوضوح ويتحقق يدوياً قبل التسليم.
+      extraWrap.style.display = 'none';
+      reportEl.style.display = 'block';
+      reportEl.style.borderColor = 'var(--border)';
+      reportEl.innerHTML =
+        `<strong style="color:var(--ink);"><i class="fas fa-clock" style="color:#c98a1f;"></i> تعذّر إكمال الفحص الآلي مؤقتاً</strong><br>` +
+        `تم استلام إيصالك بنجاح وسيُراجع يدوياً من الإدارة قبل تنفيذ الطلب (عادة خلال دقائق). يمكنك إتمام الطلب الآن بدون انتظار.` +
+        `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>`;
+      showSupportButton('تعذّر إكمال الفحص الآلي — الطلب قيد المراجعة اليدوية');
+      logFraudAttempt('technical_review', { risk_flags: analysis.riskFlags });
+      return;
+    }
+
+    hideSupportButton();
+
     reportEl.style.display = 'block';
     reportEl.style.borderColor = ok ? 'var(--primary)' : 'var(--border)';
     reportEl.innerHTML =
       `<strong style="color:${ok ? 'var(--primary)' : 'var(--ink)'};">` +
       `<i class="fas ${ok ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${escapeHtml(analysis.message)}</strong>` +
       `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
-      (ok ? '' : `<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">يمكنك إكمال الطلب الآن — الفحص اليدوي لن يؤخر تسجيل طلبك.</div>`);
-  };
+      (ok ? '' : `<div style="margin-top:8px; color:var(--danger); font-size:12px; font-weight:600;">${escapeHtml(blockHint(analysis))}</div>`);
+
+    // ── صارم: لا يُسمح بإنشاء الطلب إلا بمطابقة رقم العملية والمبلغ معاً،
+    // أو بمسار المراجعة التقنية السلسة أعلاه فقط ──
+    if (!ok) {
+      scanResult = null;
+      receiptFile = null;
+      extraWrap.style.display = 'block';
+      if (!analysis.refVerified) {
+        logFraudAttempt('ref_mismatch_blocked', { risk_flags: analysis.riskFlags, read_ref: analysis.extracted.txRef });
+      } else if (!analysis.amountVerified) {
+        logFraudAttempt('amount_mismatch_blocked', { risk_flags: analysis.riskFlags, read_amount: analysis.extracted.amount });
+      }
+    } else {
+      extraWrap.style.display = 'none';
+    }
+  }
+
+  // رسالة إرشادية دقيقة حسب سبب المنع
+  function blockHint(a) {
+    if (!a.extracted.txRef && !a.extracted.amount)
+      return 'لم نتمكن من قراءة رقم العملية ولا المبلغ من الصورة. ارفع لقطة شاشة كاملة للإشعار (أو الإشعار الأبيض من تطبيق بنكك) يظهر فيها رقم العملية والمبلغ معاً.';
+    if (!a.refVerified && a.extracted.txRef)
+      return `رقم العملية في الصورة (${a.extracted.txRef}) لا يطابق الرقم الذي أدخلته (${savedTxRef}). اضغط "تعديل" وأدخل الرقم الصحيح تماماً كما في الإشعار.`;
+    if (!a.refVerified)
+      return 'لم يظهر رقم العملية في الصورة. ارفع صورة كاملة للإشعار يظهر فيها رقم العملية بوضوح، أو أضف صورة ثانية بالأسفل.';
+    if (!a.amountVerified && a.extracted.amount)
+      return `المبلغ في الإشعار (${safeFormatSDG(a.extracted.amount)} ج.س) لا يطابق المبلغ المطلوب (${safeFormatSDG(currentTotal())} ج.س). حوّل المبلغ الصحيح ثم ارفع الإشعار الجديد.`;
+    if (!a.amountVerified)
+      return 'لم يظهر المبلغ في الصورة. أضف صورة ثانية بالأسفل (الإشعار الأبيض أو لقطة كاملة) يظهر فيها المبلغ بوضوح.';
+    return 'تعذّر إكمال الفحص. أضف صورة ثانية أوضح للإشعار، أو تواصل مع الدعم.';
+  }
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
   document.getElementById('applyCouponBtn').onclick = applyCoupon;
 }
 
+function clearActiveBasket() {
+  if (isDirectBuy) {
+    sessionStorage.removeItem('raizey_direct_buy');
+  } else {
+    localStorage.removeItem('raizey_store_cart');
+  }
+}
+
 window.removeItemFromCheckout = function(cartItemId) {
   cart = cart.filter(item => (item.cart_item_id || item.product_id) !== cartItemId);
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  if (isDirectBuy) {
+    sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at: Date.now(), items: cart }));
+  } else {
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  }
   if (cart.length === 0) {
     window.location.reload();
   } else {
@@ -977,7 +1102,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       if (error) throw error;
 
       const lastOrderId = (rpcData && rpcData.length) ? rpcData[rpcData.length - 1].id : null;
-      localStorage.removeItem('raizey_store_cart');
+      clearActiveBasket();
       window.location.href = lastOrderId
         ? `receipt.html?order_id=${lastOrderId}`
         : 'my-orders.html';
@@ -993,7 +1118,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
   if (!selectedMethodId || !receiptFile || !savedTxRef || !scanResult) {
     if (!selectedMethodId) errorBox.textContent = 'الرجاء اختيار وسيلة التحويل البنكي!';
-    else if (!savedTxRef) errorBox.textContent = 'اكتب رقم العملية واضغط "حفظ" أولاً (الخطوة 1).';
+    else if (!savedTxRef) errorBox.textContent = 'اكتب رقم العملية واضغط "تحقق" أولاً (الخطوة 1).';
     else errorBox.textContent = 'الرجاء رفع صورة الإيصال ليتم فحصها (الخطوة 2).';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
@@ -1151,7 +1276,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   const finishSuccess = (rows) => {
     const list = Array.isArray(rows) ? rows : [];
     const lastId = list.length ? list[list.length - 1].id : null;
-    localStorage.removeItem('raizey_store_cart');
+    clearActiveBasket();
     window.location.href = lastId
       ? `receipt.html?order_id=${lastId}`
       : 'my-orders.html';
