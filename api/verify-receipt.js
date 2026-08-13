@@ -179,6 +179,53 @@ async function callGeminiModel(model, base64Data, mimeType, apiKey) {
   return text;
 }
 
+// ── المرور الثاني (التحكيم): استخراج منظّم بصيغة JSON عند الشك ──
+const JSON_PROMPT =
+  'أنت مدقق إشعارات تحويل بنكي. انظر للصورة وأعد JSON فقط بهذا الشكل بالضبط: ' +
+  '{"transaction_number":"","amount":"","currency":"","status":"","datetime":"","to_account":"","bank":""}. ' +
+  'قواعد صارمة: انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح. ' +
+  'المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم). ' +
+  'إذا لم تكن القيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
+  'ممنوع الاختراع أو الاستنتاج. أعد JSON فقط بلا أي شرح.';
+
+async function callGeminiJson(model, parts, apiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const body = {
+    contents: [{ role: 'user', parts: parts.concat([{ text: JSON_PROMPT }]) }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 1024,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  };
+  const res = await withTimeout(
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body)
+    }),
+    GEMINI_TIMEOUT_MS, 'gemini_json'
+  );
+  if (!res.ok) throw new Error('gemini_json_http_' + res.status);
+  const data = await res.json();
+  const cand = data && data.candidates && data.candidates[0];
+  const ps = cand && cand.content && cand.content.parts;
+  let text = Array.isArray(ps) ? ps.map(x => (x && x.text) || '').join('') : '';
+  text = String(text || '').replace(/^```(?:json)?|```$/g, '').trim();
+  if (!text) throw new Error('gemini_json_empty');
+  return JSON.parse(text);
+}
+
+async function structuredPass(parts, apiKey) {
+  let lastErr = null;
+  for (const model of GEMINI_MODELS) {
+    try { return { data: await callGeminiJson(model, parts, apiKey), model }; }
+    catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('gemini_json_failed');
+}
+
 async function extractTextWithGemini(base64Data, mimeType, apiKey) {
   let lastErr = null;
   for (const model of GEMINI_MODELS) {
@@ -231,7 +278,8 @@ module.exports = async function handler(req, res) {
   }
   body = body || {};
 
-  let { imageBase64, mimeType, expectedAmount, manualRef, expectedAccount } = body;
+  let { imageBase64, mimeType, expectedAmount, manualRef, expectedAccount,
+        imageBase64Extra, mimeTypeExtra } = body;
 
   if (!imageBase64 || typeof imageBase64 !== 'string') {
     res.status(200).json(softReview('missing_image', 'لم تصل بيانات الصورة. حاول رفعها مرة أخرى.'));
@@ -273,12 +321,33 @@ module.exports = async function handler(req, res) {
     trustedOcr: true
   };
 
+  // صورة إضافية اختيارية (الإشعار الأبيض / بقية الشاشة)
+  let extraB64 = null, mtExtra = 'image/jpeg';
+  if (imageBase64Extra && typeof imageBase64Extra === 'string') {
+    let e = imageBase64Extra;
+    const c2 = e.indexOf(',');
+    if (e.slice(0, 5) === 'data:' && c2 !== -1) e = e.slice(c2 + 1);
+    e = e.replace(/\s/g, '');
+    if (e.length && e.length <= MAX_BASE64_CHARS) {
+      extraB64 = e;
+      let m2 = String(mimeTypeExtra || 'image/jpeg').toLowerCase().split(';')[0].trim();
+      if (m2 === 'image/jpg') m2 = 'image/jpeg';
+      mtExtra = ALLOWED_MIME.indexOf(m2) === -1 ? 'image/jpeg' : m2;
+    }
+  }
+
   let rawText = '';
   let usedModel = null;
   try {
     const out = await extractTextWithGemini(imageBase64, mt, apiKey);
     rawText = out.text;
     usedModel = out.model;
+    if (extraB64) {
+      try {
+        const out2 = await extractTextWithGemini(extraB64, mtExtra, apiKey);
+        rawText = rawText + '\n' + out2.text;
+      } catch (e2) { /* الصورة الإضافية اختيارية */ }
+    }
   } catch (err) {
     const tag = String((err && err.message) || 'unknown');
 
@@ -305,8 +374,43 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const ctx = ReceiptJudgeCore.buildContext([rawText], options);
-    const result = ReceiptJudgeCore.judge(ctx, options, ReceiptJudgeCore.blankResult());
+    const imgParts = [{ inline_data: { mime_type: mt, data: imageBase64 } }];
+    if (extraB64) imgParts.push({ inline_data: { mime_type: mtExtra, data: extraB64 } });
+
+    let ctx = ReceiptJudgeCore.buildContext([rawText], options);
+    let result = ReceiptJudgeCore.judge(ctx, options, ReceiptJudgeCore.blankResult());
+
+    // ── المرور الثاني (التحكيم): يعمل فقط عندما لا يكون القرار قبولاً مؤكداً ──
+    // لا يُستخدم للتساهل: مخرجاته نص إضافي يمرّ على نفس محرك القرار الحتمي.
+    const needsArbitration = !(result.decision === 'accept' &&
+                               result.refVerified && result.amountVerified) &&
+                             result.decision !== 'reject';
+    if (needsArbitration) {
+      try {
+        const sp = await structuredPass(imgParts, apiKey);
+        const d = sp.data || {};
+        const lines = [
+          d.bank ? ('البنك: ' + d.bank) : '',
+          d.status ? ('الحالة: ' + d.status) : '',
+          d.transaction_number ? ('رقم العملية: ' + d.transaction_number) : '',
+          d.amount ? ('المبلغ: ' + d.amount + ' ' + (d.currency || '')) : '',
+          d.datetime ? ('التاريخ: ' + d.datetime) : '',
+          d.to_account ? ('إلى حساب: ' + d.to_account) : ''
+        ].filter(Boolean).join('\n');
+        if (lines) {
+          const merged = rawText + '\n' + lines;
+          const ctx2 = ReceiptJudgeCore.buildContext([merged], options);
+          const r2 = ReceiptJudgeCore.judge(ctx2, options, ReceiptJudgeCore.blankResult());
+          r2.passes = 2;
+          r2.arbitration = { model: sp.model, extracted: d };
+          rawText = merged;
+          result = r2;
+        }
+      } catch (e) {
+        result.riskFlags = (result.riskFlags || []).concat(['arbitration_failed']);
+      }
+    }
+
     result.source = 'server';
     result.model = usedModel;
     result.confidence = rawText && rawText.trim().length > 20 ? 90 : null;
