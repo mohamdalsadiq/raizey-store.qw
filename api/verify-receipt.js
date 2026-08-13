@@ -26,7 +26,14 @@ const ReceiptJudgeCore = require('../assets/js/receipt-judge-core.js');
 
 // أول موديل متاح يُستخدَم؛ لو رجع الأول 404/400 (موديل غير متاح لهذا المفتاح)
 // نجرّب التالي تلقائياً بدل أن نسقط كل الفحص لمحرك المتصفح البطيء.
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+// تم التحقق من هذه الموديلات باستدعاء حقيقي بمفتاح المشروع (لا تعتمد على
+// ListModels: هي تُدرِج gemini-2.5-* لكن الاستدعاء يرجع 404
+// "no longer available to new users"). الترتيب: الأسرع والأرخص أولاً.
+const GEMINI_MODELS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.6-flash'
+];
 const GEMINI_TIMEOUT_MS = 24000;
 
 // حد Vercel لجسم الطلب ≈ 4.5MB. base64 أكبر من الأصل بنحو 33%، لذلك نضع
