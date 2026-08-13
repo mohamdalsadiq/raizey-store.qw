@@ -749,40 +749,30 @@
       return { matched: true, conflict: false, checked: true };
     }
 
-    // (ب) بعد تصحيح لبس الأرقام في النص كاملاً
+    // (ب) تصحيح لبس أشكال الأرقام فقط (O/0، I/1 …) — بلا أي تسامح بالمسافة
     const fixedFlat = digitsOnly(fixOcrDigits(flatAll));
     if (manualDigits.length >= 6 && fixedFlat.includes(manualDigits)) {
       return { matched: true, conflict: false, checked: true, fuzzy: true };
     }
 
-    // (ج) تسامح مع خطأ خانة أو خانتين من OCR
-    const all = (refInfo && refInfo.all) ? refInfo.all : [];
-    if (manualDigits.length >= 8) {
-      const maxDist = manualDigits.length >= 12 ? 2 : 1;
-      for (const cand of all) {
-        const cd = digitsOnly(cand);
-        if (!cd) continue;
-        if (Math.abs(cd.length - manualDigits.length) <= 1 && levenshtein(cd, manualDigits) <= maxDist) {
-          return { matched: true, conflict: false, checked: true, fuzzy: true };
-        }
-      }
-      // جزء من الرقم (بداية/نهاية) موجود — قص أو خانة ناقصة
-      const head = manualDigits.slice(0, -1);
-      const tail = manualDigits.slice(1);
-      if (flatDigits.includes(head) || flatDigits.includes(tail)) {
-        return { matched: true, conflict: false, checked: true, fuzzy: true };
-      }
-    }
-
-    // (د) تعارض: الصورة فيها رقم عملية **موسوم بحقله** ويخالف المكتوب تماماً
+    // (ج) صارم: أي رقم عملية مقروء من الصورة يخالف المكتوب = تعارض ورفض.
+    //     لا تسامح Levenshtein ولا مطابقة جزئية (بداية/نهاية) إطلاقاً.
+    const cands = [];
     const labelled = (refInfo && refInfo.labelledAll) ? refInfo.labelledAll : [];
-    for (const cand of labelled) {
-      const cd = digitsOnly(cand);
-      if (cd.length < 6) continue;
-      const dist = levenshtein(cd, manualDigits);
-      const closeLength = Math.abs(cd.length - manualDigits.length) <= 1;
-      if (closeLength && dist <= 2) continue;   // لبس قراءة، ليس تعارضاً
-      return { matched: false, conflict: true, checked: true, ocrRef: cd };
+    const all = (refInfo && refInfo.all) ? refInfo.all : [];
+    for (const c of labelled.concat(all)) {
+      const cd = digitsOnly(c);
+      if (cd.length >= 6) cands.push(cd);
+    }
+    for (const cd of cands) {
+      if (cd === manualDigits) return { matched: true, conflict: false, checked: true };
+    }
+    if (labelled.length) {
+      const cd = digitsOnly(labelled[0]);
+      if (cd.length >= 6) return { matched: false, conflict: true, checked: true, ocrRef: cd };
+    }
+    if (cands.length) {
+      return { matched: false, conflict: true, checked: true, ocrRef: cands[0] };
     }
 
     return { matched: false, conflict: false, checked: true };
@@ -790,7 +780,7 @@
 
   // ═══════════════════════════════════════════════════════════════════
   // 10) بناء السياق من النصوص المقروءة + محرك القرار
-  // ═════════════════════════════════════════════════════���═════════════
+  // ═════════════════════════════════════════════════════════════════════
   function buildContext(texts, options) {
     const joined = texts.map(t => normalizeText(t)).join(' \n ');
     const lines = toLines(texts.join('\n'));
@@ -855,7 +845,7 @@
       result.decision = 'review';
       result.ocrStatus = 'needs_review';
       result.riskFlags.push('low_ocr_confidence');
-      result.message = 'تعذّر قراءة بعض بيانات الإيصال بوضوح. تم استلام طلبك وسيُراجع يدوياً من الإدارة — لنتيجة فورية جرّب رفع لقطة شاشة (سكرين شوت) للإشعار مباشرة من التطبيق.';
+      result.message = 'تعذّر قراءة بيانات الإيصال بوضوح. ارفع لقطة شاشة (سكرين شوت) كاملة للإشعار مباشرة من التطبيق يظهر فيها رقم العملية والمبلغ.';
       return result;
     }
 
@@ -916,8 +906,8 @@
 
       // ثقة عالية في قراءة المبلغ: قيمة موسومة بحقل "المبلغ/amount" أو بعملة،
       // وليست رصيداً أو رسوماً، والقراءة العامة للإيصال معقولة
-      const readableReceipt = (provider && provider.score >= 2) || fieldHits.hits >= 3;
-      const highConfidence = !!best && best.weight >= 8 && !best.excluded && readableReceipt;
+      // صارم: أي مبلغ مقروء بثقة معقولة ويخالف الإجمالي = رفض
+      const highConfidence = !!best && !best.excluded && best.weight >= 5;
 
       // فرق ناتج عن صيغة/كسور فقط (×10 ×100 ÷100) لا يُعتبر تلاعباً
       const ratio = best && best.value ? best.value / target : 0;
@@ -975,11 +965,11 @@
       if (needsManual) {
         result.message = 'تاريخ الإشعار غير متوافق مع وقت الطلب، لذلك سيُراجع طلبك يدوياً من الإدارة.';
       } else if (result.amountVerified && !result.refVerified) {
-        result.message = 'المبلغ مطابق تماماً، لكن لم نتمكن من تأكيد رقم العملية من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
+        result.message = 'المبلغ مطابق، لكن رقم العملية غير ظاهر/غير مؤكد في الصورة. ارفع صورة كاملة للإشعار يظهر فيها رقم العملية، أو أضف صورة ثانية (الإشعار الأبيض من تطبيق بنكك).';
       } else if (result.refVerified && !result.amountVerified) {
-        result.message = 'رقم العملية مطابق، لكن لم نتمكن من قراءة المبلغ بدقة من الصورة. تم استلام طلبك وسيُراجع يدوياً من الإدارة.';
+        result.message = 'رقم العملية مطابق، لكن المبلغ غير ظاهر/غير واضح في الصورة. أضف صورة ثانية يظهر فيها المبلغ بوضوح، أو ارفع الإشعار الأبيض الكامل.';
       } else {
-        result.message = 'تم استلام الإيصال. بعض البيانات لم تُقرأ بدقة، لذلك سيُراجع طلبك يدوياً من الإدارة.';
+        result.message = 'الإشعار غير مكتمل: لم يظهر رقم العملية والمبلغ بوضوح. ارفع لقطة شاشة كاملة للإشعار أو الإشعار الأبيض من تطبيق البنك.';
       }
     }
 
