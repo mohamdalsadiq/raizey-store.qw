@@ -382,6 +382,8 @@ function renderCart() {
   document.getElementById('cartGrandTotal').textContent = `${safeFormatSDG(grandTotal)} ج.س`;
 
   document.getElementById('proceedToCheckoutBtn').onclick = () => {
+    // الدفع من السلة: نلغي أي شراء مباشر معلّق حتى لا يختلط الطلبان
+    try { sessionStorage.removeItem('raizey_direct_buy'); } catch (e) {}
     window.location.href = 'checkout.html';
   };
 }
@@ -421,4 +423,3 @@ init();
 </script>
 </body>
 </html>
-
