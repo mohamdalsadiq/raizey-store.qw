@@ -607,6 +607,58 @@ function attachCheckoutEvents(canUseWallet) {
     });
   }
 
+  // ── تصغير الصورة قبل إرسالها للسيرفر ──
+  // سبب وجودها: حد جسم الطلب على Vercel ≈ 4.5MB، وbase64 أكبر من الأصل بـ33%.
+  // صور كاميرات الهواتف الحديثة (8–12MB) كانت تكسر الطلب قبل أن يبدأ الفحص.
+  // نُبقي الدقة عالية (1600px) لأن أرقام الإشعار يجب أن تظل مقروءة.
+  const SERVER_MAX_DIMENSION = 1600;
+  const SERVER_JPEG_QUALITY = 0.85;
+  const COMPRESS_ABOVE_BYTES = 900 * 1024;
+
+  function compressForServer(file) {
+    return new Promise((resolve) => {
+      // صورة صغيرة أصلاً: أرسلها كما هي (أدق للقراءة)
+      if (file.size <= COMPRESS_ABOVE_BYTES) {
+        resolve({ base64: null, mimeType: file.type || 'image/jpeg' });
+        return;
+      }
+      let settled = false;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        URL.revokeObjectURL(url);
+        resolve(value);
+      };
+      // فشل/تأخر التصغير لا يوقف الفحص: نعود للملف الأصلي
+      const timer = setTimeout(() => done({ base64: null, mimeType: file.type || 'image/jpeg' }), 9000);
+      img.onerror = () => done({ base64: null, mimeType: file.type || 'image/jpeg' });
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          const scale = Math.min(1, SERVER_MAX_DIMENSION / Math.max(w, h));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', SERVER_JPEG_QUALITY);
+          const comma = dataUrl.indexOf(',');
+          done({
+            base64: comma !== -1 ? dataUrl.slice(comma + 1) : null,
+            mimeType: 'image/jpeg'
+          });
+        } catch (e) {
+          done({ base64: null, mimeType: file.type || 'image/jpeg' });
+        }
+      };
+      img.src = url;
+    });
+  }
+
   // ── الفحص من السيرفر (Gemini) — أسرع وأثبت من فحص المتصفح ──
   // يرمي استثناءً في أي حالة يجب فيها الرجوع لمحرك المتصفح (Tesseract)
   // كخطة بديلة: عدم توفر مفتاح Gemini، انقطاع اتصال، أو أي خطأ سيرفر.
@@ -615,27 +667,33 @@ function attachCheckoutEvents(canUseWallet) {
     'judge_error', 'missing_image', 'image_too_large', 'method_not_allowed'
   ];
   async function serverVerify(file, opts) {
-    const base64 = await fileToBase64(file);
+    const shrunk = await compressForServer(file);
+    const base64 = shrunk.base64 || await fileToBase64(file);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 14000);
+    // مهلة أطول من مهلة Gemini على السيرفر (24 ث) حتى لا نُلغي طلباً كان سينجح
+    const timer = setTimeout(() => controller.abort(), 32000);
     try {
       const resp = await fetch('/api/verify-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          mimeType: file.type || 'image/jpeg',
+          mimeType: shrunk.mimeType || file.type || 'image/jpeg',
           expectedAmount: opts.expectedAmount,
           manualRef: opts.manualRef,
           expectedAccount: opts.expectedAccount
         }),
         signal: controller.signal
       });
+      // 404 هنا = الدالة غير منشورة على Vercel (وليست مشكلة اتصال)
+      if (resp.status === 404) throw new Error('server_not_deployed');
       if (!resp.ok) throw new Error('server_http_' + resp.status);
       const data = await resp.json();
       if (data && Array.isArray(data.riskFlags) &&
           data.riskFlags.some(f => SERVER_FALLBACK_FLAGS.includes(f))) {
-        throw new Error('server_needs_fallback:' + data.riskFlags[0]);
+        const err = new Error('server_needs_fallback:' + data.riskFlags[0]);
+        err.serverDebug = data.debug || null;
+        throw err;
       }
       return data;
     } finally {
@@ -698,11 +756,13 @@ function attachCheckoutEvents(canUseWallet) {
           const serverResult = await serverVerify(file, scanOpts);
           return serverResult;
         } catch (serverErr) {
-          console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:', serverErr);
+          console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:',
+            serverErr && serverErr.message, serverErr && serverErr.serverDebug);
         }
 
         if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
           try {
+            statusEl.textContent = 'جارِ الفحص الاحتياطي في المتصفح...';
             return await ReceiptIntel.analyze(file, {
               expectedAmount: scanOpts.expectedAmount,
               manualRef: scanOpts.manualRef,
@@ -720,7 +780,7 @@ function attachCheckoutEvents(canUseWallet) {
       analysis = await Promise.race([scan, uiGuard]);
       if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
     } catch (err) {
-      // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
+      // ��طأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
       console.warn('[RAIZEY] receipt scan error:', err);
       analysis = softReview('scan_error');
     } finally {
@@ -759,7 +819,13 @@ function attachCheckoutEvents(canUseWallet) {
     const TECH_REVIEW_FLAGS = [
       'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
       'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
-      'ui_scan_timeout', 'engine_missing'
+      'ui_scan_timeout', 'engine_missing',
+      // فشل فك ترميز الصورة في المتصفح — مراجعة يدوية، لا رفض (Fail-Closed)
+      'file_decode_decode_error', 'file_decode_decode_timeout',
+      'file_decode_dimensions_too_small', 'file_decode_unknown', 'file_check_timeout',
+      // أعلام السيرفر
+      'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
+      'judge_error', 'missing_image', 'image_too_large'
     ];
     const isTechReview = analysis.decision === 'review' &&
       (analysis.riskFlags || []).some(f => TECH_REVIEW_FLAGS.includes(f));
