@@ -344,7 +344,7 @@ function safeFormatSDG(val) {
 // الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
 // ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
 const NET_TIMEOUT_MS = {
-  upload:  45000,   // رفع صورة قد يكون بطيئاً على شبكة الجوال
+  upload:  45000,   // رفع صورة قد يكون بطيئاً عل�� شبكة الجوال
   signUrl: 20000,
   rpc:     25000
 };
@@ -361,6 +361,39 @@ function withNetTimeout(promise, ms, tag) {
   return Promise.race([Promise.resolve(promise), guard])
     .finally(() => { if (timer) clearTimeout(timer); });
 }
+
+// ── تشخيص الأخطاء الصامتة ──
+// لوقات التطوير مُعطّلة على نطاق الإنتاج (vercel.app)، فكان أي خطأ غير
+// معروف يظهر كرسالة عامة بلا أي دليل يمكن تتبّعه. هذه الدوال تُخرج رمزاً
+// تقنياً قصيراً وآمناً (لا يكشف بيانات) يُلحق بالرسالة ليُمكن تشخيصه.
+function errRaw(err) {
+  if (!err) return '';
+  return String((err && (err.message || err.hint || err.details)) || err);
+}
+
+function errIsMissingFunction(err) {
+  const msg  = errRaw(err).toLowerCase();
+  const code = (err && err.code) || '';
+  return code === 'PGRST202' || code === '42883' ||
+         (msg.includes('function') &&
+          (msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache')));
+}
+
+// خطأ تعارض متغيّرات PL/pgSQL: عمود RETURNS TABLE يحمل نفس اسم عمود الجدول
+function errIsAmbiguous(err) {
+  const msg = errRaw(err).toLowerCase();
+  return (err && err.code === '42702') || msg.includes('is ambiguous');
+}
+
+function errTechCode(err) {
+  const code = (err && err.code) ? String(err.code) : '';
+  const raw  = errRaw(err).replace(/\s+/g, ' ').slice(0, 90);
+  if (code && raw) return `${code}: ${raw}`;
+  return code || raw || 'unknown';
+}
+
+// رسالة موحّدة للأخطاء التقنية التي تعني "قاعدة البيانات تحتاج تحديثاً"
+const DB_UPDATE_HINT = 'يحتاج تحديث قاعدة البيانات (شغّل ملف supabase-critical-fixes-8.sql في Supabase → SQL Editor).';
 
 
 
@@ -664,9 +697,18 @@ function attachCheckoutEvents(canUseWallet) {
       codeMsg.style.color = 'var(--primary)';
       codeMsg.textContent = `الرمز صالح ✓ — قيمته ${safeFormatSDG(row.amount)} ج.س. اضغط "تأكيد الدفع" لإتمام الطلب.`;
     } catch (e) {
-      devWarn('[RAIZEY] validate_payment_code failed:', (e && e.message) || e);
+      devWarn('[RAIZEY] validate_payment_code failed:', errRaw(e));
       codeMsg.style.color = 'var(--danger)';
-      codeMsg.textContent = 'تعذّر التحقق من الرمز حالياً. تحقق من الاتصال وحاول مجدداً.';
+      if (e && e.isTimeout) {
+        codeMsg.textContent = 'انتهت مهلة الاتصال أثناء التحقق من الرمز. تحقق من الشبكة وحاول مجدداً.';
+      } else if (errIsMissingFunction(e)) {
+        // خدمة الرمز غير منشورة على القاعدة — ليست مشكلة اتصال
+        codeMsg.textContent = 'خدمة رمز الدفع غير مُنشأة على قاعدة البيانات بعد. ' + DB_UPDATE_HINT;
+      } else if (errIsAmbiguous(e)) {
+        codeMsg.textContent = 'خطأ في دالة التحقق من الرمز على قاعدة البيانات. ' + DB_UPDATE_HINT;
+      } else {
+        codeMsg.textContent = `تعذّر التحقق من الرمز حالياً. تحقق من الاتصال وحاول مجدداً. [${errTechCode(e)}]`;
+      }
     } finally {
       codeBtn.disabled = false;
     }
@@ -1465,7 +1507,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       devWarn('[RAIZEY] payment code order error:', msg);
       errorBox.textContent =
         /already_used/.test(msg)   ? 'هذا الرمز مستخدم من قبل.' :
-        /expired/.test(msg)        ? 'انتهت صلاحية الرمز. اطلب رمزاً جديداً من الإدارة.' :
+        /expired/.test(msg)        ? 'انتهت صلاحي�� الرمز. اطلب رمزاً جديداً من الإدارة.' :
         /amount_too_low/.test(msg) ? 'قيمة الرمز أقل من إجمالي الطلب.' :
         /not_found|invalid_code/.test(msg) ? 'الرمز غير صحيح.' :
         /not_your_code/.test(msg)  ? 'هذا الرمز مخصص لعميل آخر.' :
@@ -1546,7 +1588,24 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل. أزل الكود وأعد المحاولة.');
       return;
     }
-    failOrder(getFriendlyError(msg),
+    if (msg.includes('receipt_claim_failed')) {
+      failOrder('تعذّر حجز إيصالك في قاعدة البيانات. لم يُسجّل أي طلب — أعد المحاولة، وإن تكرر تواصل مع الدعم.',
+        { support: 'فشل حجز الإيصال', fraud: 'receipt_claim_failed' });
+      return;
+    }
+    if (msg.includes('auth_required')) {
+      failOrder('انتهت جلسة دخولك. سجّل الدخول مجدداً ثم أعد المحاولة (رقم عمليتك ما زال متاحاً).');
+      return;
+    }
+    // 🔴 السبب الجذري الذي كان يُفشل كل طلب بنكي: تعارض متغيّرات في دالة
+    // القاعدة (column reference "id" is ambiguous) أو دالة غير منشورة.
+    if (errIsAmbiguous(err) || errIsMissingFunction(err)) {
+      failOrder('دالة إنشاء الطلبات على قاعدة البيانات تحتاج تحديثاً. ' + DB_UPDATE_HINT,
+        { support: 'دوال قاعدة البيانات تحتاج تحديثاً', fraud: 'technical_failure',
+          fraudExtra: { raw_error: msg } });
+      return;
+    }
+    failOrder(`${getFriendlyError(msg)} [${errTechCode(err)}]`,
       { support: 'خطأ تقني أثناء تسجيل الطلب', fraud: 'technical_failure', fraudExtra: { raw_error: msg } });
   };
 
