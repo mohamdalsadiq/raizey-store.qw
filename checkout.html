@@ -135,6 +135,24 @@
     transition: 0.2s ease;
   }
   #applyCouponBtn:hover { border-color: var(--primary); color: var(--primary); }
+  /* زر التحقق من رمز الدفع — نفس هوية زر "تطبيق" */
+  #paymentCodeInput { flex: 1; min-width: 0; }
+  #verifyCodeBtn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0 20px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+  #verifyCodeBtn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  #verifyCodeBtn:disabled { opacity: 0.55; cursor: not-allowed; }
   .copy-account-btn {
     flex-shrink: 0;
     background: var(--bg);
@@ -233,7 +251,7 @@
     <div class="bank-details" id="codeDetails">
       <div class="field" style="margin-top:0;">
         <label>رمز الدفع *</label>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:stretch;">
           <input type="text" id="paymentCodeInput" placeholder="RZY-8F3K-92QD" inputmode="latin" autocomplete="off">
           <button type="button" id="verifyCodeBtn">تحقق</button>
         </div>
