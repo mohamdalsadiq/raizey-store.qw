@@ -382,7 +382,9 @@ module.exports = async function handler(req, res) {
 
     // ── المرور الثاني (التحكيم): يعمل فقط عندما لا يكون القرار قبولاً مؤكداً ──
     // لا يُستخدم للتساهل: مخرجاته نص إضافي يمرّ على نفس محرك القرار الحتمي.
-    const needsArbitration = !(result.decision === 'accept' &&
+    // القبول الكامل والقبول-مع-تدقيق-إداري كلاهما مؤكَّد البيانات ⇒ لا تحكيم
+    const needsArbitration = !((result.decision === 'accept' ||
+                                result.decision === 'review_admin') &&
                                result.refVerified && result.amountVerified) &&
                              result.decision !== 'reject';
     if (needsArbitration) {
