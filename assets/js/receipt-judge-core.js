@@ -49,7 +49,9 @@
     // إذا لم تُرجِع أي مفردة من مفردات الإشعارات ولا اسم مزوّد فالصورة
     // فعلاً ليست إشعار تحويل ⇒ رفض فوري بلا حد أدنى للطول.
     minTextForTrustedReject: 1,
-    staleReceiptDays:  10      // إشعار أقدم من ذلك → مراجعة يدوية (ليس رفضاً)
+    freshReceiptDays:  2,      // حتى يومين: قبول كامل تلقائي
+    staleReceiptDays:  10      // 2–10 أيام: يُقبل مع تدقيق إداري / أكثر: تدقيق مشدّد
+                               // التاريخ لا يمنع الطلب إطلاقاً
   };
 
   // بصمات برامج التعديل — وجودها في بايتات الملف دليل قوي على التزييف
@@ -922,6 +924,17 @@
         result.decision = 'reject';
         result.ocrStatus = 'rejected';
         result.riskFlags.push('amount_mismatch');
+        // مبلغ ناقص مع رقم عملية مطابق: المال وصل فعلاً — نُخرج بيانات
+        // النقص ليعرض العميلُ مساراً واضحاً (واتساب / تحويل الباقي)
+        if (shortfall > 0) {
+          result.riskFlags.push('amount_shortfall');
+          result.shortfall = {
+            paid:      Math.round(best.value),
+            target:    target,
+            remaining: Math.round(shortfall),
+            refMatched: !!refMatch.matched
+          };
+        }
         result.message =
           `المبلغ في إشعار التحويل (${Math.round(best.value).toLocaleString('en-US')} ج.س) لا يطابق إجمالي الطلب المطلوب ` +
           `(${target.toLocaleString('en-US')} ج.س)` +
@@ -946,25 +959,44 @@
     }
 
     const recDate = parseReceiptDate(result.extracted.dateTime);
+    let ageDays = null;
     if (recDate) {
-      const ageDays = (Date.now() - recDate.getTime()) / 86400000;
-      if (ageDays > CONFIG.staleReceiptDays) result.riskFlags.push('stale_receipt');
-      if (ageDays < -1) result.riskFlags.push('future_dated_receipt');
+      ageDays = (Date.now() - recDate.getTime()) / 86400000;
+      if (ageDays > CONFIG.staleReceiptDays || ageDays < -1) {
+        result.riskFlags.push('very_stale_receipt');
+        if (ageDays < -1) result.riskFlags.push('future_dated_receipt');
+      } else if (ageDays > CONFIG.freshReceiptDays) {
+        result.riskFlags.push('stale_receipt');
+      }
     }
 
-    const needsManual = result.riskFlags.includes('stale_receipt') ||
-                        result.riskFlags.includes('future_dated_receipt');
+    // ── سياسة التاريخ: لا رفض بسبب التاريخ أبداً ──
+    // التاريخ يُنتج تدقيقاً إدارياً فقط، بشرط مطابقة الرقم والمبلغ.
+    const dateNeedsAdmin = result.riskFlags.includes('stale_receipt') ||
+                           result.riskFlags.includes('very_stale_receipt');
+    const severeDate = result.riskFlags.includes('very_stale_receipt');
 
-    if (result.refVerified && result.amountVerified && !needsManual) {
-      result.decision = 'accept';
-      result.ocrStatus = 'passed';
-      result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
+    if (result.refVerified && result.amountVerified) {
+      if (!dateNeedsAdmin) {
+        result.decision = 'accept';
+        result.ocrStatus = 'passed';
+        result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
+      } else {
+        result.decision = 'review_admin';
+        result.ocrStatus = 'needs_admin_check';
+        result.reviewSeverity = severeDate ? 'high' : 'normal';
+        const ageTxt = (ageDays !== null && ageDays > 0)
+          ? Math.round(ageDays) + ' يوم'
+          : 'تاريخ غير متوافق';
+        result.reviewReason = result.riskFlags.includes('future_dated_receipt')
+          ? 'تاريخ الإشعار مستقبلي — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)'
+          : `إشعار قديم (${ageTxt}) — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)`;
+        result.message = 'تم قبول الإيصال ✓ — طلبك يحتاج تدقيقاً إضافياً من الإدارة لأن تاريخ الإشعار قديم. سيتم تنفيذه خلال دقائق.';
+      }
     } else {
       result.decision = 'review';
       result.ocrStatus = 'needs_review';
-      if (needsManual) {
-        result.message = 'تاريخ الإشعار غير متوافق مع وقت الطلب، لذلك سيُراجع طلبك يدوياً من الإدارة.';
-      } else if (result.amountVerified && !result.refVerified) {
+      if (result.amountVerified && !result.refVerified) {
         result.message = 'المبلغ مطابق، لكن رقم العملية غير ظاهر/غير مؤكد في الصورة. ارفع صورة كاملة للإشعار يظهر فيها رقم العملية، أو أضف صورة ثانية (الإشعار الأبيض من تطبيق بنكك).';
       } else if (result.refVerified && !result.amountVerified) {
         result.message = 'رقم العملية مطابق، لكن المبلغ غير ظاهر/غير واضح في الصورة. أضف صورة ثانية يظهر فيها المبلغ بوضوح، أو ارفع الإشعار الأبيض الكامل.';
@@ -978,10 +1010,13 @@
 
   function blankResult() {
     return {
-      version: 3,
+      version: 4,
       decision: 'review',
       ocrStatus: 'needs_review',
       message: '',
+      reviewReason: null,
+      reviewSeverity: null,
+      shortfall: null,
       provider: null,
       providerName: null,
       confidence: null,
