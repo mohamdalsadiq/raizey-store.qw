@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رموز الدفع — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+<style>
+  .code-card { background: var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .code-value { font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:700; color:var(--primary); letter-spacing:1px; }
+  .code-meta { font-size:12.5px; color:var(--text-muted); line-height:1.9; margin-top:6px; }
+  .code-state { font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; }
+  .state-active { background:rgba(34,197,94,.14); color:#16a34a; }
+  .state-used { background:rgba(148,163,184,.18); color:#64748b; }
+  .state-expired { background:rgba(239,68,68,.12); color:#ef4444; }
+  .state-cancelled { background:rgba(239,68,68,.12); color:#ef4444; }
+</style>
+</head>
+<body>
+
+<div class="admin-page" id="adminPage" style="display:none;">
+  <div class="page-header">
+    <h1>رموز الدفع</h1>
+    <a href="admin.html" class="back-link">→ لوحة التحكم</a>
+  </div>
+
+  <p style="font-size:12.5px; color:var(--text-muted); line-height:1.8; margin-top:0;">
+    رمز الدفع وسيلة تسوية يدوية آمنة: تُعطيه للعميل فيُتِم طلبه بدون إيصال. كل رمز يُستخدم مرة واحدة فقط.
+  </p>
+
+  <button class="add-new-btn" id="addNewBtn">+ توليد رمز جديد</button>
+
+  <div class="filter-chips" style="margin:10px 0;">
+    <button class="chip active" data-filter="all">الكل</button>
+    <button class="chip" data-filter="active">نشط</button>
+    <button class="chip" data-filter="used">مستخدم</button>
+    <button class="chip" data-filter="expired">منتهٍ</button>
+    <button class="chip" data-filter="cancelled">ملغى</button>
+  </div>
+
+  <div id="codesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+</div>
+
+<div class="modal-overlay" id="formModal">
+  <div class="modal-box">
+    <div class="modal-title">رمز دفع جديد</div>
+
+    <div class="field">
+      <label>المبلغ (ج.س) *</label>
+      <input type="number" id="amountInput" placeholder="مثلاً: 50000">
+    </div>
+
+    <div class="field">
+      <label>ملاحظة (تظهر لك أنت فقط)</label>
+      <input type="text" id="noteInput" placeholder="مثلاً: تسوية مبلغ ناقص للعميل أحمد">
+    </div>
+
+    <div class="field">
+      <label>تخصيص لعميل (اختياري — اكتب رقم واتساب العميل)</label>
+      <input type="text" id="customerInput" placeholder="مثلاً: 0912345678">
+      <div id="customerHint" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
+    </div>
+
+    <div class="field">
+      <label>تاريخ الانتهاء (اختياري)</label>
+      <input type="date" id="expiresInput">
+    </div>
+
+    <div class="form-error" id="formError"></div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">توليد الرمز</button>
+    </div>
+  </div>
+</div>
+
+<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
+  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let codes = [];
+let currentFilter = 'all';
+let currentAdminId = null;
+
+const formModal      = document.getElementById('formModal');
+const amountInput    = document.getElementById('amountInput');
+const noteInput      = document.getElementById('noteInput');
+const customerInput  = document.getElementById('customerInput');
+const customerHint   = document.getElementById('customerHint');
+const expiresInput   = document.getElementById('expiresInput');
+const formError      = document.getElementById('formError');
+
+const stateLabels = { active: 'نشط', used: 'مستخدم', expired: 'منتهٍ', cancelled: 'ملغى' };
+
+function genCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // بلا حروف/أرقام متشابهة
+  const rnd = (n) => {
+    const buf = new Uint32Array(n);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    return Array.from(buf, v => alphabet[v % alphabet.length]).join('');
+  };
+  return `RZY-${rnd(4)}-${rnd(4)}`;
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+
+  const { data: profile } = await supabaseClient
+    .from('profiles').select('role').eq('id', session.user.id).single();
+
+  if (!profile || profile.role !== 'admin') {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+  currentAdminId = session.user.id;
+  document.getElementById('adminPage').style.display = 'block';
+
+  document.getElementById('addNewBtn').addEventListener('click', openForm);
+  document.getElementById('formCancelBtn').addEventListener('click', closeForm);
+  document.getElementById('formSaveBtn').addEventListener('click', saveCode);
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      render();
+    });
+  });
+
+  await loadCodes();
+}
+
+async function loadCodes() {
+  const { data, error } = await supabaseClient
+    .from('payment_codes')
+    .select('*, used_profile:profiles!payment_codes_used_by_fkey(full_name, whatsapp_number), target_profile:profiles!payment_codes_user_id_fkey(full_name, whatsapp_number)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    const fb = await supabaseClient.from('payment_codes').select('*').order('created_at', { ascending: false });
+    codes = fb.data || [];
+  } else {
+    codes = data || [];
+  }
+  render();
+}
+
+function effectiveState(c) {
+  if (c.status === 'active' && c.expires_at && new Date(c.expires_at) < new Date()) return 'expired';
+  return c.status;
+}
+
+function render() {
+  const list = document.getElementById('codesList');
+  const filtered = currentFilter === 'all' ? codes : codes.filter(c => effectiveState(c) === currentFilter);
+
+  if (!filtered.length) {
+    list.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد رموز مطابقة</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const st = effectiveState(c);
+    const created = new Date(c.created_at).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const usedAt = c.used_at ? new Date(c.used_at).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : null;
+    const target = c.target_profile;
+    const user = c.used_profile;
+    return `
+      <div class="code-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <span class="code-value">${escapeHtml(c.code)}</span>
+          <span class="code-state state-${st}">${stateLabels[st] || st}</span>
+        </div>
+        <div class="code-meta">
+          المبلغ: <strong>${formatSDG(c.amount)} ج.س</strong><br>
+          ${c.note ? `ملاحظة: ${escapeHtml(c.note)}<br>` : ''}
+          ${target ? `مخصص لـ: ${escapeHtml(target.full_name || '')} — ${escapeHtml(target.whatsapp_number || '')}<br>` : ''}
+          أُنشئ: ${created}<br>
+          ${c.expires_at ? `ينتهي: ${new Date(c.expires_at).toLocaleDateString('ar-EG')}<br>` : ''}
+          ${usedAt ? `استُخدم: ${usedAt}${user ? ` — ${escapeHtml(user.full_name || '')} (${escapeHtml(user.whatsapp_number || '')})` : ''}<br>` : ''}
+          ${c.order_id ? `الطلب: ${escapeHtml(String(c.order_id).slice(0, 8))}<br>` : ''}
+        </div>
+        <div class="admin-order-actions" style="margin-top:10px;">
+          <button class="admin-btn" data-copy="${safeDataAttr(c.code)}">نسخ الرمز</button>
+          ${st === 'active' ? `<button class="admin-btn btn-reject" data-cancel="${safeDataAttr(c.id)}">إلغاء</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const t = btn.textContent; btn.textContent = 'تم';
+        setTimeout(() => { btn.textContent = t; }, 1500);
+      } catch (e) {}
+    });
+  });
+
+  list.querySelectorAll('[data-cancel]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('إلغاء هذا الرمز نهائياً؟')) return;
+      await supabaseClient.from('payment_codes')
+        .update({ status: 'cancelled' })
+        .eq('id', btn.dataset.cancel)
+        .eq('status', 'active');
+      await supabaseClient.from('audit_logs').insert({
+        admin_id: currentAdminId, action: 'إلغاء رمز دفع', details: { code_id: btn.dataset.cancel }
+      });
+      await loadCodes();
+    });
+  });
+}
+
+function openForm() {
+  amountInput.value = '';
+  noteInput.value = '';
+  customerInput.value = '';
+  customerHint.textContent = '';
+  expiresInput.value = '';
+  formError.textContent = '';
+  formModal.classList.add('show');
+}
+
+function closeForm() { formModal.classList.remove('show'); }
+
+async function resolveCustomer(phone) {
+  const q = phone.trim();
+  if (!q) return null;
+  const { data } = await supabaseClient
+    .from('profiles').select('id, full_name, whatsapp_number')
+    .ilike('whatsapp_number', `%${q}%`).limit(2);
+  if (!data || data.length !== 1) return 'not_found';
+  return data[0];
+}
+
+async function saveCode() {
+  formError.textContent = '';
+  const amount = Number(amountInput.value);
+  if (!amount || amount <= 0) { formError.textContent = 'اكتب مبلغاً صحيحاً.'; return; }
+
+  let userId = null;
+  if (customerInput.value.trim()) {
+    const found = await resolveCustomer(customerInput.value);
+    if (found === 'not_found' || !found) {
+      formError.textContent = 'لم يُعثر على عميل واحد بهذا الرقم. اترك الحقل فارغاً أو اكتب الرقم كاملاً.';
+      return;
+    }
+    userId = found.id;
+    customerHint.textContent = `العميل: ${found.full_name || ''}`;
+  }
+
+  const payload = {
+    code: genCode(),
+    amount,
+    note: noteInput.value.trim() || null,
+    user_id: userId,
+    expires_at: expiresInput.value ? new Date(expiresInput.value + 'T23:59:59').toISOString() : null,
+    status: 'active',
+    created_by: currentAdminId
+  };
+
+  const { error } = await supabaseClient.from('payment_codes').insert(payload);
+  if (error) { formError.textContent = 'تعذّر توليد الرمز: ' + error.message; return; }
+
+  await supabaseClient.from('audit_logs').insert({
+    admin_id: currentAdminId, action: 'توليد رمز دفع',
+    details: { code: payload.code, amount, note: payload.note }
+  });
+
+  closeForm();
+  await loadCodes();
+}
+
+init();
+</script>
+</body>
+</html>
