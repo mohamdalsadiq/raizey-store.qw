@@ -40,6 +40,7 @@
   <div class="categories" style="padding:0 0 16px;" id="filterRow">
     <button class="chip active" data-filter="all">الكل</button>
     <button class="chip" data-filter="pending_review">قيد المراجعة</button>
+    <button class="chip" data-filter="needs_admin_check">يحتاج تدقيق</button>
     <button class="chip" data-filter="in_progress">قيد التنفيذ</button>
     <button class="chip" data-filter="completed">مكتمل</button>
     <button class="chip" data-filter="cancelled">ملغي</button>
@@ -194,10 +195,23 @@ async function init() {
 }
 
 async function loadOrders() {
-  const { data, error } = await supabaseClient
+  const SELECT_WITH_RECEIPT =
+    '*, profiles(full_name, whatsapp_number), ' +
+    'payment_receipts(tx_ref_raw, amount_expected, amount_detected, tx_ref_ocr, ocr_status, risk_flags, ocr_data)';
+
+  let { data, error } = await supabaseClient
     .from('orders')
-    .select('*, profiles(full_name, whatsapp_number)')
+    .select(SELECT_WITH_RECEIPT)
     .order('created_at', { ascending: false });
+
+  // بعض القواعد لم تُربط فيها العلاقة بعد — نرجع للاستعلام البسيط بدل تعطيل الصفحة
+  if (error) {
+    const fallback = await supabaseClient
+      .from('orders')
+      .select('*, profiles(full_name, whatsapp_number)')
+      .order('created_at', { ascending: false });
+    data = fallback.data;
+  }
 
   allOrders = data || [];
   render();
@@ -205,9 +219,11 @@ async function loadOrders() {
 
 function render() {
   const container = document.getElementById('ordersList');
-  let filtered = currentFilter === 'all'
-    ? allOrders
-    : allOrders.filter(o => o.status === currentFilter);
+  let filtered =
+    currentFilter === 'all' ? allOrders :
+    currentFilter === 'needs_admin_check'
+      ? allOrders.filter(o => o.ocr_status === 'needs_admin_check' || o.review_reason)
+      : allOrders.filter(o => o.status === currentFilter);
 
   if (currentSearch) {
     filtered = filtered.filter(o => {
@@ -297,6 +313,43 @@ function renderOrderCard(o) {
       </div>`;
   }
 
+  // ── بطاقة التدقيق الإداري: السبب + كل البيانات المقروءة من الفحص ──
+  const rec = o.payment_receipts || null;
+  const severity = o.review_severity || (rec && rec.ocr_data && rec.ocr_data.review_severity) || 'normal';
+  const reviewReason = o.review_reason || (rec && rec.ocr_data && rec.ocr_data.review_reason) || null;
+  const needsAdmin = o.ocr_status === 'needs_admin_check' || !!reviewReason;
+
+  const flags = (rec && Array.isArray(rec.risk_flags)) ? rec.risk_flags : [];
+  const scanRows = [];
+  if (rec) {
+    if (rec.tx_ref_ocr)      scanRows.push(`رقم العملية المقروء: ${rec.tx_ref_ocr}`);
+    if (rec.amount_detected) scanRows.push(`المبلغ المقروء: ${formatSDG(rec.amount_detected)} ج.س`);
+    if (rec.amount_expected) scanRows.push(`المبلغ المطلوب: ${formatSDG(rec.amount_expected)} ج.س`);
+    if (rec.ocr_data && rec.ocr_data.dateTime) scanRows.push(`تاريخ الإشعار: ${rec.ocr_data.dateTime}`);
+    if (rec.ocr_data && rec.ocr_data.split_payment) {
+      const sp = rec.ocr_data.split_payment;
+      scanRows.push(`دفع مجزّأ: ${formatSDG(sp.first_amount)} + ${formatSDG(sp.second_amount)} ج.س (رقم ثانٍ: ${sp.second_tx_ref})`);
+    }
+    if (flags.length) scanRows.push(`الرايات: ${flags.join('، ')}`);
+    if (rec.ocr_status) scanRows.push(`حالة الفحص: ${rec.ocr_status}`);
+  } else if (o.ocr_status) {
+    scanRows.push(`حالة الفحص: ${o.ocr_status}`);
+  }
+
+  const reviewHtml = needsAdmin ? `
+    <div style="margin-top:10px; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.7;
+                border:1px solid ${severity === 'high' ? 'var(--danger)' : '#c98a1f'};
+                background:${severity === 'high' ? 'rgba(239,68,68,.08)' : 'rgba(201,138,31,.10)'};">
+      <strong style="color:${severity === 'high' ? 'var(--danger)' : '#c98a1f'};">
+        <i class="fas fa-user-shield"></i> يحتاج تدقيق${severity === 'high' ? ' — تنبيه مشدّد' : ''}
+      </strong>
+      ${reviewReason ? `<div style="margin-top:4px;">${escapeHtml(reviewReason)}</div>` : ''}
+      ${scanRows.length ? `<div style="margin-top:6px; color:var(--text-muted);">${scanRows.map(escapeHtml).join('<br>')}</div>` : ''}
+    </div>` : (scanRows.length ? `
+    <div style="margin-top:10px; font-size:12px; color:var(--text-muted); line-height:1.7;">
+      ${scanRows.map(escapeHtml).join('<br>')}
+    </div>` : '');
+
   return `
     <div class="order-card">
       <div class="order-top">
@@ -321,6 +374,8 @@ function renderOrderCard(o) {
         ${refHtml}
         ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color:var(--primary);">عرض الإيصال</a></div>` : ''}
       </div>
+
+      ${reviewHtml}
 
       ${o.status === 'rejected' && o.rejection_reason ? `
         <div class="order-rejection">سبب الرفض: ${escapeHtml(o.rejection_reason)}</div>
