@@ -1178,4 +1178,226 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       return;
     }
     if (msg.includes('duplicate_transaction_ref')) {
-      failOrder('رقم 
+      failOrder('رقم العملية هذا تم استخدامه من قبل في طلب آخر!',
+        { support: 'رقم العملية مستخدم من قبل', fraud: 'duplicate_transaction_ref' });
+      return;
+    }
+    if (msg.includes('duplicate_receipt_image')) {
+      failOrder('صورة هذا الإيصال تم استخدامها من قبل في طلب آخر!',
+        { support: 'صورة الإيصال مستخدمة من قبل', fraud: 'duplicate_receipt_image' });
+      return;
+    }
+    if (msg.includes('receipt_rejected')) {
+      failOrder('تم رفض هذا الإيصال من الفحص الذكي. راجع صورة الإشعار وأعد المحاولة.',
+        { support: 'تم رفض الإيصال من الفحص الذكي', fraud: 'receipt_rejected',
+          fraudExtra: { scan_message: scanResult && scanResult.message } });
+      return;
+    }
+    if (msg.includes('coupon_already_used') || msg.includes('coupon_invalid') || msg.includes('coupon_min_order')) {
+      failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل. أزل الكود وأعد المحاولة.');
+      return;
+    }
+    failOrder(getFriendlyError(msg),
+      { support: 'خطأ تقني أثناء تسجيل الطلب', fraud: 'technical_failure', fraudExtra: { raw_error: msg } });
+  };
+
+  // ── (1) رفع صورة الإيصال — بمهلة صريحة وداخل try/catch ──
+  placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
+  const fileExt  = (receiptFile.name.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
+
+  try {
+    const { error: uploadError } = await withNetTimeout(
+      supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
+        contentType: receiptFile.type,
+        upsert: false
+      }),
+      NET_TIMEOUT_MS.upload, 'receipt_upload'
+    );
+    if (uploadError) throw uploadError;
+  } catch (err) {
+    devWarn('[RAIZEY] Storage upload error:', (err && err.message) || err);
+    failOrder(err && err.isTimeout
+      ? 'تعذّر رفع صورة الإيصال — الاتصال بطيء أو متوقف. تحقق من الشبكة ثم اضغط "تأكيد الدفع" مجدداً (رقم عمليتك ما زال متاحاً).'
+      : 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.');
+    return;
+  }
+
+  // ── (2) رابط موقّع للإيصال (ليظهر للإدارة) — غير حرج، فشله لا يوقف الطلب ──
+  let receiptUrl = null;
+  try {
+    const { data: signed } = await withNetTimeout(
+      supabaseClient.storage.from('receipts').createSignedUrl(filePath, 60 * 60 * 24 * 30),
+      NET_TIMEOUT_MS.signUrl, 'receipt_signed_url'
+    );
+    receiptUrl = signed ? signed.signedUrl : null;
+  } catch (e) {
+    devWarn('[RAIZEY] signed url skipped:', (e && e.message) || e);
+  }
+
+  // ── (3) الطلب كامل في معاملة واحدة ذرّية ──
+  // حجز رقم العملية + استهلاك الكوبون + إدخال صفوف الطلب تحدث كلها معاً
+  // داخل القاعدة: إما تنجح جميعها أو ترجع جميعها (ROLLBACK). لذلك لم يعد
+  // ممكناً أن يُقفل رقم العملية بينما لا يوجد طلب مكتمل.
+  placeOrderBtn.textContent = 'جارِ تسجيل طلبك...';
+
+  const bankItems = cart.map(item => ({
+    product_id:   item.product_id,
+    option_id:    item.selected_option ? item.selected_option.id : null,
+    quantity:     (item.quantity && item.quantity > 0) ? item.quantity : 1,
+    field_values: item.field_values || {},
+    field_labels: item.field_labels || {}
+  }));
+
+  const couponCode = appliedCoupon
+    ? document.getElementById('couponInput').value.trim().toUpperCase()
+    : null;
+
+  const receiptPayload = {
+    tx_ref:            savedTxRef,
+    receipt_hash:      receiptHash,
+    receipt_path:      filePath,
+    receipt_url:       receiptUrl,
+    provider:          scanResult.provider || null,
+    payment_method_id: selectedMethodId,
+    amount_detected:   scanResult.extracted ? scanResult.extracted.amount : null,
+    tx_ref_ocr:        scanResult.extracted ? scanResult.extracted.txRef : null,
+    ocr_status:        scanResult.ocrStatus || 'needs_review',
+    ocr_confidence:    scanResult.confidence ?? null,
+    risk_flags:        scanResult.riskFlags || [],
+    ocr_data: Object.assign({}, scanResult.extracted || {}, {
+      engine_version:  scanResult.version || null,
+      engine_source:   scanResult.source || 'browser',
+      language:        scanResult.language || null,
+      provider_name:   scanResult.providerName || null,
+      passes:          scanResult.passes || 0,
+      text_length:     scanResult.textLength || 0,
+      ref_verified:    !!scanResult.refVerified,
+      amount_verified: !!scanResult.amountVerified,
+      decision:        scanResult.decision || null,
+      scan_message:    scanResult.message || null
+    })
+  };
+
+  const finishSuccess = (rows) => {
+    const list = Array.isArray(rows) ? rows : [];
+    const lastId = list.length ? list[list.length - 1].id : null;
+    clearActiveBasket();
+    window.location.href = lastId
+      ? `receipt.html?order_id=${lastId}`
+      : 'my-orders.html';
+  };
+
+  let needsLegacyPath = false;
+  try {
+    const { data, error } = await withNetTimeout(
+      supabaseClient.rpc('create_bank_orders_bulk', {
+        p_items:       bankItems,
+        p_receipt:     receiptPayload,
+        p_coupon_code: couponCode
+      }),
+      NET_TIMEOUT_MS.rpc, 'create_bank_orders'
+    );
+    if (error) throw error;
+    finishSuccess(data);
+    return;
+  } catch (err) {
+    const msg  = (err && (err.message || err.hint || err.details)) || String(err);
+    const code = (err && err.code) || '';
+    // الدالة الذرّية غير منشورة بعد (لم يُشغّل supabase-critical-fixes-6.sql)
+    needsLegacyPath = code === 'PGRST202' ||
+      (/create_bank_orders_bulk/i.test(msg) &&
+       /(does not exist|could not find|schema cache)/i.test(msg));
+    if (!needsLegacyPath) { failFromError(err); return; }
+    devWarn('[RAIZEY] create_bank_orders_bulk missing — using legacy path. Run supabase-critical-fixes-6.sql');
+  }
+
+  // ── (4) مسار احتياطي مؤقت: يعمل فقط قبل تشغيل supabase-critical-fixes-6.sql ──
+  // ملاحظة: هذا المسار خطوتان (حجز ثم إدخال) وهو سبب "قفل رقم العملية"
+  // القديم؛ يبقى هنا فقط لضمان عمل المتجر حتى تُنشر الدالة الذرّية.
+  placeOrderBtn.textContent = 'جارِ تسجيل الإيصال...';
+  let receiptId = null;
+  try {
+    const { data: claimData, error: claimErr } = await withNetTimeout(
+      supabaseClient.rpc('claim_payment_receipt', {
+        p_purpose:           'order',
+        p_tx_ref:             savedTxRef,
+        p_receipt_hash:       receiptHash,
+        p_receipt_path:       filePath,
+        p_provider:           receiptPayload.provider,
+        p_payment_method_id:  selectedMethodId,
+        p_amount_expected:    currentTotal(),
+        p_amount_detected:    receiptPayload.amount_detected,
+        p_tx_ref_ocr:         receiptPayload.tx_ref_ocr,
+        p_ocr_status:         receiptPayload.ocr_status,
+        p_ocr_confidence:     receiptPayload.ocr_confidence,
+        p_risk_flags:         receiptPayload.risk_flags,
+        p_ocr_data:           receiptPayload.ocr_data
+      }),
+      NET_TIMEOUT_MS.rpc, 'claim_receipt'
+    );
+    if (claimErr) throw claimErr;
+    receiptId = claimData && claimData.length ? claimData[0].id : null;
+    if (!receiptId) throw new Error('receipt_claim_failed');
+  } catch (err) {
+    failFromError(err);
+    return;
+  }
+
+  try {
+    if (appliedCoupon && couponCode) {
+      const { data: couponAtomicData, error: couponAtomicErr } = await withNetTimeout(
+        supabaseClient.rpc('use_coupon_atomic', {
+          p_code: couponCode,
+          p_order_total: currentTotal()
+        }),
+        NET_TIMEOUT_MS.rpc, 'use_coupon'
+      );
+      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
+        failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.');
+        return;
+      }
+    }
+
+    const ordersToInsert = [];
+    for (const item of cart) {
+      const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+      const unitPrice = parseFloat(item.price_sdg) || 0;
+      const itemPrice = appliedCoupon
+        ? unitPrice - (unitPrice * appliedCoupon.discount_percent / 100)
+        : unitPrice;
+
+      const baseRow = {
+        user_id:               currentUser.id,
+        product_id:            item.product_id,
+        product_name_snapshot: item.name,
+        price_sdg_snapshot:    Math.round(itemPrice),
+        field_values:          item.field_values,
+        field_labels:          item.field_labels || {},
+        selected_option:       item.selected_option || null,
+        payment_type:          'bank',
+        payment_method_id:     selectedMethodId,
+        receipt_id:            receiptId,
+        receipt_url:           receiptUrl,
+        status:                'pending_review'
+      };
+
+      for (let i = 0; i < qty; i++) ordersToInsert.push({ ...baseRow });
+    }
+
+    const { data: insertedOrders, error: orderError } = await withNetTimeout(
+      supabaseClient.from('orders').insert(ordersToInsert).select('id'),
+      NET_TIMEOUT_MS.rpc, 'insert_orders'
+    );
+    if (orderError) throw orderError;
+
+    finishSuccess(insertedOrders);
+  } catch (err) {
+    failFromError(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
