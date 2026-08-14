@@ -344,7 +344,7 @@ function safeFormatSDG(val) {
 // الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
 // ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
 const NET_TIMEOUT_MS = {
-  upload:  45000,   // رفع صورة قد يكون بطيئاً عل�� شبكة الجوال
+  upload:  45000,   // رفع صورة قد يكون بطيئاً عل���� شبكة الجوال
   signUrl: 20000,
   rpc:     25000
 };
@@ -859,7 +859,7 @@ function attachCheckoutEvents(canUseWallet) {
     saveRefBtn.textContent = 'تعديل';
     saveRefBtn.dataset.mode = 'edit';
     refMsg.style.color = 'var(--primary)';
-    refMsg.textContent = 'تم التحقق من رقم العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
+    refMsg.textContent = 'تم التحقق من ر��م العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
     receiptStep.style.display = 'block';
     document.getElementById('formError').textContent = '';
   };
@@ -1758,14 +1758,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     await finishSuccess(data);
     return;
   } catch (err) {
-    const msg  = (err && (err.message || err.hint || err.details)) || String(err);
-    const code = (err && err.code) || '';
-    // الدالة الذرّية غير منشورة بعد (لم يُشغّل supabase-critical-fixes-6.sql)
-    needsLegacyPath = code === 'PGRST202' ||
-      (/create_bank_orders_bulk/i.test(msg) &&
-       /(does not exist|could not find|schema cache)/i.test(msg));
+    const msg = (err && (err.message || err.hint || err.details)) || String(err);
+    // نلجأ للمسار الاحتياطي في حالتين فقط، وكلتاهما عطل في القاعدة لا في الطلب:
+    //   1) الدالة الذرّية غير منشورة (PGRST202 / schema cache)
+    //   2) الدالة منشورة لكنها معطوبة بتعارض متغيّرات (42702 ambiguous)
+    //      ← هذا هو ما كان يُفشل كل طلب بنكي. المعاملة تُرجَع بالكامل عند
+    //      هذا الخطأ فلا يُحجز أي إيصال، لذا إعادة المحاولة آمنة تماماً.
+    needsLegacyPath = errIsMissingFunction(err) || errIsAmbiguous(err);
     if (!needsLegacyPath) { failFromError(err); return; }
-    devWarn('[RAIZEY] create_bank_orders_bulk missing — using legacy path. Run supabase-critical-fixes-6.sql');
+    devWarn('[RAIZEY] create_bank_orders_bulk unusable — using legacy path:', msg);
   }
 
   // ── (4) مسار احتياطي مؤقت: يعمل فقط قبل تشغيل supabase-critical-fixes-6.sql ──
