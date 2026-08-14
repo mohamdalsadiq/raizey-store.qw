@@ -223,6 +223,25 @@
       </div>
     </div>
 
+    <div class="payment-option" id="codeOption">
+      <div class="payment-option-info">
+        <div class="payment-option-title"><i class="fas fa-key" style="margin-left:6px; color:var(--primary);"></i> الدفع برمز من الإدارة</div>
+        <div class="payment-option-sub">إذا أعطتك الإدارة رمز دفع (مثال RZY-XXXX-XXXX) استخدمه هنا</div>
+      </div>
+    </div>
+
+    <div class="bank-details" id="codeDetails">
+      <div class="field" style="margin-top:0;">
+        <label>رمز الدفع *</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="paymentCodeInput" placeholder="RZY-8F3K-92QD" inputmode="latin" autocomplete="off">
+          <button type="button" id="verifyCodeBtn">تحقق</button>
+        </div>
+        <div class="field-hint">الرمز يُستخدم مرة واحدة فقط، ويجب أن يغطي إجمالي الطلب.</div>
+        <div id="paymentCodeMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
+      </div>
+    </div>
+
     <div class="bank-details" id="bankDetails">
       <div class="section-label" style="margin-top:0;">اختر وسيلة التحويل التي استخدمتها</div>
       <div class="method-picker-grid" id="methodPickerGrid"></div>
@@ -261,6 +280,22 @@
             <input type="file" id="receiptInput2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
           </div>
         </div>
+        <div id="shortfallBox" style="display:none; margin-top:12px; border:1px solid var(--danger); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.8;"></div>
+
+        <div id="remainderStep" style="display:none; margin-top:12px; border:1px dashed var(--border); border-radius:12px; padding:12px;">
+          <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">إشعار المبلغ المتبقي</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="remainderRefInput" placeholder="رقم عملية التحويل الثاني" inputmode="latin" autocomplete="off">
+            <button type="button" id="remainderRefBtn">تحقق</button>
+          </div>
+          <div id="remainderRefMsg" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
+          <div class="file-upload" id="fileUploadBox3" style="display:none; margin-top:10px;">
+            <i class="fas fa-paperclip"></i> ارفع صورة إشعار المبلغ المتبقي
+            <input type="file" id="receiptInput3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+          </div>
+          <div id="remainderStatus" style="font-size:12px; margin-top:8px; font-weight:600;"></div>
+        </div>
+
         <div id="scanStatus" style="font-size:12px; margin-top:8px; font-weight:600; color:var(--text-muted);"></div>
         <div id="scanReport" style="display:none; margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.7;"></div>
       </div>
@@ -295,6 +330,8 @@ let savedTxRef = null;      // رقم العملية بعد الحفظ
 let scanResult = null;      // نتيجة الفحص الذكي للصورة الحالية
 let isDirectBuy = false;    // شراء مباشر (زر "اشترِ الآن") — لا علاقة له بالسلة
 let selectedMethodAccount = null;  // رقم حساب الوسيلة المختارة (للتحقق من جهة الإيداع)
+let verifiedPaymentCode = null;    // رمز الدفع بعد التحقق منه من الإدارة
+let splitPayment = null;           // دفع مجزّأ: {firstFile, firstScan, secondFile, secondScan, secondRef, remaining}
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
@@ -546,11 +583,93 @@ function attachCheckoutEvents(canUseWallet) {
     walletOption.onclick = null;
   }
 
+  const codeOption  = document.getElementById('codeOption');
+  const codeDetails = document.getElementById('codeDetails');
+
+  if (canUseWallet) {
+    const prevWalletClick = walletOption.onclick;
+    walletOption.onclick = () => {
+      if (prevWalletClick) prevWalletClick();
+      codeOption.classList.remove('selected');
+      codeDetails.classList.remove('show');
+    };
+  }
+
   bankOption.onclick = () => {
     selectedPayment = 'bank';
     bankOption.classList.add('selected');
     walletOption.classList.remove('selected');
+    codeOption.classList.remove('selected');
+    codeDetails.classList.remove('show');
     bankDetails.classList.add('show');
+  };
+
+  codeOption.onclick = () => {
+    selectedPayment = 'code';
+    codeOption.classList.add('selected');
+    walletOption.classList.remove('selected');
+    bankOption.classList.remove('selected');
+    bankDetails.classList.remove('show');
+    codeDetails.classList.add('show');
+  };
+
+  // ── التحقق من رمز الدفع الصادر من الإدارة ──
+  const codeInput = document.getElementById('paymentCodeInput');
+  const codeMsg   = document.getElementById('paymentCodeMessage');
+  const codeBtn   = document.getElementById('verifyCodeBtn');
+
+  const CODE_REASONS = {
+    not_found:      'الرمز غير موجود. تأكد من كتابته كما أرسلته الإدارة.',
+    already_used:   'هذا الرمز مستخدم من قبل.',
+    expired:        'انتهت صلاحية هذا الرمز. اطلب رمزاً جديداً من الإدارة.',
+    not_your_code:  'هذا الرمز مخصص لعميل آخر.',
+    amount_too_low: 'قيمة الرمز أقل من إجمالي طلبك.',
+    cancelled:      'تم إلغاء هذا الرمز من الإدارة.'
+  };
+
+  codeInput.addEventListener('input', () => {
+    verifiedPaymentCode = null;
+    codeMsg.textContent = '';
+  });
+
+  codeBtn.onclick = async () => {
+    const raw = codeInput.value.trim().toUpperCase();
+    verifiedPaymentCode = null;
+    if (raw.length < 4) {
+      codeMsg.style.color = 'var(--danger)';
+      codeMsg.textContent = 'اكتب رمز الدفع كاملاً.';
+      return;
+    }
+    codeBtn.disabled = true;
+    codeMsg.style.color = 'var(--text-muted)';
+    codeMsg.textContent = 'جارِ التحقق من الرمز...';
+    try {
+      const { data, error } = await withNetTimeout(
+        supabaseClient.rpc('validate_payment_code', { p_code: raw }),
+        NET_TIMEOUT_MS.rpc, 'validate_payment_code'
+      );
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row || row.valid !== true) {
+        codeMsg.style.color = 'var(--danger)';
+        codeMsg.textContent = CODE_REASONS[row && row.reason] || 'الرمز غير صالح للاستخدام.';
+        return;
+      }
+      if (Number(row.amount) < currentTotal()) {
+        codeMsg.style.color = 'var(--danger)';
+        codeMsg.textContent = `قيمة الرمز (${safeFormatSDG(row.amount)} ج.س) أقل من إجمالي الطلب (${safeFormatSDG(currentTotal())} ج.س).`;
+        return;
+      }
+      verifiedPaymentCode = raw;
+      codeMsg.style.color = 'var(--primary)';
+      codeMsg.textContent = `الرمز صالح ✓ — قيمته ${safeFormatSDG(row.amount)} ج.س. اضغط "تأكيد الدفع" لإتمام الطلب.`;
+    } catch (e) {
+      devWarn('[RAIZEY] validate_payment_code failed:', (e && e.message) || e);
+      codeMsg.style.color = 'var(--danger)';
+      codeMsg.textContent = 'تعذّر التحقق من الرمز حالياً. تحقق من الاتصال وحاول مجدداً.';
+    } finally {
+      codeBtn.disabled = false;
+    }
   };
 
   // ── دعم العملاء عبر واتساب — استبدل الرقم بصيغة دولية بدون + (مثال: 249912345678) ──
@@ -613,6 +732,8 @@ function attachCheckoutEvents(canUseWallet) {
     } catch (e) {}
     fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط هنا لرفع صورة إيصال التحويل`;
     fileBox.classList.remove('has-file');
+    splitPayment = null;
+    try { hideShortfall(); } catch (e) {}
     hideSupportButton();
     document.getElementById('scanStatus').textContent = '';
     const rep = document.getElementById('scanReport');
@@ -851,6 +972,8 @@ function attachCheckoutEvents(canUseWallet) {
     document.getElementById('formError').textContent = '';
     reportEl.style.display = 'none';
     reportEl.innerHTML = '';
+    splitPayment = null;
+    hideShortfall();
     fileBox.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
 
@@ -928,6 +1051,13 @@ function attachCheckoutEvents(canUseWallet) {
 
     statusEl.textContent = '';
 
+    // ── مسار «المبلغ ناقص»: المال وصل فعلاً لكنه أقل من الإجمالي ──
+    if (analysis.decision === 'reject' && analysis.shortfall &&
+        analysis.shortfall.remaining > 0 && analysis.shortfall.refMatched) {
+      showShortfallCard(file, analysis);
+      return;
+    }
+
     if (analysis.decision === 'reject') {
       resetReceiptSelection();
       reportEl.style.display = 'block';
@@ -964,7 +1094,11 @@ function attachCheckoutEvents(canUseWallet) {
     rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
     rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
 
-    const ok = analysis.decision === 'accept' && analysis.refVerified === true && analysis.amountVerified === true;
+    // review_admin = مقبول للعميل، مع تدقيق إداري لاحق (لا يُحجب الطلب)
+    const ok = (analysis.decision === 'accept' || analysis.decision === 'review_admin') &&
+               analysis.refVerified === true && analysis.amountVerified === true;
+    const needsAdmin = ok && analysis.decision === 'review_admin';
+    if (needsAdmin && analysis.reviewReason) rows.push(`سبب التدقيق: ${analysis.reviewReason}`);
 
     // ── فشل تقني بحت في محرك الفحص (Gemini واقع/مهلة/شبكة) — هذا عطل في
     // أداتنا نحن، وليس مشكلة في إيصال العميل. لا يجوز أن يوقفه تماماً ولا
@@ -1003,10 +1137,10 @@ function attachCheckoutEvents(canUseWallet) {
     hideSupportButton();
 
     reportEl.style.display = 'block';
-    reportEl.style.borderColor = ok ? 'var(--primary)' : 'var(--border)';
+    reportEl.style.borderColor = needsAdmin ? '#c98a1f' : (ok ? 'var(--primary)' : 'var(--border)');
     reportEl.innerHTML =
-      `<strong style="color:${ok ? 'var(--primary)' : 'var(--ink)'};">` +
-      `<i class="fas ${ok ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${escapeHtml(analysis.message)}</strong>` +
+      `<strong style="color:${needsAdmin ? '#c98a1f' : (ok ? 'var(--primary)' : 'var(--ink)')};">` +
+      `<i class="fas ${needsAdmin ? 'fa-user-shield' : (ok ? 'fa-circle-check' : 'fa-circle-info')}"></i> ${escapeHtml(analysis.message)}</strong>` +
       `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
       (ok ? '' : `<div style="margin-top:8px; color:var(--danger); font-size:12px; font-weight:600;">${escapeHtml(blockHint(analysis))}</div>`);
 
@@ -1038,8 +1172,175 @@ function attachCheckoutEvents(canUseWallet) {
       return `المبلغ في الإشعار (${safeFormatSDG(a.extracted.amount)} ج.س) لا يطابق المبلغ المطلوب (${safeFormatSDG(currentTotal())} ج.س). حوّل المبلغ الصحيح ثم ارفع الإشعار الجديد.`;
     if (!a.amountVerified)
       return 'لم يظهر المبلغ في الصورة. أضف صورة ثانية بالأسفل (الإشعار الأبيض أو لقطة كاملة) يظهر فيها المبلغ بوضوح.';
-    return 'تعذّر إكمال الفحص. أضف صورة ثانية أوضح للإشعار، أو تواصل مع الدعم.';
+    if (!a.refVerified && !a.extracted.txRef)
+      return 'لم يظهر رقم العملية في الصورة. أضف صورة ثانية بالأسفل يظهر فيها رقم العملية كاملاً.';
+    return 'الإشعار غير مكتمل: يلزم ظهور رقم العملية والمبلغ معاً. أضف صورة ثانية أوضح للإشعار، أو تواصل مع الدعم.';
   }
+
+  // ═══════ مسار المبلغ الناقص: بطاقة واضحة + واتساب جاهز + إشعار ثانٍ ═══════
+  const shortfallBox   = document.getElementById('shortfallBox');
+  const remainderStep  = document.getElementById('remainderStep');
+  const remainderInput = document.getElementById('remainderRefInput');
+  const remainderBtn   = document.getElementById('remainderRefBtn');
+  const remainderMsg   = document.getElementById('remainderRefMsg');
+  const fileBox3       = document.getElementById('fileUploadBox3');
+  const fileInput3     = document.getElementById('receiptInput3');
+
+  function hideShortfall() {
+    shortfallBox.style.display = 'none';
+    shortfallBox.innerHTML = '';
+    remainderStep.style.display = 'none';
+    remainderMsg.textContent = '';
+    fileBox3.style.display = 'none';
+    fileInput3.value = '';
+  }
+
+  function showShortfallCard(file, analysis) {
+    splitPayment = {
+      firstFile: file,
+      firstScan: analysis,
+      remaining: analysis.shortfall.remaining,
+      paid: analysis.shortfall.paid,
+      secondFile: null, secondScan: null, secondRef: null
+    };
+    receiptFile = null;
+    scanResult  = null;
+    fileBox.innerHTML = `<i class="fas fa-triangle-exclamation" style="color:var(--danger);"></i> المبلغ في الإشعار ناقص`;
+    fileBox.classList.remove('has-file');
+    document.getElementById('scanReport').style.display = 'none';
+
+    const productNames = cart.map(i => i.product_name || i.name || '').filter(Boolean).join(' + ');
+    const waMsg =
+      `مرحباً، حوّلت مبلغاً ناقصاً في متجر Raizey وأحتاج إكمال الطلب.\n` +
+      `رقم العملية: ${savedTxRef}\n` +
+      `المبلغ المحوَّل: ${analysis.shortfall.paid} ج.س\n` +
+      `المتبقي: ${analysis.shortfall.remaining} ج.س\n` +
+      `إجمالي الطلب: ${analysis.shortfall.target} ج.س\n` +
+      `المنتج: ${productNames || '—'}\n` +
+      `معرّف الحساب: ${currentUser ? currentUser.id : '—'}`;
+
+    shortfallBox.style.display = 'block';
+    shortfallBox.innerHTML =
+      `<strong style="color:var(--danger);"><i class="fas fa-circle-exclamation"></i> المبلغ المحوَّل أقل من المطلوب</strong><br>` +
+      `وصل <strong>${safeFormatSDG(analysis.shortfall.paid)} ج.س</strong>، ` +
+      `والمتبقي <strong>${safeFormatSDG(analysis.shortfall.remaining)} ج.س</strong> ` +
+      `من إجمالي ${safeFormatSDG(analysis.shortfall.target)} ج.س.` +
+      `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">` +
+        (ADMIN_WHATSAPP && ADMIN_WHATSAPP.indexOf('YOUR_') !== 0
+          ? `<a href="https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(waMsg)}" target="_blank" rel="noopener"
+               style="display:inline-flex; align-items:center; gap:8px; background:#25D366; color:#fff; padding:10px 16px; border-radius:12px; font-weight:800; text-decoration:none;">
+               <i class="fab fa-whatsapp"></i> تواصل مع الدعم</a>` : '') +
+        `<button type="button" id="paidRestBtn"
+           style="background:var(--primary); color:#fff; border:none; padding:10px 16px; border-radius:12px; font-weight:800; cursor:pointer;">
+           حوّلت الباقي</button>` +
+      `</div>`;
+
+    document.getElementById('paidRestBtn').onclick = () => {
+      remainderStep.style.display = 'block';
+      remainderMsg.style.color = 'var(--text-muted)';
+      remainderMsg.textContent = `أدخل رقم عملية تحويل المبلغ المتبقي (${safeFormatSDG(splitPayment.remaining)} ج.س) ثم ارفع إشعاره.`;
+      remainderInput.focus();
+    };
+
+    logFraudAttempt('amount_shortfall', {
+      risk_flags: analysis.riskFlags,
+      paid: analysis.shortfall.paid,
+      remaining: analysis.shortfall.remaining
+    });
+  }
+
+  remainderBtn.onclick = async () => {
+    const raw = remainderInput.value.trim();
+    const norm = window.ReceiptIntel ? ReceiptIntel.normalizeRef(raw) : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    fileBox3.style.display = 'none';
+    if (!splitPayment) return;
+    if (norm.length < 6) {
+      remainderMsg.style.color = 'var(--danger)';
+      remainderMsg.textContent = 'رقم العملية قصير جداً. انسخه كما هو من الإشعار الثاني.';
+      return;
+    }
+    if (norm === (window.ReceiptIntel ? ReceiptIntel.normalizeRef(savedTxRef) : savedTxRef)) {
+      remainderMsg.style.color = 'var(--danger)';
+      remainderMsg.textContent = 'رقم العملية الثاني لا يصح أن يطابق الأول.';
+      return;
+    }
+    remainderBtn.disabled = true;
+    remainderMsg.style.color = 'var(--text-muted)';
+    remainderMsg.textContent = 'جارِ التحقق...';
+    try {
+      const { data, error } = await withNetTimeout(
+        supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: raw }),
+        NET_TIMEOUT_MS.rpc, 'check_tx_ref_2'
+      );
+      if (error) throw error;
+      if (!data || !data.length || data[0].available === false) {
+        remainderMsg.style.color = 'var(--danger)';
+        remainderMsg.textContent = 'رقم العملية الثاني مستخدم من قبل أو غير صحيح.';
+        return;
+      }
+      splitPayment.secondRef = raw;
+      remainderMsg.style.color = 'var(--primary)';
+      remainderMsg.textContent = 'تم التحقق ✓ — ارفع الآن صورة إشعار المبلغ المتبقي.';
+      fileBox3.style.display = 'block';
+    } catch (e) {
+      remainderMsg.style.color = 'var(--danger)';
+      remainderMsg.textContent = 'تعذّر التحقق (اتصال ضعيف). حاول مجدداً.';
+    } finally {
+      remainderBtn.disabled = false;
+    }
+  };
+
+  fileBox3.onclick = () => { if (splitPayment && splitPayment.secondRef) fileInput3.click(); };
+  fileInput3.onchange = async () => {
+    if (!fileInput3.files.length || !splitPayment || !splitPayment.secondRef) return;
+    const f = fileInput3.files[0];
+    const statusEl = document.getElementById('remainderStatus');
+    statusEl.style.color = 'var(--text-muted)';
+    statusEl.textContent = 'جارِ فحص إشعار المبلغ المتبقي...';
+    let res = null;
+    const opts = {
+      expectedAmount: splitPayment.remaining,
+      manualRef: splitPayment.secondRef,
+      expectedAccount: selectedMethodAccount
+    };
+    try {
+      res = await serverVerify(f, opts, null);
+    } catch (e) {
+      if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
+        try { res = await ReceiptIntel.analyze(f, opts); } catch (e2) { res = null; }
+      }
+    }
+    if (!res || res.refVerified !== true || res.amountVerified !== true) {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = (res && res.message)
+        ? res.message
+        : `لم نتمكن من تأكيد إشعار المبلغ المتبقي (${safeFormatSDG(splitPayment.remaining)} ج.س). ارفع لقطة شاشة كاملة للإشعار.`;
+      return;
+    }
+
+    splitPayment.secondFile = f;
+    splitPayment.secondScan = res;
+
+    // القبول عبر جمع إشعارين يمر دائماً بتدقيق إداري
+    const merged = Object.assign({}, splitPayment.firstScan);
+    merged.decision   = 'review_admin';
+    merged.ocrStatus  = 'needs_admin_check';
+    merged.refVerified = true;
+    merged.amountVerified = true;
+    merged.reviewSeverity = 'normal';
+    merged.reviewReason = `دفع مجزّأ عبر إشعارين: ${splitPayment.paid} + ${splitPayment.remaining} ج.س ` +
+                          `(رقم ثانٍ: ${splitPayment.secondRef}) — يحتاج تدقيقاً إدارياً`;
+    merged.riskFlags = (splitPayment.firstScan.riskFlags || []).concat(['split_payment']);
+    merged.message = 'تم قبول الإيصالين ✓ — مجموع المبلغين يساوي إجمالي الطلب. طلبك يحتاج تدقيقاً إدارياً سريعاً قبل التنفيذ.';
+    receiptFile = splitPayment.firstFile;
+    scanResult  = merged;
+
+    statusEl.style.color = 'var(--primary)';
+    statusEl.textContent = 'تم تأكيد الإشعار الثاني ✓ — اضغط "تأكيد الدفع وإرسال الطلبات".';
+    shortfallBox.style.borderColor = 'var(--primary)';
+    fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم قبول الإشعارين (دفع مجزّأ)`;
+    fileBox.classList.add('has-file');
+  };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
   document.getElementById('applyCouponBtn').onclick = applyCoupon;
@@ -1071,10 +1372,16 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   errorBox.textContent = '';
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
 
-  // ── تحقق اكتمال بيانات التحويل البنكي أولاً (قبل حساب أي محاولة) ──
-  // بهذا الترتيب: ضغطات الزر أثناء استكمال الخطوات (قبل جهوزية الإيصال)
-  // لا تُحتسب من حصة محاولات الإرسال، ولا تُهدر على مستخدم أكمل كل شيء بشكل صحيح.
-  if (selectedPayment !== 'wallet' && (!selectedMethodId || !receiptFile || !savedTxRef || !scanResult)) {
+  // ── تحقق اكتمال بيانات وسيلة الدفع المختارة أولاً (قبل حساب أي محاولة) ──
+  // بهذا الترتيب: ضغطات الزر أثناء استكمال الخطوات (رمز غير مؤكَّد، إيصال
+  // لسه ما اتفحص...) لا تُحتسب من حصة محاولات الإرسال، فمستخدم أكمل كل
+  // شيء بشكل صحيح ما بيتفاجأ بحظر بسبب محاولات فاشلة ما كان يدري بيها.
+  if (selectedPayment === 'code' && !verifiedPaymentCode) {
+    errorBox.textContent = 'اكتب رمز الدفع واضغط "تحقق" أولاً.';
+    return;
+  }
+  if (selectedPayment !== 'wallet' && selectedPayment !== 'code' &&
+      (!selectedMethodId || !receiptFile || !savedTxRef || !scanResult)) {
     if (!selectedMethodId) errorBox.textContent = 'الرجاء اختيار وسيلة التحويل البنكي!';
     else if (!savedTxRef) errorBox.textContent = 'اكتب رقم العملية واضغط "تحقق" أولاً (الخطوة 1).';
     else errorBox.textContent = 'الرجاء رفع صورة الإيصال ليتم فحصها (الخطوة 2).';
@@ -1122,6 +1429,48 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       const msg = err.message || err.hint || err.details || String(err);
       devWarn('[RAIZEY] wallet order error:', msg);
       errorBox.textContent = getFriendlyError(msg);
+      placeOrderBtn.disabled = false;
+      placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
+    }
+    return;
+  }
+
+  // ── الدفع برمز من الإدارة: دالة ذرّية تستهلك الرمز وتنشئ الطلب معاً ──
+  // (تم التحقق من verifiedPaymentCode في بداية الدالة قبل احتساب محاولة الإرسال)
+  if (selectedPayment === 'code') {
+    try {
+      const items = cart.map(item => ({
+        product_id:   item.product_id,
+        option_id:    item.selected_option ? item.selected_option.id : null,
+        quantity:     (item.quantity && item.quantity > 0) ? item.quantity : 1,
+        field_values: item.field_values || {},
+        field_labels: item.field_labels || {}
+      }));
+      const { data, error } = await withNetTimeout(
+        supabaseClient.rpc('redeem_payment_code_order', {
+          p_code:        verifiedPaymentCode,
+          p_items:       items,
+          p_coupon_code: appliedCoupon
+            ? document.getElementById('couponInput').value.trim().toUpperCase()
+            : null
+        }),
+        NET_TIMEOUT_MS.rpc, 'redeem_payment_code'
+      );
+      if (error) throw error;
+      const lastId = (data && data.length) ? data[data.length - 1].id : null;
+      clearActiveBasket();
+      window.location.href = lastId ? `receipt.html?order_id=${lastId}` : 'my-orders.html';
+    } catch (err) {
+      const msg = (err && (err.message || err.hint || err.details)) || String(err);
+      devWarn('[RAIZEY] payment code order error:', msg);
+      errorBox.textContent =
+        /already_used/.test(msg)   ? 'هذا الرمز مستخدم من قبل.' :
+        /expired/.test(msg)        ? 'انتهت صلاحية الرمز. اطلب رمزاً جديداً من الإدارة.' :
+        /amount_too_low/.test(msg) ? 'قيمة الرمز أقل من إجمالي الطلب.' :
+        /not_found|invalid_code/.test(msg) ? 'الرمز غير صحيح.' :
+        /not_your_code/.test(msg)  ? 'هذا الرمز مخصص لعميل آخر.' :
+        getFriendlyError(msg);
+      verifiedPaymentCode = null;
       placeOrderBtn.disabled = false;
       placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     }
@@ -1265,7 +1614,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     ocr_status:        scanResult.ocrStatus || 'needs_review',
     ocr_confidence:    scanResult.confidence ?? null,
     risk_flags:        scanResult.riskFlags || [],
+    review_reason:     scanResult.reviewReason || null,
+    review_severity:   scanResult.reviewSeverity || null,
     ocr_data: Object.assign({}, scanResult.extracted || {}, {
+      review_reason:   scanResult.reviewReason || null,
+      split_payment:   splitPayment && splitPayment.secondScan ? {
+        first_amount:  splitPayment.paid,
+        second_amount: splitPayment.remaining,
+        second_tx_ref: splitPayment.secondRef
+      } : null,
       engine_version:  scanResult.version || null,
       engine_source:   scanResult.source || 'browser',
       language:        scanResult.language || null,
@@ -1279,9 +1636,49 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     })
   };
 
-  const finishSuccess = (rows) => {
+  const finishSuccess = async (rows) => {
     const list = Array.isArray(rows) ? rows : [];
     const lastId = list.length ? list[list.length - 1].id : null;
+
+    // ── دفع مجزّأ: نسجّل الإشعار الثاني ونحجز رقم عمليته لمنع تكراره ──
+    if (splitPayment && splitPayment.secondFile && splitPayment.secondRef) {
+      try {
+        const ext2  = (splitPayment.secondFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path2 = `${currentUser.id}/${Date.now()}_receipt_2.${ext2}`;
+        await supabaseClient.storage.from('receipts').upload(path2, splitPayment.secondFile, {
+          contentType: splitPayment.secondFile.type, upsert: false
+        });
+        let url2 = null;
+        try {
+          const { data: signed2 } = await supabaseClient.storage.from('receipts')
+            .createSignedUrl(path2, 60 * 60 * 24 * 30);
+          url2 = signed2 ? signed2.signedUrl : null;
+        } catch (e) {}
+        await supabaseClient.rpc('attach_secondary_receipt', {
+          p_parent_tx_ref: savedTxRef,
+          p_order_id:      lastId,
+          p_receipt: {
+            tx_ref:          splitPayment.secondRef,
+            receipt_hash:    await hashFile(splitPayment.secondFile),
+            receipt_path:    path2,
+            receipt_url:     url2,
+            provider:        splitPayment.secondScan.provider || null,
+            payment_method_id: selectedMethodId,
+            expected_amount: splitPayment.remaining,
+            amount_detected: splitPayment.secondScan.extracted
+              ? splitPayment.secondScan.extracted.amount : null,
+            tx_ref_ocr:      splitPayment.secondScan.extracted
+              ? splitPayment.secondScan.extracted.txRef : null,
+            ocr_status:      'needs_admin_check',
+            risk_flags:      (splitPayment.secondScan.riskFlags || []).concat(['split_payment_part2']),
+            ocr_data:        splitPayment.secondScan.extracted || {}
+          }
+        });
+      } catch (e) {
+        devWarn('[RAIZEY] secondary receipt attach failed:', (e && e.message) || e);
+      }
+    }
+
     clearActiveBasket();
     window.location.href = lastId
       ? `receipt.html?order_id=${lastId}`
@@ -1299,7 +1696,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       NET_TIMEOUT_MS.rpc, 'create_bank_orders'
     );
     if (error) throw error;
-    finishSuccess(data);
+    await finishSuccess(data);
     return;
   } catch (err) {
     const msg  = (err && (err.message || err.hint || err.details)) || String(err);
@@ -1391,7 +1788,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     );
     if (orderError) throw orderError;
 
-    finishSuccess(insertedOrders);
+    await finishSuccess(insertedOrders);
   } catch (err) {
     failFromError(err);
   }
