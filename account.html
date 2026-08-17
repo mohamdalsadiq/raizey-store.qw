@@ -6,13 +6,11 @@
 <title>حسابي — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<!-- إضافة مكتبة الأيقونات الاحترافية الفخمة -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  /* تحسين تنسيق القائمة السفلية لتبدو متناسقة مع الأيقونات */
   .account-link-item {
     display: flex;
     align-items: center;
@@ -38,9 +36,65 @@
     width: 20px;
     text-align: center;
   }
-  .section-label i {
-    margin-left: 6px;
+  .section-label i { margin-left: 6px; }
+  .account-security {
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
   }
+  .security-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 900;
+  }
+  .security-title i { color: var(--primary); }
+  .security-subtitle {
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .security-card {
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+  }
+  .security-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .security-card-title i { width: 18px; color: var(--primary); text-align: center; }
+  .security-card p {
+    margin: 0 0 11px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.65;
+  }
+  .security-card .auth-btn { margin-top: 0; min-height: 42px; font-size: 12px; }
+  .security-card .auth-btn.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink);
+  }
+  .security-card .auth-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }
+  .security-card .auth-btn.danger {
+    background: rgba(255,77,79,.12);
+    color: var(--danger);
+    border: 1px solid rgba(255,77,79,.25);
+  }
+  .security-card .auth-btn.danger:hover { background: rgba(255,77,79,.18); }
+  .security-message { min-height: 20px; margin: 10px 0 0; }
+  .password-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .password-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -66,17 +120,20 @@
   </div>
 
   <div class="field">
-    <label>الاسم الكامل</label>
+    <label for="fullNameInput">الاسم الكامل</label>
     <input type="text" id="fullNameInput">
   </div>
 
   <div class="field">
-    <label>البريد الإلكتروني</label>
-    <input type="email" id="emailInput" disabled style="opacity:0.6; cursor: not-allowed;">
+    <label for="emailInput">البريد الإلكتروني</label>
+    <input type="email" id="emailInput" autocomplete="email">
+    <span class="email-pending-badge" id="emailPendingBadge" role="status">
+      <i class="fas fa-circle-info"></i><span id="emailPendingText"></span>
+    </span>
   </div>
 
   <div class="field">
-    <label>رقم الواتساب</label>
+    <label for="whatsappInput">رقم الواتساب</label>
     <input type="tel" id="whatsappInput">
   </div>
 
@@ -87,7 +144,35 @@
     <i class="fas fa-floppy-disk" style="margin-left: 6px;"></i> حفظ التعديلات
   </button>
 
-  <!-- القائمة السفلية الاحترافية بالأيقونات الموحدة -->
+  <section class="account-security" aria-labelledby="securityTitle">
+    <h2 class="security-title" id="securityTitle"><i class="fas fa-shield-halved"></i> أمان الحساب</h2>
+    <p class="security-subtitle">للحفاظ على حسابك، سنرسل كود تحقق إلى بريدك قبل تنفيذ أي عملية حساسة.</p>
+
+    <div class="security-card">
+      <div class="security-card-title"><i class="fas fa-key"></i><span>تغيير كلمة السر</span></div>
+      <p>أدخل كلمة سر جديدة، ثم أكّد هويتك بالكود المرسل إلى بريدك الحالي.</p>
+      <div class="password-grid">
+        <div class="field" style="margin-bottom:10px;">
+          <label for="newPasswordInput">كلمة السر الجديدة</label>
+          <input type="password" id="newPasswordInput" autocomplete="new-password" placeholder="8 أحرف على الأقل">
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label for="confirmPasswordInput">تأكيد كلمة السر</label>
+          <input type="password" id="confirmPasswordInput" autocomplete="new-password" placeholder="أعد كتابة كلمة السر">
+        </div>
+      </div>
+      <button class="auth-btn secondary" id="changePasswordBtn" type="button"><i class="fas fa-lock" style="margin-left:6px;"></i> تغيير كلمة السر</button>
+    </div>
+
+    <div class="security-card" id="googleSecurityCard" hidden>
+      <div class="security-card-title"><i class="fab fa-google"></i><span>حساب جوجل المرتبط</span></div>
+      <p>سيتم طلب تأكيد هويتك قبل فك الربط. لا تفك الربط إذا لم يكن لديك وسيلة دخول أخرى إلى الحساب.</p>
+      <button class="auth-btn danger" id="unlinkGoogleBtn" type="button"><i class="fas fa-link-slash" style="margin-left:6px;"></i> فك ربط جوجل</button>
+    </div>
+    <div class="form-error security-message" id="securityError"></div>
+    <div class="form-success security-message" id="securitySuccess"></div>
+  </section>
+
   <div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
     <a href="my-orders.html" class="account-link-item">
       <i class="fas fa-box"></i>
@@ -108,17 +193,137 @@
   </button>
 </div>
 
+<div class="auth-modal" id="reauthModal" hidden>
+  <div class="auth-modal-box" role="dialog" aria-modal="true" aria-labelledby="reauthTitle">
+    <h2 class="auth-modal-title" id="reauthTitle"><i class="fas fa-shield-halved"></i> أكّد هويتك</h2>
+    <p class="auth-modal-sub" id="reauthSub">للمتابعة، أرسلنا كودًا من 6 أرقام إلى بريدك الحالي.</p>
+    <form id="reauthForm" novalidate>
+      <div class="otp-inputs" id="reauthOtpBox" dir="ltr">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" autocomplete="one-time-code" aria-label="الرقم الأول">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الثاني">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الثالث">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الرابع">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الخامس">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم السادس">
+      </div>
+      <div class="form-error auth-modal-error" id="reauthError"></div>
+      <div class="auth-modal-actions">
+        <button type="button" class="auth-modal-cancel" id="reauthCancelBtn">إلغاء</button>
+        <button type="submit" class="auth-btn" id="reauthVerifyBtn">تأكيد الكود</button>
+      </div>
+    </form>
+    <div class="resend-row">
+      <span>ما وصلك الكود؟</span>
+      <button id="reauthResendBtn" type="button" class="resend-btn" data-idle-label="إعادة الإرسال">إعادة الإرسال</button>
+      <span class="timer" id="reauthResendTimer"></span>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/auth-ui.js"></script>
 <script>
+const UI = window.RaizeyAuthUI;
 let currentUser = null;
+let googleIdentity = null;
+let reauthEmail = '';
+let reauthMode = 'session';
+let reauthResolver = null;
+
+const formError = document.getElementById('formError');
+const formSuccess = document.getElementById('formSuccess');
+const securityError = document.getElementById('securityError');
+const securitySuccess = document.getElementById('securitySuccess');
+const emailInput = document.getElementById('emailInput');
+const emailPendingBadge = document.getElementById('emailPendingBadge');
+const emailPendingText = document.getElementById('emailPendingText');
+const saveBtn = document.getElementById('saveBtn');
+const reauthModal = document.getElementById('reauthModal');
+const reauthSub = document.getElementById('reauthSub');
+const reauthError = document.getElementById('reauthError');
+const reauthVerifyBtn = document.getElementById('reauthVerifyBtn');
+const reauthResendBtn = document.getElementById('reauthResendBtn');
+const reauthOtp = UI.bindOtpInputs(document.getElementById('reauthOtpBox'), () => document.getElementById('reauthForm').requestSubmit());
+const reauthTimer = UI.createResendTimer(reauthResendBtn, document.getElementById('reauthResendTimer'), 60);
+
+function clearMessages() {
+  formError.textContent = '';
+  formSuccess.textContent = '';
+}
+
+function clearSecurityMessages() {
+  securityError.textContent = '';
+  securitySuccess.textContent = '';
+}
+
+function showPendingEmail(email) {
+  emailPendingText.textContent = 'بانتظار تأكيد البريد الجديد: ' + email;
+  emailPendingBadge.classList.add('is-visible');
+}
+
+function refreshPendingEmail() {
+  const pending = sessionStorage.getItem('pending_email_change');
+  const current = (currentUser && currentUser.email || '').toLowerCase();
+  if (pending && pending.toLowerCase() === current) {
+    sessionStorage.removeItem('pending_email_change');
+    emailPendingBadge.classList.remove('is-visible');
+  } else if (pending) {
+    emailInput.value = pending;
+    showPendingEmail(pending);
+  }
+}
+
+function closeReauth(result) {
+  reauthTimer.stop();
+  reauthOtp.clear();
+  reauthModal.hidden = true;
+  const resolver = reauthResolver;
+  reauthResolver = null;
+  if (resolver) resolver(result);
+}
+
+async function sendReauthCode() {
+  reauthError.textContent = '';
+  const response = reauthMode === 'password'
+    ? await supabaseClient.auth.reauthenticate()
+    : await supabaseClient.auth.signInWithOtp({ email: reauthEmail });
+  if (response.error) throw response.error;
+  reauthTimer.start(60);
+  reauthOtp.focus();
+}
+
+function requestReauthentication(reason, mode) {
+  if (!currentUser || !currentUser.email) return Promise.resolve(false);
+  if (reauthResolver) closeReauth(false);
+  reauthEmail = currentUser.email;
+  reauthMode = mode || 'session';
+  reauthSub.textContent = 'للمتابعة في ' + reason + '، أرسلنا كودًا من 6 أرقام إلى بريدك الحالي ' + reauthEmail + '.';
+  reauthError.textContent = '';
+  reauthModal.hidden = false;
+  reauthResolver = null;
+
+  const promise = new Promise((resolve) => { reauthResolver = resolve; });
+  sendReauthCode().catch((error) => {
+    reauthError.textContent = error && error.status === 429
+      ? 'محاولات كثيرة، انتظر قليلاً قبل طلب كود جديد.'
+      : 'تعذر إرسال كود تأكيد الهوية الآن. حاول مرة أخرى.';
+    closeReauth(false);
+  });
+  return promise;
+}
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
-  currentUser = session.user;
 
-  document.getElementById('emailInput').value = currentUser.email;
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  currentUser = user || session.user;
+  emailInput.value = currentUser.email || '';
+  refreshPendingEmail();
+
+  googleIdentity = (currentUser.identities || []).find((identity) => identity.provider === 'google') || null;
+  document.getElementById('googleSecurityCard').hidden = !googleIdentity;
 
   const { data: profile } = await supabaseClient
     .from('profiles').select('*').eq('id', currentUser.id).single();
@@ -138,42 +343,176 @@ async function init() {
     setTimeout(() => { btn.textContent = 'نسخ'; }, 2000);
   });
 
-  document.getElementById('saveBtn').addEventListener('click', saveProfile);
+  saveBtn.addEventListener('click', saveProfile);
+  document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
+  document.getElementById('unlinkGoogleBtn').addEventListener('click', unlinkGoogle);
   document.getElementById('logoutBtn').addEventListener('click', logout);
 }
 
 async function saveProfile() {
-  const errorBox = document.getElementById('formError');
-  const successBox = document.getElementById('formSuccess');
-  errorBox.textContent = '';
-  successBox.textContent = '';
-
+  clearMessages();
   const fullName = document.getElementById('fullNameInput').value.trim();
   const whatsapp = document.getElementById('whatsappInput').value.trim();
+  const newEmail = emailInput.value.trim();
+  const oldEmail = (currentUser.email || '').trim();
 
   if (!fullName) {
-    errorBox.textContent = 'أدخل اسمك';
+    formError.textContent = 'أدخل اسمك';
+    return;
+  }
+  if (!UI.isValidEmail(newEmail)) {
+    UI.setFieldState(emailInput, 'invalid', 'صيغة البريد غير صحيحة');
+    formError.textContent = 'أدخل بريدًا إلكترونيًا صالحًا';
     return;
   }
 
-  const { error } = await supabaseClient
-    .from('profiles')
-    .update({ full_name: fullName, whatsapp_number: whatsapp })
-    .eq('id', currentUser.id);
+  const emailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
+  UI.setLoading(saveBtn, true, 'جارِ الحفظ...');
+  try {
+    const pendingEmail = sessionStorage.getItem('pending_email_change');
+    const alreadyPending = pendingEmail && pendingEmail.toLowerCase() === newEmail.toLowerCase();
+    if (emailChanged && !alreadyPending) {
+      const verified = await requestReauthentication('تغيير البريد الإلكتروني', 'session');
+      if (!verified) return;
+    }
 
-  if (error) {
-    errorBox.textContent = 'حصل خطأ، حاول تاني';
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({ full_name: fullName, whatsapp_number: whatsapp })
+      .eq('id', currentUser.id);
+
+    if (profileError) throw profileError;
+
+    if (emailChanged && !alreadyPending) {
+      const { error: emailError } = await supabaseClient.auth.updateUser({ email: newEmail });
+      if (emailError) throw emailError;
+      sessionStorage.setItem('pending_email_change', newEmail);
+      showPendingEmail(newEmail);
+      formSuccess.textContent = 'تم حفظ البيانات. تحقق من بريدك الجديد (والقديم) لتأكيد التغيير.';
+    } else if (alreadyPending) {
+      showPendingEmail(newEmail);
+      formSuccess.textContent = 'ما زال تغيير البريد بانتظار التأكيد من بريدك الجديد والقديم.';
+    } else {
+      formSuccess.textContent = 'تم حفظ التعديلات بنجاح';
+    }
+    setTimeout(() => { formSuccess.textContent = ''; }, 4500);
+  } catch (error) {
+    formError.textContent = error && error.status === 429
+      ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
+      : 'حصل خطأ أثناء الحفظ، حاول مرة أخرى';
+  } finally {
+    UI.setLoading(saveBtn, false);
+  }
+}
+
+async function changePassword() {
+  clearSecurityMessages();
+  const newPassword = document.getElementById('newPasswordInput').value;
+  const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
+  if (newPassword.length < 8) {
+    securityError.textContent = 'كلمة السر الجديدة يجب أن تكون 8 أحرف على الأقل.';
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    securityError.textContent = 'كلمتا السر غير متطابقتين.';
     return;
   }
 
-  successBox.textContent = 'تم حفظ التعديلات بنجاح';
-  setTimeout(() => { successBox.textContent = ''; }, 3000);
+  const button = document.getElementById('changePasswordBtn');
+  UI.setLoading(button, true, 'جارِ التحقق...');
+  try {
+    const verified = await requestReauthentication('تغيير كلمة السر', 'password');
+    if (!verified) return;
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword, nonce: verified.nonce });
+    if (error) throw error;
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('confirmPasswordInput').value = '';
+    securitySuccess.textContent = 'تم تغيير كلمة السر بنجاح.';
+  } catch (_) {
+    securityError.textContent = 'تعذر تغيير كلمة السر، حاول مرة أخرى.';
+  } finally {
+    UI.setLoading(button, false);
+  }
 }
 
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = 'index.html';
+async function unlinkGoogle() {
+  clearSecurityMessages();
+  if (!googleIdentity) return;
+  if ((currentUser.identities || []).length < 2) {
+    securityError.textContent = 'أضف وسيلة دخول أخرى قبل فك ربط جوجل حتى لا تفقد الوصول إلى الحساب.';
+    return;
+  }
+
+  const verified = await requestReauthentication('فك ربط حساب جوجل', 'session');
+  if (!verified) return;
+  const button = document.getElementById('unlinkGoogleBtn');
+  UI.setLoading(button, true, 'جارِ فك الربط...');
+  try {
+    const { error } = await supabaseClient.auth.unlinkIdentity(googleIdentity);
+    if (error) throw error;
+    googleIdentity = null;
+    document.getElementById('googleSecurityCard').hidden = true;
+    securitySuccess.textContent = 'تم فك ربط حساب جوجل بنجاح.';
+  } catch (_) {
+    securityError.textContent = 'تعذر فك ربط حساب جوجل، حاول مرة أخرى.';
+  } finally {
+    UI.setLoading(button, false);
+  }
 }
+
+document.getElementById('reauthForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  reauthError.textContent = '';
+  const code = reauthOtp.value();
+  if (code.length !== 6) {
+    reauthError.textContent = 'أدخل الكود كاملاً (6 أرقام).';
+    return;
+  }
+
+  UI.setLoading(reauthVerifyBtn, true, 'جارِ التحقق...');
+  try {
+    if (reauthMode === 'password') {
+      closeReauth({ nonce: code });
+      return;
+    }
+
+    const { error } = await supabaseClient.auth.verifyOtp({
+      email: reauthEmail,
+      token: code,
+      type: 'email'
+    });
+    if (error) {
+      reauthError.textContent = error.status === 429
+        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل.'
+        : 'الكود غير صحيح أو منتهي الصلاحية.';
+      reauthOtp.clear();
+      return;
+    }
+    closeReauth({ sessionVerified: true });
+  } catch (_) {
+    reauthError.textContent = 'تعذر التحقق الآن، حاول مرة أخرى.';
+  } finally {
+    UI.setLoading(reauthVerifyBtn, false);
+  }
+});
+
+document.getElementById('reauthResendBtn').addEventListener('click', async () => {
+  try {
+    await sendReauthCode();
+  } catch (_) {
+    reauthError.textContent = 'تعذرت إعادة إرسال الكود، حاول بعد قليل.';
+  }
+});
+
+document.getElementById('reauthCancelBtn').addEventListener('click', () => closeReauth(false));
+reauthModal.addEventListener('click', (event) => {
+  if (event.target === reauthModal) closeReauth(false);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !reauthModal.hidden) closeReauth(false);
+});
 
 init();
 </script>

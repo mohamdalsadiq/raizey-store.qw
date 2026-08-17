@@ -62,6 +62,44 @@
       </button>
     </form>
 
+    <button type="button" class="otp-mode-btn" id="otpModeBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/><path d="M8 16h8"/></svg>
+      <span>الدخول بكود عبر البريد</span>
+    </button>
+
+    <section id="otpLoginPanel" hidden>
+      <div class="step-badge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+        دخول آمن بدون كلمة سر
+      </div>
+      <h2 class="auth-title">أدخل كود الدخول</h2>
+      <p class="auth-sub" id="otpCodeSub"></p>
+
+      <form id="otpLoginForm" novalidate>
+        <div class="otp-inputs" id="loginOtpBox" dir="ltr">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" autocomplete="one-time-code" aria-label="الرقم الأول">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الثاني">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الثالث">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الرابع">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم الخامس">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="الرقم السادس">
+        </div>
+
+        <button type="submit" class="auth-btn" id="otpVerifyBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          <span>تحقق ودخول</span>
+        </button>
+      </form>
+
+      <div class="resend-row">
+        <span>ما وصلك الكود؟</span>
+        <button id="otpResendBtn" type="button" class="resend-btn" data-idle-label="إعادة إرسال الكود">إعادة إرسال الكود</button>
+        <span class="timer" id="otpResendTimer"></span>
+      </div>
+      <p class="auth-switch"><button type="button" class="link-button" id="changeOtpEmail">تغيير البريد الإلكتروني</button></p>
+      <p class="auth-switch"><button type="button" class="link-button" id="backToPassword">العودة للدخول بكلمة السر</button></p>
+    </section>
+
     <div class="auth-divider">أو</div>
     <div class="social-login-row">
       <button type="button" class="social-btn" id="googleLoginBtn">
@@ -85,13 +123,52 @@ const errorBox = document.getElementById('formError');
 const submitBtn = document.getElementById('submitBtn');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
+const otpModeBtn = document.getElementById('otpModeBtn');
+const otpLoginPanel = document.getElementById('otpLoginPanel');
+const otpVerifyBtn = document.getElementById('otpVerifyBtn');
+const otpResendBtn = document.getElementById('otpResendBtn');
+const otpCodeSub = document.getElementById('otpCodeSub');
+const otpTimer = UI.createResendTimer(otpResendBtn, document.getElementById('otpResendTimer'), 60);
+const loginOtp = UI.bindOtpInputs(document.getElementById('loginOtpBox'), () => document.getElementById('otpLoginForm').requestSubmit());
+let otpTargetEmail = '';
 
 UI.bindPasswordToggles();
 UI.bindEmailValidation(emailInput);
 
+function redirectAfterLogin() {
+  const savedRedirect = sessionStorage.getItem('redirect_after_login');
+  sessionStorage.removeItem('redirect_after_login');
+  if (savedRedirect) {
+    try {
+      const redirectUrl = new URL(savedRedirect, window.location.origin);
+      if (redirectUrl.origin === window.location.origin) {
+        window.location.assign(redirectUrl.href);
+        return;
+      }
+    } catch (_) {
+      // تجاهل أي رابط غير صالح والعودة إلى الصفحة الرئيسية.
+    }
+  }
+  window.location.href = 'index.html';
+}
+
+function clearMessages() {
+  errorBox.textContent = '';
+}
+
+function resetOtpMode() {
+  otpTimer.stop();
+  loginOtp.clear();
+  otpTargetEmail = '';
+  otpLoginPanel.hidden = true;
+  form.hidden = false;
+  otpModeBtn.hidden = false;
+  emailInput.focus();
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  errorBox.textContent = '';
+  clearMessages();
 
   const email = emailInput.value.trim();
   const password = passwordInput.value;
@@ -123,27 +200,95 @@ form.addEventListener('submit', async (e) => {
         : 'الإيميل أو كلمة السر غير صحيحة';
       return;
     }
-
-    const savedRedirect = sessionStorage.getItem('redirect_after_login');
-    sessionStorage.removeItem('redirect_after_login');
-
-    if (savedRedirect) {
-      try {
-        const redirectUrl = new URL(savedRedirect, window.location.origin);
-        if (redirectUrl.origin === window.location.origin) {
-          window.location.assign(redirectUrl.href);
-          return;
-        }
-      } catch (_) {
-        // تجاهل أي رابط غير صالح والعودة إلى الصفحة الرئيسية.
-      }
-    }
-    window.location.href = 'index.html';
+    redirectAfterLogin();
   } catch (_) {
     errorBox.textContent = 'تعذر تسجيل الدخول الآن، حاول مرة أخرى';
   } finally {
     UI.setLoading(submitBtn, false);
   }
+});
+
+otpModeBtn.addEventListener('click', async () => {
+  clearMessages();
+  const email = emailInput.value.trim();
+  if (!UI.isValidEmail(email)) {
+    UI.setFieldState(emailInput, 'invalid', 'أدخل بريدًا إلكترونيًا صالحًا أولاً');
+    emailInput.focus();
+    return;
+  }
+
+  UI.setLoading(otpModeBtn, true, 'جارِ إرسال الكود...');
+  try {
+    const { error } = await supabaseClient.auth.signInWithOtp({ email });
+    if (error) throw error;
+    otpTargetEmail = email;
+    otpCodeSub.textContent = 'أرسلنا كودًا من 6 أرقام إلى ' + email;
+    form.hidden = true;
+    otpModeBtn.hidden = true;
+    otpLoginPanel.hidden = false;
+    otpTimer.start(60);
+    loginOtp.focus();
+  } catch (err) {
+    errorBox.textContent = err && err.status === 429
+      ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
+      : 'تعذر إرسال كود الدخول الآن، حاول مرة أخرى';
+  } finally {
+    UI.setLoading(otpModeBtn, false);
+  }
+});
+
+document.getElementById('otpLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearMessages();
+  const code = loginOtp.value();
+  if (code.length !== 6) {
+    errorBox.textContent = 'أدخل الكود كاملاً (6 أرقام)';
+    return;
+  }
+
+  UI.setLoading(otpVerifyBtn, true, 'جارِ التحقق...');
+  try {
+    const { error } = await supabaseClient.auth.verifyOtp({
+      email: otpTargetEmail,
+      token: code,
+      type: 'email'
+    });
+    if (error) {
+      errorBox.textContent = error.status === 429
+        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
+        : 'الكود غير صحيح أو منتهي الصلاحية';
+      loginOtp.clear();
+      return;
+    }
+    redirectAfterLogin();
+  } catch (_) {
+    errorBox.textContent = 'تعذر التحقق الآن، حاول مرة أخرى';
+  } finally {
+    UI.setLoading(otpVerifyBtn, false);
+  }
+});
+
+otpResendBtn.addEventListener('click', async () => {
+  clearMessages();
+  otpTimer.start(60);
+  try {
+    const { error } = await supabaseClient.auth.signInWithOtp({ email: otpTargetEmail });
+    if (error) throw error;
+  } catch (err) {
+    errorBox.textContent = err && err.status === 429
+      ? 'محاولات كثيرة، انتظر قليلاً قبل إعادة المحاولة'
+      : 'تعذرت إعادة إرسال الكود، حاول بعد قليل';
+  }
+});
+
+document.getElementById('changeOtpEmail').addEventListener('click', () => {
+  clearMessages();
+  resetOtpMode();
+});
+
+document.getElementById('backToPassword').addEventListener('click', () => {
+  clearMessages();
+  resetOtpMode();
 });
 
 document.getElementById('googleLoginBtn').addEventListener('click', async () => {
