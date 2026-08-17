@@ -80,7 +80,7 @@
   }
   .account-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .password-stage[hidden] { display: none !important; }
-  .password-intro { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 14px; border: 1px dashed rgba(255,106,26,.3); border-radius: 12px; background: rgba(255,106,26,.055); }
+  .password-intro { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 13px 14px; border: 1px dashed rgba(255,106,26,.3); border-radius: 12px; background: rgba(255,106,26,.055); }
   .password-intro p { margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.7; }
   .password-intro .auth-btn { flex: 0 0 auto; margin: 0; min-height: 40px; }
   .profile-photo-card { display: flex; align-items: center; gap: 15px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(120deg, #fffdfa, #fff8f1); }
@@ -199,6 +199,68 @@
   .account-footer-actions .auth-btn { margin-top: 0; }
   @media (max-width: 700px) { .account-summary { grid-template-columns: auto 1fr; } .account-summary-status { grid-column: 2; } .account-nav { grid-template-columns: 1fr 1fr; } .security-grid { grid-template-columns: 1fr; } .security-card.wide, .preference-card.wide { grid-column: auto; } }
   @media (max-width: 540px) { .account-shell { width: min(100% - 20px, 980px); padding-top: 18px; } .account-header { align-items: stretch; flex-direction: column; } .account-back { justify-content: center; } .account-section { padding: 15px; } .field-grid, .password-grid { grid-template-columns: 1fr; } .field-grid .field.full { grid-column: auto; } .mfa-panel { grid-template-columns: 1fr; } .mfa-qr { width: 150px; } .player-id-row { grid-template-columns: 1fr 1fr auto; } .player-id-row select { grid-column: 1 / -1; } .account-links { grid-template-columns: 1fr; } .account-footer-actions { flex-direction: column; } }
+  /* Mobile-first polish: يمنع تمدد العناصر والتفاف النص إلى أعمدة ضيقة */
+  .account-shell, .account-shell * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { overflow-x: hidden; }
+  .account-section, .security-card, .preference-card, .profile-photo-card, .password-intro { min-width: 0; }
+  .password-stage { margin-top: 12px; min-width: 0; }
+  .password-intro p, .card-description, .section-heading p { min-width: 0; overflow-wrap: anywhere; word-break: normal; }
+  .profile-photo-preview { aspect-ratio: 1 / 1; }
+  .profile-photo-preview img, .account-avatar img { object-fit: contain; padding: 6px; background: #20222d; }
+  .profile-photo-preview img[hidden], .account-avatar img[hidden] { display: none !important; }
+  .profile-photo-actions label { cursor: pointer; }
+  .email-row { flex-wrap: wrap; min-width: 0; }
+  .email-row input { min-width: 0; }
+  .account-nav a { min-width: 0; white-space: nowrap; }
+  @media (max-width: 700px) {
+    .account-shell { width: min(100% - 20px, 680px); padding: 16px 0 32px; }
+    .account-summary { grid-template-columns: 54px minmax(0, 1fr) auto; padding: 14px; gap: 11px; }
+    .account-summary > .section-number { grid-column: 3; grid-row: 1; justify-self: end; }
+    .account-summary small { overflow-wrap: anywhere; }
+    .account-section { padding: 14px; margin-bottom: 12px; border-radius: 16px; }
+    .section-heading { align-items: center; margin-bottom: 13px; }
+    .section-heading h2 { font-size: 16px; }
+    .security-grid { gap: 10px; }
+    .security-card, .preference-card { padding: 13px; border-radius: 13px; }
+    .password-intro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 11px; align-items: stretch; padding: 12px; }
+    .password-intro p { line-height: 1.8; }
+    .password-intro .auth-btn, .password-stage .auth-btn { width: 100%; min-height: 44px; }
+    .password-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .profile-photo-card { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px; }
+    .profile-photo-preview { width: 88px; height: 88px; border-radius: 20px; }
+    .profile-photo-copy { min-width: 0; }
+    .profile-photo-copy .card-title { font-size: 13px; }
+    .profile-photo-copy .card-description { font-size: 11px; line-height: 1.65; }
+    .email-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+    .email-row input { width: 100%; }
+    .email-row .verified-badge, .email-row .pending-badge { justify-self: start; }
+    .player-id-row { display: grid; grid-template-columns: minmax(0, 1fr) 42px; gap: 8px; }
+    .player-id-row select { grid-column: 1 / -1; width: 100%; }
+    .player-id-row input { width: 100%; }
+    .player-id-row .icon-remove { width: 42px; height: 42px; }
+    .account-links { gap: 7px; }
+  }
+  @media (max-width: 420px) {
+    .account-shell { width: calc(100% - 14px); }
+    .account-header h1 { font-size: 24px; }
+    .account-header p { font-size: 12px; }
+    .account-nav { gap: 6px; }
+    .account-nav a { padding: 9px 5px; font-size: 10.5px; }
+    .section-heading h2 { font-size: 15px; }
+    .section-number { width: 27px; height: 27px; }
+    .profile-photo-card { grid-template-columns: 74px minmax(0, 1fr); gap: 10px; }
+    .profile-photo-preview { width: 74px; height: 74px; border-radius: 17px; }
+    .profile-photo-actions .auth-btn { width: 100%; }
+    .policy-table { min-width: 0; display: block; }
+    .policy-table thead { display: none; }
+    .policy-table tbody, .policy-table tr, .policy-table td { display: block; width: 100%; }
+    .policy-table tr { padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .policy-table tr:last-child { border-bottom: 0; }
+    .policy-table td { padding: 4px 12px; border: 0; }
+    .policy-table td:first-child { padding-top: 8px; color: var(--primary); font-weight: 900; }
+    .policy-table td:last-child { padding-bottom: 8px; }
+  }
 </style>
 </head>
 <body>
