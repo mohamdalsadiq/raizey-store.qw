@@ -444,6 +444,7 @@
   text-align: center;
   line-height: 1.7;
 }
+.admin-error-state[hidden] { display: none !important; }
 .admin-error-state > i { color: var(--danger); font-size: 22px; }
 .admin-error-state strong { color: var(--ink); font-size: 13px; max-width: 34rem; }
 .admin-error-state .admin-btn { min-height: 40px; padding-inline: 16px; }

@@ -227,6 +227,19 @@
   .btn-secondary-cart { width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 800; font-family:var(--font-display); cursor: pointer; margin-top: 10px; margin-bottom: 25px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-sizing: border-box; }
   .btn-secondary-cart:hover { background: rgba(255, 106, 26, 0.04); }
   .btn-secondary-cart:active { transform: scale(0.98); }
+  .product-quantity-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 12px; padding:12px 14px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-card); }
+  .product-quantity-label { display:inline-flex; align-items:center; gap:7px; color:var(--text-light); font-size:13px; font-weight:800; }
+  .product-quantity-label i { color:var(--accent-gold); }
+  .product-qty-stepper { display:inline-flex; align-items:center; gap:12px; }
+  .product-qty-stepper button { width:34px; height:34px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--accent-gold); border-radius:9px; background:transparent; color:var(--accent-gold); font-size:20px; font-weight:900; line-height:1; transition:transform .15s ease, background .15s ease, opacity .15s ease; }
+  .product-qty-stepper button:hover:not(:disabled), .product-qty-stepper button:focus-visible:not(:disabled) { background:rgba(255,106,26,.08); outline:3px solid rgba(255,106,26,.14); outline-offset:1px; }
+  .product-qty-stepper button:active:not(:disabled) { transform:scale(.92); }
+  .product-qty-stepper button:disabled { border-color:var(--border-color); color:var(--text-muted); opacity:.45; cursor:not-allowed; }
+  .product-qty-value { min-width:24px; color:var(--text-light); font-family:var(--font-mono); font-size:16px; font-weight:900; text-align:center; }
+  .product-summary-box { margin:12px 0 14px; }
+  .product-confirm-btn { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
+  .product-checkout-hint { display:flex; align-items:flex-start; gap:6px; margin:0 0 24px; color:var(--text-muted); font-size:11px; line-height:1.7; text-align:center; justify-content:center; }
+  .product-checkout-hint i { color:var(--accent-gold); margin-top:3px; }
   
   .payment-option { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s ease; }
   .payment-option:hover { border-color: rgba(255, 106, 26, 0.2); }
@@ -298,6 +311,7 @@ let selectedMethodId = null;
 let receiptFile = null;
 let appliedCoupon = null;
 let welcomeDiscount = null;
+let quantity = 1;
 
 function updateCartBadgeGlobal() {
   const cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
@@ -394,7 +408,7 @@ function updateFixedPriceBar() {
     amountEl.textContent = 'اختر الخيار النهائي أولاً';
     amountEl.classList.add('placeholder');
   } else {
-    amountEl.textContent = formatSDG(getSelectedPriceSdg()) + ' ج.س';
+    amountEl.textContent = formatSDG(getSelectedPriceSdg() * quantity) + ' ج.س';
     amountEl.classList.remove('placeholder');
   }
 }
@@ -490,80 +504,25 @@ function render() {
         `).join('')}
     ` : ''}
 
-    <button class="btn-secondary-cart" id="addToCartBtn">
-      <i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات
-    </button>
-
-    <div style="border-top: 1px dashed var(--border-color); margin: 25px 0;"></div>
-
-    <div class="section-label"><i class="fas fa-bolt" style="color:var(--accent-gold);"></i> أو شراء مباشر الآن</div>
-
-    <div class="payment-option ${!canUseWallet ? 'disabled' : ''}" id="walletOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">الدفع من المحفظة</div>
-        <div class="payment-option-sub" id="walletOptionSub">${canUseWallet ? `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س` : `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`}</div>
+    <div class="product-quantity-row" aria-label="تحديد الكمية">
+      <span class="product-quantity-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> الكمية</span>
+      <div class="product-qty-stepper">
+        <button type="button" id="qtyMinus" aria-label="إنقاص الكمية">&minus;</button>
+        <span id="qtyValue" class="product-qty-value" aria-live="polite">1</span>
+        <button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button>
       </div>
     </div>
 
-    <div class="payment-option" id="bankOption">
-      <div class="payment-option-info">
-        <div class="payment-option-title">تحويل بنكك ورفع الإيصال</div>
-        <div class="payment-option-sub">ادفع مباشرة وارفع صورة التحويل</div>
-      </div>
-    </div>
-
-    <div class="bank-details" id="bankDetails">
-      ${paymentMethods.map(m => `
-        <div style="margin-bottom:14px; font-size:14px; line-height:1.5;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-            <span><strong style="color:var(--accent-gold);">${escapeHtml(m.name)}</strong> — اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeAttribute(m.account_name || '')}">نسخ</button>
-          </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
-            <button type="button" class="copy-account-btn" data-copy="${escapeAttribute(m.account_number || '')}">نسخ</button>
-          </div>
-          ${m.instructions ? `<span style="color:var(--text-muted); font-size:13px;">${escapeHtml(m.instructions)}</span>` : ''}
-        </div>
-      `).join('')}
-      <div class="field" style="margin-top:14px;">
-        <label>رقم العملية (من رسالة التحويل) *</label>
-        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
-      </div>
-      <div class="field" style="margin-top:14px;">
-        <label>اختر وسيلة التحويل</label>
-        <select id="methodSelect">
-          <option value="">-- اختر --</option>
-          ${paymentMethods.map(m => `<option value="${escapeAttribute(m.id)}">${escapeHtml(m.name)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="file-upload" id="fileUploadBox">
-        <i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال
-        <input type="file" id="receiptInput" accept="image/*" style="display:none;">
-      </div>
-    </div>
-
-    ${welcomeDiscount ? `
-      <div style="background:rgba(255, 106, 26,0.06); border:1px solid var(--accent-gold); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--accent-gold); font-weight:700;">
-        خصم ترحيبي ${welcomeDiscount}% مطبق تلقائياً على أول طلب ليك
-      </div>
-    ` : ''}
-
-    <div class="section-label">هل لديك كود خصم؟</div>
-    <div style="display:flex; gap:8px; margin-bottom:6px;">
-      <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
-      <button id="applyCouponBtn">تطبيق</button>
-    </div>
-    <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
-
-    <div class="summary-box">
-      <span>الإجمالي للشراء المباشر</span>
-      <span class="total" id="summaryTotal">${selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الخيار'}</span>
+    <div class="summary-box product-summary-box">
+      <span>الإجمالي الحالي</span>
+      <span class="total" id="summaryTotal">${selectedOption ? formatSDG(currentPrice() * quantity) + ' ج.س' : 'اختر الخيار'}</span>
     </div>
 
     <div class="form-error" id="formError" style="margin-bottom:12px; font-weight:700; color:var(--danger);"></div>
 
-    <button class="auth-btn" id="submitBtn">تأكيد الطلب المباشر</button>
+    <button class="auth-btn product-confirm-btn" id="confirmPurchaseBtn"><i class="fas fa-arrow-left" aria-hidden="true"></i> تأكيد الشراء والمتابعة للدفع</button>
+    <button class="btn-secondary-cart" id="addToCartBtn"><i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة</button>
+    <p class="product-checkout-hint"><i class="fas fa-shield-halved" aria-hidden="true"></i> ستكمل فحص الإيصال واختيار طريقة الدفع في صفحة تأكيد الدفع.</p>
   `;
 
   content.innerHTML = htmlContent;
@@ -571,147 +530,119 @@ function render() {
   attachEvents();
 }
 
-function attachEvents() {
-  const walletOption = document.getElementById('walletOption');
-  const bankOption = document.getElementById('bankOption');
-  const bankDetails = document.getElementById('bankDetails');
-  const fileBox = document.getElementById('fileUploadBox');
-  const fileInput = document.getElementById('receiptInput');
-  const errorBox = document.getElementById('formError');
-  const submitBtn = document.getElementById('submitBtn');
-  const addToCartBtn = document.getElementById('addToCartBtn');
+function buildCartItem() {
+  const fieldValues = collectFieldValues();
+  if (fieldValues === null) return null;
+  const fieldLabels = {};
+  (product.required_fields || []).forEach(f => { if (f.key) fieldLabels[f.key] = f.label; });
+  return {
+    cart_item_id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+    product_id: product.id,
+    name: product.name,
+    price_sdg: getSelectedPriceSdg(),
+    quantity,
+    image_url: product.image_url,
+    selected_option: {
+      id: selectedOption.id,
+      label: selectedMainCat ? `${selectedMainCat} - ${selectedOption.display_label}` : selectedOption.display_label,
+      price_usd: getSelectedPriceUsd(),
+      price_sdg: getSelectedPriceSdg()
+    },
+    field_values: fieldValues,
+    field_labels: fieldLabels
+  };
+}
 
-  // --- أزرار الباقة الأساسية ---
+function attachEvents() {
+  const errorBox = document.getElementById('formError');
+  const addToCartBtn = document.getElementById('addToCartBtn');
+  const confirmPurchaseBtn = document.getElementById('confirmPurchaseBtn');
   const mainGrid = document.getElementById('mainCategoryGrid');
   const subGrid = document.getElementById('subOptionsGrid');
   const subLabel = document.getElementById('subLabel');
   const mainHint = document.getElementById('mainHint');
+
+  const addCurrentToCart = () => {
+    errorBox.textContent = '';
+    if (!validateSelection(errorBox)) return false;
+    const item = buildCartItem();
+    if (!item) { errorBox.textContent = 'املأ بيانات الطلب المطلوبة أولاً.'; return false; }
+    let cart = [];
+    try { cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || []; } catch (e) { cart = []; }
+    cart.push(item);
+    localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+    updateCartBadgeGlobal();
+    return true;
+  };
 
   if (mainGrid) {
     mainGrid.querySelectorAll('.main-cat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const cat = btn.dataset.mainCat;
         selectedMainCat = cat;
-        selectedOption = null; // إعادة تعيين الخيار الفرعي
-        
-        // تظليل الباقة الأساسية
+        selectedOption = null;
         mainGrid.querySelectorAll('.main-cat-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        if (mainHint) { mainHint.classList.remove('error'); mainHint.innerHTML = 'اختر الخيار المطلوب من القائمة'; }
-
-        // عرض الخيارات الفرعية الخاصة بهذه الباقة
+        if (mainHint) { mainHint.classList.remove('error'); mainHint.textContent = 'اختر الخيار المطلوب من القائمة'; }
         const subOptions = groupedOptions[cat] || [];
-        if (subOptions.length > 0) {
-          if (subLabel) subLabel.style.display = 'block';
-          if (subGrid) {
-            subGrid.innerHTML = subOptions.map(opt => `
-              <div class="option-card" data-option-id="${escapeAttribute(opt.id)}">
-                <i class="fas fa-circle-check opt-check"></i>
-                <div class="opt-title">${escapeHtml(opt.display_label)}</div>
-                <div class="opt-price-tag">${formatSDG(opt.price_usd * exchangeRate)} ج.س</div>
-              </div>
-            `).join('');
-            subGrid.classList.add('visible');
-
-            // تفعيل النقر على الخيارات الفرعية
-            subGrid.querySelectorAll('.option-card').forEach(card => {
-              card.addEventListener('click', () => {
-                const optId = card.dataset.optionId;
-                const found = subOptions.find(o => o.id === optId);
-                if (found) {
-                  selectedOption = found;
-                  subGrid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-                  card.classList.add('selected');
-
-                  // تحديث السعر
-                  const baseSdg = getSelectedPriceSdg();
-                  document.getElementById('heroPriceDisplay').textContent = formatSDG(baseSdg) + ' ج.س';
-                  updateSummary();
-                  updateFixedPriceBar();
-
-                  // تحديث المحفظة
-                  const canUse = walletBalance >= currentPrice();
-                  if (canUse) {
-                    walletOption.classList.remove('disabled');
-                    document.getElementById('walletOptionSub').innerHTML = `رصيدك الحالي: ${formatSDG(walletBalance)} ج.س`;
-                  } else {
-                    walletOption.classList.add('disabled');
-                    if (selectedPayment === 'wallet') { selectedPayment = null; walletOption.classList.remove('selected'); }
-                    document.getElementById('walletOptionSub').innerHTML = `رصيدك غير كافٍ (${formatSDG(walletBalance)} ج.س) — <a href="wallet.html" class="recharge-highlight-link">اشحن المحفظة</a>`;
-                  }
-                }
-              });
+        if (subLabel) subLabel.style.display = subOptions.length ? 'flex' : 'none';
+        if (subGrid) {
+          subGrid.innerHTML = subOptions.map(opt => `
+            <button type="button" class="option-card" data-option-id="${escapeAttribute(opt.id)}">
+              <i class="fas fa-circle-check opt-check" aria-hidden="true"></i>
+              <span class="opt-title">${escapeHtml(opt.display_label)}</span>
+              <span class="opt-price-tag">${formatSDG(opt.price_usd * exchangeRate)} ج.س</span>
+            </button>
+          `).join('');
+          subGrid.classList.toggle('visible', subOptions.length > 0);
+          subGrid.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', () => {
+              const found = subOptions.find(o => String(o.id) === String(card.dataset.optionId));
+              if (!found) return;
+              selectedOption = found;
+              subGrid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+              card.classList.add('selected');
+              const hero = document.getElementById('heroPriceDisplay');
+              if (hero) hero.textContent = formatSDG(getSelectedPriceSdg() * quantity) + ' ج.س';
+              updateQuantityUI();
             });
-          }
+          });
         }
+        updateQuantityUI();
       });
     });
   }
 
-  // --- أحداث طرق الدفع ---
-  walletOption.addEventListener('click', () => {
-    const currentPriceSdg = currentPrice();
-    if (walletBalance < currentPriceSdg) { window.location.href = 'wallet.html'; return; }
-    selectedPayment = 'wallet'; walletOption.classList.add('selected'); bankOption.classList.remove('selected'); bankDetails.classList.remove('show');
+  document.getElementById('qtyMinus')?.addEventListener('click', () => {
+    quantity = Math.max(1, quantity - 1);
+    updateQuantityUI();
+  });
+  document.getElementById('qtyPlus')?.addEventListener('click', () => {
+    quantity = Math.min(99, quantity + 1);
+    updateQuantityUI();
   });
 
-  bankOption.addEventListener('click', () => {
-    selectedPayment = 'bank'; bankOption.classList.add('selected'); walletOption.classList.remove('selected'); bankDetails.classList.add('show');
+  addToCartBtn?.addEventListener('click', () => {
+    if (!addCurrentToCart()) return;
+    errorBox.style.color = 'var(--accent-gold)';
+    errorBox.textContent = 'تمت إضافة الباقة إلى السلة.';
+    addToCartBtn.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i> تمت الإضافة';
+    setTimeout(() => {
+      addToCartBtn.innerHTML = '<i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة';
+      errorBox.textContent = '';
+    }, 2200);
   });
 
-  document.querySelectorAll('.copy-account-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(btn.dataset.copy); const original = btn.textContent; btn.textContent = 'تم النسخ'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1800); } catch (e) {}
-    });
-  });
-
-  fileBox.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', async () => {
-    if (fileInput.files.length > 0) {
-      const file = fileInput.files[0];
-      const validation = await validateReceiptImage(file);
-      if (!validation.valid) {
-        fileInput.value = ''; receiptFile = null; fileBox.innerHTML = `<i class="fas fa-paperclip"></i> اضغط لرفع صورة الإيصال`; document.getElementById('formError').textContent = validation.message; return;
-      }
-      receiptFile = file; document.getElementById('formError').textContent = ''; fileBox.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-gold);" aria-hidden="true"></i> ${escapeHtml(receiptFile.name)}`; fileBox.classList.add('has-file');
-    }
-  });
-
-  document.getElementById('methodSelect').addEventListener('change', (e) => { selectedMethodId = e.target.value; });
-  document.getElementById('applyCouponBtn').addEventListener('click', applyCoupon);
-
-  // --- إضافة السلة ---
-  addToCartBtn.addEventListener('click', () => {
+  confirmPurchaseBtn?.addEventListener('click', () => {
     errorBox.textContent = '';
     if (!validateSelection(errorBox)) return;
-
-    const fieldValues = collectFieldValues();
-    if (fieldValues === null) { errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'املأ البيانات المطلوبة!'; return; }
-
-    // بناء خريطة field_labels لعرض الأسماء الحقيقية بدلاً من المعرفات الخام
-    const fieldLabels = {};
-    (product.required_fields || []).forEach(f => { if (f.key) fieldLabels[f.key] = f.label; });
-
-    let cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
-    const cartItem = {
-      cart_item_id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      product_id: product.id,
-      name: product.name,
-      price_sdg: getSelectedPriceSdg(),
-      image_url: product.image_url,
-      selected_option: { id: selectedOption.id, label: selectedMainCat + ' - ' + selectedOption.display_label, price_usd: getSelectedPriceUsd(), price_sdg: getSelectedPriceSdg() },
-      field_values: fieldValues,
-      field_labels: fieldLabels
-    };
-    cart.push(cartItem); localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
-    updateCartBadgeGlobal();
-    errorBox.style.color = 'var(--accent-gold)'; errorBox.textContent = 'تم الإضافة للسلة!';
-    addToCartBtn.innerHTML = '<i class="fas fa-check-circle"></i> تم!';
-    setTimeout(() => { addToCartBtn.innerHTML = '<i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات'; errorBox.textContent = ''; }, 2500);
+    const item = buildCartItem();
+    if (!item) { errorBox.textContent = 'املأ بيانات الطلب المطلوبة أولاً.'; return; }
+    sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at: Date.now(), items: [item] }));
+    window.location.href = 'checkout.html';
   });
-
-  submitBtn.addEventListener('click', () => submitOrder(errorBox, submitBtn));
 }
+
 
 // --- دوال المساعدة ---
 function currentPrice() {
@@ -724,7 +655,19 @@ function currentPrice() {
   if (welcomePercent) base -= base * welcomePercent / 100;
   return Math.max(0, base);
 }
-function updateSummary() { document.getElementById('summaryTotal').textContent = selectedOption ? formatSDG(currentPrice()) + ' ج.س' : 'اختر الخيار'; }
+function updateSummary() {
+  const summary = document.getElementById('summaryTotal');
+  if (summary) summary.textContent = selectedOption ? formatSDG(currentPrice() * quantity) + ' ج.س' : 'اختر الخيار';
+}
+
+function updateQuantityUI() {
+  const value = document.getElementById('qtyValue');
+  const minus = document.getElementById('qtyMinus');
+  if (value) value.textContent = String(quantity);
+  if (minus) minus.disabled = quantity <= 1;
+  updateSummary();
+  updateFixedPriceBar();
+}
 
 async function applyCoupon() {
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
