@@ -67,15 +67,33 @@
     box-shadow: 0 10px 30px rgba(26,29,41,.05);
   }
   .account-avatar {
+    position: relative;
     display: grid;
     place-items: center;
     width: 54px;
     height: 54px;
+    overflow: hidden;
     border-radius: 16px;
     background: var(--ink);
     color: var(--primary);
     font-size: 22px;
   }
+  .account-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .password-stage[hidden] { display: none !important; }
+  .password-intro { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 14px; border: 1px dashed rgba(255,106,26,.3); border-radius: 12px; background: rgba(255,106,26,.055); }
+  .password-intro p { margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.7; }
+  .password-intro .auth-btn { flex: 0 0 auto; margin: 0; min-height: 40px; }
+  .profile-photo-card { display: flex; align-items: center; gap: 15px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(120deg, #fffdfa, #fff8f1); }
+  .profile-photo-preview { display: grid; place-items: center; width: 78px; height: 78px; overflow: hidden; flex: 0 0 auto; border: 3px solid #fff; border-radius: 22px; background: var(--ink); color: var(--primary); box-shadow: 0 5px 16px rgba(26,29,41,.14); font-size: 26px; }
+  .profile-photo-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .profile-photo-copy { min-width: 0; flex: 1; }
+  .profile-photo-copy .card-title { margin-bottom: 4px; }
+  .profile-photo-copy .card-description { margin-bottom: 10px; }
+  .profile-photo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .profile-photo-actions .auth-btn { margin: 0; min-height: 38px; font-size: 11px; }
+  .avatar-status { min-height: 16px; margin-top: 6px; color: var(--text-muted); font-size: 10.5px; }
+  .google-debug { margin-top: 8px; color: var(--text-muted); font-size: 10.5px; line-height: 1.6; }
+  @media (max-width: 540px) { .password-intro, .profile-photo-card { align-items: stretch; flex-direction: column; } .password-intro .auth-btn { width: 100%; } .profile-photo-preview { width: 70px; height: 70px; } }
   .account-summary strong { display: block; font-size: 15px; }
   .account-summary small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11.5px; direction: ltr; text-align: right; }
   .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #15803d; font-size: 11px; font-weight: 800; }
@@ -195,7 +213,7 @@
   </header>
 
   <section class="account-summary" aria-label="ملخص الحساب">
-    <div class="account-avatar"><i class="fas fa-user-shield"></i></div>
+    <div class="account-avatar" id="summaryAvatar"><i class="fas fa-user-shield"></i><img id="summaryAvatarImg" alt="" hidden></div>
     <div>
       <strong id="summaryName">حساب RAIZEY STORE</strong>
       <small id="summaryEmail">—</small>
@@ -222,7 +240,12 @@
     <div class="security-grid">
       <article class="security-card wide">
         <div class="card-title"><i class="fas fa-key"></i> تغيير كلمة السر</div>
-        <p class="card-description">استخدم كلمة سر قوية، وسيُطلب منك تأكيد هويتك قبل حفظها.</p>
+        <p class="card-description">لن تظهر حقول كلمة السر إلا بعد أن تضغط الزر وتؤكد بريدك بالكود المرسل إليه.</p>
+        <div class="password-intro" id="passwordIntro">
+          <p><i class="fas fa-envelope-circle-check" style="color:var(--primary);margin-left:5px"></i> سنرسل كود تأكيد إلى بريدك الحالي قبل إظهار نموذج التغيير.</p>
+          <button class="auth-btn secondary" id="startPasswordChangeBtn" type="button"><i class="fas fa-lock" style="margin-left:6px"></i> تغيير كلمة المرور</button>
+        </div>
+        <div class="password-stage" id="passwordFormStage" hidden>
         <div class="password-grid">
           <div class="field">
             <label for="newPasswordInput">كلمة السر الجديدة</label>
@@ -248,7 +271,8 @@
             <div class="field-hint"></div>
           </div>
         </div>
-        <button class="auth-btn secondary" id="changePasswordBtn" type="button"><i class="fas fa-lock" style="margin-left:6px"></i> تغيير كلمة السر</button>
+        <button class="auth-btn" id="changePasswordBtn" type="button"><i class="fas fa-check" style="margin-left:6px"></i> حفظ كلمة المرور الجديدة</button>
+        </div>
       </article>
 
       <article class="security-card wide">
@@ -290,6 +314,18 @@
     <div class="section-heading">
       <div><h2><i class="fas fa-id-card"></i> البيانات الشخصية</h2><p>حدّث بيانات التواصل ومعرّفات اللاعبين المفضّلة.</p></div>
       <span class="section-number">02</span>
+    </div>
+    <div class="profile-photo-card">
+      <div class="profile-photo-preview" id="profilePhotoPreview"><i class="fas fa-user"></i><img id="profileAvatarImg" alt="الصورة الشخصية" hidden></div>
+      <div class="profile-photo-copy">
+        <div class="card-title"><i class="fas fa-camera"></i> الصورة الشخصية</div>
+        <p class="card-description">اختر صورة من معرض جهازك. الصيغ المدعومة JPG وPNG وWEBP، وبحد أقصى 5MB.</p>
+        <div class="profile-photo-actions">
+          <label class="auth-btn secondary" for="avatarFileInput"><i class="fas fa-upload" style="margin-left:6px"></i> اختيار صورة</label>
+          <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" hidden>
+        </div>
+        <div class="avatar-status" id="avatarStatus"></div>
+      </div>
     </div>
     <div class="field-grid">
       <div class="field">
@@ -408,6 +444,8 @@ const UI = window.RaizeyAuthUI;
 let currentUser = null;
 let currentProfile = null;
 let googleIdentity = null;
+let avatarPath = '';
+let pendingPasswordNonce = '';
 let reauthEmail = '';
 let reauthMode = 'session';
 let reauthResolver = null;
@@ -417,6 +455,8 @@ const formError = document.getElementById('formError');
 const formSuccess = document.getElementById('formSuccess');
 const securityError = document.getElementById('securityError');
 const securitySuccess = document.getElementById('securitySuccess');
+const avatarInput = document.getElementById('avatarFileInput');
+const avatarStatus = document.getElementById('avatarStatus');
 const emailInput = document.getElementById('emailInput');
 const pendingBadge = document.getElementById('pendingBadge');
 const verifiedBadge = document.getElementById('verifiedBadge');
@@ -584,6 +624,21 @@ async function unenrollMfa(factorId) {
   } catch (_) { securityError.textContent = 'تعذر إيقاف التحقق بخطوتين.'; }
 }
 
+function describeGoogleError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('provider') && (message.includes('not enabled') || message.includes('unsupported'))) return 'مزود Google غير مفعّل في Supabase Auth. فعّل Google من Authentication ثم Providers.';
+  if (message.includes('redirect') || message.includes('allow list') || message.includes('not allowed')) return 'رابط العودة غير مضاف في Supabase. أضف رابط الموقع مع /account.html إلى Redirect URLs.';
+  if (message.includes('identity') && (message.includes('already') || message.includes('exists'))) return 'حساب Google مرتبط بحساب آخر بالفعل.';
+  return 'تعذر ربط حساب Google: ' + (error?.message || 'خطأ غير معروف') + '.';
+}
+
+function renderAvatar(url) {
+  const summaryImg = document.getElementById('summaryAvatarImg');
+  const profileImg = document.getElementById('profileAvatarImg');
+  [summaryImg, profileImg].forEach((img) => { if (!img) return; img.hidden = !url; if (url) img.src = url; });
+  document.querySelectorAll('#summaryAvatar > i, #profilePhotoPreview > i').forEach((icon) => { icon.hidden = !!url; });
+}
+
 function renderGoogleState() {
   const actions = document.getElementById('googleActions');
   const status = document.getElementById('googleStatusText');
@@ -605,8 +660,14 @@ async function linkGoogle() {
   clearSecurityMessages();
   const verified = await requestReauthentication('ربط حساب جوجل', 'session');
   if (!verified) return;
-  const { error } = await supabaseClient.auth.linkIdentity({ provider: 'google', options: { redirectTo: new URL('account.html', window.location.href).href, queryParams: { prompt: 'select_account' } } });
-  if (error) securityError.textContent = 'تعذر بدء ربط حساب جوجل.';
+  const { data: refreshedUser } = await supabaseClient.auth.getUser();
+  if (refreshedUser?.user) { currentUser = refreshedUser.user; googleIdentity = (currentUser.identities || []).find((identity) => identity.provider === 'google') || null; }
+  const redirectTo = new URL('account.html', document.baseURI).href;
+  const { error } = await supabaseClient.auth.linkIdentity({ provider: 'google', options: { redirectTo, queryParams: { prompt: 'select_account' } } });
+  if (error) {
+    securityError.textContent = describeGoogleError(error);
+    document.getElementById('googleStatusText').insertAdjacentHTML('afterend', '<div class="google-debug">تحقق من تفعيل Google ومن إضافة رابط العودة في Supabase Auth.</div>');
+  }
 }
 
 async function unlinkGoogle() {
@@ -634,11 +695,16 @@ async function init() {
   googleIdentity = (currentUser.identities || []).find((identity) => identity.provider === 'google') || null;
   renderGoogleState();
   await loadMfa();
-  const { data: profile } = await supabaseClient.from('profiles').select('full_name,whatsapp_number,referral_code,player_ids').eq('id', currentUser.id).single();
+  let { data: profile, error: profileError } = await supabaseClient.from('profiles').select('full_name,whatsapp_number,referral_code,player_ids,avatar_url').eq('id', currentUser.id).single();
+  if (profileError && /avatar_url|player_ids|column/i.test(profileError.message || '')) {
+    const fallback = await supabaseClient.from('profiles').select('full_name,whatsapp_number,referral_code').eq('id', currentUser.id).single();
+    profile = fallback.data || {};
+  }
   currentProfile = profile || {};
   document.getElementById('fullNameInput').value = currentProfile.full_name || currentUser.user_metadata?.full_name || '';
   document.getElementById('whatsappInput').value = currentProfile.whatsapp_number || '';
   renderPlayerIds(currentProfile.player_ids || {});
+  renderAvatar(currentProfile.avatar_url || '');
   currencySelect.value = localStorage.getItem('raizey_preferred_currency') || 'SDG';
 }
 
@@ -687,22 +753,66 @@ async function resendConfirmation() {
   } catch (_) { formError.textContent = 'تعذر إرسال رسالة التأكيد الآن.'; }
 }
 
+async function startPasswordChange() {
+  clearSecurityMessages();
+  const button = document.getElementById('startPasswordChangeBtn');
+  UI.setLoading(button, true, 'جارِ إرسال الكود...');
+  try {
+    const verified = await requestReauthentication('تغيير كلمة المرور', 'password');
+    if (!verified) return;
+    pendingPasswordNonce = verified.nonce;
+    document.getElementById('passwordIntro').hidden = true;
+    document.getElementById('passwordFormStage').hidden = false;
+    document.getElementById('newPasswordInput').focus();
+    securitySuccess.textContent = 'تم تأكيد بريدك بالكود. أدخل كلمة المرور الجديدة ثم احفظها.';
+  } finally { UI.setLoading(button, false); }
+}
+
 async function changePassword() {
   clearSecurityMessages();
+  if (!pendingPasswordNonce) { securityError.textContent = 'ابدأ بتأكيد بريدك أولاً.'; return; }
   const newPassword = document.getElementById('newPasswordInput').value;
   const confirmPassword = document.getElementById('confirmPasswordInput').value;
   if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) { securityError.textContent = 'كلمة السر يجب أن تحتوي على 8 أحرف ورقم واحد على الأقل.'; return; }
   if (newPassword !== confirmPassword) { securityError.textContent = 'كلمتا السر غير متطابقتين.'; return; }
   const button = document.getElementById('changePasswordBtn'); UI.setLoading(button, true, 'جارِ التحقق...');
   try {
-    const verified = await requestReauthentication('تغيير كلمة السر', 'password');
-    if (!verified) return;
-    const { error } = await supabaseClient.auth.updateUser({ password: newPassword, nonce: verified.nonce });
+    const { error } = await supabaseClient.auth.updateUser({ password: newPassword, nonce: pendingPasswordNonce });
     if (error) throw error;
     document.getElementById('newPasswordInput').value = ''; document.getElementById('confirmPasswordInput').value = '';
+    pendingPasswordNonce = '';
+    document.getElementById('passwordFormStage').hidden = true;
+    document.getElementById('passwordIntro').hidden = false;
     securitySuccess.textContent = 'تم تغيير كلمة السر بنجاح.';
-  } catch (_) { securityError.textContent = 'تعذر تغيير كلمة السر، حاول مرة أخرى.'; }
+  } catch (error) {
+    pendingPasswordNonce = '';
+    document.getElementById('passwordFormStage').hidden = true;
+    document.getElementById('passwordIntro').hidden = false;
+    securityError.textContent = error?.message?.toLowerCase().includes('nonce') ? 'انتهت صلاحية كود التأكيد. أعد طلب كود جديد.' : 'تعذر تغيير كلمة السر، حاول مرة أخرى.';
+  }
   finally { UI.setLoading(button, false); }
+}
+
+async function uploadAvatar(file) {
+  if (!file) return;
+  clearMessages();
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { avatarStatus.textContent = 'اختر صورة JPG أو PNG أو WEBP فقط.'; return; }
+  if (file.size > 5 * 1024 * 1024) { avatarStatus.textContent = 'حجم الصورة أكبر من 5MB.'; return; }
+  avatarStatus.textContent = 'جارِ رفع الصورة...';
+  try {
+    const extension = file.type.split('/')[1].replace('jpeg', 'jpg');
+    const path = currentUser.id + '/' + crypto.randomUUID() + '.' + extension;
+    const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
+    if (uploadError) throw uploadError;
+    const { data: urlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
+    const { error: profileError } = await supabaseClient.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
+    if (profileError) throw profileError;
+    avatarPath = path;
+    renderAvatar(urlData.publicUrl);
+    avatarStatus.textContent = 'تم حفظ الصورة الشخصية.';
+  } catch (error) {
+    avatarStatus.textContent = error?.message?.toLowerCase().includes('bucket') ? 'لم يتم إعداد مساحة الصور بعد. طبّق migration الخاصة بالصور.' : 'تعذر رفع الصورة، حاول مرة أخرى.';
+  } finally { avatarInput.value = ''; }
 }
 
 async function globalSignOut() {
@@ -720,7 +830,9 @@ document.getElementById('addPlayerIdBtn').addEventListener('click', () => addPla
 document.getElementById('mfaVerifyBtn').addEventListener('click', verifyMfa);
 document.getElementById('resendConfirmBtn').addEventListener('click', resendConfirmation);
 document.getElementById('saveBtn').addEventListener('click', saveProfile);
+document.getElementById('startPasswordChangeBtn').addEventListener('click', startPasswordChange);
 document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
+avatarInput.addEventListener('change', () => uploadAvatar(avatarInput.files[0]));
 document.getElementById('globalSignOutBtn').addEventListener('click', globalSignOut);
 document.getElementById('logoutBtn').addEventListener('click', logout);
 currencySelect.addEventListener('change', () => localStorage.setItem('raizey_preferred_currency', currencySelect.value));
@@ -732,9 +844,9 @@ document.getElementById('reauthForm').addEventListener('submit', async (event) =
   UI.setLoading(reauthVerifyBtn, true, 'جارِ التحقق...');
   try {
     if (reauthMode === 'password') { closeReauth({ nonce: code }); return; }
-    const { error } = await supabaseClient.auth.verifyOtp({ email: reauthEmail, token: code, type: 'email' });
+    const { data, error } = await supabaseClient.auth.verifyOtp({ email: reauthEmail, token: code, type: 'email' });
     if (error) { reauthError.textContent = error.status === 429 ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل.' : 'الكود غير صحيح أو منتهي الصلاحية.'; reauthOtp.clear(); return; }
-    closeReauth({ sessionVerified: true });
+    closeReauth({ sessionVerified: true, session: data.session || null });
   } catch (_) { reauthError.textContent = 'تعذر التحقق الآن، حاول مرة أخرى.'; }
   finally { UI.setLoading(reauthVerifyBtn, false); }
 });
