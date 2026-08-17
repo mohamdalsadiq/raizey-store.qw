@@ -116,3 +116,38 @@ That exact path currently returns HTTP 404. The repository's current canonical T
 9. Use `object-fit`, aspect-ratio containers, and intrinsic sizing deliberately so images remain complete and do not create layout shifts.
 10. Test representative mobile widths, long Arabic and English text, keyboard navigation, reduced motion, and empty/error states before delivery.
 11. Review the result visually and remove unnecessary decoration; reserve the strongest visual emphasis for the page's primary action.
+
+
+## Section 2: Application Security & Database Hardening (SEC)
+
+- **Input Sanitization & Schema Validation:** Enforce strict runtime schema validation, such as Zod, on all API payloads. Never trust client data.
+- **Data Isolation & RLS:** Enable and strictly enforce Row Level Security (RLS) or tenant-isolation policies on all database tables.
+- **Atomic Transactions & Race Conditions:** Wrap all financial, balance, or transactional state changes inside safe database functions or RPCs with row locking to eliminate race conditions.
+- **SQL Injection & XSS Shielding:** Use parameterized ORM queries exclusively. Escape all dynamically rendered user strings.
+- **API Rate Limiting & Auth Validation:** Secure all public and private API endpoints with rate-limit middleware, secure JWT/session verification, and properly scoped CORS settings.
+- **Zero Credentials Policy:** Ensure that no secrets, private keys, or database credentials exist in public client bundles or version control. Use environment variables strictly.
+
+## Section 3: Performance & Smooth User Experience (Perf UX)
+
+- **Core Web Vitals Optimization:** Maintain LCP below 2.5 seconds, CLS below 0.1, and FID/INP below 100 milliseconds where the target environment supports those measurements.
+- **Asset Optimization:** Implement lazy loading for images, use WebP/AVIF media formats where supported, and configure proper static-asset caching.
+- **Optimistic UI Updates:** Apply immediate visual updates for interactive elements such as likes, items added to a cart, and state toggles, with automatic rollback on server errors.
+- **Skeleton Loaders:** Replace raw loading spinners with skeleton screens to reduce perceived latency and communicate the shape of incoming content.
+
+## Section 4: AI Engine & Native LLM Integrations
+
+- **Streaming Responses:** Support chunked UI rendering through SSE or WebSockets for real-time AI responses and live status updates.
+- **Structured JSON Outputs:** Force AI APIs to return strict JSON-schema data to prevent parse errors during UI rendering.
+- **Graceful Degradation:** Provide fallback UIs and bounded automatic retry policies when AI services or external APIs experience downtime, rate limits, or timeouts.
+
+## Section 5: Code Quality & Enterprise Standards
+
+- **Clean Architecture:** Keep UI components modular and highly reusable, with a strict separation between presentation, business logic, data access, and API hooks.
+- **Strict Typing:** Enforce explicit TypeScript types across all API payloads, database schemas, server responses, and component interfaces.
+- **Error Handling & Toast Notifications:** Wrap asynchronous operations in global error boundaries where applicable and present user-friendly Toast notifications without revealing system stack traces, secrets, or internal implementation details.
+
+## Fullstack Delivery Checklist
+
+Before delivery, verify the complete request path rather than only the visual layer. Validate untrusted input at the boundary, authorize the current user or tenant, execute sensitive state changes atomically, and return only the minimum response data required by the UI. Confirm that failures are observable to developers but understandable and safe for end users.
+
+For every performance-sensitive page, verify loading, empty, error, retry, success, and disabled states. Measure representative mobile and desktop layouts, confirm that images do not cause layout shifts, and ensure keyboard, reduced-motion, and screen-reader behavior remains usable. Keep credentials out of source control and inspect the final bundle for accidental exposure before publishing.
