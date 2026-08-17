@@ -3,194 +3,378 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>حسابي — RAIZEY STORE</title>
+<title>إعدادات الحساب — RAIZEY STORE</title>
+<meta name="description" content="إدارة بياناتك الشخصية وأمان حسابك وتفضيلاتك في RAIZEY STORE.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
-
 <style>
-  .account-link-item {
+  :root { --account-surface: #fffdfa; }
+  body { background: var(--bg, #f7f7f5); }
+  .account-shell {
+    width: min(100% - 28px, 980px);
+    margin: 0 auto;
+    padding: 28px 0 44px;
+  }
+  .account-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+  .account-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .02em;
+  }
+  .account-kicker i { font-size: 11px; }
+  .account-header h1 { margin: 0; font-size: clamp(24px, 4vw, 32px); line-height: 1.2; }
+  .account-header p { margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+  .account-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 13px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--bg-card);
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .account-back:hover { border-color: var(--primary); color: var(--primary); }
+  .account-summary {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: linear-gradient(120deg, #fffdfa, #fff7ef);
+    box-shadow: 0 10px 30px rgba(26,29,41,.05);
+  }
+  .account-avatar {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: var(--ink);
+    color: var(--primary);
+    font-size: 22px;
+  }
+  .account-summary strong { display: block; font-size: 15px; }
+  .account-summary small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11.5px; direction: ltr; text-align: right; }
+  .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #15803d; font-size: 11px; font-weight: 800; }
+  .account-summary-status i { font-size: 9px; }
+  .account-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .account-nav a {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px;
-    background: var(--bg-card);
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 8px;
     border: 1px solid var(--border);
     border-radius: 10px;
-    margin-bottom: 10px;
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--ink);
-    text-decoration: none;
-    transition: 0.2s ease;
-  }
-  .account-link-item:hover {
-    border-color: var(--primary);
-    background: rgba(255, 106, 26, 0.06);
-  }
-  .account-link-item i {
-    color: var(--primary);
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-  }
-  .section-label i { margin-left: 6px; }
-  .account-security {
-    margin-top: 26px;
-    padding-top: 22px;
-    border-top: 1px solid var(--border);
-  }
-  .security-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 6px;
-    font-size: 16px;
-    font-weight: 900;
-  }
-  .security-title i { color: var(--primary); }
-  .security-subtitle {
-    margin: 0 0 16px;
     color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.7;
+    background: var(--bg-card);
+    font-size: 11.5px;
+    font-weight: 800;
+    text-decoration: none;
   }
-  .security-card {
-    padding: 14px;
-    margin-bottom: 10px;
+  .account-nav a:hover { color: var(--primary); border-color: var(--primary); background: rgba(255,106,26,.05); }
+  .account-nav i { color: var(--primary); }
+  .account-section {
+    scroll-margin-top: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 17px;
+    background: var(--account-surface);
+    box-shadow: 0 8px 24px rgba(26,29,41,.035);
+  }
+  .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .section-heading h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 17px; font-weight: 900; }
+  .section-heading h2 i { color: var(--primary); font-size: 15px; }
+  .section-heading p { margin: 5px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.65; }
+  .section-number { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 9px; background: rgba(255,106,26,.1); color: var(--primary); font-family: var(--font-mono); font-size: 12px; font-weight: 800; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .field-grid .field.full { grid-column: 1 / -1; }
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 12px; }
+  .field input, .field select { width: 100%; }
+  .email-row { display: flex; align-items: center; gap: 8px; }
+  .email-row input { flex: 1; min-width: 0; }
+  .verified-badge, .pending-badge { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 7px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+  .verified-badge { color: #15803d; background: rgba(21,128,61,.09); }
+  .pending-badge { color: #a16207; background: rgba(234,179,8,.13); }
+  .email-action { margin-top: 7px; border: 0; background: none; color: var(--primary); font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .email-action:hover { text-decoration: underline; }
+  .security-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .security-card, .preference-card, .policy-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
     background: var(--bg-card);
   }
-  .security-card-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 800;
-  }
-  .security-card-title i { width: 18px; color: var(--primary); text-align: center; }
-  .security-card p {
-    margin: 0 0 11px;
-    color: var(--text-muted);
-    font-size: 11.5px;
-    line-height: 1.65;
-  }
-  .security-card .auth-btn { margin-top: 0; min-height: 42px; font-size: 12px; }
-  .security-card .auth-btn.secondary {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--ink);
-  }
-  .security-card .auth-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }
-  .security-card .auth-btn.danger {
-    background: rgba(255,77,79,.12);
-    color: var(--danger);
-    border: 1px solid rgba(255,77,79,.25);
-  }
-  .security-card .auth-btn.danger:hover { background: rgba(255,77,79,.18); }
-  .security-message { min-height: 20px; margin: 10px 0 0; }
+  .security-card.wide, .preference-card.wide { grid-column: 1 / -1; }
+  .card-title { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; font-weight: 900; }
+  .card-title i { width: 18px; color: var(--primary); text-align: center; }
+  .card-description { margin: 0 0 12px; color: var(--text-muted); font-size: 11.5px; line-height: 1.7; }
   .password-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 520px) { .password-grid { grid-template-columns: 1fr; } }
+  .pw-rules { margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; list-style: none; color: var(--text-muted); font-size: 10.5px; }
+  .pw-rules li { display: flex; align-items: center; gap: 5px; }
+  .pw-rules li.ok { color: #15803d; font-weight: 800; }
+  .pw-rules [data-rule-icon] { display: inline-flex; color: var(--text-muted); }
+  .pw-rules li.ok [data-rule-icon] { color: #15803d; }
+  .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .action-row .auth-btn { flex: 1 1 180px; margin-top: 0; min-height: 42px; font-size: 12px; }
+  .auth-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--ink); }
+  .auth-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }
+  .auth-btn.danger { background: rgba(255,77,79,.1); border: 1px solid rgba(255,77,79,.25); color: var(--danger); }
+  .auth-btn.danger:hover { background: rgba(255,77,79,.17); }
+  .auth-btn.success { background: #15803d; color: #fff; }
+  .status-line { min-height: 19px; margin: 9px 0 0; font-size: 11.5px; line-height: 1.6; }
+  .mfa-panel { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .mfa-qr { display: grid; place-items: center; min-height: 140px; padding: 8px; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
+  .mfa-qr img { display: block; width: 128px; height: 128px; }
+  .mfa-secret { display: inline-block; padding: 8px 10px; border-radius: 8px; background: var(--bg); color: var(--ink); direction: ltr; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; }
+  .mfa-panel[hidden], .hidden { display: none !important; }
+  .player-id-list { display: grid; gap: 8px; margin-bottom: 10px; }
+  .player-id-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; align-items: center; }
+  .player-id-row select, .player-id-row input { min-height: 42px; }
+  .icon-remove { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(255,77,79,.24); border-radius: 10px; background: rgba(255,77,79,.08); color: var(--danger); cursor: pointer; }
+  .icon-remove:hover { background: rgba(255,77,79,.15); }
+  .inline-button { padding: 0; border: 0; background: none; color: var(--primary); font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
+  .inline-button:hover { text-decoration: underline; }
+  .info-callout { display: flex; align-items: flex-start; gap: 10px; padding: 13px; border: 1px solid rgba(255,106,26,.22); border-radius: 12px; background: rgba(255,106,26,.07); color: var(--ink); }
+  .info-callout i { margin-top: 2px; color: var(--primary); }
+  .info-callout p { margin: 0; font-size: 11.5px; line-height: 1.75; }
+  .policy-card { overflow-x: auto; padding: 0; }
+  .policy-table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 11.5px; line-height: 1.75; }
+  .policy-table th, .policy-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+  .policy-table th { color: var(--primary); background: rgba(255,106,26,.055); font-weight: 900; }
+  .policy-table tr:last-child td { border-bottom: 0; }
+  .account-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 16px; }
+  .account-link-item { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 9px; border: 1px solid var(--border); border-radius: 11px; color: var(--ink); background: var(--bg-card); font-size: 12px; font-weight: 800; text-decoration: none; }
+  .account-link-item:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,106,26,.05); }
+  .account-link-item i { color: var(--primary); }
+  .account-footer-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .account-footer-actions .auth-btn { margin-top: 0; }
+  @media (max-width: 700px) { .account-summary { grid-template-columns: auto 1fr; } .account-summary-status { grid-column: 2; } .account-nav { grid-template-columns: 1fr 1fr; } .security-grid { grid-template-columns: 1fr; } .security-card.wide, .preference-card.wide { grid-column: auto; } }
+  @media (max-width: 540px) { .account-shell { width: min(100% - 20px, 980px); padding-top: 18px; } .account-header { align-items: stretch; flex-direction: column; } .account-back { justify-content: center; } .account-section { padding: 15px; } .field-grid, .password-grid { grid-template-columns: 1fr; } .field-grid .field.full { grid-column: auto; } .mfa-panel { grid-template-columns: 1fr; } .mfa-qr { width: 150px; } .player-id-row { grid-template-columns: 1fr 1fr auto; } .player-id-row select { grid-column: 1 / -1; } .account-links { grid-template-columns: 1fr; } .account-footer-actions { flex-direction: column; } }
 </style>
 </head>
 <body>
-
-<div class="orders-page">
-  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h1 style="margin: 0; font-size: 22px;">حسابي</h1>
-    <a href="index.html" class="back-link" style="margin: 0;"><i class="fas fa-arrow-right" style="margin-left: 4px;"></i> المتجر</a>
-  </div>
-
-  <div style="background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0; display: flex; align-items: center;">
-      <i class="fas fa-gift" style="color: var(--primary); margin-left: 8px;"></i> شارك واكسب
+<div class="account-shell">
+  <header class="account-header">
+    <div>
+      <div class="account-kicker"><i class="fas fa-sliders"></i> مركز التحكم بالحساب</div>
+      <h1>إعدادات الحساب</h1>
+      <p>تحكم في بياناتك، أمانك، وتفضيلاتك من مكان واحد.</p>
     </div>
-    <a href="referrals.html" style="display:block; margin-top:10px; font-size:12px; color:var(--primary); font-weight:700; text-align:center; text-decoration: none;">عرض تفاصيل إحالاتي وأرباحي ←</a>
-    <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; margin-top: 8px; line-height: 1.5;">
-      شارك رابطك مع أصحابك، وكل ما حد يسجل ويشحن رصيده لأول مرة، هتاخد مكافأة في محفظتك تلقائياً.
-    </p>
-    <div style="display:flex; gap:8px;">
-      <input type="text" id="referralLinkInput" readonly style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
-      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px; cursor: pointer;">نسخ</button>
+    <a href="index.html" class="account-back"><i class="fas fa-arrow-right"></i> العودة إلى المتجر</a>
+  </header>
+
+  <section class="account-summary" aria-label="ملخص الحساب">
+    <div class="account-avatar"><i class="fas fa-user-shield"></i></div>
+    <div>
+      <strong id="summaryName">حساب RAIZEY STORE</strong>
+      <small id="summaryEmail">—</small>
+      <span class="account-summary-status" id="summaryStatus"><i class="fas fa-circle-check"></i> حساب محمي</span>
     </div>
-  </div>
+    <div class="section-number">01</div>
+  </section>
 
-  <div class="field">
-    <label for="fullNameInput">الاسم الكامل</label>
-    <input type="text" id="fullNameInput">
-  </div>
-
-  <div class="field">
-    <label for="emailInput">البريد الإلكتروني</label>
-    <input type="email" id="emailInput" autocomplete="email">
-    <span class="email-pending-badge" id="emailPendingBadge" role="status">
-      <i class="fas fa-circle-info"></i><span id="emailPendingText"></span>
-    </span>
-  </div>
-
-  <div class="field">
-    <label for="whatsappInput">رقم الواتساب</label>
-    <input type="tel" id="whatsappInput">
-  </div>
+  <nav class="account-nav" aria-label="أقسام الحساب">
+    <a href="#security"><i class="fas fa-shield-halved"></i> الأمان</a>
+    <a href="#personal"><i class="fas fa-id-card"></i> البيانات</a>
+    <a href="#preferences"><i class="fas fa-wallet"></i> التفضيلات</a>
+    <a href="#policies"><i class="fas fa-file-shield"></i> السياسات</a>
+  </nav>
 
   <div class="form-error" id="formError"></div>
   <div class="form-success" id="formSuccess"></div>
 
-  <button class="auth-btn" id="saveBtn">
-    <i class="fas fa-floppy-disk" style="margin-left: 6px;"></i> حفظ التعديلات
-  </button>
-
-  <section class="account-security" aria-labelledby="securityTitle">
-    <h2 class="security-title" id="securityTitle"><i class="fas fa-shield-halved"></i> أمان الحساب</h2>
-    <p class="security-subtitle">للحفاظ على حسابك، سنرسل كود تحقق إلى بريدك قبل تنفيذ أي عملية حساسة.</p>
-
-    <div class="security-card">
-      <div class="security-card-title"><i class="fas fa-key"></i><span>تغيير كلمة السر</span></div>
-      <p>أدخل كلمة سر جديدة، ثم أكّد هويتك بالكود المرسل إلى بريدك الحالي.</p>
-      <div class="password-grid">
-        <div class="field" style="margin-bottom:10px;">
-          <label for="newPasswordInput">كلمة السر الجديدة</label>
-          <input type="password" id="newPasswordInput" autocomplete="new-password" placeholder="8 أحرف على الأقل">
-        </div>
-        <div class="field" style="margin-bottom:10px;">
-          <label for="confirmPasswordInput">تأكيد كلمة السر</label>
-          <input type="password" id="confirmPasswordInput" autocomplete="new-password" placeholder="أعد كتابة كلمة السر">
-        </div>
-      </div>
-      <button class="auth-btn secondary" id="changePasswordBtn" type="button"><i class="fas fa-lock" style="margin-left:6px;"></i> تغيير كلمة السر</button>
+  <section class="account-section" id="security">
+    <div class="section-heading">
+      <div><h2><i class="fas fa-shield-halved"></i> الأمان والخصوصية</h2><p>إجراءات إضافية لحماية الحساب والعمليات الحساسة.</p></div>
+      <span class="section-number">01</span>
     </div>
+    <div class="security-grid">
+      <article class="security-card wide">
+        <div class="card-title"><i class="fas fa-key"></i> تغيير كلمة السر</div>
+        <p class="card-description">استخدم كلمة سر قوية، وسيُطلب منك تأكيد هويتك قبل حفظها.</p>
+        <div class="password-grid">
+          <div class="field">
+            <label for="newPasswordInput">كلمة السر الجديدة</label>
+            <div class="input-wrap">
+              <input type="password" id="newPasswordInput" autocomplete="new-password" placeholder="8 أحرف على الأقل">
+              <span class="trail"><button type="button" class="icon-btn" data-toggle-password="newPasswordInput" aria-label="إظهار كلمة السر"></button></span>
+            </div>
+            <div class="pw-meter"><span id="pwStrengthFill"></span></div>
+            <div class="pw-label" id="pwStrengthLabel"></div>
+            <ul class="pw-rules" id="pwRules">
+              <li data-rule="length"><span data-rule-icon></span> 8 أحرف فأكثر</li>
+              <li data-rule="letter"><span data-rule-icon></span> حرف واحد على الأقل</li>
+              <li data-rule="digit"><span data-rule-icon></span> رقم واحد على الأقل</li>
+              <li data-rule="symbol"><span data-rule-icon></span> رمز خاص اختياري</li>
+            </ul>
+          </div>
+          <div class="field">
+            <label for="confirmPasswordInput">تأكيد كلمة السر</label>
+            <div class="input-wrap">
+              <input type="password" id="confirmPasswordInput" autocomplete="new-password" placeholder="أعد كتابة كلمة السر">
+              <span class="trail"><button type="button" class="icon-btn" data-toggle-password="confirmPasswordInput" aria-label="إظهار كلمة السر"></button></span>
+            </div>
+            <div class="field-hint"></div>
+          </div>
+        </div>
+        <button class="auth-btn secondary" id="changePasswordBtn" type="button"><i class="fas fa-lock" style="margin-left:6px"></i> تغيير كلمة السر</button>
+      </article>
 
-    <div class="security-card" id="googleSecurityCard" hidden>
-      <div class="security-card-title"><i class="fab fa-google"></i><span>حساب جوجل المرتبط</span></div>
-      <p>سيتم طلب تأكيد هويتك قبل فك الربط. لا تفك الربط إذا لم يكن لديك وسيلة دخول أخرى إلى الحساب.</p>
-      <button class="auth-btn danger" id="unlinkGoogleBtn" type="button"><i class="fas fa-link-slash" style="margin-left:6px;"></i> فك ربط جوجل</button>
+      <article class="security-card wide">
+        <div class="card-title"><i class="fas fa-mobile-screen-button"></i> التحقق بخطوتين</div>
+        <p class="card-description">اربط تطبيق Authenticator للحصول على طبقة حماية إضافية عند تسجيل الدخول. دعم الواتساب وSMS سيكون متاحًا قريباً.</p>
+        <div id="mfaStatus" class="status-line"></div>
+        <div class="action-row" id="mfaActions"></div>
+        <div class="mfa-panel" id="mfaEnrollPanel" hidden>
+          <div class="mfa-qr"><img id="mfaQrCode" alt="رمز QR لإعداد تطبيق Authenticator"></div>
+          <div>
+            <p class="card-description">امسح الرمز من تطبيق Authenticator، أو أدخل المفتاح يدويًا، ثم اكتب الرمز المكوّن من 6 أرقام.</p>
+            <div class="mfa-secret" id="mfaSecret">—</div>
+            <div class="field" style="margin-top:12px;margin-bottom:8px;max-width:210px;">
+              <label for="mfaCodeInput">رمز التطبيق</label>
+              <input type="text" id="mfaCodeInput" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" dir="ltr">
+            </div>
+            <button class="auth-btn" id="mfaVerifyBtn" type="button" style="margin-top:0;max-width:210px">تأكيد التفعيل</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="security-card">
+        <div class="card-title"><i class="fas fa-laptop"></i> الأجهزة النشطة</div>
+        <p class="card-description">لا تعرض Supabase قائمة الجلسات من طرف العميل؛ استخدم هذا الزر لتسجيل الخروج من جميع الأجهزة.</p>
+        <button class="auth-btn danger" id="globalSignOutBtn" type="button"><i class="fas fa-right-from-bracket" style="margin-left:6px"></i> تسجيل الخروج من كل الأجهزة</button>
+      </article>
+
+      <article class="security-card">
+        <div class="card-title"><i class="fas fa-link"></i> الحسابات المرتبطة</div>
+        <p class="card-description" id="googleStatusText">إدارة حساب جوجل المرتبط مع طلب تأكيد الهوية قبل الفك.</p>
+        <div class="action-row" id="googleActions"></div>
+      </article>
     </div>
-    <div class="form-error security-message" id="securityError"></div>
-    <div class="form-success security-message" id="securitySuccess"></div>
+    <div class="form-error status-line" id="securityError"></div>
+    <div class="form-success status-line" id="securitySuccess"></div>
   </section>
 
-  <div style="margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
-    <a href="my-orders.html" class="account-link-item">
-      <i class="fas fa-box"></i>
-      <span>طلباتي</span>
-    </a>
-    <a href="wallet.html" class="account-link-item">
-      <i class="fas fa-wallet"></i>
-      <span>محفظتي</span>
-    </a>
-    <a href="notifications.html" class="account-link-item">
-      <i class="fas fa-bell"></i>
-      <span>الإشعارات</span>
-    </a>
-  </div>
+  <section class="account-section" id="personal">
+    <div class="section-heading">
+      <div><h2><i class="fas fa-id-card"></i> البيانات الشخصية</h2><p>حدّث بيانات التواصل ومعرّفات اللاعبين المفضّلة.</p></div>
+      <span class="section-number">02</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label for="fullNameInput">الاسم الكامل</label>
+        <input type="text" id="fullNameInput" autocomplete="name" placeholder="اكتب اسمك الكامل">
+      </div>
+      <div class="field">
+        <label for="whatsappInput">رقم الواتساب</label>
+        <input type="tel" id="whatsappInput" autocomplete="tel" placeholder="رقم التواصل">
+      </div>
+      <div class="field full">
+        <label for="emailInput">البريد الإلكتروني</label>
+        <div class="email-row">
+          <input type="email" id="emailInput" autocomplete="email">
+          <span class="verified-badge" id="verifiedBadge" hidden><i class="fas fa-circle-check"></i> موثّق</span>
+          <span class="pending-badge" id="pendingBadge" hidden><i class="fas fa-clock"></i> بانتظار التأكيد</span>
+        </div>
+        <button class="email-action" id="resendConfirmBtn" type="button" hidden>إرسال تأكيد البريد مرة أخرى</button>
+      </div>
+    </div>
+    <div class="security-card" style="margin-top:4px">
+      <div class="card-title"><i class="fas fa-gamepad"></i> معرّفات اللاعب المفضّلة</div>
+      <p class="card-description">احفظ معرّفك لكل لعبة ليكون جاهزًا عند الشراء. يمكنك إضافة أكثر من لعبة.</p>
+      <div class="player-id-list" id="playerIdList"></div>
+      <button class="inline-button" id="addPlayerIdBtn" type="button"><i class="fas fa-plus"></i> إضافة معرّف لعبة</button>
+    </div>
+    <button class="auth-btn" id="saveBtn" type="button"><i class="fas fa-floppy-disk" style="margin-left:6px"></i> حفظ البيانات الشخصية</button>
+  </section>
 
-  <button class="auth-btn" id="logoutBtn" style="background:rgba(255,77,79,0.15); color:var(--danger); margin-top:16px;">
-    <i class="fas fa-right-from-bracket" style="margin-left: 6px;"></i> تسجيل الخروج
-  </button>
+  <section class="account-section" id="preferences">
+    <div class="section-heading">
+      <div><h2><i class="fas fa-wallet"></i> المحفظة والتفضيلات</h2><p>تفضيلات بصرية ومعلومات واضحة حول الرصيد والشحن.</p></div>
+      <span class="section-number">03</span>
+    </div>
+    <div class="security-grid">
+      <article class="preference-card">
+        <div class="card-title"><i class="fas fa-coins"></i> عملة العرض</div>
+        <p class="card-description">تغيير بصري فقط؛ التسعير الفعلي للمتجر ثابت بالجنيه السوداني.</p>
+        <div class="field" style="margin-bottom:0">
+          <label for="currencySelect">العملة المفضّلة</label>
+          <select id="currencySelect">
+            <option value="SDG">الجنيه السوداني — SDG</option>
+            <option value="USD">الدولار الأمريكي — USD</option>
+            <option value="SAR">الريال السعودي — SAR</option>
+            <option value="AED">الدرهم الإماراتي — AED</option>
+          </select>
+        </div>
+      </article>
+      <article class="preference-card">
+        <div class="card-title"><i class="fas fa-wallet"></i> المحفظة</div>
+        <p class="card-description">الرصيد يضاف بعد مراجعة إيصال التحويل واعتماده. لا تشارك بيانات دخولك مع أي طرف.</p>
+        <a href="wallet.html" class="auth-btn secondary" style="display:block;text-align:center;text-decoration:none;margin-top:0">فتح المحفظة</a>
+      </article>
+      <article class="preference-card wide">
+        <div class="info-callout"><i class="fas fa-circle-info"></i><p><strong>معلومة مهمة:</strong> شحن المحفظة يخضع لمراجعة الإيصال، ولا يتم اعتماد الرصيد إلا بعد التأكد من بيانات التحويل ورقم العملية.</p></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="account-section" id="policies">
+    <div class="section-heading">
+      <div><h2><i class="fas fa-file-shield"></i> السياسات والمعلومات</h2><p>معلومات أساسية لحماية حسابك وتجربتك في المتجر.</p></div>
+      <span class="section-number">04</span>
+    </div>
+    <div class="policy-card">
+      <table class="policy-table">
+        <thead><tr><th>العنصر</th><th>النص</th></tr></thead>
+        <tbody>
+          <tr><td>حماية البيانات</td><td>بياناتك الشخصية ومعاملاتك المالية مشفرة بالكامل ولا يتم مشاركتها مع أي طرف ثالث.</td></tr>
+          <tr><td>سياسة الاسترجاع</td><td>البطاقات والخدمات التي تم تسليمها بنجاح غير قابلة للإرجاع إلا في حال وجود خلل في الكود.</td></tr>
+          <tr><td>التأكيد قبل الشراء</td><td>تأكد دائماً من صحة الآيدي (Player ID) المرفق قبل تأكيد الطلب، المتجر غير مسؤول عن الإدخال الخاطئ.</td></tr>
+          <tr><td>حسابات التواصل الرسمية</td><td>لتجنب الاحتيال، تحقق دائماً من أنك تتواصل مع الدعم الفني عبر رقم الواتساب الرسمي المعتمد في المتجر.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="account-links">
+    <a href="my-orders.html" class="account-link-item"><i class="fas fa-box"></i> طلباتي</a>
+    <a href="referrals.html" class="account-link-item"><i class="fas fa-gift"></i> إحالاتي</a>
+    <a href="notifications.html" class="account-link-item"><i class="fas fa-bell"></i> الإشعارات</a>
+  </div>
+  <div class="account-footer-actions">
+    <button class="auth-btn danger" id="logoutBtn" type="button"><i class="fas fa-right-from-bracket" style="margin-left:6px"></i> تسجيل الخروج</button>
+  </div>
 </div>
 
 <div class="auth-modal" id="reauthModal" hidden>
@@ -212,11 +396,7 @@
         <button type="submit" class="auth-btn" id="reauthVerifyBtn">تأكيد الكود</button>
       </div>
     </form>
-    <div class="resend-row">
-      <span>ما وصلك الكود؟</span>
-      <button id="reauthResendBtn" type="button" class="resend-btn" data-idle-label="إعادة الإرسال">إعادة الإرسال</button>
-      <span class="timer" id="reauthResendTimer"></span>
-    </div>
+    <div class="resend-row"><span>ما وصلك الكود؟</span><button id="reauthResendBtn" type="button" class="resend-btn" data-idle-label="إعادة الإرسال">إعادة الإرسال</button><span class="timer" id="reauthResendTimer"></span></div>
   </div>
 </div>
 
@@ -226,19 +406,24 @@
 <script>
 const UI = window.RaizeyAuthUI;
 let currentUser = null;
+let currentProfile = null;
 let googleIdentity = null;
 let reauthEmail = '';
 let reauthMode = 'session';
 let reauthResolver = null;
+let pendingMfaFactor = null;
 
 const formError = document.getElementById('formError');
 const formSuccess = document.getElementById('formSuccess');
 const securityError = document.getElementById('securityError');
 const securitySuccess = document.getElementById('securitySuccess');
 const emailInput = document.getElementById('emailInput');
-const emailPendingBadge = document.getElementById('emailPendingBadge');
-const emailPendingText = document.getElementById('emailPendingText');
+const pendingBadge = document.getElementById('pendingBadge');
+const verifiedBadge = document.getElementById('verifiedBadge');
+const resendConfirmBtn = document.getElementById('resendConfirmBtn');
 const saveBtn = document.getElementById('saveBtn');
+const playerIdList = document.getElementById('playerIdList');
+const currencySelect = document.getElementById('currencySelect');
 const reauthModal = document.getElementById('reauthModal');
 const reauthSub = document.getElementById('reauthSub');
 const reauthError = document.getElementById('reauthError');
@@ -247,32 +432,13 @@ const reauthResendBtn = document.getElementById('reauthResendBtn');
 const reauthOtp = UI.bindOtpInputs(document.getElementById('reauthOtpBox'), () => document.getElementById('reauthForm').requestSubmit());
 const reauthTimer = UI.createResendTimer(reauthResendBtn, document.getElementById('reauthResendTimer'), 60);
 
-function clearMessages() {
-  formError.textContent = '';
-  formSuccess.textContent = '';
-}
+UI.bindPasswordToggles();
+UI.bindPasswordStrength(document.getElementById('newPasswordInput'), document.getElementById('pwStrengthFill'), document.getElementById('pwStrengthLabel'), document.getElementById('pwRules'));
+UI.bindConfirmPassword(document.getElementById('newPasswordInput'), document.getElementById('confirmPasswordInput'));
 
-function clearSecurityMessages() {
-  securityError.textContent = '';
-  securitySuccess.textContent = '';
-}
-
-function showPendingEmail(email) {
-  emailPendingText.textContent = 'بانتظار تأكيد البريد الجديد: ' + email;
-  emailPendingBadge.classList.add('is-visible');
-}
-
-function refreshPendingEmail() {
-  const pending = sessionStorage.getItem('pending_email_change');
-  const current = (currentUser && currentUser.email || '').toLowerCase();
-  if (pending && pending.toLowerCase() === current) {
-    sessionStorage.removeItem('pending_email_change');
-    emailPendingBadge.classList.remove('is-visible');
-  } else if (pending) {
-    emailInput.value = pending;
-    showPendingEmail(pending);
-  }
-}
+function clearMessages() { formError.textContent = ''; formSuccess.textContent = ''; }
+function clearSecurityMessages() { securityError.textContent = ''; securitySuccess.textContent = ''; }
+function showMessage(element, text, isError) { element.textContent = text; if (isError) element.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
 function closeReauth(result) {
   reauthTimer.stop();
@@ -301,52 +467,179 @@ function requestReauthentication(reason, mode) {
   reauthSub.textContent = 'للمتابعة في ' + reason + '، أرسلنا كودًا من 6 أرقام إلى بريدك الحالي ' + reauthEmail + '.';
   reauthError.textContent = '';
   reauthModal.hidden = false;
-  reauthResolver = null;
-
   const promise = new Promise((resolve) => { reauthResolver = resolve; });
   sendReauthCode().catch((error) => {
-    reauthError.textContent = error && error.status === 429
-      ? 'محاولات كثيرة، انتظر قليلاً قبل طلب كود جديد.'
-      : 'تعذر إرسال كود تأكيد الهوية الآن. حاول مرة أخرى.';
+    reauthError.textContent = error && error.status === 429 ? 'محاولات كثيرة، انتظر قليلاً قبل طلب كود جديد.' : 'تعذر إرسال كود تأكيد الهوية الآن. حاول مرة أخرى.';
     closeReauth(false);
   });
   return promise;
 }
 
+function renderPlayerIds(playerIds) {
+  playerIdList.innerHTML = '';
+  const entries = Object.entries(playerIds || {});
+  (entries.length ? entries : [['pubg', '']]).forEach(([game, value]) => addPlayerIdRow(game, value));
+}
+
+function addPlayerIdRow(game, value) {
+  const row = document.createElement('div');
+  row.className = 'player-id-row';
+  row.innerHTML = '<select aria-label="اللعبة" data-player-game>' +
+    '<option value="pubg">PUBG Mobile</option><option value="free_fire">Free Fire</option><option value="efootball">eFootball</option><option value="call_of_duty">Call of Duty</option><option value="other">لعبة أخرى</option>' +
+    '</select><input type="text" inputmode="text" placeholder="Player ID" aria-label="معرّف اللاعب" data-player-value><button class="icon-remove" type="button" aria-label="حذف المعرّف"><i class="fas fa-trash-can"></i></button>';
+  const select = row.querySelector('[data-player-game]');
+  const input = row.querySelector('[data-player-value]');
+  select.value = [...select.options].some((option) => option.value === game) ? game : 'other';
+  input.value = value || '';
+  row.querySelector('.icon-remove').addEventListener('click', () => row.remove());
+  playerIdList.appendChild(row);
+}
+
+function readPlayerIds() {
+  const result = {};
+  playerIdList.querySelectorAll('.player-id-row').forEach((row) => {
+    const game = row.querySelector('[data-player-game]').value;
+    const value = row.querySelector('[data-player-value]').value.trim();
+    if (value) result[game] = value;
+  });
+  return result;
+}
+
+function renderEmailState() {
+  const confirmed = !!(currentUser.email_confirmed_at || currentUser.confirmed_at);
+  const pending = sessionStorage.getItem('pending_email_change');
+  const isPending = pending && pending.toLowerCase() !== (currentUser.email || '').toLowerCase();
+  verifiedBadge.hidden = !confirmed || !!isPending;
+  pendingBadge.hidden = !isPending;
+  resendConfirmBtn.hidden = confirmed && !isPending;
+  if (isPending) {
+    emailInput.value = pending;
+    pendingBadge.title = 'بانتظار تأكيد: ' + pending;
+  }
+}
+
+async function loadMfa() {
+  const status = document.getElementById('mfaStatus');
+  const actions = document.getElementById('mfaActions');
+  if (!supabaseClient.auth.mfa) { status.textContent = 'التحقق بخطوتين غير متاح في إصدار المكتبة الحالي.'; return; }
+  const { data, error } = await supabaseClient.auth.mfa.listFactors();
+  if (error) { status.textContent = 'تعذر قراءة حالة التحقق بخطوتين الآن.'; return; }
+  const factor = (data.all || data.totp || []).find((item) => item.factor_type === 'totp' && item.status === 'verified');
+  actions.innerHTML = '';
+  if (factor) {
+    status.innerHTML = '<span style="color:#15803d;font-weight:800"><i class="fas fa-circle-check"></i> التحقق بخطوتين مفعّل عبر Authenticator.</span>';
+    const button = document.createElement('button');
+    button.className = 'auth-btn danger'; button.type = 'button'; button.innerHTML = '<i class="fas fa-shield-halved" style="margin-left:6px"></i> إيقاف التحقق بخطوتين';
+    button.addEventListener('click', () => unenrollMfa(factor.id)); actions.appendChild(button);
+  } else {
+    status.textContent = 'لم يتم تفعيل التحقق بخطوتين بعد.';
+    const button = document.createElement('button');
+    button.className = 'auth-btn secondary'; button.type = 'button'; button.innerHTML = '<i class="fas fa-mobile-screen-button" style="margin-left:6px"></i> إعداد Authenticator';
+    button.addEventListener('click', enrollMfa); actions.appendChild(button);
+  }
+}
+
+async function enrollMfa() {
+  clearSecurityMessages();
+  if (!supabaseClient.auth.mfa) { securityError.textContent = 'التحقق بخطوتين غير متاح الآن.'; return; }
+  try {
+    const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'RAIZEY STORE Authenticator' });
+    if (error) throw error;
+    pendingMfaFactor = data;
+    document.getElementById('mfaQrCode').src = data.totp.qr_code;
+    document.getElementById('mfaSecret').textContent = data.totp.secret;
+    document.getElementById('mfaEnrollPanel').hidden = false;
+    document.getElementById('mfaCodeInput').focus();
+  } catch (_) { securityError.textContent = 'تعذر بدء إعداد Authenticator، حاول مرة أخرى.'; }
+}
+
+async function verifyMfa() {
+  clearSecurityMessages();
+  const code = document.getElementById('mfaCodeInput').value.trim();
+  if (!pendingMfaFactor || !/^\d{6}$/.test(code)) { securityError.textContent = 'أدخل رمز Authenticator المكوّن من 6 أرقام.'; return; }
+  const button = document.getElementById('mfaVerifyBtn'); UI.setLoading(button, true, 'جارِ التحقق...');
+  try {
+    const { data: challenge, error: challengeError } = await supabaseClient.auth.mfa.challenge({ factorId: pendingMfaFactor.id });
+    if (challengeError) throw challengeError;
+    const { error } = await supabaseClient.auth.mfa.verify({ factorId: pendingMfaFactor.id, challengeId: challenge.id, code });
+    if (error) throw error;
+    document.getElementById('mfaEnrollPanel').hidden = true;
+    document.getElementById('mfaCodeInput').value = '';
+    pendingMfaFactor = null;
+    securitySuccess.textContent = 'تم تفعيل التحقق بخطوتين بنجاح.';
+    await loadMfa();
+  } catch (_) { securityError.textContent = 'رمز Authenticator غير صحيح أو انتهت صلاحيته.'; }
+  finally { UI.setLoading(button, false); }
+}
+
+async function unenrollMfa(factorId) {
+  clearSecurityMessages();
+  const verified = await requestReauthentication('إيقاف التحقق بخطوتين', 'session');
+  if (!verified) return;
+  try {
+    const { error } = await supabaseClient.auth.mfa.unenroll({ factorId });
+    if (error) throw error;
+    securitySuccess.textContent = 'تم إيقاف التحقق بخطوتين.';
+    await loadMfa();
+  } catch (_) { securityError.textContent = 'تعذر إيقاف التحقق بخطوتين.'; }
+}
+
+function renderGoogleState() {
+  const actions = document.getElementById('googleActions');
+  const status = document.getElementById('googleStatusText');
+  actions.innerHTML = '';
+  const button = document.createElement('button'); button.type = 'button'; button.className = googleIdentity ? 'auth-btn danger' : 'auth-btn secondary';
+  if (googleIdentity) {
+    status.textContent = 'حساب جوجل مرتبط. فك الربط محمي بتأكيد الهوية.';
+    button.innerHTML = '<i class="fas fa-link-slash" style="margin-left:6px"></i> فك ربط جوجل';
+    button.addEventListener('click', unlinkGoogle);
+  } else {
+    status.textContent = 'لا يوجد حساب جوجل مرتبط حاليًا.';
+    button.innerHTML = '<i class="fab fa-google" style="margin-left:6px"></i> ربط حساب جوجل';
+    button.addEventListener('click', linkGoogle);
+  }
+  actions.appendChild(button);
+}
+
+async function linkGoogle() {
+  clearSecurityMessages();
+  const verified = await requestReauthentication('ربط حساب جوجل', 'session');
+  if (!verified) return;
+  const { error } = await supabaseClient.auth.linkIdentity({ provider: 'google', options: { redirectTo: new URL('account.html', window.location.href).href, queryParams: { prompt: 'select_account' } } });
+  if (error) securityError.textContent = 'تعذر بدء ربط حساب جوجل.';
+}
+
+async function unlinkGoogle() {
+  clearSecurityMessages();
+  if (!googleIdentity) return;
+  if ((currentUser.identities || []).length < 2) { securityError.textContent = 'أضف وسيلة دخول أخرى قبل فك ربط جوجل حتى لا تفقد الوصول إلى الحساب.'; return; }
+  const verified = await requestReauthentication('فك ربط حساب جوجل', 'session');
+  if (!verified) return;
+  try {
+    const { error } = await supabaseClient.auth.unlinkIdentity(googleIdentity);
+    if (error) throw error;
+    googleIdentity = null; renderGoogleState(); securitySuccess.textContent = 'تم فك ربط حساب جوجل بنجاح.';
+  } catch (_) { securityError.textContent = 'تعذر فك ربط حساب جوجل، حاول مرة أخرى.'; }
+}
+
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
-
   const { data: { user } } = await supabaseClient.auth.getUser();
   currentUser = user || session.user;
+  document.getElementById('summaryName').textContent = currentUser.user_metadata?.full_name || 'حساب RAIZEY STORE';
+  document.getElementById('summaryEmail').textContent = currentUser.email || '—';
   emailInput.value = currentUser.email || '';
-  refreshPendingEmail();
-
+  renderEmailState();
   googleIdentity = (currentUser.identities || []).find((identity) => identity.provider === 'google') || null;
-  document.getElementById('googleSecurityCard').hidden = !googleIdentity;
-
-  const { data: profile } = await supabaseClient
-    .from('profiles').select('*').eq('id', currentUser.id).single();
-
-  if (profile) {
-    document.getElementById('fullNameInput').value = profile.full_name || '';
-    document.getElementById('whatsappInput').value = profile.whatsapp_number || '';
-    document.getElementById('referralLinkInput').value = `${window.location.origin}/register.html?ref=${profile.referral_code}`;
-  }
-
-  document.getElementById('copyRefBtn').addEventListener('click', () => {
-    const input = document.getElementById('referralLinkInput');
-    input.select();
-    navigator.clipboard.writeText(input.value);
-    const btn = document.getElementById('copyRefBtn');
-    btn.textContent = 'اتنسخ!';
-    setTimeout(() => { btn.textContent = 'نسخ'; }, 2000);
-  });
-
-  saveBtn.addEventListener('click', saveProfile);
-  document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
-  document.getElementById('unlinkGoogleBtn').addEventListener('click', unlinkGoogle);
-  document.getElementById('logoutBtn').addEventListener('click', logout);
+  renderGoogleState();
+  await loadMfa();
+  const { data: profile } = await supabaseClient.from('profiles').select('full_name,whatsapp_number,referral_code,player_ids').eq('id', currentUser.id).single();
+  currentProfile = profile || {};
+  document.getElementById('fullNameInput').value = currentProfile.full_name || currentUser.user_metadata?.full_name || '';
+  document.getElementById('whatsappInput').value = currentProfile.whatsapp_number || '';
+  renderPlayerIds(currentProfile.player_ids || {});
+  currencySelect.value = localStorage.getItem('raizey_preferred_currency') || 'SDG';
 }
 
 async function saveProfile() {
@@ -355,164 +648,100 @@ async function saveProfile() {
   const whatsapp = document.getElementById('whatsappInput').value.trim();
   const newEmail = emailInput.value.trim();
   const oldEmail = (currentUser.email || '').trim();
-
-  if (!fullName) {
-    formError.textContent = 'أدخل اسمك';
-    return;
-  }
-  if (!UI.isValidEmail(newEmail)) {
-    UI.setFieldState(emailInput, 'invalid', 'صيغة البريد غير صحيحة');
-    formError.textContent = 'أدخل بريدًا إلكترونيًا صالحًا';
-    return;
-  }
-
+  if (!fullName) { formError.textContent = 'أدخل اسمك الكامل.'; return; }
+  if (!UI.isValidEmail(newEmail)) { formError.textContent = 'أدخل بريدًا إلكترونيًا صالحًا.'; return; }
   const emailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
+  const pendingEmail = sessionStorage.getItem('pending_email_change');
+  const alreadyPending = pendingEmail && pendingEmail.toLowerCase() === newEmail.toLowerCase();
   UI.setLoading(saveBtn, true, 'جارِ الحفظ...');
   try {
-    const pendingEmail = sessionStorage.getItem('pending_email_change');
-    const alreadyPending = pendingEmail && pendingEmail.toLowerCase() === newEmail.toLowerCase();
-    if (emailChanged && !alreadyPending) {
-      const verified = await requestReauthentication('تغيير البريد الإلكتروني', 'session');
-      if (!verified) return;
-    }
-
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .update({ full_name: fullName, whatsapp_number: whatsapp })
-      .eq('id', currentUser.id);
-
+    if (emailChanged && !alreadyPending) { const verified = await requestReauthentication('تغيير البريد الإلكتروني', 'session'); if (!verified) return; }
+    const { error: profileError } = await supabaseClient.from('profiles').update({ full_name: fullName, whatsapp_number: whatsapp, player_ids: readPlayerIds() }).eq('id', currentUser.id);
     if (profileError) throw profileError;
-
     if (emailChanged && !alreadyPending) {
       const { error: emailError } = await supabaseClient.auth.updateUser({ email: newEmail });
       if (emailError) throw emailError;
-      sessionStorage.setItem('pending_email_change', newEmail);
-      showPendingEmail(newEmail);
-      formSuccess.textContent = 'تم حفظ البيانات. تحقق من بريدك الجديد (والقديم) لتأكيد التغيير.';
+      sessionStorage.setItem('pending_email_change', newEmail); pendingBadge.hidden = false; verifiedBadge.hidden = true;
+      formSuccess.textContent = 'تم الحفظ. تحقق من بريدك الجديد (والقديم) لتأكيد التغيير.';
     } else if (alreadyPending) {
-      showPendingEmail(newEmail);
       formSuccess.textContent = 'ما زال تغيير البريد بانتظار التأكيد من بريدك الجديد والقديم.';
-    } else {
-      formSuccess.textContent = 'تم حفظ التعديلات بنجاح';
-    }
+    } else { formSuccess.textContent = 'تم حفظ البيانات الشخصية بنجاح.'; }
+    document.getElementById('summaryName').textContent = fullName;
     setTimeout(() => { formSuccess.textContent = ''; }, 4500);
-  } catch (error) {
-    formError.textContent = error && error.status === 429
-      ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
-      : 'حصل خطأ أثناء الحفظ، حاول مرة أخرى';
-  } finally {
-    UI.setLoading(saveBtn, false);
-  }
+  } catch (_) { formError.textContent = 'حصل خطأ أثناء الحفظ، حاول مرة أخرى.'; }
+  finally { UI.setLoading(saveBtn, false); }
+}
+
+async function resendConfirmation() {
+  clearMessages();
+  try {
+    const pendingEmail = sessionStorage.getItem('pending_email_change');
+    const { error } = await supabaseClient.auth.resend({
+      type: pendingEmail ? 'email_change' : 'signup',
+      email: pendingEmail || currentUser.email
+    });
+    if (error) throw error;
+    formSuccess.textContent = pendingEmail
+      ? 'تمت إعادة إرسال رسالة تأكيد تغيير البريد.'
+      : 'تم إرسال رسالة تأكيد جديدة إلى بريدك.';
+  } catch (_) { formError.textContent = 'تعذر إرسال رسالة التأكيد الآن.'; }
 }
 
 async function changePassword() {
   clearSecurityMessages();
   const newPassword = document.getElementById('newPasswordInput').value;
   const confirmPassword = document.getElementById('confirmPasswordInput').value;
-
-  if (newPassword.length < 8) {
-    securityError.textContent = 'كلمة السر الجديدة يجب أن تكون 8 أحرف على الأقل.';
-    return;
-  }
-  if (newPassword !== confirmPassword) {
-    securityError.textContent = 'كلمتا السر غير متطابقتين.';
-    return;
-  }
-
-  const button = document.getElementById('changePasswordBtn');
-  UI.setLoading(button, true, 'جارِ التحقق...');
+  if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) { securityError.textContent = 'كلمة السر يجب أن تحتوي على 8 أحرف ورقم واحد على الأقل.'; return; }
+  if (newPassword !== confirmPassword) { securityError.textContent = 'كلمتا السر غير متطابقتين.'; return; }
+  const button = document.getElementById('changePasswordBtn'); UI.setLoading(button, true, 'جارِ التحقق...');
   try {
     const verified = await requestReauthentication('تغيير كلمة السر', 'password');
     if (!verified) return;
     const { error } = await supabaseClient.auth.updateUser({ password: newPassword, nonce: verified.nonce });
     if (error) throw error;
-    document.getElementById('newPasswordInput').value = '';
-    document.getElementById('confirmPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = ''; document.getElementById('confirmPasswordInput').value = '';
     securitySuccess.textContent = 'تم تغيير كلمة السر بنجاح.';
-  } catch (_) {
-    securityError.textContent = 'تعذر تغيير كلمة السر، حاول مرة أخرى.';
-  } finally {
-    UI.setLoading(button, false);
-  }
+  } catch (_) { securityError.textContent = 'تعذر تغيير كلمة السر، حاول مرة أخرى.'; }
+  finally { UI.setLoading(button, false); }
 }
 
-async function unlinkGoogle() {
+async function globalSignOut() {
   clearSecurityMessages();
-  if (!googleIdentity) return;
-  if ((currentUser.identities || []).length < 2) {
-    securityError.textContent = 'أضف وسيلة دخول أخرى قبل فك ربط جوجل حتى لا تفقد الوصول إلى الحساب.';
-    return;
-  }
-
-  const verified = await requestReauthentication('فك ربط حساب جوجل', 'session');
+  const verified = await requestReauthentication('تسجيل الخروج من كل الأجهزة', 'session');
   if (!verified) return;
-  const button = document.getElementById('unlinkGoogleBtn');
-  UI.setLoading(button, true, 'جارِ فك الربط...');
-  try {
-    const { error } = await supabaseClient.auth.unlinkIdentity(googleIdentity);
-    if (error) throw error;
-    googleIdentity = null;
-    document.getElementById('googleSecurityCard').hidden = true;
-    securitySuccess.textContent = 'تم فك ربط حساب جوجل بنجاح.';
-  } catch (_) {
-    securityError.textContent = 'تعذر فك ربط حساب جوجل، حاول مرة أخرى.';
-  } finally {
-    UI.setLoading(button, false);
-  }
+  const { error } = await supabaseClient.auth.signOut({ scope: 'global' });
+  if (error) { securityError.textContent = 'تعذر تسجيل الخروج من كل الأجهزة.'; return; }
+  window.location.href = 'login.html';
 }
 
-document.getElementById('reauthForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  reauthError.textContent = '';
-  const code = reauthOtp.value();
-  if (code.length !== 6) {
-    reauthError.textContent = 'أدخل الكود كاملاً (6 أرقام).';
-    return;
-  }
+async function logout() { await supabaseClient.auth.signOut({ scope: 'local' }); window.location.href = 'index.html'; }
 
+document.getElementById('addPlayerIdBtn').addEventListener('click', () => addPlayerIdRow('other', ''));
+document.getElementById('mfaVerifyBtn').addEventListener('click', verifyMfa);
+document.getElementById('resendConfirmBtn').addEventListener('click', resendConfirmation);
+document.getElementById('saveBtn').addEventListener('click', saveProfile);
+document.getElementById('changePasswordBtn').addEventListener('click', changePassword);
+document.getElementById('globalSignOutBtn').addEventListener('click', globalSignOut);
+document.getElementById('logoutBtn').addEventListener('click', logout);
+currencySelect.addEventListener('change', () => localStorage.setItem('raizey_preferred_currency', currencySelect.value));
+
+document.getElementById('reauthForm').addEventListener('submit', async (event) => {
+  event.preventDefault(); reauthError.textContent = '';
+  const code = reauthOtp.value();
+  if (code.length !== 6) { reauthError.textContent = 'أدخل الكود كاملاً (6 أرقام).'; return; }
   UI.setLoading(reauthVerifyBtn, true, 'جارِ التحقق...');
   try {
-    if (reauthMode === 'password') {
-      closeReauth({ nonce: code });
-      return;
-    }
-
-    const { error } = await supabaseClient.auth.verifyOtp({
-      email: reauthEmail,
-      token: code,
-      type: 'email'
-    });
-    if (error) {
-      reauthError.textContent = error.status === 429
-        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل.'
-        : 'الكود غير صحيح أو منتهي الصلاحية.';
-      reauthOtp.clear();
-      return;
-    }
+    if (reauthMode === 'password') { closeReauth({ nonce: code }); return; }
+    const { error } = await supabaseClient.auth.verifyOtp({ email: reauthEmail, token: code, type: 'email' });
+    if (error) { reauthError.textContent = error.status === 429 ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل.' : 'الكود غير صحيح أو منتهي الصلاحية.'; reauthOtp.clear(); return; }
     closeReauth({ sessionVerified: true });
-  } catch (_) {
-    reauthError.textContent = 'تعذر التحقق الآن، حاول مرة أخرى.';
-  } finally {
-    UI.setLoading(reauthVerifyBtn, false);
-  }
+  } catch (_) { reauthError.textContent = 'تعذر التحقق الآن، حاول مرة أخرى.'; }
+  finally { UI.setLoading(reauthVerifyBtn, false); }
 });
-
-document.getElementById('reauthResendBtn').addEventListener('click', async () => {
-  try {
-    await sendReauthCode();
-  } catch (_) {
-    reauthError.textContent = 'تعذرت إعادة إرسال الكود، حاول بعد قليل.';
-  }
-});
-
+document.getElementById('reauthResendBtn').addEventListener('click', () => sendReauthCode().catch(() => { reauthError.textContent = 'تعذرت إعادة إرسال الكود.'; }));
 document.getElementById('reauthCancelBtn').addEventListener('click', () => closeReauth(false));
-reauthModal.addEventListener('click', (event) => {
-  if (event.target === reauthModal) closeReauth(false);
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !reauthModal.hidden) closeReauth(false);
-});
+reauthModal.addEventListener('click', (event) => { if (event.target === reauthModal) closeReauth(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !reauthModal.hidden) closeReauth(false); });
 
 init();
 </script>
