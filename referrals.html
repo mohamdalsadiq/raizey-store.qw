@@ -8,6 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .referral-panel { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:20px; box-shadow:var(--shadow-card); }
+  .referral-panel.is-primary { border-color:rgba(255,106,26,.55); background:linear-gradient(135deg,#fff8f1,var(--bg-card)); }
+  .referral-panel .section-label { margin-top:0; }
+  .referral-action-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:stretch; }
+  .referral-action-row input { min-width:0; width:100%; }
+  .referral-copy-btn { min-width:84px; padding:0 16px; border-radius:11px; background:var(--primary); color:var(--ink); font-weight:800; }
+  .referral-code-value { direction:ltr; text-align:center; letter-spacing:2px; font-family:var(--font-mono); font-weight:800; color:var(--primary-dim); }
+  .referral-help { margin-top:8px; color:var(--text-muted); font-size:12px; line-height:1.7; }
+  .referral-howto p { margin:5px 0; }
+  @media (max-width:420px) { .referral-action-row { grid-template-columns:1fr; } .referral-copy-btn { min-height:44px; } }
+</style>
 </head>
 <body>
 
@@ -17,16 +30,25 @@
     <a href="account.html" class="back-link">→ حسابي</a>
   </div>
 
-  <div style="background:var(--bg-card); border:1px solid var(--primary); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;">رابط الإحالة الخاص بك</div>
-    <div style="display:flex; gap:8px;">
-      <input type="text" id="referralLinkInput" readonly style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
-      <button id="copyRefBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px;">نسخ</button>
+  <div class="referral-panel is-primary">
+    <div class="section-label"><i class="fas fa-link" style="color:var(--primary);"></i> رابط الإحالة الخاص بك</div>
+    <div class="referral-action-row">
+      <input type="text" id="referralLinkInput" readonly aria-label="رابط الإحالة الخاص بك" style="padding:12px 14px; border-radius:11px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
+      <button id="copyRefBtn" class="referral-copy-btn" type="button"><i class="fas fa-copy" style="margin-left:6px;"></i> نسخ الرابط</button>
     </div>
   </div>
 
-  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px; font-size:13px; line-height:1.9;">
-    <div class="section-label" style="margin-top:0;">كيف يشتغل النظام؟</div>
+  <div class="referral-panel">
+    <div class="section-label"><i class="fas fa-hashtag" style="color:var(--primary);"></i> كود الإحالة القصير</div>
+    <div class="referral-action-row">
+      <input type="text" id="referralShortCodeInput" class="referral-code-value" readonly aria-label="كود الإحالة القصير">
+      <button id="copyShortRefBtn" class="referral-copy-btn" type="button"><i class="fas fa-copy" style="margin-left:6px;"></i> نسخ الكود</button>
+    </div>
+    <div class="referral-help">شارك هذا الكود يدويًا؛ يمكن لصديقك كتابته أثناء إنشاء الحساب بدل فتح الرابط.</div>
+  </div>
+
+  <div class="referral-panel referral-howto" style="font-size:13px; line-height:1.9;">
+    <div class="section-label"><i class="fas fa-circle-info" style="color:var(--primary);"></i> كيف يشتغل النظام؟</div>
     <p>• شارك رابطك مع أصحابك عبر الواتساب أو أي مكان.</p>
     <p>• لما حد يسجل برابطك، بياخد <strong id="welcomeDiscountText" style="color:var(--primary);">خصم ترحيبي</strong> تلقائياً على أول طلب ليه.</p>
     <p>• وانت تاخد <strong style="color:var(--primary);">عمولة</strong> من قيمة أول طلب فعلي يعمله (النسبة بتفرق حسب نوع الباقة).</p>
@@ -45,13 +67,13 @@
     </div>
   </div>
 
-  <div class="section-label">مستويات المكافآت</div>
+  <div class="section-label"><i class="fas fa-layer-group" style="color:var(--primary);"></i> مستويات المكافآت</div>
   <div id="milestonesBox" style="margin-bottom:24px;"></div>
 
-  <div class="section-label">قائمة إحالاتك</div>
+  <div class="section-label"><i class="fas fa-users" style="color:var(--primary);"></i> قائمة إحالاتك</div>
   <div id="referralsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 
-  <div class="section-label">سجل أرباح الإحالة</div>
+  <div class="section-label"><i class="fas fa-coins" style="color:var(--primary);"></i> سجل أرباح الإحالة</div>
   <div id="earningsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
 
@@ -67,22 +89,17 @@ async function init() {
 
   const { data: myProfile } = await supabaseClient
     .from('profiles')
-    .select('referral_code')
+    .select('referral_code, referral_short_code')
     .eq('id', currentUser.id)
     .single();
 
   if (myProfile) {
-    document.getElementById('referralLinkInput').value = `${window.location.origin}/register.html?ref=${myProfile.referral_code}`;
+    document.getElementById('referralLinkInput').value = `${window.location.origin}/register.html?ref=${encodeURIComponent(myProfile.referral_code || '')}`;
+    document.getElementById('referralShortCodeInput').value = myProfile.referral_short_code || '—';
   }
 
-  document.getElementById('copyRefBtn').addEventListener('click', () => {
-    const input = document.getElementById('referralLinkInput');
-    input.select();
-    navigator.clipboard.writeText(input.value);
-    const btn = document.getElementById('copyRefBtn');
-    btn.textContent = 'اتنسخ!';
-    setTimeout(() => { btn.textContent = 'نسخ'; }, 2000);
-  });
+  bindCopyButton('copyRefBtn', 'referralLinkInput', 'نسخ الرابط');
+  bindCopyButton('copyShortRefBtn', 'referralShortCodeInput', 'نسخ الكود');
 
   const { data: discountRow } = await supabaseClient
     .from('settings').select('value').eq('key', 'referral_signup_discount_percent').single();
@@ -104,6 +121,26 @@ async function init() {
   await renderMilestones(successCount);
   renderReferrals(list);
   await loadEarnings();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+}
+
+function bindCopyButton(buttonId, inputId, idleLabel) {
+  document.getElementById(buttonId).addEventListener('click', async () => {
+    const input = document.getElementById(inputId);
+    const value = input.value.trim();
+    if (!value || value === '—') return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch (_) {
+      input.focus(); input.select(); document.execCommand('copy');
+    }
+    const btn = document.getElementById(buttonId);
+    btn.innerHTML = '<i class="fas fa-check" style="margin-left:6px;"></i> تم النسخ';
+    setTimeout(() => { btn.innerHTML = `<i class="fas fa-copy" style="margin-left:6px;"></i> ${idleLabel}`; }, 1800);
+  });
 }
 
 async function renderMilestones(successCount) {
@@ -132,11 +169,11 @@ async function renderMilestones(successCount) {
       <div class="order-card">
         <div class="order-top">
           <div>
-            <div class="order-product">${m.label || 'مستوى'} (${m.threshold} إحالة)</div>
+            <div class="order-product">${escapeHtml(m.label || 'مستوى')} (${Number(m.threshold) || 0} إحالة)</div>
             <div class="order-date">مكافأة: ${formatSDG(m.bonus)} ج.س</div>
           </div>
           <span class="status-badge ${achieved ? 'status-completed' : 'status-pending_review'}">
-            ${achieved ? 'تم التحقيق' : `${Math.min(successCount, m.threshold)} / ${m.threshold}`}
+            ${achieved ? 'تم التحقيق' : `${Math.min(successCount, Number(m.threshold) || 0)} / ${Number(m.threshold) || 0}`}
           </span>
         </div>
       </div>
@@ -156,7 +193,7 @@ function renderReferrals(list) {
     return `
       <div class="mini-list-item">
         <div>
-          <div class="name">${r.full_name || 'مستخدم جديد'}</div>
+          <div class="name">${escapeHtml(r.full_name || 'مستخدم جديد')}</div>
           <div class="sub">سجل في ${date}</div>
         </div>
         <span class="status-badge ${r.referral_rewarded ? 'status-completed' : 'status-pending_review'}">
@@ -186,8 +223,8 @@ async function loadEarnings() {
     return `
       <div class="mini-list-item">
         <div>
-          <div class="name">${n.title}</div>
-          <div class="sub">${n.message}</div>
+          <div class="name">${escapeHtml(n.title)}</div>
+          <div class="sub">${escapeHtml(n.message)}</div>
         </div>
         <div class="sub">${date}</div>
       </div>

@@ -70,10 +70,6 @@
     { iso: 'br', ar: 'البرازيل',           en: 'Brazil',               dial: '55',  len: [10, 11] }
   ];
 
-  function flagUrl(iso) {
-    return 'https://flagcdn.com/w40/' + iso + '.png';
-  }
-
   function maxLen(country) {
     return Math.max.apply(null, country.len);
   }
@@ -100,9 +96,9 @@
 
     function renderButton() {
       button.innerHTML =
-        '<img class="flag" src="' + flagUrl(current.iso) + '" alt="' + current.ar + '" loading="lazy">' +
+        '<span class="country-name">' + current.ar + '</span>' +
         '<span class="dial">+' + current.dial + '</span>' +
-        '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+        '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
       phoneInput.setAttribute('maxlength', String(maxLen(current)));
       phoneInput.setAttribute('placeholder', new Array(maxLen(current) + 1).join('X'));
     }
@@ -125,7 +121,6 @@
       list.innerHTML = items.map(function (c) {
         return '<button type="button" class="country-item' + (c.iso === current.iso ? ' active' : '') +
           '" data-iso="' + c.iso + '" data-dial="' + c.dial + '">' +
-          '<img class="flag" src="' + flagUrl(c.iso) + '" alt="" loading="lazy">' +
           '<span class="nm">' + c.ar + '</span>' +
           '<span class="dial">+' + c.dial + '</span></button>';
       }).join('');
@@ -183,7 +178,6 @@
 
   global.RaizeyCountries = {
     list: COUNTRIES,
-    flagUrl: flagUrl,
     isValidNumber: isValidNumber,
     createCountryPicker: createCountryPicker
   };

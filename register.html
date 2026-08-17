@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -79,6 +80,16 @@
       </div>
 
       <div class="field">
+        <label for="referralCode">كود الإحالة <span style="color:var(--text-muted); font-weight:500;">(اختياري)</span></label>
+        <div class="input-wrap">
+          <span class="lead-icon"><i class="fas fa-user-plus" aria-hidden="true"></i></span>
+          <input type="text" id="referralCode" autocomplete="off" maxlength="32" placeholder="مثال: RZY482" aria-describedby="referralCodeHint">
+          <span class="trail"><span class="valid-mark"><i class="fas fa-check" aria-hidden="true"></i></span></span>
+        </div>
+        <div class="field-hint" id="referralCodeHint">يمكنك كتابة الكود القصير أو استخدام رابط الإحالة.</div>
+      </div>
+
+      <div class="field">
         <label for="password">كلمة السر</label>
         <div class="input-wrap">
           <span class="lead-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></span>
@@ -137,6 +148,8 @@ const phoneInput = document.getElementById('whatsapp');
 const passwordInput = document.getElementById('password');
 const confirmInput = document.getElementById('confirmPassword');
 const policyInput = document.getElementById('acceptPolicy');
+const referralCodeInput = document.getElementById('referralCode');
+let referralValidationTimer = null;
 
 UI.bindPasswordToggles();
 UI.bindEmailValidation(emailInput);
@@ -181,6 +194,44 @@ function validatePhone() {
 phoneInput.addEventListener('input', validatePhone);
 phoneInput.addEventListener('blur', validatePhone);
 
+async function validateReferralCode(showMessage = true) {
+  const code = referralCodeInput.value.trim().toUpperCase();
+  referralCodeInput.value = code;
+  if (!code) {
+    UI.setFieldState(referralCodeInput, null, 'يمكنك كتابة الكود القصير أو استخدام رابط الإحالة.');
+    return true;
+  }
+  if (!/^[A-Z0-9]{5,32}$/.test(code)) {
+    UI.setFieldState(referralCodeInput, 'invalid', 'اكتب كود الإحالة كما استلمته، من 5 خانات فأكثر.');
+    return false;
+  }
+  const { data, error } = await supabaseClient.rpc('validate_referral_short_code', { p_code: code });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row || row.valid !== true) {
+    const reason = row?.reason;
+    const message = reason === 'self_referral'
+      ? 'لا يمكنك استخدام كود الإحالة الخاص بك.'
+      : 'كود الإحالة غير موجود أو غير صالح.';
+    UI.setFieldState(referralCodeInput, 'invalid', showMessage ? message : 'الكود غير صالح');
+    return false;
+  }
+  UI.setFieldState(referralCodeInput, 'valid', 'كود إحالة صالح وسيُحتسب عند إنشاء الحساب.');
+  return true;
+}
+
+referralCodeInput.addEventListener('input', () => {
+  clearTimeout(referralValidationTimer);
+  if (!referralCodeInput.value.trim()) { validateReferralCode(false); return; }
+  referralValidationTimer = setTimeout(() => validateReferralCode(false), 450);
+});
+referralCodeInput.addEventListener('blur', () => validateReferralCode(true));
+
+const referralFromUrl = new URLSearchParams(window.location.search).get('ref');
+if (referralFromUrl) {
+  referralCodeInput.value = referralFromUrl.trim().toUpperCase().slice(0, 32);
+  validateReferralCode(false);
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorBox.textContent = '';
@@ -189,6 +240,7 @@ form.addEventListener('submit', async (e) => {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
   const confirmPassword = confirmInput.value;
+  const referralCode = referralCodeInput.value.trim().toUpperCase();
 
   if (fullName.length < 3) {
     errorBox.textContent = 'اكتب اسمك الكامل بشكل صحيح';
@@ -221,11 +273,15 @@ form.addEventListener('submit', async (e) => {
     policyInput.focus();
     return;
   }
+  if (referralCode && !(await validateReferralCode(true))) {
+    errorBox.textContent = 'تحقق من كود الإحالة قبل إنشاء الحساب';
+    referralCodeInput.focus();
+    return;
+  }
 
   UI.setLoading(submitBtn, true, 'جارِ الإنشاء...');
 
   try {
-    const refCode = new URLSearchParams(window.location.search).get('ref');
     const { error } = await supabaseClient.auth.signUp({
       email,
       password,
@@ -234,7 +290,7 @@ form.addEventListener('submit', async (e) => {
           full_name: fullName.slice(0, 120),
           whatsapp_number: picker.fullNumber(phoneInput.value),
           whatsapp_country: picker.country.iso.toUpperCase(),
-          referral_code_used: refCode ? refCode.trim().toUpperCase().slice(0, 32) : null
+          referral_code_used: referralCode || null
         }
       }
     });

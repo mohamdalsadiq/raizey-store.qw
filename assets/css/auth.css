@@ -809,3 +809,22 @@ img.flag {
   .auth-modal-actions { flex-direction: column-reverse; }
   .auth-modal-cancel { flex: 1; min-height: 44px; }
 }
+
+
+/* ---------- Text-only country picker ---------- */
+.country-btn {
+  min-width: 142px;
+  justify-content: space-between;
+  gap: 8px;
+}
+.country-btn .country-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.country-item .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) {
+  .country-btn { min-width: 132px; padding-inline: 9px; font-size: 12.5px; }
+  .country-pop { width: min(300px, calc(100vw - 36px)); }
+}
