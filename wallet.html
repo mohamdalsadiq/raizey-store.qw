@@ -31,10 +31,10 @@
     <div class="wallet-balance-amount" id="balanceAmount">...</div>
   </div>
 
-  <button class="topup-toggle-btn" id="toggleFormBtn">+ اطلب شحن رصيد</button>
+  <button class="topup-toggle-btn" id="toggleFormBtn"><i class="fas fa-wallet" style="margin-left:7px;"></i> اطلب شحن رصيد</button>
 
   <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;">عندك كود هدية؟</div>
+    <div class="section-label" style="margin-top:0;"><i class="fas fa-gift" style="color:var(--primary);"></i> عندك كود هدية؟</div>
     <div style="display:flex; gap:8px;">
       <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--ink); font-family:var(--font-mono); font-size:13px;">
       <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px;">استبدال</button>
@@ -76,12 +76,12 @@
     <button class="auth-btn" id="submitTopupBtn" style="margin-top:10px;">إرسال طلب الشحن</button>
   </div>
 
-  <div class="section-label">سجل الشحن</div>
+  <div class="section-label"><i class="fas fa-receipt" style="color:var(--primary);"></i> سجل الشحن</div>
   <div id="topupsList">
     <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
   </div>
 
-  <div class="section-label">حركات الرصيد</div>
+  <div class="section-label"><i class="fas fa-arrow-right-arrow-left" style="color:var(--primary);"></i> حركات الرصيد</div>
   <div id="transactionsList">
     <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
   </div>
@@ -288,10 +288,12 @@ async function runWalletReceiptScan() {
 }
 
 async function checkUnifiedTransactionRef(transactionRef) {
+  const normalized = String(transactionRef || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (normalized.length < 6) return { available: false, reason: 'invalid_tx_ref' };
   const { data, error } = await supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: transactionRef });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return !!row && row.available !== false;
+  return row || { available: false, reason: 'invalid_tx_ref' };
 }
 
 function walletReceiptErrorMessage(error) {
@@ -548,18 +550,20 @@ async function submitTopup() {
     return;
   }
 
-  let isDuplicateRef = false;
+  let refCheck = null;
   try {
-    isDuplicateRef = !(await checkUnifiedTransactionRef(transactionRef));
+    refCheck = await checkUnifiedTransactionRef(transactionRef);
   } catch (error) {
     errorBox.textContent = 'تعذر التحقق من رقم العملية عبر قاعدة البيانات. حاول مرة أخرى قبل إرسال الطلب.';
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
   }
+  const isDuplicateRef = refCheck.available === false && refCheck.reason === 'duplicate_transaction_ref';
+  const isInvalidRef = refCheck.available === false && refCheck.reason === 'invalid_tx_ref';
   const isDuplicateHash = await checkDuplicateReceipt('wallet_topups', receiptHash);
 
-  if (isDuplicateHash || isDuplicateRef) {
+  if (isDuplicateHash || isDuplicateRef || isInvalidRef) {
     try {
       await supabaseClient.from('audit_logs').insert({
         admin_id: null,
@@ -568,9 +572,11 @@ async function submitTopup() {
       });
     } catch (e) {}
     errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = isDuplicateRef
-      ? 'رقم العملية هذا تم استخدامه في طلب شحن سابق!'
-      : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض طلب الشحن تلقائياً.';
+    errorBox.textContent = isInvalidRef
+      ? 'رقم العملية غير صحيح. اكتب الرقم كما ظهر في إشعار التحويل (6 خانات على الأقل).'
+      : isDuplicateRef
+        ? 'رقم العملية هذا مستخدم من قبل في شحن المحفظة أو دفع طلب. تم رفضه فورًا.'
+        : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض طلب الشحن تلقائياً.';
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;

@@ -90,3 +90,36 @@ GRANT EXECUTE ON FUNCTION public.create_wallet_topup_from_receipt(
 ) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
+
+
+-- التحقق المبكر الموحد: يستخدمه checkout.html وwallet.html قبل رفع/إرسال الإيصال.
+-- الحجز النهائي يبقى داخل claim_payment_receipt، لأن الفحص المبكر وحده ليس قفلًا ذريًا.
+CREATE OR REPLACE FUNCTION public.check_tx_ref_available(p_tx_ref text)
+RETURNS TABLE(available boolean, reason text)
+LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_norm text;
+BEGIN
+  IF v_user_id IS NULL THEN RAISE EXCEPTION 'auth_required'; END IF;
+  v_norm := public.normalize_tx_ref(p_tx_ref);
+  IF v_norm IS NULL OR length(v_norm) < 6 THEN
+    RETURN QUERY SELECT false, 'invalid_tx_ref';
+    RETURN;
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.payment_receipts WHERE tx_ref_norm = v_norm)
+     OR EXISTS (SELECT 1 FROM public.orders WHERE public.normalize_tx_ref(transaction_reference) = v_norm)
+     OR EXISTS (SELECT 1 FROM public.wallet_topups WHERE public.normalize_tx_ref(transaction_reference) = v_norm) THEN
+    RETURN QUERY SELECT false, 'duplicate_transaction_ref';
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT true, 'available';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.check_tx_ref_available(text) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.check_tx_ref_available(text) TO authenticated;
+
+NOTIFY pgrst, 'reload schema';
