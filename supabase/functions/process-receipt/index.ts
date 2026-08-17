@@ -51,24 +51,48 @@ function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
 }
 
-function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}, request?: Request) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      ...corsHeaders(),
+      ...corsHeaders(request),
       ...extraHeaders,
     },
   });
 }
 
-function corsHeaders(): Record<string, string> {
-  const origin = env("RAIZEY_PUBLIC_ORIGIN") || "*";
+// نُعيد أصل الطلب نفسه (echo) متى كان مسموحاً، بدل قيمة ثابتة قد لا تطابق
+// النطاق الفعلي فيكسر CORS بصمت. لا نستخدم كوكيز/اعتمادات، لذا echo الأصل
+// المسموح آمن تماماً. يُضبط RAIZEY_PUBLIC_ORIGIN (أو قائمة مفصولة بفواصل)
+// في أسرار الدالة لتقييد الأصول؛ وإن لم يُضبط نسمح بأي أصل (*).
+function allowedOrigins(): string[] {
+  return env("RAIZEY_PUBLIC_ORIGIN")
+    .split(",")
+    .map((value) => value.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+}
+
+function corsHeaders(request?: Request): Record<string, string> {
+  const configured = allowedOrigins();
+  const requestOrigin = (request?.headers.get("Origin") || "").trim().replace(/\/$/, "");
+  let allowOrigin = "*";
+  if (configured.length) {
+    if (requestOrigin && configured.includes(requestOrigin)) {
+      allowOrigin = requestOrigin;
+    } else {
+      // أصل غير مُدرج: نعيد أول أصل مُهيّأ حتى لا نعطي "*" على قائمة مقيّدة.
+      allowOrigin = configured[0];
+    }
+  } else if (requestOrigin) {
+    allowOrigin = requestOrigin;
+  }
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 }
@@ -409,31 +433,33 @@ async function processScan(request: Request, admin: any, userId: string, body: a
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
-  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
+  // preflight يمر دائماً بترويسات CORS. مع verify_jwt=false على مستوى المنصّة
+  // لن تعترضه البوابة، فيصل إلى هنا ويعيد 204 صريحة.
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405, {}, request);
 
   const token = authToken(request);
-  if (!token) return json({ ok: false, error: "auth_required" }, 401);
+  if (!token) return json({ ok: false, error: "auth_required" }, 401, {}, request);
 
   let admin: any;
   try {
     admin = buildAdminClient();
     const { data, error } = await admin.auth.getUser(token);
-    if (error || !data?.user) return json({ ok: false, error: "auth_required" }, 401);
+    if (error || !data?.user) return json({ ok: false, error: "auth_required" }, 401, {}, request);
     const userId = data.user.id;
     const rawBody = await request.text();
-    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json({ ok: false, error: "request_too_large" }, 413);
+    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json({ ok: false, error: "request_too_large" }, 413, {}, request);
     let body: any;
-    try { body = JSON.parse(rawBody); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400); }
-    if (!(await enforceRateLimit(admin, userId))) return json({ ok: false, error: "rate_limited" }, 429);
+    try { body = JSON.parse(rawBody); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, {}, request); }
+    if (!(await enforceRateLimit(admin, userId))) return json({ ok: false, error: "rate_limited" }, 429, {}, request);
     const result = await processScan(request, admin, userId, body);
-    return json({ ok: true, ...result });
+    return json({ ok: true, ...result }, 200, {}, request);
   } catch (error) {
     console.error("[RAIZEY] process-receipt error", String((error as any)?.message || error));
     return json({
       ok: false,
       error: "receipt_processing_failed",
       message: "تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.",
-    }, 500);
+    }, 500, {}, request);
   }
 });
