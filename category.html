@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>اختر باقتك — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -34,23 +34,29 @@
 
   /* الباقات الأساسية */
   .variant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .variant-btn { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; display: flex; align-items: center; justify-content: center; min-height: 55px; color: var(--ink); }
-  .variant-btn .v-name { font-size: 14px; font-weight: 800; color: var(--ink); }
-  .variant-btn.active { background: var(--primary); border-color: var(--primary); }
+  .variant-btn { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 9px; text-align: center; cursor: pointer; transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease; display: flex; align-items: center; justify-content: center; min-height: 48px; color: var(--ink); }
+  .variant-btn:hover, .variant-btn:focus-visible { border-color: var(--primary); transform: translateY(-1px); outline: none; }
+  .variant-btn .v-name { font-size: 13px; font-weight: 800; color: var(--ink); line-height:1.35; }
+  .variant-btn.active { background: var(--primary); border-color: var(--primary); box-shadow: 0 7px 16px rgba(255,106,26,.2); }
   .variant-btn.active .v-name { color: var(--ink); }
 
   /* الخيارات الفرعية */
   .sub-options-container { display: none; margin-bottom: 20px; padding: 15px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; }
   .sub-options-container.visible { display: block; }
   .sub-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .sub-option-btn { background: var(--bg); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 10px; text-align: center; cursor: pointer; transition: 0.15s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 55px; color: var(--ink); }
-  .sub-option-btn .so-name { font-size: 14px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+  .sub-option-btn { background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer; transition: transform .18s ease, background .18s ease, border-color .18s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; color: var(--ink); }
+  .sub-option-btn:hover, .sub-option-btn:focus-visible { border-color: var(--primary); transform: translateY(-1px); outline:none; }
+  .sub-option-btn .so-name { font-size: 13px; font-weight: 800; color: var(--ink); margin-bottom: 3px; line-height:1.35; }
   .sub-option-btn .so-price { font-size: 13px; font-weight: 800; color: var(--primary); }
   .sub-option-btn.active { background: var(--primary); border-color: var(--primary); }
   .sub-option-btn.active .so-name { color: var(--ink); }
   .sub-option-btn.active .so-price { color: var(--ink); }
 
-  .price-display { font-size: 26px; font-weight: 900; color: var(--primary); text-align: center; margin: 4px 0 20px; }
+  .price-display { display:flex; align-items:center; justify-content:center; gap:9px; flex-wrap:wrap; background:linear-gradient(135deg,rgba(255,106,26,.1),var(--bg-card)); border:1px solid rgba(255,106,26,.22); border-radius:14px; padding:13px 14px; margin:6px 0 20px; min-height:64px; }
+  .price-caption { width:100%; color:var(--text-muted); font-size:11px; font-weight:700; }
+  .price-value { font-family:var(--font-mono); font-size:23px; font-weight:900; color:var(--primary); direction:ltr; }
+  .price-old { color:var(--text-muted); font-family:var(--font-mono); font-size:12px; direction:ltr; }
+  .price-old[hidden] { display:none; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .field input[type="text"], .field select { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-sizing: border-box; color: var(--ink); font-size: 15px; font-weight: 600; }
@@ -211,7 +217,7 @@ function render() {
       <div class="sub-options-grid" id="subOptionsGrid"></div>
     </div>
 
-    <div class="price-display" id="unitPriceDisplay">اختر الخيار لعرض السعر</div>
+    <div class="price-display" aria-live="polite"><span class="price-caption">السعر الحالي</span><span class="price-value" id="unitPriceDisplay">اختر الباقة لعرض السعر</span><del class="price-old" id="oldPriceDisplay" hidden></del></div>
 
     ${fields.length > 0 ? `
       <div class="section-label">بيانات الطلب المطلوبة</div>
@@ -277,6 +283,7 @@ function attachEvents() {
   const buyNowBtn = document.getElementById('buyNowBtn');
   const deliveryBadge = document.getElementById('deliveryBadge');
   const deliveryBadgeText = deliveryBadge?.querySelector('.delivery-badge-text');
+  const oldPriceDisplay = document.getElementById('oldPriceDisplay');
 
   function updateDeliveryBadge(product) {
     const text = typeof product?.delivery_badge_text === 'string'
@@ -297,8 +304,16 @@ function attachEvents() {
     if (selectedSubOption) {
       priceEl.textContent = safeFormatSDG(getCurrentPriceSDG()) + ' ج.س';
       totalEl.textContent = safeFormatSDG(total) + ' ج.س';
+      const previous = selectedSubOption.id === 'main' ? Number(selectedMainProduct.compare_at_price_usd) || 0 : 0;
+      const current = Number(selectedSubOption.price_usd) || 0;
+      if (oldPriceDisplay) {
+        oldPriceDisplay.hidden = !(previous > current);
+        oldPriceDisplay.textContent = previous > current ? `${safeFormatSDG(previous * exchangeRate)} ج.س` : '';
+      }
     } else {
-      priceEl.textContent = 'اختر الخيار لعرض السعر';
+      priceEl.textContent = 'اختر الباقة لعرض السعر';
+      totalEl.textContent = '0 ج.س';
+      if (oldPriceDisplay) { oldPriceDisplay.hidden = true; oldPriceDisplay.textContent = ''; }
     }
     
     qtyValueEl.textContent = selectedQty;

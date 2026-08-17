@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المشرفين — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+<style>
+  .staff-intro { background:linear-gradient(135deg,rgba(255,106,26,.1),var(--bg-card)); border:1px solid rgba(255,106,26,.22); border-radius:16px; padding:15px; margin-bottom:18px; }
+  .staff-intro strong { display:block; font-family:var(--font-heading); margin-bottom:4px; }
+  .staff-intro p { color:var(--text-muted); font-size:12px; line-height:1.7; }
+  .staff-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:12px; }
+  .staff-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .staff-name { font-family:var(--font-heading); font-size:15px; font-weight:900; }
+  .staff-meta { color:var(--text-muted); font-size:12px; margin-top:3px; }
+  .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
+  .permission-item { display:flex; align-items:center; gap:8px; min-height:42px; padding:9px 10px; background:var(--bg); border:1px solid var(--border); border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; }
+  .permission-item input { width:17px; height:17px; accent-color:var(--primary); }
+  .permission-all { border-color:rgba(255,106,26,.35); background:rgba(255,106,26,.07); }
+  .staff-actions { display:flex; gap:8px; margin-top:14px; }
+  .staff-actions button { flex:1; min-height:40px; border-radius:10px; font-weight:800; }
+  .staff-role { min-height:38px; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--ink); font-family:inherit; }
+  @media (max-width:520px) { .permission-grid { grid-template-columns:1fr; } .staff-card-head { flex-direction:column; } }
+</style>
+</head>
+<body>
+<div class="admin-page" id="adminPage" style="display:none;">
+  <div class="page-header"><h1>إدارة المشرفين</h1><a href="index.html" class="back-link"><i class="fas fa-store"></i> المتجر</a></div>
+  <div class="admin-nav">
+    <a href="admin.html">الرئيسية</a><a href="admin-orders.html">الطلبات</a><a href="admin-topups.html">شحن المحافظ</a><a href="admin-products.html">المنتجات</a><a href="admin-categories.html">التصنيفات</a><a href="admin-customers.html">العملاء</a><a href="admin-staff.html" class="active">المشرفون</a><a href="admin-settings.html">الإعدادات</a><a href="admin-audit-log.html">سجل النشاطات</a>
+  </div>
+  <div class="staff-intro"><strong><i class="fas fa-user-shield" style="color:var(--primary);"></i> تحكم بصلاحيات الفريق</strong><p>هذه الصفحة للسوبر أدمن فقط. لا يتم تعديل الدور أو الصلاحيات من المتصفح مباشرة؛ كل تغيير يمر عبر تحقق خادمي ويسجل في سجل النشاطات.</p></div>
+  <div id="staffList"><div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px 0;">جارِ التحميل...</div></div>
+</div>
+<div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);"><h3 style="color:var(--ink);">غير مصرح لك بالدخول</h3><p>تحتاج إلى صلاحية السوبر أدمن لإدارة المشرفين.</p><a href="index.html" style="color:var(--primary);font-weight:800;">رجوع للمتجر</a></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+const permissionFields = [
+  ['can_manage_orders','إدارة الطلبات','fa-clipboard-list'],
+  ['can_manage_wallets','إدارة المحافظ','fa-wallet'],
+  ['can_manage_products','إدارة المنتجات','fa-box-open'],
+  ['can_manage_settings','إدارة الإعدادات','fa-sliders'],
+  ['can_manage_maintenance','وضع الصيانة','fa-screwdriver-wrench'],
+  ['can_manage_admins','إدارة المشرفين','fa-user-shield'],
+  ['can_manage_coupons','إدارة الكوبونات','fa-ticket'],
+  ['can_manage_gift_cards','إدارة كروت الهدايا','fa-gift'],
+  ['can_view_audit_logs','عرض سجل النشاطات','fa-clock-rotate-left']
+];
+let staff = [];
+
+function toast(message, error = false) {
+  let box = document.getElementById('staffToast');
+  if (!box) { box = document.createElement('div'); box.id = 'staffToast'; box.setAttribute('role','alert'); box.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 16px;border-radius:12px;max-width:90vw;text-align:center;font-size:13px;'; document.body.appendChild(box); }
+  box.textContent = message; box.style.background = error ? 'var(--danger)' : 'var(--bg-card)'; box.style.color = error ? '#fff' : 'var(--ink)'; box.style.border = `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`; box.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>box.style.display='none',4000);
+}
+function permissionMarkup(id, perms) {
+  const allChecked = !!perms?.is_super_admin;
+  return `<label class="permission-item permission-all"><input type="checkbox" data-perm="all" ${allChecked ? 'checked' : ''}> كل الصلاحيات</label>` + permissionFields.map(([key,label,icon]) => `<label class="permission-item"><input type="checkbox" data-perm="${key}" ${allChecked || perms?.[key] ? 'checked' : ''}> <i class="fas ${icon}" aria-hidden="true"></i> ${label}</label>`).join('');
+}
+function render() {
+  const container = document.getElementById('staffList');
+  if (!staff.length) { container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:30px;">لا يوجد مشرفون بعد.</div>'; return; }
+  container.innerHTML = staff.map((person) => {
+    const perms = person.admin_permissions?.[0] || person.admin_permissions || {};
+    const isSuper = !!perms.is_super_admin;
+    return `<article class="staff-card" data-id="${escapeAttribute(person.id)}">
+      <div class="staff-card-head"><div><div class="staff-name">${escapeHtml(person.full_name || 'بدون اسم')} ${isSuper ? '<span class="inactive-badge">سوبر أدمن</span>' : ''}</div><div class="staff-meta">${escapeHtml(person.whatsapp_number || '—')} · ${person.role === 'admin' ? 'مشرف' : 'عميل'}</div></div><select class="staff-role" data-role><option value="admin" ${person.role === 'admin' ? 'selected' : ''}>مشرف</option><option value="customer" ${person.role !== 'admin' ? 'selected' : ''}>عميل</option></select></div>
+      <div class="permission-grid">${permissionMarkup(person.id, perms)}</div>
+      <div class="staff-actions"><button class="btn-confirm" data-save><i class="fas fa-save"></i> حفظ الصلاحيات</button></div>
+    </article>`;
+  }).join('');
+  container.querySelectorAll('[data-perm="all"]').forEach((toggle) => toggle.addEventListener('change', () => { const card=toggle.closest('.staff-card'); card.querySelectorAll('[data-perm]').forEach(input => input.checked=toggle.checked); }));
+  container.querySelectorAll('[data-save]').forEach((button) => button.addEventListener('click', () => saveStaff(button.closest('.staff-card'))));
+}
+async function saveStaff(card) {
+  const role = card.querySelector('[data-role]').value;
+  const permissions = { all: !!card.querySelector('[data-perm="all"]').checked };
+  card.querySelectorAll('[data-perm]:not([data-perm="all"])').forEach(input => { permissions[input.dataset.perm] = input.checked; });
+  const button = card.querySelector('[data-save]'); button.disabled=true; button.textContent='جارِ الحفظ...';
+  const { error } = await supabaseClient.rpc('admin_set_staff_permissions', { p_profile_id: card.dataset.id, p_role: role, p_permissions: permissions });
+  button.disabled=false; button.innerHTML='<i class="fas fa-save"></i> حفظ الصلاحيات';
+  if (error) { toast(String(error.message || '').includes('super admin') ? 'تحتاج صلاحية السوبر أدمن.' : 'تعذر حفظ الصلاحيات.', true); return; }
+  toast('تم حفظ صلاحيات المشرف وتسجيل العملية.'); await loadStaff();
+}
+async function loadStaff() {
+  const { data, error } = await supabaseClient.from('profiles').select('id, full_name, whatsapp_number, role, admin_permissions(*)').order('created_at', { ascending:false });
+  if (error) { toast('تعذر تحميل قائمة الفريق.', true); return; }
+  staff = data || []; render();
+}
+async function init() {
+  const { data:{session} } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href='login.html'; return; }
+  const { data: superAdmin, error } = await supabaseClient.rpc('is_super_admin');
+  if (error || superAdmin !== true) { document.getElementById('accessDenied').style.display='block'; return; }
+  document.getElementById('adminPage').style.display='block'; await loadStaff();
+}
+init();
+</script>
+<script src="assets/js/admin-nav.js"></script>
+</body>
+</html>

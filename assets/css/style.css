@@ -13,7 +13,8 @@
   --danger: #e5484d;
   --warning: #f59e0b;
   --success: #16a34a;
-  --font-display: 'Tajawal', sans-serif;
+  --font-display: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+  --font-heading: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 14px;
 }
@@ -36,6 +37,12 @@ body {
   direction: rtl;
   min-height: 100vh;
   line-height: 1.6;
+  font-size: 15px;
+}
+
+h1, h2, h3, h4, .section-title, .slide h2, .catalog-section-title {
+  font-family: var(--font-heading);
+  text-wrap: balance;
 }
 
 /* تحجيم تلقائي وآمن لجميع الصور بالموقع */
@@ -106,6 +113,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-radius: 50%;
   background: var(--danger);
   display: none;
+}
+
+.badge-dot.is-alert {
+  width: 10px;
+  height: 10px;
+  background: var(--danger);
+  box-shadow: 0 0 0 3px rgba(229,72,77,.14);
 }
 
 /* ---------- Hero Slider ---------- */

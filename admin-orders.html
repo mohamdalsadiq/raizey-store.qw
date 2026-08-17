@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة الطلبات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
@@ -26,6 +26,7 @@
     <a href="admin-categories.html">التصنيفات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-staff.html">المشرفون</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
     <a href="admin-coupons.html">الكوبونات</a>
@@ -86,12 +87,41 @@ const statusLabels = {
   in_progress: 'قيد التنفيذ',
   completed: 'مكتمل',
   cancelled: 'ملغي',
-  rejected: 'مرفوض'
+  rejected: 'مرفوض',
+  needs_admin_check: 'يحتاج تدقيق'
 };
 
 const rejectModal = document.getElementById('rejectModal');
 const customReasonInput = document.getElementById('customReasonInput');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+function showToast(message, tone = 'default') {
+  let box = document.getElementById('adminToast');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'adminToast';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;max-width:92vw;padding:12px 16px;border-radius:12px;font-size:13px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.16);';
+    document.body.appendChild(box);
+  }
+  box.style.background = tone === 'error' ? 'var(--danger)' : 'var(--bg-card)';
+  box.style.color = tone === 'error' ? '#fff' : 'var(--ink)';
+  box.style.border = tone === 'error' ? '1px solid var(--danger)' : '1px solid var(--border)';
+  box.textContent = message;
+  box.style.display = 'block';
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { box.style.display = 'none'; }, 4200);
+}
+
+function mapOrderError(message) {
+  const value = String(message || '').toLowerCase();
+  if (value.includes('pgrst202') || value.includes('does not exist') || value.includes('admin_update_order_status') || value.includes('admin_reject_order')) return 'شغّل ملف SQL الخاص بالتوسعة في Supabase أولاً لتفعيل إجراءات الإدارة الآمنة.';
+  if (value.includes('manage_orders')) return 'ليست لديك صلاحية إدارة الطلبات.';
+  if (value.includes('invalid_status_transition')) return 'لا يمكن نقل الطلب من حالته الحالية إلى هذه الحالة.';
+  if (value.includes('order_not_found')) return 'الطلب غير موجود أو تم حذفه.';
+  if (value.includes('reason_required')) return 'اكتب سبب الرفض أولاً.';
+  return 'تعذر تنفيذ العملية. حدّث الصفحة وحاول مرة أخرى.';
+}
 
 document.querySelectorAll('.reason-option').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -121,36 +151,17 @@ modalConfirmBtn.addEventListener('click', async () => {
   modalConfirmBtn.disabled = true;
   const order = allOrders.find(o => o.id === rejectingOrderId);
 
-  // نشترط أن يكون الطلب لا يزال بحالة pending_review — هذا يمنع تكرار
-  // عملية الرفض والاسترجاع مرتين لو حصل نقر مزدوج على الزر
-  const { data: updatedRows } = await supabaseClient.from('orders')
-    .update({ status: 'rejected', rejection_reason: selectedReason })
-    .eq('id', rejectingOrderId)
-    .eq('status', 'pending_review')
-    .select('id');
+  const { error } = await supabaseClient.rpc('admin_reject_order', {
+    p_order_id: rejectingOrderId,
+    p_reason: selectedReason
+  });
 
-  if (!updatedRows || updatedRows.length === 0) {
-    // الطلب كان مرفوضاً بالفعل (أو تغيّرت حالته) — لا نكرر الاسترجاع
-    closeRejectModal();
-    await loadOrders();
+  if (error) {
+    showToast(mapOrderError(error.message), 'error');
+    modalConfirmBtn.disabled = false;
     return;
   }
 
-  if (order) {
-    let refundNote = '';
-    if (order.payment_type === 'wallet') {
-      // استخدام RPC آمنة لإعادة الرصيد بدلاً من التعديل المباشر
-      await supabaseClient.rpc('admin_refund_wallet', {
-        p_user_id: order.user_id,
-        p_amount: Number(order.price_sdg_snapshot),
-        p_order_id: rejectingOrderId
-      });
-      refundNote = ` وتم إرجاع ${formatSDG(order.price_sdg_snapshot)} ج.س إلى محفظتك تلقائياً.`;
-      await logAudit('استرجاع رصيد بعد رفض طلب', { order_id: rejectingOrderId, amount: order.price_sdg_snapshot, user_id: order.user_id });
-    }
-    await notifyCustomer(order.user_id, 'تم رفض طلبك', `طلبك (${order.product_name_snapshot}) رُفض. السبب: ${selectedReason}${refundNote}`);
-    await logAudit('رفض طلب', { order_id: rejectingOrderId, product: order.product_name_snapshot, reason: selectedReason });
-  }
   closeRejectModal();
   await loadOrders();
 });
@@ -175,16 +186,31 @@ async function init() {
   if (!session) { window.location.href = 'login.html'; return; }
 
   const { data: profile } = await supabaseClient
-    .from('profiles').select('role').eq('id', session.user.id).single();
+    .from('profiles').select('role, is_banned').eq('id', session.user.id).single();
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || profile.role !== 'admin' || profile.is_banned === true) {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  const { data: canManageOrders, error: permissionError } = await supabaseClient
+    .rpc('has_admin_permission', { permission_key: 'manage_orders' });
+  if (permissionError || canManageOrders !== true) {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
 
   currentAdminId = session.user.id;
-
   document.getElementById('adminPage').style.display = 'block';
+
+  document.querySelectorAll('#filterRow .chip').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('#filterRow .chip').forEach((chip) => chip.classList.remove('active'));
+      button.classList.add('active');
+      currentFilter = button.dataset.filter || 'all';
+      render();
+    });
+  });
 
   document.getElementById('orderSearchInput').addEventListener('input', (e) => {
     currentSearch = e.target.value.trim().toLowerCase();
@@ -303,13 +329,15 @@ function renderOrderCard(o) {
   if (o.status === 'pending_review') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${safeOrderId}">تأكيد</button>
-        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${safeOrderId}">رفض</button>
+        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${safeOrderId}"><i class="fas fa-play"></i> بدء التنفيذ</button>
+        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${safeOrderId}"><i class="fas fa-xmark"></i> رفض</button>
+        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><i class="fas fa-ban"></i> إلغاء</button>
       </div>`;
   } else if (o.status === 'in_progress') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${safeOrderId}">تم التنفيذ</button>
+        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${safeOrderId}"><i class="fas fa-check"></i> تم التنفيذ</button>
+        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><i class="fas fa-ban"></i> إلغاء</button>
       </div>`;
   }
 
@@ -390,25 +418,37 @@ async function handleAction(action, orderId) {
   const order = allOrders.find(o => o.id === orderId);
   if (!order) return;
 
-  if (action === 'confirm') {
-    const { data: updatedRows } = await supabaseClient.from('orders')
-      .update({ status: 'in_progress' })
-      .eq('id', orderId)
-      .eq('status', 'pending_review')
-      .select('id');
-    if (!updatedRows || updatedRows.length === 0) { await loadOrders(); return; }
-    await notifyCustomer(order.user_id, 'تم تأكيد طلبك', `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`);
-    await logAudit('تأكيد طلب', { order_id: orderId, product: order.product_name_snapshot });
-    await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
-    await loadOrders();
-  } else if (action === 'complete') {
-    await supabaseClient.from('orders').update({ status: 'completed' }).eq('id', orderId);
-    await notifyCustomer(order.user_id, 'تم تنفيذ طلبك', `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`);
-    await logAudit('إتمام طلب', { order_id: orderId, product: order.product_name_snapshot });
-    await loadOrders();
-  } else if (action === 'reject') {
+  if (action === 'reject') {
     openRejectModal(orderId);
+    return;
   }
+
+  const nextStatus = action === 'confirm' ? 'in_progress' : action === 'complete' ? 'completed' : action === 'cancel' ? 'cancelled' : null;
+  if (!nextStatus) return;
+
+  const button = document.querySelector(`[data-action="${CSS.escape(action)}"][data-order-id="${CSS.escape(orderId)}"]`);
+  if (button) { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التنفيذ'; }
+
+  const { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus });
+  if (error) {
+    if (button) { button.disabled = false; button.innerHTML = button.dataset.originalLabel || 'تنفيذ'; }
+    showToast(mapOrderError(error.message), 'error');
+    await loadOrders();
+    return;
+  }
+
+  const labels = { in_progress: 'تم تأكيد طلبك', completed: 'تم تنفيذ طلبك', cancelled: 'تم إلغاء طلبك' };
+  const messages = {
+    in_progress: `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`,
+    completed: `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`,
+    cancelled: `طلبك (${order.product_name_snapshot}) تم إلغاؤه من الإدارة.`
+  };
+  await notifyCustomer(order.user_id, labels[nextStatus], messages[nextStatus]);
+  await logAudit(labels[nextStatus], { order_id: orderId, product: order.product_name_snapshot });
+  if (nextStatus === 'in_progress') {
+    await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
+  }
+  await loadOrders();
 }
 
 async function notifyCustomer(userId, title, message) {
@@ -421,5 +461,6 @@ async function logAudit(action, details) {
 
 init();
 </script>
+<script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

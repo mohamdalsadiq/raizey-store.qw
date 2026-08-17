@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة العملاء — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
@@ -26,6 +26,7 @@
     <a href="admin-categories.html">التصنيفات</a>
     <a href="admin-customers.html" class="active">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-staff.html">المشرفون</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
     <a href="admin-coupons.html">الكوبونات</a>
@@ -100,11 +101,11 @@ function render() {
         <div style="display:flex; align-items:center; gap:12px;">
           <div class="manage-item-info">
             <div class="manage-item-name">
-              ${c.full_name || 'بدون اسم'}
-              ${c.role === 'admin' ? '<span class="inactive-badge" style="color:var(--primary); background:rgba(43,237,51,0.15);">أدمن</span>' : ''}
+              ${escapeHtml(c.full_name || 'بدون اسم')}
+              ${c.role === 'admin' ? '<span class="inactive-badge" style="color:var(--primary); background:rgba(255,106,26,0.15);">مشرف</span>' : ''}
               ${c.is_banned ? '<span class="inactive-badge" style="color:var(--danger); background:rgba(255,77,79,0.15);">محظور</span>' : ''}
             </div>
-            <div class="manage-item-sub">${c.whatsapp_number || '—'} — رصيد: ${formatSDG(balance)} ج.س</div>
+            <div class="manage-item-sub">${escapeHtml(c.whatsapp_number || '—')} — رصيد: ${formatSDG(balance)} ج.س</div>
           </div>
         </div>
         <div class="admin-order-actions">
@@ -112,9 +113,7 @@ function render() {
             <button class="admin-btn ${c.is_banned ? 'btn-confirm' : 'btn-reject'}" data-action="ban" data-id="${c.id}" data-banned="${c.is_banned}">
               ${c.is_banned ? 'إلغاء الحظر' : 'حظر'}
             </button>
-            <button class="admin-btn btn-complete" data-action="role" data-id="${c.id}" data-role="${c.role}">
-              ${c.role === 'admin' ? 'إلغاء صلاحية الأدمن' : 'ترقية لأدمن'}
-            </button>
+            <a class="admin-btn btn-complete" href="admin-staff.html" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;">${c.role === 'admin' ? 'إدارة الصلاحيات' : 'تعيين كمشرف'}</a>
           ` : '<div style="font-size:12px; color:var(--text-muted); padding:8px;">هذا حسابك</div>'}
         </div>
       </div>
@@ -124,35 +123,18 @@ function render() {
   container.querySelectorAll('[data-action="ban"]').forEach(btn => {
     btn.addEventListener('click', () => toggleBan(btn.dataset.id, btn.dataset.banned === 'true'));
   });
-  container.querySelectorAll('[data-action="role"]').forEach(btn => {
-    btn.addEventListener('click', () => toggleRole(btn.dataset.id, btn.dataset.role));
-  });
 }
 
 async function toggleBan(id, currentlyBanned) {
   const action = currentlyBanned ? 'إلغاء حظر' : 'حظر';
   if (!confirm(`متأكد عايز ${action} هذا العميل؟`)) return;
-  await supabaseClient.from('profiles').update({ is_banned: !currentlyBanned }).eq('id', id);
-  await supabaseClient.from('audit_logs').insert({
-    admin_id: currentUserId, action: `${action} عميل`, details: { customer_id: id }
-  });
-  await loadCustomers();
-}
-
-async function toggleRole(id, currentRole) {
-  const newRole = currentRole === 'admin' ? 'customer' : 'admin';
-  const msg = newRole === 'admin' ? 'ترقية هذا الحساب لأدمن؟' : 'إلغاء صلاحية الأدمن من هذا الحساب؟';
-  if (!confirm(msg)) return;
-  await supabaseClient.from('profiles').update({ role: newRole }).eq('id', id);
-  await supabaseClient.from('audit_logs').insert({
-    admin_id: currentUserId,
-    action: newRole === 'admin' ? 'ترقية حساب لأدمن' : 'إلغاء صلاحية أدمن',
-    details: { target_id: id }
-  });
+  const { error } = await supabaseClient.rpc('admin_set_customer_banned', { p_profile_id: id, p_banned: !currentlyBanned });
+  if (error) { alert('تعذر تنفيذ العملية أو ليست لديك صلاحية إدارة المشرفين.'); return; }
   await loadCustomers();
 }
 
 init();
 </script>
+<script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة المنتجات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
@@ -27,6 +27,7 @@
     <a href="admin-categories.html">التصنيفات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-staff.html">المشرفون</a>
     <a href="admin-settings.html">الإعدادات</a>
     <a href="admin-audit-log.html">سجل النشاطات</a>
     <a href="admin-referral-milestones.html">مستويات الإحالة</a>
@@ -58,7 +59,7 @@
 
     <div class="field">
       <label>شرح المنتج / طريقة الاستلام والتنبيهات (يظهر للعميل في صفحة المنتج)</label>
-      <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal', sans-serif; font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
+      <textarea id="instructionsInput" placeholder="اكتب هنا شرحاً مفصلاً للمنتج، طريقة الاستلام، أو أي تنبيهات تهم العميل..." style="width: 100%; min-height: 110px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 14px; resize: vertical; line-height: 1.6;"></textarea>
     </div>
 
     <div class="field">
@@ -77,8 +78,17 @@
     </div>
 
     <div class="field">
-      <label>السعر الأساسي (بالدولار $)</label>
-      <input type="number" id="priceInput" step="0.01" placeholder="1.00">
+      <label>السعر قبل الخصم (بالدولار $)</label>
+      <input type="number" id="priceInput" step="0.01" min="0.01" placeholder="1.00">
+    </div>
+
+    <div class="field offer-control-box" style="border:1px solid rgba(255,106,26,.22);background:rgba(255,106,26,.05);border-radius:12px;padding:12px;">
+      <label><i class="fas fa-bolt" style="color:var(--primary);"></i> عرض تلقائي (اختياري)</label>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:8px;">
+        <input type="number" id="discountPercentInput" min="0" max="90" step="1" placeholder="نسبة الخصم %">
+        <input type="datetime-local" id="flashSaleEndsInput" aria-label="نهاية العرض">
+      </div>
+      <div id="offerPreview" style="font-size:12px;color:var(--text-muted);margin-top:7px;">عند إدخال نسبة الخصم وتاريخ النهاية سيظهر العرض تلقائيًا أعلى المتجر.</div>
     </div>
 
     <!-- قسم الخيارات الفرعية للمنتج -->
@@ -150,6 +160,9 @@ const instructionsInput = document.getElementById('instructionsInput');
 const deliveryBadgeInput = document.getElementById('deliveryBadgeInput');
 const imageInput = document.getElementById('imageInput');
 const priceInput = document.getElementById('priceInput');
+const discountPercentInput = document.getElementById('discountPercentInput');
+const flashSaleEndsInput = document.getElementById('flashSaleEndsInput');
+const offerPreview = document.getElementById('offerPreview');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
@@ -165,9 +178,14 @@ async function init() {
   if (!session) { window.location.href = 'login.html'; return; }
 
   const { data: profile } = await supabaseClient
-    .from('profiles').select('role').eq('id', session.user.id).single();
+    .from('profiles').select('role, is_banned').eq('id', session.user.id).single();
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || profile.role !== 'admin' || profile.is_banned === true) {
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+  const { data: canManageProducts, error: permissionError } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_products' });
+  if (permissionError || canManageProducts !== true) {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }
@@ -180,6 +198,7 @@ async function init() {
 
   hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
   addOptionBtn.addEventListener('click', () => addOptionRow('', '', ''));
+  [priceInput, discountPercentInput, flashSaleEndsInput].forEach(input => input.addEventListener('input', updateOfferPreview));
 
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('imageFileInput');
@@ -227,8 +246,8 @@ function addOptionRow(label = '', price = '', id = '') {
 
   row.innerHTML = `
     <input type="hidden" class="opt-id" value="${safeId}">
-    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
-    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
+    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
+    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
     <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
@@ -287,7 +306,7 @@ function render() {
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
           ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
-        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}${p.delivery_badge_text ? ` — <span style="color:var(--primary);">${escapeHtml(p.delivery_badge_text)}</span>` : ''}</div>
+        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}${p.compare_at_price_usd > p.price_usd ? ` — خصم ${Math.round((1 - Number(p.price_usd) / Number(p.compare_at_price_usd)) * 100)}%` : ''}${p.delivery_badge_text ? ` — <span style="color:var(--primary);">${escapeHtml(p.delivery_badge_text)}</span>` : ''}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
@@ -315,8 +334,8 @@ function addFieldRow(key, label, placeholder = '') {
   const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
 
   row.innerHTML = `
-    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
-    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
+    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
     <input type="hidden" class="field-key" value="${safeKey}">
     <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><i class="fas fa-xmark"></i></button>
   `;
@@ -343,8 +362,12 @@ function openForm(id) {
     document.getElementById('imageInput').value = p.image_url || '';
     fileBox.textContent = p.image_url ? 'يوجد صورة مرفوعة (اضغط للتغيير)' : 'اضغط لرفع صورة';
     fileBox.classList.toggle('has-file', !!p.image_url);
-    priceInput.value = p.price_usd;
+    priceInput.value = p.compare_at_price_usd || p.price_usd;
+    const existingDiscount = Number(p.compare_at_price_usd) > Number(p.price_usd) ? Math.round((1 - Number(p.price_usd) / Number(p.compare_at_price_usd)) * 100) : 0;
+    discountPercentInput.value = existingDiscount || '';
+    flashSaleEndsInput.value = p.flash_sale_ends_at ? new Date(p.flash_sale_ends_at).toISOString().slice(0, 16) : '';
     orderInput.value = p.display_order;
+    updateOfferPreview();
     activeInput.value = String(p.is_active);
     
     // تعبئة الخيارات الفرعية عند التعديل
@@ -368,6 +391,9 @@ function openForm(id) {
     fileBox.textContent = 'اضغط لرفع صورة';
     fileBox.classList.remove('has-file');
     priceInput.value = '';
+    discountPercentInput.value = '';
+    flashSaleEndsInput.value = '';
+    updateOfferPreview();
     orderInput.value = products.length;
     activeInput.value = 'true';
 
@@ -397,13 +423,27 @@ function collectFields() {
   return fields;
 }
 
+function updateOfferPreview() {
+  if (!offerPreview) return;
+  const base = Number(priceInput.value) || 0;
+  const discount = Math.min(90, Math.max(0, Number(discountPercentInput.value) || 0));
+  const sale = base > 0 ? base * (1 - discount / 100) : 0;
+  offerPreview.textContent = discount > 0 && base > 0
+    ? `سيظهر السعر ${sale.toFixed(2)}$ بدل ${base.toFixed(2)}$، وينتهي العرض في التاريخ المحدد.`
+    : 'عند إدخال نسبة الخصم وتاريخ النهاية سيظهر العرض تلقائيًا أعلى المتجر.';
+}
+
 async function saveProduct() {
   const name = nameInput.value.trim();
-  const price = parseFloat(priceInput.value);
+  const basePrice = parseFloat(priceInput.value);
+  const discount = Math.min(90, Math.max(0, Number(discountPercentInput.value) || 0));
   const categoryId = categoryInput.value;
+  const salePrice = discount > 0 ? basePrice * (1 - discount / 100) : basePrice;
+  const flashSaleEnds = flashSaleEndsInput.value ? new Date(flashSaleEndsInput.value) : null;
 
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
-  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
+  if (!basePrice || basePrice <= 0 || !Number.isFinite(salePrice) || salePrice <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
+  if (discount > 0 && (!flashSaleEnds || Number.isNaN(flashSaleEnds.getTime()) || flashSaleEnds <= new Date())) { formError.textContent = 'حدد نهاية مستقبلية للعرض'; return; }
   if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
 
   if (hasOptionsToggle.checked) {
@@ -420,7 +460,9 @@ async function saveProduct() {
     instructions: instructionsInput.value.trim() || null,
     delivery_badge_text: deliveryBadgeInput.value.trim().slice(0, 120) || null,
     image_url: imageInput.value.trim() || null,
-    price_usd: price,
+    price_usd: Number(salePrice.toFixed(4)),
+    compare_at_price_usd: discount > 0 ? Number(basePrice.toFixed(4)) : null,
+    flash_sale_ends_at: discount > 0 && flashSaleEnds ? flashSaleEnds.toISOString() : null,
     category_id: categoryId,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
@@ -451,5 +493,6 @@ async function deleteProduct(id) {
 
 init();
 </script>
+<script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

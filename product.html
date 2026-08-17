@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>تفاصيل المنتج — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -24,7 +24,7 @@
   body {
     background-color: var(--bg-main) !important;
     color: var(--text-light) !important;
-    font-family: 'Tajawal', sans-serif;
+    font-family:var(--font-display);
   }
 
   .product-page {
@@ -224,7 +224,7 @@
   .field input[type="text"], .field select { width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; box-sizing: border-box; color: var(--text-light); font-size: 15px; font-weight: 600; transition: all 0.2s ease; }
   .field input[type="text"]:focus, .field select:focus { border-color: var(--accent-gold); box-shadow: 0 0 10px rgba(255, 106, 26, 0.1); outline: none; }
   
-  .btn-secondary-cart { width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 800; font-family: 'Tajawal', sans-serif; cursor: pointer; margin-top: 10px; margin-bottom: 25px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-sizing: border-box; }
+  .btn-secondary-cart { width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: 800; font-family:var(--font-display); cursor: pointer; margin-top: 10px; margin-bottom: 25px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-sizing: border-box; }
   .btn-secondary-cart:hover { background: rgba(255, 106, 26, 0.04); }
   .btn-secondary-cart:active { transform: scale(0.98); }
   
@@ -244,7 +244,7 @@
   .file-upload { background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: 12px; padding: 16px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; margin-top: 14px; }
   .file-upload:hover, .file-upload.has-file { border-color: var(--accent-gold); color: var(--text-light); }
   
-  #couponInput { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-light); font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 600; transition: border-color 0.2s; }
+  #couponInput { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-light); font-family:var(--font-display); font-size: 14px; font-weight: 600; transition: border-color 0.2s; }
   #couponInput:focus { border-color: var(--accent-gold); outline: none; }
   #applyCouponBtn { padding: 0 20px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-light); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }
   #applyCouponBtn:hover { border-color: var(--accent-gold); color: var(--accent-gold); }

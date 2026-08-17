@@ -7,7 +7,7 @@
 <meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <!-- إضافة مكتبة الأيقونات الاحترافية لتطابق صفحة المنتج -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
@@ -27,7 +27,7 @@
   body {
     background-color: var(--bg-main) !important;
     color: var(--text-light) !important;
-    font-family: 'Tajawal', sans-serif;
+    font-family:var(--font-display);
   }
 
   /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
@@ -178,7 +178,7 @@
     align-items: center !important;
     gap: 8px !important;
     color: var(--text-light) !important;
-    font-family: 'Tajawal', sans-serif !important;
+    font-family:var(--font-display) !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
@@ -243,10 +243,20 @@
   }
 
   /* كتالوج الأقسام والمنتجات — mobile-first */
+  .flash-sale-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 20px 0; padding:10px 13px; border:1px solid rgba(255,106,26,.3); border-radius:14px; background:linear-gradient(135deg,rgba(255,106,26,.12),rgba(255,255,255,.9)); color:var(--text-light); text-decoration:none; }
+  .flash-sale-banner[hidden] { display:none; }
+  .flash-sale-copy { min-width:0; display:flex; align-items:center; gap:9px; }
+  .flash-sale-copy i { color:var(--accent-gold); font-size:17px; }
+  .flash-sale-title { font-family:var(--font-heading); font-size:12px; font-weight:900; }
+  .flash-sale-detail { display:block; margin-top:2px; color:var(--text-muted); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .flash-sale-percent { flex:0 0 auto; color:var(--accent-gold); font-family:var(--font-mono); font-size:13px; font-weight:800; direction:ltr; }
   .catalog-section { padding: 22px 20px 0; }
   .catalog-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
   .catalog-section-title { display:flex; align-items:center; gap:9px; margin:0; color:var(--text-light); font-size:18px; font-weight:900; }
   .catalog-section-title i { color:var(--accent-gold); font-size:16px; }
+  .catalog-section.featured-section { padding-top:18px; }
+  .catalog-section.featured-section .catalog-section-title { font-size:19px; }
+  .catalog-section.featured-section .catalog-product-card { border-color:rgba(255,106,26,.28); }
   .catalog-section-desc { margin:4px 0 0; color:var(--text-muted); font-size:12px; line-height:1.6; }
   .catalog-section-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent-gold); font-size:12px; font-weight:800; text-decoration:none; white-space:nowrap; }
   .catalog-products-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
@@ -289,6 +299,11 @@
     </div>
   </div>
 </header>
+
+<a href="category.html" id="flashSaleBanner" class="flash-sale-banner" hidden aria-label="عرض تخفيض نشط">
+  <span class="flash-sale-copy"><i class="fas fa-bolt" aria-hidden="true"></i><span><strong class="flash-sale-title">عرض نشط الآن</strong><span class="flash-sale-detail" id="flashSaleDetail"></span></span></span>
+  <span class="flash-sale-percent" id="flashSalePercent"></span>
+</a>
 
 <div class="drawer-overlay" id="drawerOverlay">
   <div class="drawer-panel">
@@ -501,14 +516,19 @@ async function init() {
     }
 
     // جلب الحقول اللازمة فقط للتقليل من حجم الاستجابة.
-    const [{ data: categories, error: categoriesError }, { data: products, error: productsError }, exchangeRate] = await Promise.all([
+    const [{ data: categories, error: categoriesError }, { data: products, error: productsError }, { data: popularProducts, error: popularError }, exchangeRate] = await Promise.all([
       supabaseClient.from('categories').select('id, name, description, image_url, display_order').eq('is_active', true).order('display_order'),
-      supabaseClient.from('products').select('id, category_id, name, description, image_url, price_usd, delivery_badge_text, is_active, display_order').eq('is_active', true).order('display_order'),
+      supabaseClient.from('products').select('id, category_id, name, description, image_url, price_usd, compare_at_price_usd, flash_sale_ends_at, delivery_badge_text, is_active, display_order').eq('is_active', true).order('display_order'),
+      supabaseClient.rpc('get_popular_products', { p_limit: 8 }),
       getExchangeRate()
     ]);
 
     if (categoriesError || productsError) throw categoriesError || productsError;
-    renderCategories(categories || [], products || [], exchangeRate);
+    renderActiveFlashSale(products || []);
+    const safePopularProducts = popularError
+      ? (products || []).slice(0, 8).map(product => ({ ...product, purchase_count: 0 }))
+      : (popularProducts || []);
+    renderCategories(categories || [], products || [], safePopularProducts, exchangeRate);
 
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
@@ -549,6 +569,41 @@ function createIcon(className, style) {
   return icon;
 }
 
+function renderActiveFlashSale(products) {
+  const banner = document.getElementById('flashSaleBanner');
+  const detail = document.getElementById('flashSaleDetail');
+  const percentEl = document.getElementById('flashSalePercent');
+  if (!banner || !detail || !percentEl) return;
+
+  const now = Date.now();
+  const active = (products || []).filter((product) => {
+    const current = Number(product.price_usd);
+    const previous = Number(product.compare_at_price_usd);
+    const endsAt = Date.parse(product.flash_sale_ends_at || '');
+    return product.is_active !== false && previous > current && endsAt > now;
+  }).sort((a, b) => Number(b.compare_at_price_usd) - Number(a.compare_at_price_usd))[0];
+
+  if (!active) {
+    banner.hidden = true;
+    return;
+  }
+
+  const previous = Number(active.compare_at_price_usd);
+  const current = Number(active.price_usd);
+  const discount = Math.max(1, Math.round((1 - current / previous) * 100));
+  detail.textContent = `${active.name || 'باقة مختارة'} — خصم خاص لفترة محدودة`;
+  percentEl.textContent = `-${discount}%`;
+  banner.href = `category.html?id=${encodeURIComponent(String(active.category_id || ''))}`;
+  banner.hidden = false;
+}
+
+function getCategoryPriority(name) {
+  const value = String(name || '').toLowerCase();
+  if (value.includes('اشتراك') || value.includes('subscription')) return 20;
+  if (value.includes('لعب') || value.includes('game') || value.includes('pubg') || value.includes('free fire')) return 30;
+  return 40;
+}
+
 function getCategoryIcon(name) {
   const value = String(name || '').toLowerCase();
   if (value.includes('اشتراك') || value.includes('subscription')) return 'fas fa-crown';
@@ -557,7 +612,7 @@ function getCategoryIcon(name) {
   return 'fas fa-gamepad';
 }
 
-function renderCategories(categories, products, exchangeRate) {
+function renderCategories(categories, products, popularProducts, exchangeRate) {
   const container = document.getElementById('categoriesContainer');
   if (!categories.length) {
     renderMessage('لا توجد أقسام متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
@@ -566,8 +621,31 @@ function renderCategories(categories, products, exchangeRate) {
 
   const safeRate = Number(exchangeRate) || 0;
   const fragment = document.createDocumentFragment();
+  const orderedCategories = [...categories].sort((a, b) => getCategoryPriority(a.name) - getCategoryPriority(b.name) || Number(a.display_order || 0) - Number(b.display_order || 0));
 
-  categories.forEach((cat) => {
+  if (Array.isArray(popularProducts) && popularProducts.length) {
+    const popularCategory = document.createElement('section');
+    popularCategory.className = 'catalog-section featured-section';
+    popularCategory.setAttribute('aria-labelledby', 'popular-products-title');
+    const popularHead = document.createElement('div');
+    popularHead.className = 'catalog-section-head';
+    const popularTitle = document.createElement('h3');
+    popularTitle.id = 'popular-products-title';
+    popularTitle.className = 'catalog-section-title';
+    popularTitle.append(createIcon('fas fa-fire'), document.createTextNode('الأكثر شراءً'));
+    popularHead.appendChild(popularTitle);
+    const popularLink = document.createElement('span');
+    popularLink.className = 'catalog-section-desc';
+    popularLink.textContent = 'اختيارات العملاء الأكثر طلبًا';
+    popularHead.appendChild(popularLink);
+    const popularGrid = document.createElement('div');
+    popularGrid.className = 'catalog-products-grid';
+    popularProducts.slice(0, 8).forEach((product) => popularGrid.appendChild(createProductCard(product, categories.find(c => String(c.id) === String(product.category_id))?.name || 'الأكثر شراءً', safeRate)));
+    popularCategory.append(popularHead, popularGrid);
+    fragment.appendChild(popularCategory);
+  }
+
+  orderedCategories.forEach((cat) => {
     if (cat.id === null || cat.id === undefined) return;
     const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
     const description = typeof cat.description === 'string' && cat.description.trim() ? cat.description.trim() : '';
@@ -605,63 +683,7 @@ function renderCategories(categories, products, exchangeRate) {
       grid.appendChild(empty);
     }
 
-    sectionProducts.forEach((product) => {
-      const card = document.createElement('a');
-      card.className = 'catalog-product-card';
-      card.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
-      card.setAttribute('aria-label', `عرض باقات ${product.name || name}`);
-
-      const thumb = document.createElement('div');
-      thumb.className = 'catalog-product-thumb';
-      const imageUrl = getSafeImageUrl(product.image_url);
-      if (imageUrl) {
-        const image = document.createElement('img');
-        image.src = imageUrl;
-        image.alt = product.name || name;
-        image.loading = 'lazy';
-        image.decoding = 'async';
-        image.addEventListener('error', () => {
-          thumb.replaceChildren(createIcon(getCategoryIcon(name)));
-        }, { once: true });
-        thumb.appendChild(image);
-      } else {
-        thumb.appendChild(createIcon(getCategoryIcon(name)));
-      }
-
-      const info = document.createElement('div');
-      info.className = 'catalog-product-info';
-      const productName = document.createElement('div');
-      productName.className = 'catalog-product-name';
-      productName.textContent = typeof product.name === 'string' ? product.name : 'باقة رقمية';
-      info.appendChild(productName);
-
-      const productDesc = document.createElement('div');
-      productDesc.className = 'catalog-product-desc';
-      productDesc.textContent = typeof product.description === 'string' && product.description.trim() ? product.description.trim() : 'اختر الباقة المناسبة وأكمل طلبك بسهولة.';
-      info.appendChild(productDesc);
-
-      const badgeText = typeof product.delivery_badge_text === 'string' ? product.delivery_badge_text.trim().slice(0, 120) : '';
-      if (badgeText) {
-        const badge = document.createElement('span');
-        badge.className = 'catalog-delivery-badge';
-        badge.append(createIcon('fas fa-bolt'), document.createElement('span'));
-        badge.lastElementChild.textContent = badgeText;
-        info.appendChild(badge);
-      }
-
-      const bottom = document.createElement('div');
-      bottom.className = 'catalog-product-bottom';
-      const price = document.createElement('span');
-      price.className = 'catalog-product-price';
-      const usd = Number(product.price_usd) || 0;
-      price.textContent = safeRate > 0 ? `${formatSDG(usd * safeRate)} ج.س` : `$${usd.toFixed(2)}`;
-      const arrow = createIcon('fas fa-chevron-left', 'font-size:10px;');
-      arrow.className += ' catalog-product-arrow';
-      bottom.append(price, arrow);
-      info.appendChild(bottom);
-      card.append(thumb, info);
-      grid.appendChild(card);
-    });
+    sectionProducts.forEach((product) => grid.appendChild(createProductCard(product, name, safeRate)));
 
     section.append(head, grid);
     fragment.appendChild(section);
@@ -672,6 +694,69 @@ function renderCategories(categories, products, exchangeRate) {
     return;
   }
   container.replaceChildren(fragment);
+}
+
+function createProductCard(product, categoryName, safeRate) {
+  const card = document.createElement('a');
+  card.className = 'catalog-product-card';
+  card.href = `category.html?id=${encodeURIComponent(String(product.category_id || ''))}`;
+  card.setAttribute('aria-label', `عرض باقات ${product.name || categoryName}`);
+
+  const thumb = document.createElement('div');
+  thumb.className = 'catalog-product-thumb';
+  const imageUrl = getSafeImageUrl(product.image_url);
+  if (imageUrl) {
+    const image = document.createElement('img');
+    image.src = imageUrl;
+    image.alt = product.name || categoryName;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.addEventListener('error', () => thumb.replaceChildren(createIcon(getCategoryIcon(categoryName))), { once: true });
+    thumb.appendChild(image);
+  } else {
+    thumb.appendChild(createIcon(getCategoryIcon(categoryName)));
+  }
+
+  const info = document.createElement('div');
+  info.className = 'catalog-product-info';
+  const productName = document.createElement('div');
+  productName.className = 'catalog-product-name';
+  productName.textContent = typeof product.name === 'string' ? product.name : 'باقة رقمية';
+  info.appendChild(productName);
+
+  const productDesc = document.createElement('div');
+  productDesc.className = 'catalog-product-desc';
+  productDesc.textContent = typeof product.description === 'string' && product.description.trim() ? product.description.trim() : 'اختر الباقة المناسبة وأكمل طلبك بسهولة.';
+  info.appendChild(productDesc);
+
+  const badgeText = typeof product.delivery_badge_text === 'string' ? product.delivery_badge_text.trim().slice(0, 120) : '';
+  if (badgeText) {
+    const badge = document.createElement('span');
+    badge.className = 'catalog-delivery-badge';
+    badge.append(createIcon('fas fa-bolt'), document.createElement('span'));
+    badge.lastElementChild.textContent = badgeText;
+    info.appendChild(badge);
+  }
+
+  const bottom = document.createElement('div');
+  bottom.className = 'catalog-product-bottom';
+  const price = document.createElement('span');
+  price.className = 'catalog-product-price';
+  const usd = Number(product.price_usd) || 0;
+  price.textContent = safeRate > 0 ? `${formatSDG(usd * safeRate)} ج.س` : `$${usd.toFixed(2)}`;
+  const previous = Number(product.compare_at_price_usd) || 0;
+  if (previous > usd) {
+    const oldPrice = document.createElement('del');
+    oldPrice.className = 'catalog-product-old-price';
+    oldPrice.textContent = safeRate > 0 ? `${formatSDG(previous * safeRate)} ج.س` : `$${previous.toFixed(2)}`;
+    bottom.prepend(oldPrice);
+  }
+  const arrow = createIcon('fas fa-chevron-left', 'font-size:10px;');
+  arrow.className += ' catalog-product-arrow';
+  bottom.append(price, arrow);
+  info.appendChild(bottom);
+  card.append(thumb, info);
+  return card;
 }
 
 init();
