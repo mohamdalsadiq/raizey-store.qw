@@ -1,13 +1,6 @@
 {
   "framework": null,
   "trailingSlash": false,
-  "functions": {
-    "api/verify-receipt.js": {
-      "maxDuration": 60,
-      "memory": 1024,
-      "includeFiles": "assets/js/receipt-judge-core.js"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -38,7 +31,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' data: blob:; connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' data: blob:; connect-src 'self' blob: data: https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests"
         }
       ]
     },

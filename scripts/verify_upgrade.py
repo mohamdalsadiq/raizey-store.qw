@@ -21,6 +21,8 @@ def inline_js(path, output):
 index = (ROOT / 'index.html').read_text(encoding='utf-8')
 category = (ROOT / 'category.html').read_text(encoding='utf-8')
 product = (ROOT / 'product.html').read_text(encoding='utf-8')
+checkout = (ROOT / 'checkout.html').read_text(encoding='utf-8')
+wallet = (ROOT / 'wallet.html').read_text(encoding='utf-8')
 admin = (ROOT / 'admin.html').read_text(encoding='utf-8')
 subcategories_admin = (ROOT / 'admin-subcategories.html').read_text(encoding='utf-8')
 orders = (ROOT / 'admin-orders.html').read_text(encoding='utf-8')
@@ -39,6 +41,12 @@ css = (ROOT / 'assets/css/admin.css').read_text(encoding='utf-8')
 main_css = (ROOT / 'assets/css/style.css').read_text(encoding='utf-8')
 admin_sql = (ROOT / 'supabase-SQL-التوسعة-الإدارة-والعروض.sql').read_text(encoding='utf-8')
 catalog_sql = (ROOT / 'supabase-SQL-إعادة-هيكلة-الكتالوج.sql').read_text(encoding='utf-8')
+receipt_pipeline = (ROOT / 'assets/js/receipt-pipeline.js').read_text(encoding='utf-8')
+supabase_client = (ROOT / 'assets/js/supabase-client.js').read_text(encoding='utf-8')
+receipt_migration = (ROOT / 'supabase-SQL-نقل-فحص-الإيصالات-إلى-الخادم.sql').read_text(encoding='utf-8')
+edge_index = (ROOT / 'supabase/functions/process-receipt/index.ts').read_text(encoding='utf-8')
+edge_core = (ROOT / 'supabase/functions/process-receipt/receipt-judge-core.ts').read_text(encoding='utf-8')
+rollback_dir = ROOT / 'backups/receipt-browser-legacy-20260817'
 
 check('homepage renders dynamic popular products', 'الأكثر شراءً' in index and 'get_popular_products' in index and 'renderCategories(categories || [], subcategories || [], products || [], safePopularProducts' in index)
 check('homepage renders strict category to subcategory flow', 'renderCategories(categories, subcategories, products, popularProducts, exchangeRate)' in index and 'catalog-subcategories-grid' in index and 'category.html?category_id=' in index and 'createSubcategoryCard' in index)
@@ -84,12 +92,23 @@ check('SQL ties admin tables to exact permissions', "has_admin_permission('manag
 check('SQL protects payment codes and referral milestones', 'payment_codes_admin_manage' in admin_sql and 'referral_milestones_admin' in admin_sql)
 check('catalog CSS has responsive subcategory cards', '.catalog-subcategories-grid' in main_css and '.catalog-subcategory-card' in main_css and '@media (max-width: 520px)' in main_css)
 check('Cairo font applied globally', 'family=Cairo' in index and "--font-display: 'Cairo'" in main_css)
+check('receipt pipeline is server-only', 'process-receipt' in receipt_pipeline and 'ReceiptIntel' not in receipt_pipeline and 'Tesseract' not in receipt_pipeline)
+check('receipt client forwards user JWT', 'Authorization' in receipt_pipeline and 'getSession' in receipt_pipeline and 'Bearer' in receipt_pipeline)
+check('receipt pages do not load browser OCR', 'tesseract.js' not in checkout and 'receipt-intel.js' not in checkout and 'tesseract.js' not in (ROOT / 'wallet.html').read_text(encoding='utf-8') and 'receipt-intel.js' not in (ROOT / 'wallet.html').read_text(encoding='utf-8'))
+check('legacy receipt endpoint removed from active Vercel path', not (ROOT / 'api/verify-receipt.js').exists() and 'verify-receipt.js' not in (ROOT / 'vercel.json').read_text(encoding='utf-8'))
+check('edge function authenticates and uses server secrets', 'auth.getUser' in edge_index and 'SUPABASE_SERVICE_ROLE_KEY' in edge_index and 'GEMINI_API_KEY' in edge_index and 'Bearer' in receipt_pipeline)
+check('edge function saves server scan result', 'receipt_scan_results' in edge_index and 'sha256Hex' in edge_index and 'scanId' in edge_index and 'receiptHash' in edge_index)
+check('edge judge core preserves deterministic rules', 'buildContext' in edge_core and 'judge' in edge_core and 'export { ReceiptJudgeCore }' in edge_core)
+check('database binds claims to edge scan', 'receipt_scan_results' in receipt_migration and 'enforce_edge_receipt_scan_claim' in receipt_migration and 'edge_scan_id' in receipt_migration)
+check('database consumes scan after financial insert', 'mark_edge_receipt_scan_consumed' in receipt_migration and 'trg_orders_edge_scan_consumed' in receipt_migration and 'trg_wallet_topups_edge_scan_consumed' in receipt_migration)
+check('receipt rollback backup is complete', all((rollback_dir / name).exists() for name in ('receipt-intel.js', 'receipt-judge-core.js', 'verify-receipt.js', 'SHA256SUMS.txt', 'ROLLBACK.md')))
 
 pages = (
     'index.html', 'category.html', 'product.html', 'admin.html', 'admin-subcategories.html',
     'admin-orders.html', 'admin-customers.html', 'admin-staff.html', 'admin-products.html',
     'admin-categories.html', 'admin-settings.html', 'admin-coupons.html', 'admin-giftcards.html',
-    'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html'
+    'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html',
+    'checkout.html', 'wallet.html'
 )
 for page in pages:
     out = ROOT / '.upgrade-check.js'

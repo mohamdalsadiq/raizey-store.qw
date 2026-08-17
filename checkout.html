@@ -333,8 +333,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="assets/js/receipt-intel.js"></script>
 <script src="assets/js/receipt-pipeline.js"></script>
 <script>
 let cart = [];
@@ -821,7 +819,9 @@ function attachCheckoutEvents(canUseWallet) {
     }
 
     const raw  = refInput.value.trim();
-    const norm = window.ReceiptIntel ? ReceiptIntel.normalizeRef(raw) : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const norm = window.RaizeyReceiptPipeline
+      ? RaizeyReceiptPipeline.normalizeRef(raw)
+      : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
     if (norm.length < 6) {
       refMsg.style.color = 'var(--danger)';
@@ -954,35 +954,16 @@ function attachCheckoutEvents(canUseWallet) {
         expectedAccount: selectedMethodAccount
       };
 
-      // (1) نجرب السيرفر أولاً (Gemini) — أسرع وأثبت من فحص المتصفح.
-      // (2) لو تعذّر (مفتاح غير مُعد، انقطاع اتصال، مهلة) → ننتقل تلقائياً
-      //     لمحرك المتصفح (Tesseract) كخطة بديلة، دون أن يشعر العميل بفرق.
+      // الفحص الوحيد هو Edge Function؛ لا يوجد OCR أو قرار داخل المتصفح.
       const scan = (async () => {
         statusEl.style.color = 'var(--text-muted)';
-        statusEl.textContent = 'جارِ فحص الصورة...';
+        statusEl.textContent = 'جارِ فحص الصورة بأمان على الخادم...';
         try {
-          const serverResult = await serverVerify(file, scanOpts, secondFile);
-          return serverResult;
+          return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
-          console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:',
-            serverErr && serverErr.message, serverErr && serverErr.serverDebug);
+          console.warn('[RAIZEY] server receipt verification failed:', serverErr && serverErr.message);
+          return softReview('server_ocr_failed');
         }
-
-        if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
-          try {
-            statusEl.textContent = 'جارِ الفحص الاحتياطي في المتصفح...';
-            return await ReceiptIntel.analyze(file, {
-              expectedAmount: scanOpts.expectedAmount,
-              manualRef: scanOpts.manualRef,
-              expectedAccount: scanOpts.expectedAccount,
-              onStatus: (t) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = t; }
-            });
-          } catch (clientErr) {
-            console.warn('[RAIZEY] receipt scan error:', clientErr);
-            return softReview('scan_error');
-          }
-        }
-        return softReview('engine_missing');
       })();
 
       analysis = await Promise.race([scan, uiGuard]);
@@ -1066,7 +1047,8 @@ function attachCheckoutEvents(canUseWallet) {
       'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
       'judge_error', 'missing_image', 'image_too_large'
     ];
-    const isTechReview = !ok && analysis.decision === 'review' &&
+    const isTechReview = !!analysis.scanId && !!analysis.receiptHash &&
+      !ok && analysis.decision === 'review' &&
       (analysis.riskFlags || []).some(f => TECH_FLAGS.includes(f));
 
     if (isTechReview) {
@@ -1202,7 +1184,9 @@ function attachCheckoutEvents(canUseWallet) {
 
   remainderBtn.onclick = async () => {
     const raw = remainderInput.value.trim();
-    const norm = window.ReceiptIntel ? ReceiptIntel.normalizeRef(raw) : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const norm = window.RaizeyReceiptPipeline
+      ? RaizeyReceiptPipeline.normalizeRef(raw)
+      : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     fileBox3.style.display = 'none';
     if (!splitPayment) return;
     if (norm.length < 6) {
@@ -1210,7 +1194,7 @@ function attachCheckoutEvents(canUseWallet) {
       remainderMsg.textContent = 'رقم العملية قصير جداً. انسخه كما هو من الإشعار الثاني.';
       return;
     }
-    if (norm === (window.ReceiptIntel ? ReceiptIntel.normalizeRef(savedTxRef) : savedTxRef)) {
+    if (norm === (window.RaizeyReceiptPipeline ? RaizeyReceiptPipeline.normalizeRef(savedTxRef) : savedTxRef)) {
       remainderMsg.style.color = 'var(--danger)';
       remainderMsg.textContent = 'رقم العملية الثاني لا يصح أن يطابق الأول.';
       return;
@@ -1257,9 +1241,7 @@ function attachCheckoutEvents(canUseWallet) {
     try {
       res = await serverVerify(f, opts, null);
     } catch (e) {
-      if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
-        try { res = await ReceiptIntel.analyze(f, opts); } catch (e2) { res = null; }
-      }
+      res = null;
     }
     if (!res || res.refVerified !== true || res.amountVerified !== true) {
       statusEl.style.color = 'var(--danger)';
@@ -1431,18 +1413,11 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   // (تم التحقق من selectedMethodId / receiptFile / savedTxRef / scanResult
   // في بداية الدالة قبل احتساب محاولة الإرسال — لا داعي لتكرار الفحص هنا)
 
-  placeOrderBtn.textContent = 'جارِ حساب بصمة الملف...';
-  let receiptHash = null;
-  try {
-    receiptHash = await hashFile(receiptFile);
-  } catch (e) {
-    errorBox.textContent = 'فشل حساب بصمة الملف، يرجى المحاولة مجدداً.';
-    placeOrderBtn.disabled = false;
-    placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
-    return;
-  }
-  if (!receiptHash) {
-    errorBox.textContent = 'تعذّر معالجة صورة الإيصال، جرّب صورة أخرى.';
+  placeOrderBtn.textContent = 'جارِ التحقق من نتيجة الفحص الخادمي...';
+  const receiptHash = scanResult && scanResult.receiptHash;
+  const receiptScanId = scanResult && scanResult.scanId;
+  if (!receiptHash || !receiptScanId) {
+    errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. أعد رفع الإيصال وانتظر النتيجة قبل الإرسال.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;
@@ -1592,7 +1567,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         second_tx_ref: splitPayment.secondRef
       } : null,
       engine_version:  scanResult.version || null,
-      engine_source:   scanResult.source || 'browser',
+      engine_source:   scanResult.source || 'supabase_edge',
       language:        scanResult.language || null,
       provider_name:   scanResult.providerName || null,
       passes:          scanResult.passes || 0,
@@ -1600,7 +1575,9 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       ref_verified:    !!scanResult.refVerified,
       amount_verified: !!scanResult.amountVerified,
       decision:        scanResult.decision || null,
-      scan_message:    scanResult.message || null
+      scan_message:    scanResult.message || null,
+      edge_scan_id:    scanResult.scanId || null,
+      edge_receipt_hash: scanResult.receiptHash || null
     })
   };
 
@@ -1627,7 +1604,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
           p_order_id:      lastId,
           p_receipt: {
             tx_ref:          splitPayment.secondRef,
-            receipt_hash:    await hashFile(splitPayment.secondFile),
+            receipt_hash:    splitPayment.secondScan && splitPayment.secondScan.receiptHash,
             receipt_path:    path2,
             receipt_url:     url2,
             provider:        splitPayment.secondScan.provider || null,
@@ -1638,8 +1615,15 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
             tx_ref_ocr:      splitPayment.secondScan.extracted
               ? splitPayment.secondScan.extracted.txRef : null,
             ocr_status:      'needs_admin_check',
+            ocr_confidence: splitPayment.secondScan.confidence ?? null,
             risk_flags:      (splitPayment.secondScan.riskFlags || []).concat(['split_payment_part2']),
-            ocr_data:        splitPayment.secondScan.extracted || {}
+            ocr_data:        Object.assign({}, splitPayment.secondScan.extracted || {}, {
+              edge_scan_id: splitPayment.secondScan.scanId || null,
+              engine_source: splitPayment.secondScan.source || 'supabase_edge',
+              decision: splitPayment.secondScan.decision || null,
+              ref_verified: !!splitPayment.secondScan.refVerified,
+              amount_verified: !!splitPayment.secondScan.amountVerified
+            })
           }
         });
       } catch (e) {

@@ -89,8 +89,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="assets/js/receipt-intel.js"></script>
 <script src="assets/js/receipt-pipeline.js"></script>
 <script>
 let currentUser = null;
@@ -219,7 +217,8 @@ function isTechnicalReceiptReview(analysis) {
     'ui_scan_timeout', 'engine_missing', 'server_ocr_failed', 'server_ocr_timeout',
     'gemini_not_configured', 'judge_error', 'missing_image', 'image_too_large'
   ];
-  return analysis && analysis.decision === 'review' &&
+  return !!analysis && !!analysis.scanId && !!analysis.receiptHash &&
+    analysis.decision === 'review' &&
     (analysis.riskFlags || []).some((flag) => technicalFlags.includes(flag));
 }
 
@@ -265,8 +264,7 @@ async function runWalletReceiptScan() {
       manualRef,
       expectedAccount: method ? method.account_number : null,
       onStatus: (text) => { status.textContent = text; },
-      onServerError: (error) => { status.textContent = 'تعذّر فحص الخادم؛ جارِ تشغيل الفحص الاحتياطي...'; console.warn('[RAIZEY] wallet server scan fallback:', error?.message || error); },
-      onClientError: (error) => { console.warn('[RAIZEY] wallet browser scan failed:', error?.message || error); }
+      onServerError: (error) => { status.textContent = 'تعذّر الفحص الخادمي؛ لم يُنشأ أي طلب. أعد المحاولة.'; console.warn('[RAIZEY] wallet edge scan failed:', error?.message || error); }
     });
     receiptAnalysis = analysis;
     receiptScanContext = { amount, manualRef };
@@ -539,12 +537,11 @@ async function submitTopup() {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ التحقق...';
 
-  // ── فحص تكرار بصمة الملف ورقم العملية قبل الرفع ──
-  let receiptHash = null;
-  try {
-    receiptHash = await hashFile(receiptFile);
-  } catch (e) {
-    errorBox.textContent = 'فشل معالجة الملف، يرجى المحاولة مجدداً.';
+  // البصمة والـ scan_id مصدرهما Edge Function فقط؛ لا نثق بأي hash من المتصفح.
+  const receiptHash = receiptAnalysis && receiptAnalysis.receiptHash;
+  const receiptScanId = receiptAnalysis && receiptAnalysis.scanId;
+  if (!receiptHash || !receiptScanId) {
+    errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. ارفع الإيصال وانتظر النتيجة ثم أعد المحاولة.';
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
@@ -636,7 +633,9 @@ async function submitTopup() {
         ref_verified: !!scan.refVerified,
         amount_verified: !!scan.amountVerified,
         decision: scan.decision || null,
-        scan_message: scan.message || null
+        scan_message: scan.message || null,
+        edge_scan_id: scan.scanId || null,
+        edge_receipt_hash: scan.receiptHash || null
       })
     });
     if (error) throw error;

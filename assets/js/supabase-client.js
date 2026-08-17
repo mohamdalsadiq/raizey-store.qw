@@ -87,6 +87,9 @@ function getFriendlyError(errMsg) {
 const runtimeSupabaseConfig = window.__SUPABASE_CONFIG__ || {};
 const SUPABASE_URL = runtimeSupabaseConfig.url || "https://rglbfizqolrenwfsndyv.supabase.co";
 const SUPABASE_ANON_KEY = runtimeSupabaseConfig.anonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
+// القراءة العامة المطلوبة للوصول إلى Edge Function؛ لا تُعرّف هنا أي خدمة سرية.
+window.SUPABASE_URL = SUPABASE_URL;
+window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
 // حماية: لو لم تُحمَّل مكتبة Supabase من الـ CDN لا نرمي TypeError يوقف الصفحة كلها
 let supabaseClient = null;
@@ -103,6 +106,7 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
       headers: { 'x-client-info': 'raizey-store' }
     }
   });
+  window.supabaseClient = supabaseClient;
 } else {
   devWarn('[RAIZEY] Supabase SDK not loaded');
   document.addEventListener('DOMContentLoaded', () => {
@@ -177,19 +181,6 @@ async function getExchangeRate() {
 // دالة مساعدة: تنسيق السعر بالجنيه (أرقام إنجليزية لتطابق خط الأسعار الرقمي)
 function formatSDG(amount) {
   return new Intl.NumberFormat('en-US').format(Math.round(amount));
-}
-
-// بصمة رقمية SHA-256 لملف الإيصال — تُستخدم لكشف الإيصالات المكررة
-async function hashFile(file) {
-  try {
-    const buffer      = await file.arrayBuffer();
-    const hashBuffer  = await crypto.subtle.digest('SHA-256', buffer);
-    return Array.from(new Uint8Array(hashBuffer))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (e) {
-    devWarn('[RAIZEY] hashFile error:', e);
-    return null;
-  }
 }
 
 // فحص إذا كانت بصمة الإيصال أو رقم العملية مستخدمة من قبل في نفس الجدول (orders أو wallet_topups)
@@ -400,56 +391,45 @@ async function logReceiptFraudAttempt({ reference, reason, provider, ocrExcerpt,
 }
 
 // =========================================================
-// ⚠️ مُستغنى عنها (DEPRECATED) — لا تستخدمها في أي كود جديد.
-//
-// كانت هذه الدالة ترجع دائماً passed: true بغض النظر عن محتوى الصورة
-// (نظام إبلاغ فقط، لا يرفض شيئاً) — وهو ما يخالف مبدأ Fail-Closed تماماً.
-// أُعيدت كتابتها الآن لتفوّض حصراً لمحرك الفحص الصارم ReceiptIntel.analyze()،
-// ولم تعد تُرجع passed:true إلا إذا كان قرار المحرك 'accept' فعلاً.
-// عند غياب المحرك أو أي فشل/غموض → تُرجع passed:false مع مراجعة يدوية
-// (لا قبول تلقائي أبداً).
-//
-// المسار الرسمي للدفع (checkout.html و product.html) يعتمد مباشرةً على
-// ReceiptIntel.analyze() + claim_payment_receipt، ولا يوجد أي استدعاء فعلي
-// لهذه الدالة في المشروع؛ تبقى هنا فقط لعدم كسر أي مرجع قديم.
+// ⚠️ توافق قديم: التفويض الوحيد المسموح هو Supabase Edge Function.
+// لا يوجد OCR أو قرار مالي داخل المتصفح حتى لو استدعى كود قديم هذه الدالة.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
   // Fail-Closed افتراضياً: تعليق للمراجعة اليدوية، لا قبول.
   const NEEDS_REVIEW = { passed: false, ocr_status: 'needs_review', amount_verified: false };
 
-  // نفوّض للمحرك الصارم الوحيد المعتمد. غيابه أو تعذّر الاستخدام = مراجعة يدوية.
   const canDelegate =
     typeof window !== 'undefined' &&
-    window.ReceiptIntel &&
-    typeof window.ReceiptIntel.analyze === 'function' &&
+    window.RaizeyReceiptPipeline &&
+    typeof window.RaizeyReceiptPipeline.analyze === 'function' &&
     (typeof File !== 'undefined' && fileOrUrl instanceof Blob);
 
   if (!canDelegate) {
-    devWarn('[RAIZEY OCR] verifyReceiptContent: تفويض غير متاح — مراجعة يدوية (fail-closed)');
+    devWarn('[RAIZEY receipt] verifyReceiptContent: Edge Function غير متاحة — مراجعة يدوية (fail-closed)');
     return NEEDS_REVIEW;
   }
 
   try {
-    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
-    const analysis = await window.ReceiptIntel.analyze(fileOrUrl, {
+    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال على الخادم...');
+    const analysis = await window.RaizeyReceiptPipeline.analyze(fileOrUrl, {
       manualRef: transactionRef || '',
       expectedAmount: Number(expectedAmountSDG) || 0,
       onStatus: statusCallback || undefined
     });
 
     if (!analysis || typeof analysis !== 'object') return NEEDS_REVIEW;
-
     return {
-      // القبول التلقائي حصري بقرار المحرك 'accept' — لا مسار "يقبل كل شيء".
-      passed:          analysis.decision === 'accept',
+      passed:          analysis.decision === 'accept' && !!analysis.scanId,
       ocr_status:      analysis.ocrStatus || (analysis.decision === 'reject' ? 'rejected' : 'needs_review'),
       amount_verified: !!analysis.amountVerified,
       ref_verified:    !!analysis.refVerified,
       decision:        analysis.decision || 'review',
+      scan_id:         analysis.scanId || null,
+      receipt_hash:    analysis.receiptHash || null,
       message:         analysis.message || ''
     };
   } catch (e) {
-    devWarn('[RAIZEY OCR] verifyReceiptContent delegate error — مراجعة يدوية:', e && e.message);
+    devWarn('[RAIZEY receipt] Edge Function delegate error — مراجعة يدوية:', e && e.message);
     return NEEDS_REVIEW;
   }
 }

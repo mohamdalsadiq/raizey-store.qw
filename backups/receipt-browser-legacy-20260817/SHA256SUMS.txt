@@ -1,0 +1,3 @@
+cb3c957f95b6de5d1f1b490f457861232a8c2bf1f87b76428035a820bfae701d  backups/receipt-browser-legacy-20260817/receipt-intel.js
+f066f4dbe52e4dd6280e9e9f00b1e1c7cbff41288202c3d2db8fb6f16d19000a  backups/receipt-browser-legacy-20260817/receipt-judge-core.js
+178175b2f3bbe5bb36723fc7f382cd5045c8105364b92345b8e42278874429c1  backups/receipt-browser-legacy-20260817/verify-receipt.js
