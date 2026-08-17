@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إدارة الباقات والخدمات — RAIZEY STORE</title>
+<title>إدارة المنتجات والباقات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
@@ -15,7 +15,7 @@
 
 <div class="admin-page" id="adminPage" style="display:none;">
   <div class="page-header">
-    <h1>إدارة الباقات والخدمات</h1>
+    <h1>إدارة المنتجات والباقات</h1>
     <a href="index.html" class="back-link">→ المتجر</a>
   </div>
 
@@ -23,8 +23,9 @@
     <a href="admin.html">الرئيسية</a>
     <a href="admin-orders.html">الطلبات</a>
     <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html" class="active">المنتجات</a>
-    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-categories.html">إدارة الأقسام</a>
+    <a href="admin-subcategories.html">إدارة التصنيفات</a>
+    <a href="admin-products.html" class="active">إدارة المنتجات والباقات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-staff.html">المشرفون</a>
@@ -33,24 +34,24 @@
     <a href="admin-referral-milestones.html">مستويات الإحالة</a>
   </div>
 
-  <p class="admin-page-hint">كل بطاقة هنا تمثل باقة أو خدمة داخل قسم رئيسي. استخدم الخيارات التفصيلية لإضافة القيم القابلة للشراء مثل 60 UC و325 UC و660 UC.</p>
-  <button class="add-new-btn" id="addNewBtn">+ إضافة باقة أو خدمة</button>
+  <p class="admin-page-hint">كل سجل هنا يمثل منتجًا أو باقة داخل تصنيف واحد. السعر الأساسي والحقول المطلوبة مستقلان، والخيارات التفصيلية اختيارية بالكامل ويمكن تفعيلها عند الحاجة فقط.</p>
+  <button class="add-new-btn" id="addNewBtn">+ إضافة منتج أو باقة</button>
 
   <div id="productsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
 
 <div class="modal-overlay" id="formModal">
   <div class="modal-box" style="max-height:85vh; overflow-y:auto;">
-    <div class="modal-title" id="formModalTitle">باقة أو خدمة جديدة</div>
+    <div class="modal-title" id="formModalTitle">منتج أو باقة جديدة</div>
 
     <div class="field">
-      <label>القسم الرئيسي</label>
-      <select id="categoryInput"></select>
+      <label>التصنيف / الباقة</label>
+      <select id="subcategoryInput"></select>
     </div>
 
     <div class="field">
-      <label>اسم المنتج</label>
-      <input type="text" id="nameInput" placeholder="مثلاً: 60 UC أو حساب توثيق">
+      <label>اسم المنتج أو الباقة</label>
+      <input type="text" id="nameInput" placeholder="مثلاً: 60 UC أو حساب موثق">
     </div>
 
     <div class="field">
@@ -92,7 +93,7 @@
       <div id="offerPreview" style="font-size:12px;color:var(--text-muted);margin-top:7px;">عند إدخال نسبة الخصم وتاريخ النهاية سيظهر العرض تلقائيًا أعلى المتجر.</div>
     </div>
 
-    <!-- قسم الخيارات الفرعية للمنتج -->
+    <!-- الخيارات التفصيلية اختيارية، ولا تُفرض على المنتج البسيط -->
     <div class="field" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <label style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
@@ -104,7 +105,7 @@
 
       <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
         <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
-          أنشئ الخيار الأساسي مثل «RedotPay»، ثم اكتب تحته الخيار الفرعي الإجباري مثل «حساب موثق فقط». لن يستطيع العميل إكمال الطلب قبل اختيار خيار فرعي.
+          اختياري: فعّل هذا القسم فقط إذا كان المنتج يحتاج Product Variants. المنتج العادي يمكن حفظه بسعره الأساسي وبدون أي خيارات.
         </label>
         <div id="optionsBuilder"></div>
         <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top: 8px;">
@@ -150,11 +151,11 @@
 <script src="assets/js/supabase-client.js"></script>
 <script>
 let products = [];
-let categories = [];
+let subcategories = [];
 let editingId = null;
 
 const formModal = document.getElementById('formModal');
-const categoryInput = document.getElementById('categoryInput');
+const subcategoryInput = document.getElementById('subcategoryInput');
 const nameInput = document.getElementById('nameInput');
 const descInput = document.getElementById('descInput');
 const instructionsInput = document.getElementById('instructionsInput');
@@ -224,17 +225,12 @@ async function init() {
     fileBox.classList.add('has-file');
   });
 
-  await loadCategories();
+  await loadSubcategories();
   await loadProducts();
 }
 
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
-  // التحقق: لا نضيف صفوفاً فارغة إلا إذا لم يكن هناك خيارات حالية
-  if (show && optionsBuilder.children.length === 0) {
-    addOptionRow('', '', '', '');
-    addOptionRow('', '', '', '');
-  }
 }
 
 function addOptionRow(label = '', price = '', id = '', group = '') {
@@ -255,9 +251,9 @@ function addOptionRow(label = '', price = '', id = '', group = '') {
 
   row.innerHTML = `
     <input type="hidden" class="opt-id" value="${safeId}">
-    <input type="text" placeholder="الخيار الأساسي (مثلاً: RedotPay)" class="opt-group" value="${cleanGroup}" style="flex: 1.2; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
-    <input type="text" placeholder="الخيار الفرعي الإجباري (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 1.8; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
-    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: .8; min-width:90px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
+    <input type="text" placeholder="المجموعة (اختياري، مثلاً: RedotPay)" class="opt-group" value="${cleanGroup}" style="flex: 1.2; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
+    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 1.8; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color:var(--ink); font-family:var(--font-display); font-size: 13px;">
+    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: .8; min-width:90px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
     <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
@@ -287,16 +283,20 @@ function collectOptions() {
   return options;
 }
 
-async function loadCategories() {
-  const { data } = await supabaseClient.from('categories').select('*').order('display_order');
-  categories = data || [];
-  categoryInput.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+async function loadSubcategories() {
+  const { data, error } = await supabaseClient.from('subcategories').select('id, name').eq('is_active', true).order('name');
+  subcategories = data || [];
+  if (error) {
+    subcategoryInput.innerHTML = '<option value="">شغّل migration التصنيفات أولاً</option>';
+    return;
+  }
+  subcategoryInput.innerHTML = subcategories.map(item => `<option value="${escapeAttribute(item.id)}">${escapeHtml(item.name)}</option>`).join('');
 }
 
 async function loadProducts() {
   const { data } = await supabaseClient
-    .from('products').select('*, categories(name)').order('display_order');
-  products = data || [];
+    .from('products').select('*').order('display_order');
+  products = (data || []).map(item => ({ ...item, subcategoryName: subcategories.find(row => String(row.id) === String(item.subcategory_id))?.name || '' }));
   render();
 }
 
@@ -318,7 +318,7 @@ function render() {
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
           ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
-        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}${p.compare_at_price_usd > p.price_usd ? ` — خصم ${Math.round((1 - Number(p.price_usd) / Number(p.compare_at_price_usd)) * 100)}%` : ''}${p.delivery_badge_text ? ` — <span style="color:var(--primary);">${escapeHtml(p.delivery_badge_text)}</span>` : ''}</div>
+        <div class="manage-item-sub">${escapeHtml(p.subcategoryName || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}${p.compare_at_price_usd > p.price_usd ? ` — خصم ${Math.round((1 - Number(p.price_usd) / Number(p.compare_at_price_usd)) * 100)}%` : ''}${p.delivery_badge_text ? ` — <span style="color:var(--primary);">${escapeHtml(p.delivery_badge_text)}</span>` : ''}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
@@ -365,8 +365,8 @@ function openForm(id) {
 
   if (id) {
     const p = products.find(x => x.id === id);
-    document.getElementById('formModalTitle').textContent = 'تعديل الباقة أو الخدمة';
-    categoryInput.value = p.category_id || '';
+    document.getElementById('formModalTitle').textContent = 'تعديل المنتج أو الباقة';
+    subcategoryInput.value = p.subcategory_id || '';
     nameInput.value = p.name;
     descInput.value = p.description || '';
     instructionsInput.value = p.instructions || '';
@@ -394,7 +394,7 @@ function openForm(id) {
 
     (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
   } else {
-    document.getElementById('formModalTitle').textContent = 'باقة أو خدمة جديدة';
+    document.getElementById('formModalTitle').textContent = 'منتج أو باقة جديدة';
     nameInput.value = '';
     descInput.value = '';
     instructionsInput.value = '';
@@ -449,22 +449,15 @@ async function saveProduct() {
   const name = nameInput.value.trim();
   const basePrice = parseFloat(priceInput.value);
   const discount = Math.min(90, Math.max(0, Number(discountPercentInput.value) || 0));
-  const categoryId = categoryInput.value;
+  const subcategoryId = subcategoryInput.value;
   const salePrice = discount > 0 ? basePrice * (1 - discount / 100) : basePrice;
   const flashSaleEnds = flashSaleEndsInput.value ? new Date(flashSaleEndsInput.value) : null;
 
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
   if (!basePrice || basePrice <= 0 || !Number.isFinite(salePrice) || salePrice <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
   if (discount > 0 && (!flashSaleEnds || Number.isNaN(flashSaleEnds.getTime()) || flashSaleEnds <= new Date())) { formError.textContent = 'حدد نهاية مستقبلية للعرض'; return; }
-  if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
+  if (!subcategoryId) { formError.textContent = 'اختر التصنيف أو الباقة'; return; }
 
-  if (hasOptionsToggle.checked) {
-    const opts = collectOptions();
-    if (opts.length < 2) {
-      formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
-      return;
-    }
-  }
 
   const payload = {
     name,
@@ -475,12 +468,12 @@ async function saveProduct() {
     price_usd: Number(salePrice.toFixed(4)),
     compare_at_price_usd: discount > 0 ? Number(basePrice.toFixed(4)) : null,
     flash_sale_ends_at: discount > 0 && flashSaleEnds ? flashSaleEnds.toISOString() : null,
-    category_id: categoryId,
+    subcategory_id: subcategoryId,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
     options: collectOptions(),
-    has_options: hasOptionsToggle.checked && collectOptions().length > 0
+    has_options: collectOptions().length > 0
   };
 
   const { error } = editingId

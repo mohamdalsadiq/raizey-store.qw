@@ -30,7 +30,21 @@
     }
   }
 
+  function ensureCatalogNavigation() {
+    document.querySelectorAll('.admin-nav').forEach((nav) => {
+      nav.querySelectorAll('a[href="admin-catalog.html"]').forEach((legacyLink) => legacyLink.remove());
+      if (nav.querySelector('a[href="admin-subcategories.html"]')) return;
+      const categoriesLink = nav.querySelector('a[href="admin-categories.html"]');
+      if (!categoriesLink) return;
+      const link = document.createElement('a');
+      link.href = 'admin-subcategories.html';
+      link.innerHTML = '<i class="fas fa-tags" aria-hidden="true"></i> إدارة التصنيفات';
+      categoriesLink.insertAdjacentElement('afterend', link);
+    });
+  }
+
   async function loadAdminAlerts() {
+    ensureCatalogNavigation();
     if (!window.supabaseClient) return;
     try {
       const { data: sessionData } = await supabaseClient.auth.getSession();

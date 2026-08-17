@@ -516,19 +516,20 @@ async function init() {
     }
 
     // جلب الحقول اللازمة فقط للتقليل من حجم الاستجابة.
-    const [{ data: categories, error: categoriesError }, { data: products, error: productsError }, { data: popularProducts, error: popularError }, exchangeRate] = await Promise.all([
+    const [{ data: categories, error: categoriesError }, { data: subcategories, error: subcategoriesError }, { data: products, error: productsError }, { data: popularProducts, error: popularError }, exchangeRate] = await Promise.all([
       supabaseClient.from('categories').select('id, name, description, image_url, display_order').eq('is_active', true).order('display_order'),
-      supabaseClient.from('products').select('id, category_id, name, description, image_url, price_usd, compare_at_price_usd, flash_sale_ends_at, delivery_badge_text, is_active, display_order').eq('is_active', true).order('display_order'),
+      supabaseClient.from('subcategories').select('id, category_id, name, description, image_url, display_order').eq('is_active', true).order('display_order'),
+      supabaseClient.from('products').select('id, subcategory_id, name, description, image_url, price_usd, compare_at_price_usd, flash_sale_ends_at, delivery_badge_text, is_active, display_order').eq('is_active', true).order('display_order'),
       supabaseClient.rpc('get_popular_products', { p_limit: 8 }),
       getExchangeRate()
     ]);
 
-    if (categoriesError || productsError) throw categoriesError || productsError;
+    if (categoriesError || subcategoriesError || productsError) throw categoriesError || subcategoriesError || productsError;
     renderActiveFlashSale(products || []);
     const safePopularProducts = popularError
       ? (products || []).slice(0, 8).map(product => ({ ...product, purchase_count: 0 }))
       : (popularProducts || []);
-    renderCategories(categories || [], products || [], safePopularProducts, exchangeRate);
+    renderCategories(categories || [], subcategories || [], products || [], safePopularProducts, exchangeRate);
 
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
@@ -612,7 +613,7 @@ function getCategoryIcon(name) {
   return 'fas fa-gamepad';
 }
 
-function renderCategories(categories, products, popularProducts, exchangeRate) {
+function renderCategories(categories, subcategories, products, popularProducts, exchangeRate) {
   const container = document.getElementById('categoriesContainer');
   if (!categories.length) {
     renderMessage('لا توجد أقسام متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
@@ -640,16 +641,18 @@ function renderCategories(categories, products, popularProducts, exchangeRate) {
     popularHead.appendChild(popularLink);
     const popularGrid = document.createElement('div');
     popularGrid.className = 'catalog-products-grid';
-    popularProducts.slice(0, 8).forEach((product) => popularGrid.appendChild(createProductCard(product, categories.find(c => String(c.id) === String(product.category_id))?.name || 'الأكثر شراءً', safeRate)));
+    popularProducts.slice(0, 8).forEach((product) => {
+      const subcategory = subcategories.find(item => String(item.id) === String(product.subcategory_id));
+      popularGrid.appendChild(createProductCard(product, subcategory?.name || 'الأكثر شراءً', safeRate));
+    });
     popularCategory.append(popularHead, popularGrid);
     fragment.appendChild(popularCategory);
   }
 
   orderedCategories.forEach((cat) => {
-    if (cat.id === null || cat.id === undefined) return;
-    const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
+    const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'قسم';
     const description = typeof cat.description === 'string' && cat.description.trim() ? cat.description.trim() : '';
-    const sectionProducts = products.filter((product) => String(product.category_id) === String(cat.id));
+    const sectionSubcategories = subcategories.filter(item => String(item.category_id) === String(cat.id));
     const section = document.createElement('section');
     section.className = 'catalog-section';
     section.setAttribute('aria-labelledby', `category-title-${cat.id}`);
@@ -670,30 +673,54 @@ function renderCategories(categories, products, popularProducts, exchangeRate) {
     }
     const viewLink = document.createElement('a');
     viewLink.className = 'catalog-section-link';
-    viewLink.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
-    viewLink.append(document.createTextNode('كل الباقات'), createIcon('fas fa-arrow-left'));
+    viewLink.href = `category.html?category_id=${encodeURIComponent(String(cat.id))}`;
+    viewLink.append(document.createTextNode('كل التصنيفات'), createIcon('fas fa-arrow-left'));
     head.append(titleWrap, viewLink);
 
     const grid = document.createElement('div');
-    grid.className = 'catalog-products-grid';
-    if (!sectionProducts.length) {
+    grid.className = 'catalog-subcategories-grid';
+    if (!sectionSubcategories.length) {
       const empty = document.createElement('div');
       empty.className = 'catalog-empty';
-      empty.textContent = 'لا توجد باقات متاحة في هذا القسم حالياً.';
+      empty.textContent = 'لا توجد تصنيفات متاحة في هذا القسم حالياً.';
       grid.appendChild(empty);
     }
-
-    sectionProducts.forEach((product) => grid.appendChild(createProductCard(product, name, safeRate)));
-
+    sectionSubcategories.forEach(subcategory => grid.appendChild(createSubcategoryCard(subcategory, name)));
     section.append(head, grid);
     fragment.appendChild(section);
   });
 
-  if (!fragment.childNodes.length) {
-    renderMessage('لا توجد أقسام متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
-    return;
-  }
   container.replaceChildren(fragment);
+}
+
+function createSubcategoryCard(subcategory, categoryName) {
+  const card = document.createElement('a');
+  card.className = 'catalog-subcategory-card';
+  card.href = `category.html?id=${encodeURIComponent(String(subcategory.id))}`;
+  card.setAttribute('aria-label', `فتح تصنيف ${subcategory.name || categoryName}`);
+  const thumb = document.createElement('div');
+  thumb.className = 'catalog-subcategory-thumb';
+  const imageUrl = getSafeImageUrl(subcategory.image_url);
+  if (imageUrl) {
+    const image = document.createElement('img');
+    image.src = imageUrl;
+    image.alt = subcategory.name || categoryName;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.addEventListener('error', () => thumb.replaceChildren(createIcon(getCategoryIcon(categoryName))), { once: true });
+    thumb.appendChild(image);
+  } else thumb.appendChild(createIcon(getCategoryIcon(categoryName)));
+  const info = document.createElement('div');
+  info.className = 'catalog-subcategory-info';
+  const title = document.createElement('h4');
+  title.textContent = subcategory.name || 'تصنيف';
+  info.appendChild(title);
+  const desc = document.createElement('p');
+  desc.textContent = subcategory.description || 'تصفح المنتجات والباقات المتاحة';
+  info.appendChild(desc);
+  info.append(createIcon('fas fa-arrow-left', 'font-size:11px;'));
+  card.append(thumb, info);
+  return card;
 }
 
 function createProductCard(product, categoryName, safeRate) {

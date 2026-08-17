@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة التصنيفات والباقات — RAIZEY STORE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <main class="admin-page" id="adminPage" hidden>
+    <div class="page-header">
+      <h1>إدارة التصنيفات والباقات</h1>
+      <a href="admin.html" class="back-link"><i class="fas fa-arrow-right" aria-hidden="true"></i> لوحة التحكم</a>
+    </div>
+    <nav class="admin-nav" aria-label="تنقل الإدارة">
+      <a href="admin.html">الرئيسية</a>
+      <a href="admin-categories.html">إدارة الأقسام</a>
+      <a href="admin-subcategories.html" class="active">إدارة التصنيفات</a>
+      <a href="admin-products.html">إدارة المنتجات والباقات</a>
+      <a href="admin-orders.html">الطلبات</a>
+      <a href="admin-staff.html">المشرفون</a>
+    </nav>
+    <p class="admin-page-hint"><i class="fas fa-sitemap" aria-hidden="true"></i> أنشئ هنا تصنيفًا أو خدمة مثل PUBG Mobile أو Starlink واربطه بقسم رئيسي واحد. بعد ذلك أضف المنتجات والأسعار من صفحة إدارة المنتجات والباقات.</p>
+    <button class="add-new-btn" id="addNewBtn" type="button"><i class="fas fa-plus" aria-hidden="true"></i> إضافة تصنيف أو باقة</button>
+    <div id="subcategoriesList"><div class="loading-state">جارِ تحميل التصنيفات...</div></div>
+  </main>
+
+  <section id="accessDenied" class="admin-error-state" hidden>
+    <i class="fas fa-lock" aria-hidden="true"></i>
+    <strong>ليس لديك صلاحية إدارة التصنيفات.</strong>
+    <a href="admin.html" class="admin-btn btn-confirm">العودة إلى لوحة التحكم</a>
+  </section>
+
+  <div class="modal-overlay" id="formModal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
+      <div class="modal-title" id="formModalTitle">تصنيف أو باقة جديدة</div>
+      <div class="field">
+        <label for="categoryInput">القسم الرئيسي</label>
+        <select id="categoryInput" required></select>
+      </div>
+      <div class="field">
+        <label for="nameInput">اسم التصنيف أو الباقة</label>
+        <input id="nameInput" type="text" maxlength="120" placeholder="مثلاً: PUBG Mobile أو Starlink" required>
+      </div>
+      <div class="field">
+        <label for="descriptionInput">وصف مختصر (اختياري)</label>
+        <textarea id="descriptionInput" maxlength="500" placeholder="وصف يظهر للعميل داخل القسم"></textarea>
+      </div>
+      <div class="field">
+        <label for="imageInput">رابط الصورة (اختياري)</label>
+        <input id="imageInput" type="url" maxlength="500" placeholder="https://..."></input>
+      </div>
+      <div class="field">
+        <label for="orderInput">ترتيب العرض</label>
+        <input id="orderInput" type="number" min="0" step="1" value="0">
+      </div>
+      <div class="field">
+        <label for="activeInput">الحالة</label>
+        <select id="activeInput"><option value="true">فعّال</option><option value="false">مخفي</option></select>
+      </div>
+      <div class="form-error" id="formError" role="alert"></div>
+      <div class="modal-actions">
+        <button class="modal-cancel-btn" id="formCancelBtn" type="button">إلغاء</button>
+        <button class="modal-confirm-btn" id="formSaveBtn" type="button">حفظ التصنيف</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script>
+    let categories = [];
+    let subcategories = [];
+    let editingId = null;
+    const formModal = document.getElementById('formModal');
+    const categoryInput = document.getElementById('categoryInput');
+    const nameInput = document.getElementById('nameInput');
+    const descriptionInput = document.getElementById('descriptionInput');
+    const imageInput = document.getElementById('imageInput');
+    const orderInput = document.getElementById('orderInput');
+    const activeInput = document.getElementById('activeInput');
+    const formError = document.getElementById('formError');
+
+    function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    function safeUrl(value) { try { const url = new URL(String(value || ''), location.href); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch (_) { return ''; } }
+
+    async function init() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { location.href = 'login.html'; return; }
+      const { data: profile } = await supabaseClient.from('profiles').select('role, is_banned').eq('id', session.user.id).single();
+      const { data: allowed, error: permissionError } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_products' });
+      if (!profile || profile.role !== 'admin' || profile.is_banned === true || permissionError || allowed !== true) {
+        document.getElementById('accessDenied').hidden = false;
+        return;
+      }
+      document.getElementById('adminPage').hidden = false;
+      document.getElementById('addNewBtn').addEventListener('click', () => openForm(null));
+      document.getElementById('formCancelBtn').addEventListener('click', closeForm);
+      document.getElementById('formSaveBtn').addEventListener('click', saveSubcategory);
+      await loadData();
+    }
+
+    async function loadData() {
+      const [{ data: categoryRows, error: categoryError }, { data: subcategoryRows, error: subcategoryError }] = await Promise.all([
+        supabaseClient.from('categories').select('id,name').order('display_order').order('name'),
+        supabaseClient.from('subcategories').select('id,category_id,name,description,image_url,display_order,is_active').order('display_order').order('name')
+      ]);
+      if (categoryError || subcategoryError) {
+        document.getElementById('subcategoriesList').innerHTML = '<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>تعذر تحميل التصنيفات. تأكد من تشغيل migration ثم أعد المحاولة.</strong><button type="button" class="admin-btn btn-confirm" onclick="loadData()">إعادة المحاولة</button></div>';
+        return;
+      }
+      categories = categoryRows || [];
+      subcategories = subcategoryRows || [];
+      categoryInput.innerHTML = categories.map(category => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join('');
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('subcategoriesList');
+      if (!subcategories.length) {
+        list.innerHTML = '<div class="empty-state">لا توجد تصنيفات بعد. أضف أول تصنيف واربطه بقسم رئيسي.</div>';
+        return;
+      }
+      list.innerHTML = subcategories.map(item => {
+        const category = categories.find(row => String(row.id) === String(item.category_id));
+        const image = safeUrl(item.image_url);
+        return `<article class="manage-item">
+          <div class="manage-item-thumb">${image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy">` : '<i class="fas fa-tags" aria-hidden="true"></i>'}</div>
+          <div class="manage-item-info"><div class="manage-item-name">${escapeHtml(item.name)} ${item.is_active ? '' : '<span class="inactive-badge">مخفي</span>'}</div><div class="manage-item-sub">القسم: ${escapeHtml(category?.name || 'غير مربوط')} · ترتيب: ${Number(item.display_order) || 0}</div>${item.description ? `<div class="manage-item-sub">${escapeHtml(item.description)}</div>` : ''}</div>
+          <div class="manage-item-actions"><button class="icon-action-btn" type="button" data-action="edit" data-id="${escapeHtml(item.id)}" title="تعديل"><i class="fas fa-pen" aria-hidden="true"></i></button><button class="icon-action-btn" type="button" data-action="delete" data-id="${escapeHtml(item.id)}" title="حذف"><i class="fas fa-trash-can" aria-hidden="true"></i></button></div>
+        </article>`;
+      }).join('');
+      list.querySelectorAll('[data-action="edit"]').forEach(button => button.addEventListener('click', () => openForm(button.dataset.id)));
+      list.querySelectorAll('[data-action="delete"]').forEach(button => button.addEventListener('click', () => deleteSubcategory(button.dataset.id)));
+    }
+
+    function openForm(id) {
+      editingId = id;
+      formError.textContent = '';
+      const item = id ? subcategories.find(row => String(row.id) === String(id)) : null;
+      document.getElementById('formModalTitle').textContent = item ? 'تعديل التصنيف أو الباقة' : 'تصنيف أو باقة جديدة';
+      categoryInput.value = item?.category_id || categories[0]?.id || '';
+      nameInput.value = item?.name || '';
+      descriptionInput.value = item?.description || '';
+      imageInput.value = item?.image_url || '';
+      orderInput.value = item?.display_order ?? subcategories.length;
+      activeInput.value = String(item?.is_active ?? true);
+      formModal.hidden = false;
+      formModal.classList.add('show');
+      nameInput.focus();
+    }
+    function closeForm() { formModal.classList.remove('show'); formModal.hidden = true; editingId = null; }
+
+    async function saveSubcategory() {
+      const name = nameInput.value.trim();
+      const categoryId = categoryInput.value;
+      const imageUrl = imageInput.value.trim();
+      if (!categoryId) { formError.textContent = 'اختر قسمًا رئيسيًا أولاً.'; return; }
+      if (!name) { formError.textContent = 'اكتب اسم التصنيف أو الباقة.'; return; }
+      if (imageUrl && !safeUrl(imageUrl)) { formError.textContent = 'رابط الصورة غير صالح.'; return; }
+      const button = document.getElementById('formSaveBtn');
+      button.disabled = true;
+      button.textContent = 'جارِ الحفظ...';
+      const payload = { category_id: categoryId, name, description: descriptionInput.value.trim() || null, image_url: imageUrl || null, display_order: Number(orderInput.value) || 0, is_active: activeInput.value === 'true' };
+      const result = editingId ? await supabaseClient.from('subcategories').update(payload).eq('id', editingId) : await supabaseClient.from('subcategories').insert(payload);
+      if (result.error) formError.textContent = result.error.code === '23505' ? 'يوجد تصنيف بالاسم نفسه داخل هذا القسم.' : 'تعذر حفظ التصنيف. تحقق من الصلاحية والاتصال.';
+      else { closeForm(); await loadData(); }
+      button.disabled = false;
+      button.textContent = 'حفظ التصنيف';
+    }
+
+    async function deleteSubcategory(id) {
+      const used = await supabaseClient.from('products').select('id', { count: 'exact', head: true }).eq('subcategory_id', id);
+      if (used.error || Number(used.count) > 0) { alert('لا يمكن حذف تصنيف يحتوي منتجات. انقل المنتجات أو احذفها أولاً.'); return; }
+      if (!confirm('هل تريد حذف هذا التصنيف؟')) return;
+      const { error } = await supabaseClient.from('subcategories').delete().eq('id', id);
+      if (error) alert('تعذر حذف التصنيف.');
+      else await loadData();
+    }
+
+    init();
+  </script>
+</body>
+</html>

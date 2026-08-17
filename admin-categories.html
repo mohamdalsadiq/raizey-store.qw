@@ -64,8 +64,9 @@
     <a href="admin.html">الرئيسية</a>
     <a href="admin-orders.html">الطلبات</a>
     <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html">المنتجات</a>
-    <a href="admin-categories.html" class="active">التصنيفات</a>
+    <a href="admin-categories.html" class="active">إدارة الأقسام</a>
+    <a href="admin-subcategories.html">إدارة التصنيفات</a>
+    <a href="admin-products.html">إدارة المنتجات والباقات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-staff.html">المشرفون</a>
@@ -73,7 +74,7 @@
     <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
-  <p class="admin-page-hint">أنشئ أقسام المتجر مثل الألعاب والاشتراكات والبطاقات، ثم أضف الباقات والخدمات داخل كل قسم من صفحة إدارة الباقات.</p>
+  <p class="admin-page-hint">أنشئ الأقسام الرئيسية مثل الألعاب والاشتراكات والبطاقات، ثم أضف التصنيفات والباقات داخل كل قسم من صفحة إدارة التصنيفات.</p>
   <button class="add-new-btn" id="addNewBtn">+ إضافة قسم رئيسي</button>
 
   <div id="categoriesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
@@ -85,16 +86,16 @@
 
     <div class="field">
       <label>اسم القسم الرئيسي</label>
-      <input type="text" id="nameInput" placeholder="مثلاً: PUBG Mobile">
+      <input type="text" id="nameInput" placeholder="مثلاً: الألعاب أو الاشتراكات">
     </div>
 
     <div class="field">
-      <label>وصف التصنيف</label>
+      <label>وصف القسم الرئيسي</label>
       <textarea id="descriptionInput" placeholder="اكتب وصفاً مختصراً وفخماً يظهر للعملاء في صفحة الباقات..." rows="3" style="width:100%; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:8px; color:var(--ink); font-family:inherit; resize:vertical;"></textarea>
     </div>
 
     <div class="field">
-      <label>صورة التصنيف (أيقونة اللعبة)</label>
+      <label>صورة القسم أو أيقونته</label>
       <input type="file" id="imageFileInput" accept="image/*" style="background:var(--bg); border:1px solid var(--border); padding:8px; border-radius:8px; width:100%; color:var(--ink);">
       <input type="hidden" id="imageUrlInput">
       <div id="imageUploadStatus" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
