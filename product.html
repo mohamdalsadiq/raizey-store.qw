@@ -421,22 +421,32 @@ function render() {
   // --- 1. تجميع الخيارات تلقائياً حسب الفئة الأساسية ---
   groupedOptions = {};
   if (hasOptions()) {
+    const fallbackGroup = String(product.name || 'الباقة').split(' - ')[0].trim() || 'الباقة';
+    let hasExplicitGroup = false;
     product.options.forEach(opt => {
-      let cat = 'الخيارات المتاحة';
-      let label = String(opt.label || 'خيار');
-      // إذا كان الاسم يحتوي على " - "، نقسمه (فئة - خيار)
+      let cat = '';
+      let label = String(opt.label || 'خيار').trim();
+      // الصيغة المحفوظة من الأدمن: الخيار الأساسي - الخيار الفرعي الإجباري
       if (label.includes(' - ')) {
         const parts = label.split(' - ');
-        cat = parts[0].trim();
-        label = parts.slice(1).join(' - '); 
+        cat = parts.shift().trim();
+        label = parts.join(' - ').trim();
+        hasExplicitGroup = true;
       } else if (label.includes('-')) {
         const parts = label.split('-');
-        cat = parts[0].trim();
-        label = parts.slice(1).join('-');
+        cat = parts.shift().trim();
+        label = parts.join('-').trim();
+        hasExplicitGroup = true;
       }
-      if (!groupedOptions[cat]) groupedOptions[cat] = [];
-      groupedOptions[cat].push({ ...opt, display_label: label });
+      const group = cat || fallbackGroup;
+      if (!groupedOptions[group]) groupedOptions[group] = [];
+      groupedOptions[group].push({ ...opt, display_label: label, required: true });
     });
+    // يضمن للبيانات القديمة ظهور مستوى أساسي واضح بدل "الخيارات المتاحة".
+    if (!hasExplicitGroup && Object.keys(groupedOptions).length === 1) {
+      const onlyOptions = Object.values(groupedOptions)[0];
+      groupedOptions = { [fallbackGroup]: onlyOptions };
+    }
   }
 
   const mainCategories = Object.keys(groupedOptions);
@@ -466,12 +476,12 @@ function render() {
       </div>
       <div class="main-category-grid" id="mainCategoryGrid">
         ${mainCategories.map(cat => `
-          <div class="main-cat-btn" data-main-cat="${escapeAttribute(cat)}">
+          <button type="button" class="main-cat-btn" data-main-cat="${escapeAttribute(cat)}" aria-label="اختيار ${escapeAttribute(cat)}">
             ${escapeHtml(cat)}
-          </div>
+          </button>
         `).join('')}
       </div>
-      <div class="options-hint" id="mainHint">اختر الباقة لعرض الخيارات المتاحة</div>
+      <div class="options-hint" id="mainHint">اختر الخيار الأساسي لعرض الخيارات الفرعية الإلزامية</div>
     `;
   }
 
@@ -479,7 +489,7 @@ function render() {
   if (hasOptions()) {
     htmlContent += `
       <div class="section-label" style="display:none;" id="subLabel">
-        <i class="fas fa-list-check" style="color:var(--accent-gold);"></i> اختر الخيار المطلوب:
+        <i class="fas fa-list-check" style="color:var(--accent-gold);"></i> اختر الخيار الفرعي الإجباري:
       </div>
       <div class="sub-options-grid" id="subOptionsGrid"></div>
     `;
@@ -487,13 +497,6 @@ function render() {
 
   // باقي محتوى الصفحة
   htmlContent += `
-    ${product.instructions ? `
-      <div class="product-instructions-box">
-        <div class="product-instructions-title"><i class="fas fa-circle-info"></i> تفاصيل وطريقة استلام المنتج:</div>
-        ${escapeHtml(product.instructions).replace(/\n/g, '<br>')}
-      </div>
-    ` : ''}
-
     ${fields.length > 0 ? `
       <div class="section-label"><i class="fas fa-pen-to-square" style="color:var(--accent-gold);"></i> بيانات الطلب</div>
       ${fields.map(f => `
@@ -523,6 +526,13 @@ function render() {
     <button class="auth-btn product-confirm-btn" id="confirmPurchaseBtn"><i class="fas fa-arrow-left" aria-hidden="true"></i> تأكيد الشراء والمتابعة للدفع</button>
     <button class="btn-secondary-cart" id="addToCartBtn"><i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة</button>
     <p class="product-checkout-hint"><i class="fas fa-shield-halved" aria-hidden="true"></i> ستكمل فحص الإيصال واختيار طريقة الدفع في صفحة تأكيد الدفع.</p>
+
+    ${product.instructions ? `
+      <div class="product-instructions-box">
+        <div class="product-instructions-title"><i class="fas fa-circle-info" aria-hidden="true"></i> تفاصيل وطريقة استلام المنتج:</div>
+        ${escapeHtml(product.instructions).replace(/\n/g, '<br>')}
+      </div>
+    ` : ''}
   `;
 
   content.innerHTML = htmlContent;
@@ -583,7 +593,7 @@ function attachEvents() {
         selectedOption = null;
         mainGrid.querySelectorAll('.main-cat-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        if (mainHint) { mainHint.classList.remove('error'); mainHint.textContent = 'اختر الخيار المطلوب من القائمة'; }
+        if (mainHint) { mainHint.classList.remove('error'); mainHint.textContent = 'اختر الخيار الفرعي الإجباري من القائمة'; }
         const subOptions = groupedOptions[cat] || [];
         if (subLabel) subLabel.style.display = subOptions.length ? 'flex' : 'none';
         if (subGrid) {
@@ -691,7 +701,7 @@ function validateSelection(errorBox) {
   }
   // إذا كانت الفئة تحتوي على خيارات فرعية، أو كانت فئة واحدة، نتحقق من اختيار خيار.
   if (hasOptions() && !selectedOption) {
-    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الخيار المطلوب أولاً.';
+    errorBox.style.color = 'var(--danger)'; errorBox.textContent = 'يرجى اختيار الخيار الفرعي الإجباري أولاً.';
     document.getElementById('subOptionsGrid')?.classList.add('selection-shake');
     setTimeout(() => document.getElementById('subOptionsGrid')?.classList.remove('selection-shake'), 500); return false;
   }

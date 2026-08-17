@@ -104,7 +104,7 @@
 
       <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
         <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
-          أدخل الخيارات وسعر كل خيار ($). يمكنك كتابة الاسم "فئة - خيار" لتقسيمها لمرحلتين، أو كتابة الاسم مباشرة لتظهر مباشرة.
+          أنشئ الخيار الأساسي مثل «RedotPay»، ثم اكتب تحته الخيار الفرعي الإجباري مثل «حساب موثق فقط». لن يستطيع العميل إكمال الطلب قبل اختيار خيار فرعي.
         </label>
         <div id="optionsBuilder"></div>
         <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top: 8px;">
@@ -198,7 +198,7 @@ async function init() {
   document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', '', ''));
 
   hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
-  addOptionBtn.addEventListener('click', () => addOptionRow('', '', ''));
+  addOptionBtn.addEventListener('click', () => addOptionRow('', '', '', ''));
   [priceInput, discountPercentInput, flashSaleEndsInput].forEach(input => input.addEventListener('input', updateOfferPreview));
 
   const fileBox = document.getElementById('fileUploadBox');
@@ -232,23 +232,32 @@ function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
   // التحقق: لا نضيف صفوفاً فارغة إلا إذا لم يكن هناك خيارات حالية
   if (show && optionsBuilder.children.length === 0) {
-    addOptionRow('', '', '');
-    addOptionRow('', '', '');
+    addOptionRow('', '', '', '');
+    addOptionRow('', '', '', '');
   }
 }
 
-function addOptionRow(label = '', price = '', id = '') {
+function addOptionRow(label = '', price = '', id = '', group = '') {
   const row = document.createElement('div');
   row.className = 'option-row';
   row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
   
-  const cleanLabel = (label || '').replace(/"/g, '&quot;');
+  let optionGroup = String(group || '').trim();
+  let optionLabel = String(label || '').trim();
+  if (!optionGroup && optionLabel.includes(' - ')) {
+    const parts = optionLabel.split(' - ');
+    optionGroup = parts.shift().trim();
+    optionLabel = parts.join(' - ').trim();
+  }
+  const cleanGroup = optionGroup.replace(/"/g, '&quot;');
+  const cleanLabel = optionLabel.replace(/"/g, '&quot;');
   const safeId = id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
 
   row.innerHTML = `
     <input type="hidden" class="opt-id" value="${safeId}">
-    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
-    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
+    <input type="text" placeholder="الخيار الأساسي (مثلاً: RedotPay)" class="opt-group" value="${cleanGroup}" style="flex: 1.2; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
+    <input type="text" placeholder="الخيار الفرعي الإجباري (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 1.8; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
+    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: .8; min-width:90px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;" required>
     <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
@@ -262,13 +271,15 @@ function collectOptions() {
 
   rows.forEach((row) => {
     const id = row.querySelector('.opt-id').value;
+    const group = row.querySelector('.opt-group').value.trim();
     const label = row.querySelector('.opt-label').value.trim();
     const price = parseFloat(row.querySelector('.opt-price').value) || 0;
-    if (label) {
+    if (group && label) {
       options.push({
-        id: id,
-        label: label,
-        price_usd: price
+        id,
+        label: `${group} - ${label}`,
+        price_usd: price,
+        required: true
       });
     }
   });
@@ -375,7 +386,7 @@ function openForm(id) {
     if (Array.isArray(p.options) && p.options.length > 0) {
       hasOptionsToggle.checked = true;
       optionsContainer.style.display = 'block'; // إظهار الحاوية بدون استدعاء دالة الإضافة الفارغة
-      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
+      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id, opt.group || opt.main_category || ''));
     } else {
       hasOptionsToggle.checked = false;
       optionsContainer.style.display = 'none';
