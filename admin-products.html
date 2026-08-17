@@ -93,24 +93,22 @@
       <div id="offerPreview" style="font-size:12px;color:var(--text-muted);margin-top:7px;">عند إدخال نسبة الخصم وتاريخ النهاية سيظهر العرض تلقائيًا أعلى المتجر.</div>
     </div>
 
-    <!-- الخيارات التفصيلية اختيارية، ولا تُفرض على المنتج البسيط -->
-    <div class="field" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <label style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
-          <i class="fas fa-list-check" style="color: var(--primary);"></i>
-          إضافة خيارات الشراء التفصيلية
+    <!-- الخيارات الشرطية: لا تُنشأ ولا تُفرض إلا بتحكم صريح من الأدمن -->
+    <div class="field" style="margin-top:15px;border-top:1px dashed var(--border);padding-top:15px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;">
+        <label style="font-weight:800;margin:0;color:var(--ink);display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-sitemap" style="color:var(--primary);"></i> خيارات إضافية مشروطة
         </label>
-        <input type="checkbox" id="hasOptionsToggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+        <input type="checkbox" id="hasOptionsToggle" aria-label="تفعيل الخيارات الإضافية" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary);">
       </div>
-
-      <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
-        <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
-          اختياري: فعّل هذا القسم فقط إذا كان المنتج يحتاج Product Variants. المنتج العادي يمكن حفظه بسعره الأساسي وبدون أي خيارات.
+      <div id="optionsContainer" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;margin-bottom:12px;color:var(--ink);">
+          <input type="checkbox" id="optionsRequiredToggle" style="margin-top:2px;accent-color:var(--primary);">
+          <span>الخيارات الفرعية إجبارية — لن يستطيع العميل الإكمال قبل اختيار المسار المطلوب.</span>
         </label>
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.55;margin:0 0 12px;">أضف مجموعة مثل «نوع الحساب»، ثم خياراتها مثل «موثق». يمكن لكل خيار أن يحتوي خيارات فرعية بأسعار مستقلة. السعر النهائي هو سعر آخر اختيار.</p>
         <div id="optionsBuilder"></div>
-        <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top: 8px;">
-          <i class="fas fa-plus"></i> إضافة خيار جديد
-        </button>
+        <button class="add-field-btn" id="addOptionBtn" type="button" style="margin-top:8px;"><i class="fas fa-plus"></i> إضافة مجموعة خيارات</button>
       </div>
     </div>
 
@@ -171,6 +169,7 @@ const formError = document.getElementById('formError');
 const fieldsBuilder = document.getElementById('fieldsBuilder');
 
 const hasOptionsToggle = document.getElementById('hasOptionsToggle');
+const optionsRequiredToggle = document.getElementById('optionsRequiredToggle');
 const optionsContainer = document.getElementById('optionsContainer');
 const optionsBuilder = document.getElementById('optionsBuilder');
 const addOptionBtn = document.getElementById('addOptionBtn');
@@ -199,7 +198,7 @@ async function init() {
   document.getElementById('addFieldBtn').addEventListener('click', () => addFieldRow('', '', ''));
 
   hasOptionsToggle.addEventListener('change', () => toggleOptionsSection(hasOptionsToggle.checked));
-  addOptionBtn.addEventListener('click', () => addOptionRow('', '', '', ''));
+  addOptionBtn.addEventListener('click', () => addOptionGroup());
   [priceInput, discountPercentInput, flashSaleEndsInput].forEach(input => input.addEventListener('input', updateOfferPreview));
 
   const fileBox = document.getElementById('fileUploadBox');
@@ -229,58 +228,106 @@ async function init() {
   await loadProducts();
 }
 
+function makeId(prefix = 'option') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+function escapeInput(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
+  if (!show) optionsRequiredToggle.checked = false;
 }
-
-function addOptionRow(label = '', price = '', id = '', group = '') {
+function addOptionGroup(group = {}) {
+  const groupRow = document.createElement('div');
+  groupRow.className = 'option-group-row';
+  groupRow.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px;background:var(--bg-card);';
+  groupRow.dataset.groupId = group.id || makeId('group');
+  groupRow.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:9px;">
+      <input class="option-group-label" type="text" placeholder="اسم المجموعة (مثلاً: نوع الحساب)" value="${escapeInput(group.label)}" style="min-width:0;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--font-display);">
+      <button type="button" class="remove-option-group" aria-label="حذف مجموعة الخيارات" style="background:var(--danger,#e5484d);color:#fff;border:0;border-radius:8px;padding:10px;cursor:pointer;"><i class="fas fa-trash-can"></i></button>
+    </div>
+    <div class="option-items"></div>
+    <button type="button" class="add-child-option add-field-btn" style="font-size:12px;padding:8px 10px;"><i class="fas fa-plus"></i> إضافة خيار رئيسي</button>`;
+  groupRow.querySelector('.remove-option-group').addEventListener('click', () => groupRow.remove());
+  groupRow.querySelector('.add-child-option').addEventListener('click', () => addOptionItem(groupRow.querySelector('.option-items')));
+  optionsBuilder.appendChild(groupRow);
+  (Array.isArray(group.options) ? group.options : []).forEach(option => addOptionItem(groupRow.querySelector('.option-items'), option));
+  if (!group.options?.length) addOptionItem(groupRow.querySelector('.option-items'));
+}
+function addOptionItem(container, option = {}) {
   const row = document.createElement('div');
-  row.className = 'option-row';
-  row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
-  
-  let optionGroup = String(group || '').trim();
-  let optionLabel = String(label || '').trim();
-  if (!optionGroup && optionLabel.includes(' - ')) {
-    const parts = optionLabel.split(' - ');
-    optionGroup = parts.shift().trim();
-    optionLabel = parts.join(' - ').trim();
-  }
-  const cleanGroup = optionGroup.replace(/"/g, '&quot;');
-  const cleanLabel = optionLabel.replace(/"/g, '&quot;');
-  const safeId = id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-
+  row.className = 'option-item-row';
+  row.style.cssText = 'border-top:1px dashed var(--border);padding-top:9px;margin-top:9px;';
+  row.dataset.optionId = option.id || makeId('option');
   row.innerHTML = `
-    <input type="hidden" class="opt-id" value="${safeId}">
-    <input type="text" placeholder="المجموعة (اختياري، مثلاً: RedotPay)" class="opt-group" value="${cleanGroup}" style="flex: 1.2; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
-    <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 1.8; min-width:0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color:var(--ink); font-family:var(--font-display); font-size: 13px;">
-    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: .8; min-width:90px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family:var(--font-display); font-size: 13px;">
-    <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
-  `;
-  row.querySelector('button').addEventListener('click', () => row.remove());
-  optionsBuilder.appendChild(row);
+    <div style="display:grid;grid-template-columns:1fr 100px auto;gap:7px;align-items:center;">
+      <input class="option-label" type="text" placeholder="الخيار (مثلاً: حساب موثق)" value="${escapeInput(option.label)}" style="min-width:0;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--font-display);">
+      <input class="option-price" type="number" min="0" step="0.01" placeholder="USD" value="${Number.isFinite(Number(option.price_usd)) ? option.price_usd : ''}" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--font-mono);">
+      <button type="button" class="remove-option-item" aria-label="حذف الخيار" style="background:transparent;color:var(--danger,#e5484d);border:0;padding:8px;cursor:pointer;"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="option-children" style="display:none;margin-top:8px;padding-right:12px;border-right:2px solid rgba(255,106,26,.25);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;"><small style="color:var(--text-muted);">خيارات فرعية لهذا الخيار</small><button type="button" class="add-grandchild add-field-btn" style="font-size:11px;padding:6px 8px;">+ إضافة فرعي</button></div>
+      <div class="grandchildren"></div>
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:6px;margin-top:7px;color:var(--text-muted);font-size:11px;"><input type="checkbox" class="has-children" ${Array.isArray(option.children) && option.children.length ? 'checked' : ''}> يحتوي خيارات فرعية</label>`;
+  const children = row.querySelector('.option-children');
+  const childrenBox = row.querySelector('.grandchildren');
+  const toggle = () => { children.style.display = row.querySelector('.has-children').checked ? 'block' : 'none'; };
+  row.querySelector('.has-children').addEventListener('change', toggle);
+  row.querySelector('.add-grandchild').addEventListener('click', () => addGrandchild(childrenBox));
+  row.querySelector('.remove-option-item').addEventListener('click', () => row.remove());
+  container.appendChild(row);
+  (Array.isArray(option.children) ? option.children : []).forEach(child => addGrandchild(childrenBox, child));
+  toggle();
 }
-
-function collectOptions() {
+function addGrandchild(container, child = {}) {
+  const row = document.createElement('div'); row.className = 'grandchild-row'; row.style.cssText = 'display:grid;grid-template-columns:1fr 92px auto;gap:6px;align-items:center;margin-bottom:7px;';
+  row.dataset.optionId = child.id || makeId('child');
+  row.innerHTML = `<input class="child-label" type="text" placeholder="الخيار الفرعي (مثلاً: ببطاقة فيزا)" value="${escapeInput(child.label)}" style="min-width:0;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-size:12px;"><input class="child-price" type="number" min="0" step="0.01" placeholder="USD" value="${Number.isFinite(Number(child.price_usd)) ? child.price_usd : ''}" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:var(--font-mono);font-size:12px;"><button type="button" aria-label="حذف الخيار الفرعي" style="background:transparent;color:var(--danger,#e5484d);border:0;padding:7px;cursor:pointer;"><i class="fas fa-xmark"></i></button>`;
+  row.querySelector('button').addEventListener('click', () => row.remove()); container.appendChild(row);
+}
+function collectOptionTree() {
   if (!hasOptionsToggle.checked) return [];
-  const rows = optionsBuilder.querySelectorAll('.option-row');
-  const options = [];
-
-  rows.forEach((row) => {
-    const id = row.querySelector('.opt-id').value;
-    const group = row.querySelector('.opt-group').value.trim();
-    const label = row.querySelector('.opt-label').value.trim();
-    const price = parseFloat(row.querySelector('.opt-price').value) || 0;
-    if (group && label) {
-      options.push({
-        id,
-        label: `${group} - ${label}`,
-        price_usd: price,
-        required: true
+  const tree = [];
+  optionsBuilder.querySelectorAll('.option-group-row').forEach(groupRow => {
+    const label = groupRow.querySelector('.option-group-label').value.trim();
+    if (!label) return;
+    const options = [];
+    groupRow.querySelectorAll(':scope > .option-items > .option-item-row').forEach(optionRow => {
+      const optionLabel = optionRow.querySelector('.option-label').value.trim();
+      const price = Number(optionRow.querySelector('.option-price').value);
+      if (!optionLabel || !Number.isFinite(price) || price < 0) return;
+      const children = [];
+      optionRow.querySelectorAll('.grandchildren > .grandchild-row').forEach(childRow => {
+        const childLabel = childRow.querySelector('.child-label').value.trim();
+        const childPrice = Number(childRow.querySelector('.child-price').value);
+        if (childLabel && Number.isFinite(childPrice) && childPrice >= 0) children.push({ id: childRow.dataset.optionId, label: childLabel, price_usd: childPrice, children: [] });
       });
-    }
+      options.push({ id: optionRow.dataset.optionId, label: optionLabel, price_usd: price, children });
+    });
+    if (options.length) tree.push({ id: groupRow.dataset.groupId, label, required: optionsRequiredToggle.checked, options });
   });
-
-  return options;
+  return tree;
+}
+function flattenOptionTree(tree) {
+  const rows = [];
+  (tree || []).forEach(group => (group.options || []).forEach(option => rows.push({ id: option.id, group: group.label, label: `${group.label} - ${option.label}`, price_usd: option.price_usd, required: !!group.required, children: option.children || [] })));
+  return rows;
+}
+function normalizeAdminTree(product) {
+  if (Array.isArray(product.option_tree) && product.option_tree.length) return product.option_tree;
+  const groups = new Map();
+  (Array.isArray(product.options) ? product.options : []).forEach((option, index) => {
+    let group = option.group || '';
+    let label = option.label || 'خيار';
+    if (!group && label.includes(' - ')) { const parts = label.split(' - '); group = parts.shift(); label = parts.join(' - '); }
+    group = group || 'خيارات المنتج';
+    if (!groups.has(group)) groups.set(group, { id: makeId('legacy_group'), label: group, required: true, options: [] });
+    groups.get(group).options.push({ id: option.id || makeId(`legacy_${index}`), label, price_usd: Number(option.price_usd ?? option.price) || 0, children: option.children || [] });
+  });
+  return [...groups.values()];
 }
 
 async function loadSubcategories() {
@@ -316,7 +363,7 @@ function render() {
         <div class="manage-item-name">
           ${escapeHtml(p.name)}
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
-          ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
+          ${((Array.isArray(p.option_tree) && p.option_tree.length > 0) || (Array.isArray(p.options) && p.options.length > 0)) ? `<span class="inactive-badge" style="background:rgba(59,130,246,0.12);color:#3b82f6;">خيارات ${p.options_required === false ? 'اختيارية' : 'إجبارية'}</span>` : ''}
         </div>
         <div class="manage-item-sub">${escapeHtml(p.subcategoryName || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}${p.compare_at_price_usd > p.price_usd ? ` — خصم ${Math.round((1 - Number(p.price_usd) / Number(p.compare_at_price_usd)) * 100)}%` : ''}${p.delivery_badge_text ? ` — <span style="color:var(--primary);">${escapeHtml(p.delivery_badge_text)}</span>` : ''}</div>
       </div>
@@ -382,13 +429,16 @@ function openForm(id) {
     updateOfferPreview();
     activeInput.value = String(p.is_active);
     
-    // تعبئة الخيارات الفرعية عند التعديل
-    if (Array.isArray(p.options) && p.options.length > 0) {
+    // تعبئة شجرة الخيارات الجديدة، مع قراءة آمنة للبيانات القديمة.
+    const existingTree = normalizeAdminTree(p);
+    if (existingTree.length) {
       hasOptionsToggle.checked = true;
-      optionsContainer.style.display = 'block'; // إظهار الحاوية بدون استدعاء دالة الإضافة الفارغة
-      p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id, opt.group || opt.main_category || ''));
+      optionsRequiredToggle.checked = p.options_required !== false;
+      optionsContainer.style.display = 'block';
+      existingTree.forEach(group => addOptionGroup(group));
     } else {
       hasOptionsToggle.checked = false;
+      optionsRequiredToggle.checked = false;
       optionsContainer.style.display = 'none';
     }
 
@@ -410,6 +460,7 @@ function openForm(id) {
     activeInput.value = 'true';
 
     hasOptionsToggle.checked = false;
+    optionsRequiredToggle.checked = false;
     optionsContainer.style.display = 'none';
   }
 
@@ -472,8 +523,10 @@ async function saveProduct() {
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
-    options: collectOptions(),
-    has_options: collectOptions().length > 0
+    option_tree: collectOptionTree(),
+    options_required: optionsRequiredToggle.checked && collectOptionTree().length > 0,
+    options: flattenOptionTree(collectOptionTree()),
+    has_options: collectOptionTree().length > 0
   };
 
   const { error } = editingId

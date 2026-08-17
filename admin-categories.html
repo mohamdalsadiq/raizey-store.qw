@@ -334,7 +334,7 @@ async function saveCategory() {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('متأكد عايز تحذف التصنيف ده؟ المنتجات المرتبطة بيه هتفضل بدون تصنيف.')) return;
+  if (!confirm('تأكيد حذف القسم؟ يجب نقل التصنيفات والباقات التابعة أولاً؛ قاعدة البيانات تمنع حذف قسم ما زال مرتبطًا بتصنيفات.')) return;
   await supabaseClient.from('categories').delete().eq('id', id);
   await loadCategories();
 }
