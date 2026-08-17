@@ -151,3 +151,13 @@ That exact path currently returns HTTP 404. The repository's current canonical T
 Before delivery, verify the complete request path rather than only the visual layer. Validate untrusted input at the boundary, authorize the current user or tenant, execute sensitive state changes atomically, and return only the minimum response data required by the UI. Confirm that failures are observable to developers but understandable and safe for end users.
 
 For every performance-sensitive page, verify loading, empty, error, retry, success, and disabled states. Measure representative mobile and desktop layouts, confirm that images do not cause layout shifts, and ensure keyboard, reduced-motion, and screen-reader behavior remains usable. Keep credentials out of source control and inspect the final bundle for accidental exposure before publishing.
+
+## Section 6: Data Hierarchy & E-Commerce Architecture Rules (CRITICAL)
+
+- **Strict Data Scoping:** Never merge Categories, Sub-Categories, and Multi-variant Product logic into a flat array or complex hybrid UI. Keep each level independently scoped in data fetching, state, rendering, and CRUD operations.
+- **Optional Form Fields:** Never enforce nested sub-variant dynamic inputs unless explicitly toggled by the admin user. Standard products must support simple single-price creation without mandating variants.
+- **Clean Naming Conventions:** Standardize UI terms strictly to:
+  1. `Category` (قسم رئيسي)
+  2. `Subcategory / Brand` (تصنيف / باقة)
+  3. `Product Variant` (المنتج التفصيلي والخيارات)
+- **Zero Regression Principle:** Before altering database schemas or UI controllers for catalog structures, strictly preserve independent CRUD flows for primary categories and individual products. Validate existing create, read, update, delete, selection, cart, checkout, and admin permission flows before delivery.
