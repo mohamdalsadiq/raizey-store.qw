@@ -8,6 +8,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .receipt-scan-status { margin-top:8px; color:var(--text-muted); font-size:12px; line-height:1.7; }
+  .receipt-scan-report { display:none; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; color:var(--text-muted); font-size:12px; line-height:1.8; background:var(--bg-card); }
+  .receipt-scan-report.is-success { border-color:var(--primary); }
+  .receipt-scan-report.is-review { border-color:#c98a1f; }
+  .receipt-scan-report.is-error { border-color:var(--danger); color:var(--danger); }
+  .receipt-file-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+</style>
 </head>
 <body>
 
@@ -55,10 +64,12 @@
 
     <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
     <div class="file-upload" id="fileUploadBox">
-      اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)
+      <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)</span>
       <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
     </div>
     <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
+    <div id="receiptScanStatus" class="receipt-scan-status"></div>
+    <div id="receiptScanReport" class="receipt-scan-report"></div>
 
     <div class="form-error" id="formError" style="margin-top:10px;"></div>
 
@@ -78,12 +89,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="assets/js/receipt-intel.js"></script>
+<script src="assets/js/receipt-pipeline.js"></script>
 <script>
 let currentUser = null;
 let paymentMethods = [];
 let receiptFile = null;
+let receiptAnalysis = null;
+let receiptScanContext = null;
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
+
+const ocrStatusLabels = {
+  passed: 'فحص آلي ناجح',
+  needs_admin_check: 'مقبول ويحتاج مراجعة الإدارة',
+  needs_review: 'قيد المراجعة اليدوية',
+  rejected: 'مرفوض'
+};
 
 const txSourceLabels = {
   topup_confirmed: 'شحن رصيد مؤكد',
@@ -149,25 +172,136 @@ async function init() {
   fileBox.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
     fileError.textContent = '';
+    resetReceiptScan();
     if (fileInput.files.length === 0) return;
     const file = fileInput.files[0];
     const validation = await validateReceiptImage(file);
     if (!validation.valid) {
       fileInput.value = '';
       receiptFile = null;
-      fileBox.textContent = 'اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+      document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
       fileBox.classList.remove('has-file');
       fileError.textContent = validation.message;
       return;
     }
     receiptFile = file;
-    // textContent آمن أصلاً — استخدام escapeHtml معه يسبب ترميزاً مزدوجاً
-    fileBox.textContent = receiptFile.name;
+    document.getElementById('receiptFileLabel').textContent = receiptFile.name;
     fileBox.classList.add('has-file');
+    await runWalletReceiptScan();
+  });
+
+  ['amountInput', 'transactionRefInput'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', () => {
+      if (receiptAnalysis) resetReceiptScan('غيّرت بيانات التحويل؛ ارفع الإيصال من جديد للفحص.');
+    });
+  });
+  document.getElementById('methodSelect').addEventListener('change', () => {
+    if (receiptAnalysis) resetReceiptScan('غيّرت وسيلة التحويل؛ ارفع الإيصال من جديد للفحص.');
   });
 
   document.getElementById('submitTopupBtn').addEventListener('click', submitTopup);
   document.getElementById('redeemGiftBtn').addEventListener('click', redeemGiftCard);
+}
+
+function resetReceiptScan(message) {
+  receiptAnalysis = null;
+  receiptScanContext = null;
+  const status = document.getElementById('receiptScanStatus');
+  const report = document.getElementById('receiptScanReport');
+  if (status) status.textContent = message || '';
+  if (report) { report.hidden = true; report.style.display = 'none'; report.className = 'receipt-scan-report'; report.innerHTML = ''; }
+}
+
+function isTechnicalReceiptReview(analysis) {
+  const technicalFlags = [
+    'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
+    'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
+    'ui_scan_timeout', 'engine_missing', 'server_ocr_failed', 'server_ocr_timeout',
+    'gemini_not_configured', 'judge_error', 'missing_image', 'image_too_large'
+  ];
+  return analysis && analysis.decision === 'review' &&
+    (analysis.riskFlags || []).some((flag) => technicalFlags.includes(flag));
+}
+
+function receiptAnalysisAllowed(analysis) {
+  if (!analysis || analysis.decision === 'reject') return false;
+  const verified = (analysis.decision === 'accept' || analysis.decision === 'review_admin') &&
+    analysis.refVerified === true && analysis.amountVerified === true;
+  return verified || isTechnicalReceiptReview(analysis);
+}
+
+function renderWalletScanReport(analysis, amount, manualRef) {
+  const report = document.getElementById('receiptScanReport');
+  if (!report) return;
+  const extracted = analysis.extracted || {};
+  const rows = [
+    `المبلغ المطلوب: ${formatSDG(amount)} ج.س`,
+    `رقم العملية المدخل: ${manualRef}`,
+    `رقم العملية المقروء: ${extracted.txRef || 'لم يُقرأ'}`,
+    `المبلغ المقروء: ${extracted.amount ? formatSDG(extracted.amount) + ' ج.س' : 'لم يُقرأ'}`,
+    `مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`,
+    `مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`
+  ];
+  const technicalReview = isTechnicalReceiptReview(analysis);
+  report.className = 'receipt-scan-report ' + (technicalReview ? 'is-review' : receiptAnalysisAllowed(analysis) ? 'is-success' : 'is-error');
+  report.style.display = 'block';
+  report.hidden = false;
+  report.innerHTML = `<strong><i class="fas ${technicalReview ? 'fa-clock' : receiptAnalysisAllowed(analysis) ? 'fa-circle-check' : 'fa-circle-xmark'}"></i> ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top:7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
+}
+
+async function runWalletReceiptScan() {
+  const status = document.getElementById('receiptScanStatus');
+  const errorBox = document.getElementById('formError');
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const manualRef = document.getElementById('transactionRefInput').value.trim();
+  const method = paymentMethods.find((item) => item.id === document.getElementById('methodSelect').value);
+  errorBox.textContent = '';
+  if (!Number.isFinite(amount) || amount <= 0) { errorBox.textContent = 'أدخل المبلغ قبل فحص الإيصال.'; return; }
+  if (!manualRef || manualRef.length < 6) { errorBox.textContent = 'اكتب رقم العملية (6 خانات على الأقل) قبل فحص الإيصال.'; return; }
+  status.textContent = 'جارِ بدء الفحص الذكي...';
+  try {
+    const analysis = await RaizeyReceiptPipeline.analyze(receiptFile, {
+      expectedAmount: amount,
+      manualRef,
+      expectedAccount: method ? method.account_number : null,
+      onStatus: (text) => { status.textContent = text; },
+      onServerError: (error) => { status.textContent = 'تعذّر فحص الخادم؛ جارِ تشغيل الفحص الاحتياطي...'; console.warn('[RAIZEY] wallet server scan fallback:', error?.message || error); },
+      onClientError: (error) => { console.warn('[RAIZEY] wallet browser scan failed:', error?.message || error); }
+    });
+    receiptAnalysis = analysis;
+    receiptScanContext = { amount, manualRef };
+    renderWalletScanReport(analysis, amount, manualRef);
+    if (!receiptAnalysisAllowed(analysis)) {
+      status.textContent = 'لم يتم اعتماد الإيصال. راجع التقرير وارفع صورة أوضح.';
+      receiptAnalysis = null;
+      return;
+    }
+    status.textContent = isTechnicalReceiptReview(analysis)
+      ? 'تم استلام الإيصال؛ سيُراجع يدويًا من الإدارة قبل اعتماد الشحن.'
+      : 'تمت مطابقة الإيصال. يمكنك إرسال طلب الشحن الآن.';
+  } catch (error) {
+    receiptAnalysis = null;
+    status.textContent = 'تعذر تشغيل الفحص الذكي؛ أعد اختيار الصورة.';
+    errorBox.textContent = 'تعذر فحص الإيصال الآن. لم يُرسل أي طلب؛ حاول مرة أخرى.';
+    console.warn('[RAIZEY] wallet receipt pipeline error:', error?.message || error);
+  }
+}
+
+async function checkUnifiedTransactionRef(transactionRef) {
+  const { data, error } = await supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: transactionRef });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return !!row && row.available !== false;
+}
+
+function walletReceiptErrorMessage(error) {
+  const raw = String(error?.message || error?.hint || error?.details || error || '');
+  if (raw.includes('duplicate_transaction_ref')) return 'رقم العملية هذا مستخدم في طلب شحن أو طلب شراء سابق.';
+  if (raw.includes('duplicate_receipt_image')) return 'صورة الإيصال هذه مستخدمة في طلب سابق.';
+  if (raw.includes('receipt_rejected')) return 'تم رفض الإيصال من الفحص الذكي. ارفع صورة إشعار صحيحة.';
+  if (raw.includes('create_wallet_topup_from_receipt') || raw.includes('PGRST202') || raw.includes('42883')) return 'تحتاج قاعدة البيانات لتطبيق ملف supabase-SQL-المهمة-3.sql.';
+  if (raw.includes('auth_required')) return 'انتهت جلسة الدخول؛ سجّل الدخول من جديد ثم أعد المحاولة.';
+  return getFriendlyError(raw);
 }
 
 async function redeemGiftCard() {
@@ -375,6 +509,10 @@ async function submitTopup() {
     errorBox.textContent = 'ارفع صورة الإيصال';
     return;
   }
+  if (!receiptAnalysis || !receiptAnalysisAllowed(receiptAnalysis)) {
+    errorBox.textContent = 'انتظر اكتمال فحص الإيصال قبل إرسال طلب الشحن.';
+    return;
+  }
   const transactionRef = document.getElementById('transactionRefInput').value.trim();
   if (!transactionRef) {
     errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
@@ -410,10 +548,16 @@ async function submitTopup() {
     return;
   }
 
-  const [isDuplicateHash, isDuplicateRef] = await Promise.all([
-    checkDuplicateReceipt('wallet_topups', receiptHash),
-    checkDuplicateTransactionRef('wallet_topups', transactionRef)
-  ]);
+  let isDuplicateRef = false;
+  try {
+    isDuplicateRef = !(await checkUnifiedTransactionRef(transactionRef));
+  } catch (error) {
+    errorBox.textContent = 'تعذر التحقق من رقم العملية عبر قاعدة البيانات. حاول مرة أخرى قبل إرسال الطلب.';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال طلب الشحن';
+    return;
+  }
+  const isDuplicateHash = await checkDuplicateReceipt('wallet_topups', receiptHash);
 
   if (isDuplicateHash || isDuplicateRef) {
     try {
@@ -459,25 +603,42 @@ async function submitTopup() {
     return;
   }
 
-  // ── إدخال طلب الشحن ──
+  // ── حجز الإيصال وإنشاء طلب الشحن في RPC موحّد ──
   try {
-    const { error } = await supabaseClient.from('wallet_topups').insert({
-      user_id:               currentUser.id,
-      amount,
-      payment_method_id:     methodId,
-      receipt_url:           signedData.signedUrl,
-      receipt_hash:          receiptHash,
-      transaction_reference: transactionRef,
-      status:                'pending',
+    const scan = receiptAnalysis || {};
+    const extracted = scan.extracted || {};
+    const { error } = await supabaseClient.rpc('create_wallet_topup_from_receipt', {
+      p_amount: amount,
+      p_payment_method_id: methodId,
+      p_receipt_url: signedData.signedUrl,
+      p_tx_ref: transactionRef,
+      p_receipt_hash: receiptHash,
+      p_receipt_path: filePath,
+      p_provider: scan.provider || scan.providerName || null,
+      p_amount_detected: extracted.amount || null,
+      p_tx_ref_ocr: extracted.txRef || null,
+      p_ocr_status: scan.ocrStatus || (isTechnicalReceiptReview(scan) ? 'needs_review' : 'needs_admin_check'),
+      p_ocr_confidence: scan.confidence ?? null,
+      p_risk_flags: scan.riskFlags || [],
+      p_ocr_data: Object.assign({}, extracted, {
+        engine_version: scan.version || null,
+        engine_source: scan.source || 'receipt-pipeline',
+        provider_name: scan.providerName || null,
+        language: scan.language || null,
+        passes: scan.passes || 0,
+        text_length: scan.textLength || 0,
+        ref_verified: !!scan.refVerified,
+        amount_verified: !!scan.amountVerified,
+        decision: scan.decision || null,
+        scan_message: scan.message || null
+      })
     });
-
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
   } catch (e) {
+    try { await supabaseClient.storage.from('receipts').remove([filePath]); } catch (_) {}
     const errMsg = e.message || String(e);
-    devWarn('[RAIZEY] wallet_topups insert error:', errMsg);
-    errorBox.textContent = getFriendlyError(errMsg);
+    devWarn('[RAIZEY] create_wallet_topup_from_receipt error:', errMsg);
+    errorBox.textContent = walletReceiptErrorMessage(e);
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
     return;
@@ -490,10 +651,16 @@ async function submitTopup() {
   document.getElementById('transactionRefInput').value = '';
   document.getElementById('methodDetails').innerHTML = '';
   const fBox = document.getElementById('fileUploadBox');
-  fBox.textContent = 'اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
   fBox.classList.remove('has-file');
   receiptFile = null;
+  receiptAnalysis = null;
+  receiptScanContext = null;
   document.getElementById('receiptInput').value = '';
+  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  document.getElementById('receiptScanStatus').textContent = '';
+  document.getElementById('receiptScanReport').hidden = true;
+  document.getElementById('receiptScanReport').style.display = 'none';
   submitBtn.disabled = false;
   submitBtn.textContent = 'إرسال طلب الشحن';
 
