@@ -181,9 +181,10 @@ function render() {
   }
 
   container.innerHTML = categories.map(c => {
-    const imgHtml = c.image_url 
-      ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
-      : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad"></i></div>`;
+    const imageUrl = sanitizeUrl(c.image_url);
+    const imgHtml = imageUrl
+      ? `<img src="${escapeAttribute(imageUrl)}" class="category-thumb" alt="${escapeAttribute(c.name)}" loading="lazy">`
+      : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad" aria-hidden="true"></i></div>`;
 
     return `
       <div class="manage-item">
@@ -191,17 +192,17 @@ function render() {
           ${imgHtml}
           <div class="category-meta-text">
             <div class="manage-item-name">
-              ${c.name}
+              ${escapeHtml(c.name)}
               ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
             </div>
-            <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
+            <div class="manage-item-sub">ترتيب: ${Number(c.display_order) || 0} — عمولة: ${Number(c.commission_percent) || 0}%</div>
           </div>
         </div>
         <div class="manage-item-actions">
-          <button data-action="edit" data-id="${c.id}" class="admin-action-btn" title="تعديل">
+          <button data-action="edit" data-id="${escapeAttribute(c.id)}" class="admin-action-btn" title="تعديل">
             <i class="fas fa-pen" style="color:var(--text-muted);"></i>
           </button>
-          <button data-action="delete" data-id="${c.id}" class="admin-action-btn" title="حذف">
+          <button data-action="delete" data-id="${escapeAttribute(c.id)}" class="admin-action-btn" title="حذف">
             <i class="fas fa-trash-can" style="color:var(--danger);"></i>
           </button>
         </div>

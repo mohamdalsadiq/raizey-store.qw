@@ -9,6 +9,15 @@
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .catalog-admin-panel { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:0 0 24px; }
+  .catalog-admin-link { display:flex; align-items:center; gap:10px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--bg-card); color:var(--ink); text-decoration:none; font-weight:800; transition:.2s ease; }
+  .catalog-admin-link:hover,.catalog-admin-link:focus-visible { border-color:var(--primary); transform:translateY(-1px); outline:none; }
+  .catalog-admin-link i { color:var(--primary); font-size:18px; }
+  .catalog-admin-link small { display:block; margin-top:3px; color:var(--text-muted); font-size:11px; font-weight:600; }
+  @media (max-width:420px) { .catalog-admin-panel { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 
@@ -60,6 +69,12 @@
       <div class="stat-card-label">عدد المنتجات</div>
       <div class="stat-card-value" id="statProducts">...</div>
     </div>
+  </div>
+
+  <div class="admin-section-title">كتالوج المتجر</div>
+  <div class="catalog-admin-panel" aria-label="إدارة كتالوج المتجر">
+    <a class="catalog-admin-link" href="admin-categories.html"><i class="fas fa-layer-group" aria-hidden="true"></i><span>إدارة الأقسام<small>الاسم، الصورة، الترتيب، والتفعيل</small></span></a>
+    <a class="catalog-admin-link" href="admin-products.html"><i class="fas fa-box-open" aria-hidden="true"></i><span>إدارة المنتجات<small>الربط، الأسعار، وشارة التسليم</small></span></a>
   </div>
 
   <div class="admin-section-title">المبيعات آخر 7 أيام</div>

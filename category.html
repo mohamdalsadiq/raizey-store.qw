@@ -27,6 +27,8 @@
   .trust-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
   .trust-badge-item { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--ink); }
   .trust-badge-item i { color: var(--primary); font-size: 13px; }
+  .trust-badge-item.delivery-badge { border-color: rgba(255,106,26,.35); background: rgba(255,106,26,.06); }
+  .trust-badge-item[hidden] { display: none; }
   .category-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; }
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 12px; }
 
@@ -187,7 +189,7 @@ function render() {
     </div>
 
     <div class="trust-badges">
-      <span class="trust-badge-item"><i class="fas fa-bolt"></i> تسليم فوري ومضمون 100%</span>
+      <span class="trust-badge-item delivery-badge" id="deliveryBadge" hidden><i class="fas fa-bolt"></i><span class="delivery-badge-text"></span></span>
       <span class="trust-badge-item"><i class="fas fa-shield-halved"></i> دفع آمن وموثوق</span>
       <span class="trust-badge-item"><i class="fas fa-headset"></i> دعم فني على مدار الساعة</span>
     </div>
@@ -273,6 +275,19 @@ function attachEvents() {
   const errorBox = document.getElementById('formError');
   const addToCartBtn = document.getElementById('addToCartBtn');
   const buyNowBtn = document.getElementById('buyNowBtn');
+  const deliveryBadge = document.getElementById('deliveryBadge');
+  const deliveryBadgeText = deliveryBadge?.querySelector('.delivery-badge-text');
+
+  function updateDeliveryBadge(product) {
+    const text = typeof product?.delivery_badge_text === 'string'
+      ? product.delivery_badge_text.trim().slice(0, 120)
+      : '';
+    if (!deliveryBadge || !deliveryBadgeText) return;
+    deliveryBadge.hidden = !text;
+    deliveryBadgeText.textContent = text;
+  }
+
+  updateDeliveryBadge(variants[0]);
 
   function updateLiveCalculations() {
     const total = getCurrentPriceSDG() * selectedQty;
@@ -298,7 +313,8 @@ function attachEvents() {
       
       const index = parseInt(btn.dataset.index);
       selectedMainProduct = variants[index];
-      selectedSubOption = null; 
+      selectedSubOption = null;
+      updateDeliveryBadge(selectedMainProduct);
       
       // جلب الخيارات الفرعية الخاصة بهذا المنتج
       const subContainer = document.getElementById('subOptionsContainer');
