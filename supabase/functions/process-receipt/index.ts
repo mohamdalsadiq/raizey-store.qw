@@ -2,10 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 
+// نماذج Vision مستقرة ومتاحة عبر Gemini API؛ نبدأ بالنموذج الرسمي المتوازن.
 const GEMINI_MODELS = [
-  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
   "gemini-3-flash-preview",
-  "gemini-3.6-flash",
 ];
 const GEMINI_TIMEOUT_MS = 24_000;
 const MAX_IMAGE_BYTES = 3.2 * 1024 * 1024;
@@ -329,6 +330,8 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       rawText += `\n${second.text}`;
     }
   } catch (error) {
+    const safeError = String((error as any)?.message || "unknown").replace(/\s+/g, " ").slice(0, 240);
+    console.error("[RAIZEY] Gemini receipt OCR failed", safeError);
     if ((error as any)?.code === "no_visible_text") {
       const rejected = ReceiptJudgeCore.blankResult() as ScanResult;
       rejected.decision = "reject";
@@ -345,6 +348,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       String((error as any)?.message || "").startsWith("timeout:") ? "server_ocr_timeout" : "server_ocr_failed",
       "تعذّر تشغيل الفحص الخادمي مؤقتاً. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.",
     );
+    technical.serverErrorCode = safeError;
     technical.mimeType = mimeType;
     const scan = await saveScan(admin, userId, hash, bytes, options, technical, usedModel, "");
     return { ...technical, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
