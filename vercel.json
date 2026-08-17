@@ -1,6 +1,13 @@
 {
   "framework": null,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/checkout.html",
+      "destination": "/checkout-v2.html",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

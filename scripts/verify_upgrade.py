@@ -57,7 +57,7 @@ check('category supports primary category mode', 'params.get(\'category_id\')' i
 check('category supports subcategory product mode', 'params.get(\'id\')' in category and "from('products')" in category and '.eq(\'subcategory_id\', subcategoryId)' in category)
 check('category has breadcrumb and escaped DOM rendering', 'setBreadcrumb' in category and 'textContent' in category and 'encodeURIComponent' in category)
 check('product supports simple products without variants', 'function hasOptions()' in product and "if (!hasOptions())" in product and "id: 'main'" in product)
-check('product keeps checkout handoff and cart action', 'raizey_direct_buy' in product and "window.location.href = 'checkout.html'" in product and 'addToCartBtn' in product and 'buildCartItem' in product)
+check('product keeps checkout handoff and cart action', 'raizey_direct_buy' in product and "window.location.href = 'checkout-v2.html'" in product and 'addToCartBtn' in product and 'buildCartItem' in product)
 check('admin subcategory CRUD page exists', 'admin-subcategories.html' in admin and 'from(\'subcategories\')' in subcategories_admin and 'manage_products' in subcategories_admin)
 check('admin dashboard uses simplified catalog navigation', 'admin-catalog.html' not in admin and 'admin-categories.html' in admin and 'admin-subcategories.html' in admin and 'admin-products.html' in admin)
 check('admin product form scopes products to subcategory', 'subcategoryInput' in products_admin and 'subcategory_id: subcategoryId' in products_admin and "from('subcategories')" in products_admin)
@@ -94,7 +94,8 @@ check('catalog CSS has responsive subcategory cards', '.catalog-subcategories-gr
 check('Cairo font applied globally', 'family=Cairo' in index and "--font-display: 'Cairo'" in main_css)
 check('receipt pipeline is server-only', 'process-receipt' in receipt_pipeline and 'ReceiptIntel' not in receipt_pipeline and 'Tesseract' not in receipt_pipeline)
 check('receipt client forwards user JWT', 'Authorization' in receipt_pipeline and 'getSession' in receipt_pipeline and 'Bearer' in receipt_pipeline)
-check('receipt pages do not load browser OCR', 'tesseract.js' not in checkout and 'receipt-intel.js' not in checkout and 'tesseract.js' not in (ROOT / 'wallet.html').read_text(encoding='utf-8') and 'receipt-intel.js' not in (ROOT / 'wallet.html').read_text(encoding='utf-8'))
+check('receipt pages do not load browser OCR', 'tesseract.js' not in checkout and 'receipt-intel.js' not in checkout and 'tesseract.js' not in wallet and 'receipt-intel.js' not in wallet and 'tesseract.js' not in product)
+check('checkout cache-proof path is wired', 'checkout-v2.html' in (ROOT / 'cart.html').read_text(encoding='utf-8') and 'checkout-v2.html' in product and 'checkout-v2.html' in (ROOT / 'vercel.json').read_text(encoding='utf-8'))
 check('legacy receipt endpoint removed from active Vercel path', not (ROOT / 'api/verify-receipt.js').exists() and 'verify-receipt.js' not in (ROOT / 'vercel.json').read_text(encoding='utf-8'))
 check('edge function authenticates and uses server secrets', 'auth.getUser' in edge_index and 'SUPABASE_SERVICE_ROLE_KEY' in edge_index and 'GEMINI_API_KEY' in edge_index and 'Bearer' in receipt_pipeline)
 check('edge function saves server scan result', 'receipt_scan_results' in edge_index and 'sha256Hex' in edge_index and 'scanId' in edge_index and 'receiptHash' in edge_index)
@@ -108,7 +109,7 @@ pages = (
     'admin-orders.html', 'admin-customers.html', 'admin-staff.html', 'admin-products.html',
     'admin-categories.html', 'admin-settings.html', 'admin-coupons.html', 'admin-giftcards.html',
     'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html',
-    'checkout.html', 'wallet.html'
+    'checkout.html', 'checkout-v2.html', 'wallet.html'
 )
 for page in pages:
     out = ROOT / '.upgrade-check.js'

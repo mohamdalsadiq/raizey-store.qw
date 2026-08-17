@@ -648,7 +648,7 @@ function attachEvents() {
     const item = buildCartItem();
     if (!item) { errorBox.textContent = 'املأ بيانات الطلب المطلوبة أولاً.'; return; }
     sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at: Date.now(), items: [item] }));
-    window.location.href = 'checkout.html';
+    window.location.href = 'checkout-v2.html';
   });
 }
 
@@ -715,7 +715,7 @@ function collectFieldValues() {
 }
 
 async function submitOrder(errorBox, submitBtn) {
-  // صفحة المنتج لا تنشئ طلبًا ولا تستقبل إيصالًا. checkout.html هو المسار
+  // صفحة المنتج لا تنشئ طلبًا ولا تستقبل إيصالًا. checkout-v2.html هو المسار
   // الموحد الذي يرفع الصورة ويستدعي process-receipt قبل RPC الإنشاء الذري.
   errorBox.textContent = '';
   if (!validateSelection(errorBox)) return;
@@ -729,7 +729,7 @@ async function submitOrder(errorBox, submitBtn) {
     items: [item]
   }));
   if (submitBtn) submitBtn.disabled = true;
-  window.location.href = 'checkout.html';
+  window.location.href = 'checkout-v2.html';
 }
 
 init();

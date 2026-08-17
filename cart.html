@@ -384,7 +384,7 @@ function renderCart() {
   document.getElementById('proceedToCheckoutBtn').onclick = () => {
     // الدفع من السلة: نلغي أي شراء مباشر معلّق حتى لا يختلط الطلبان
     try { sessionStorage.removeItem('raizey_direct_buy'); } catch (e) {}
-    window.location.href = 'checkout.html';
+    window.location.href = 'checkout-v2.html';
   };
 }
 
