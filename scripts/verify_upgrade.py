@@ -35,15 +35,19 @@ sql = (ROOT / 'supabase-SQL-التوسعة-الإدارة-والعروض.sql').r
 check('homepage has ordered catalog sections', 'الأكثر شراءً' in index and 'getCategoryPriority' in index and 'renderCategories(categories || [], products || [], safePopularProducts' in index)
 check('homepage has automatic flash sale banner', 'flashSaleBanner' in index and 'flash_sale_ends_at' in index and 'compare_at_price_usd' in index)
 check('homepage keeps category navigation', 'category.html?id=' in index)
+check('popular cards open package detail', 'product.html?id=' in index and 'product.product_id || product.id' in index)
 check('category has compact option controls', 'min-height: 48px' in category and 'price-value' in category)
 check('category has live current and old price', 'oldPriceDisplay' in category and 'updateLiveCalculations' in category)
+check('category renders package cards', 'package-card-grid' in category and 'product.html?id=' in category and 'خيارات' in category)
 check('orders labels audit and cancel', 'needs_admin_check' in orders and 'data-action="cancel"' in orders)
 check('orders uses protected RPC transitions', 'admin_update_order_status' in orders and 'admin_reject_order' in orders)
 check('orders initializes filter chips', 'querySelectorAll(\'#filterRow .chip\')' in orders)
 check('staff page uses permission RPC', 'admin_set_staff_permissions' in staff and 'is_super_admin' in staff)
+check('staff load avoids ambiguous embedded relation', "from('admin_permissions').select('profile_id" in staff and 'retryStaffBtn' in staff)
 check('customer role toggle removed', 'toggleRole' not in customers and 'admin-staff.html' in customers)
 check('admin alerts use protected counts', 'get_admin_notification_counts' in nav and 'admin-orders.html' in nav and 'admin-topups.html' in nav)
 check('admin CSS has red badges and responsive states', 'admin-nav-alert' in css and '@media (max-width: 520px)' in css)
+check('admin hierarchy hints styled', 'admin-page-hint' in css)
 check('product admin guard', "manage_products" in products_admin and "is_banned" in products_admin)
 check('category admin guard', "manage_products" in categories_admin and "is_banned" in categories_admin)
 check('settings admin guard', "manage_settings" in settings_admin and "is_banned" in settings_admin)
@@ -60,6 +64,7 @@ check('SQL has protected staff RPC', 'admin_set_staff_permissions' in sql and 'c
 check('SQL has protected ban RPC', 'admin_set_customer_banned' in sql and 'manage_admins' in sql)
 check('SQL ties admin tables to exact permissions', "has_admin_permission('manage_products')" in sql and "has_admin_permission('manage_settings')" in sql and "has_admin_permission('manage_coupons')" in sql)
 check('SQL protects payment codes and referral milestones', 'payment_codes_admin_manage' in sql and 'referral_milestones_admin' in sql)
+check('Cairo font applied globally', 'family=Cairo' in index and "--font-display: 'Cairo'" in (ROOT / 'assets/css/style.css').read_text(encoding='utf-8'))
 
 for page in ('index.html', 'category.html', 'admin-orders.html', 'admin-customers.html', 'admin-staff.html', 'admin-products.html', 'admin-categories.html', 'admin-settings.html', 'admin-coupons.html', 'admin-giftcards.html', 'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html'):
     out = ROOT / '.upgrade-check.js'

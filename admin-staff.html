@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة المشرفين — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -63,6 +63,17 @@ function permissionMarkup(id, perms) {
   const allChecked = !!perms?.is_super_admin;
   return `<label class="permission-item permission-all"><input type="checkbox" data-perm="all" ${allChecked ? 'checked' : ''}> كل الصلاحيات</label>` + permissionFields.map(([key,label,icon]) => `<label class="permission-item"><input type="checkbox" data-perm="${key}" ${allChecked || perms?.[key] ? 'checked' : ''}> <i class="fas ${icon}" aria-hidden="true"></i> ${label}</label>`).join('');
 }
+function normalizePermissionRow(row) {
+  return row || {};
+}
+
+function getStaffErrorMessage(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('permission denied') || message.includes('row-level security') || message.includes('rls')) return 'ليس لديك صلاحية قراءة بيانات الفريق. تأكد من حساب السوبر أدمن وسياسات RLS.';
+  if (message.includes('does not exist') || message.includes('schema cache') || message.includes('relationship')) return 'لم يتم تحديث مخطط Supabase بعد. شغّل migration الإدارة ثم اضغط إعادة المحاولة.';
+  return 'تعذر تحميل قائمة الفريق. اضغط إعادة المحاولة أو راجع سجل الأخطاء.';
+}
+
 function render() {
   const container = document.getElementById('staffList');
   if (!staff.length) { container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:30px;">لا يوجد مشرفون بعد.</div>'; return; }
@@ -89,9 +100,25 @@ async function saveStaff(card) {
   toast('تم حفظ صلاحيات المشرف وتسجيل العملية.'); await loadStaff();
 }
 async function loadStaff() {
-  const { data, error } = await supabaseClient.from('profiles').select('id, full_name, whatsapp_number, role, admin_permissions(*)').order('created_at', { ascending:false });
-  if (error) { toast('تعذر تحميل قائمة الفريق.', true); return; }
-  staff = data || []; render();
+  const container = document.getElementById('staffList');
+  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px 0;"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارِ التحميل...</div>';
+
+  const [profilesResponse, permissionsResponse] = await Promise.all([
+    supabaseClient.from('profiles').select('id, full_name, whatsapp_number, role, is_banned, created_at').order('created_at', { ascending: false }),
+    supabaseClient.from('admin_permissions').select('profile_id, is_super_admin, can_manage_orders, can_manage_wallets, can_manage_products, can_manage_settings, can_manage_maintenance, can_manage_admins, can_manage_coupons, can_manage_gift_cards, can_view_audit_logs')
+  ]);
+
+  if (profilesResponse.error || permissionsResponse.error) {
+    const error = profilesResponse.error || permissionsResponse.error;
+    devLog('[RAIZEY] staff load error:', error);
+    container.innerHTML = `<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>${escapeHtml(getStaffErrorMessage(error))}</strong><button type="button" class="admin-btn btn-confirm" id="retryStaffBtn"><i class="fas fa-rotate-right"></i> إعادة المحاولة</button></div>`;
+    document.getElementById('retryStaffBtn')?.addEventListener('click', loadStaff);
+    return;
+  }
+
+  const permissionMap = new Map((permissionsResponse.data || []).map(row => [String(row.profile_id), normalizePermissionRow(row)]));
+  staff = (profilesResponse.data || []).map(person => ({ ...person, admin_permissions: permissionMap.get(String(person.id)) || {} }));
+  render();
 }
 async function init() {
   const { data:{session} } = await supabaseClient.auth.getSession();

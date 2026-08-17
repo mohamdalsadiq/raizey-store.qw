@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إدارة التصنيفات — RAIZEY STORE</title>
+<title>إدارة الأقسام الرئيسية — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <!-- إضافة مكتبة الأيقونات الاحترافية الفخمة للوحة التحكم -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
@@ -56,7 +56,7 @@
 
 <div class="admin-page" id="adminPage" style="display:none;">
   <div class="page-header">
-    <h1>إدارة التصنيفات</h1>
+    <h1>إدارة الأقسام الرئيسية</h1>
     <a href="index.html" class="back-link"><i class="fas fa-store" style="margin-left: 4px;"></i> المتجر</a>
   </div>
 
@@ -73,17 +73,18 @@
     <a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
 
-  <button class="add-new-btn" id="addNewBtn">+ إضافة تصنيف جديد</button>
+  <p class="admin-page-hint">أنشئ أقسام المتجر مثل الألعاب والاشتراكات والبطاقات، ثم أضف الباقات والخدمات داخل كل قسم من صفحة إدارة الباقات.</p>
+  <button class="add-new-btn" id="addNewBtn">+ إضافة قسم رئيسي</button>
 
   <div id="categoriesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
 
 <div class="modal-overlay" id="formModal">
   <div class="modal-box">
-    <div class="modal-title" id="formModalTitle">تصنيف جديد</div>
+    <div class="modal-title" id="formModalTitle">قسم رئيسي جديد</div>
 
     <div class="field">
-      <label>اسم التصنيف</label>
+      <label>اسم القسم الرئيسي</label>
       <input type="text" id="nameInput" placeholder="مثلاً: PUBG Mobile">
     </div>
 
@@ -232,7 +233,7 @@ function openForm(id) {
 
   if (id) {
     const cat = categories.find(c => c.id === id);
-    document.getElementById('formModalTitle').textContent = 'تعديل التصنيف';
+    document.getElementById('formModalTitle').textContent = 'تعديل القسم الرئيسي';
     nameInput.value = cat.name;
     descriptionInput.value = cat.description || '';
     imageUrlInput.value = cat.image_url || '';
@@ -243,7 +244,7 @@ function openForm(id) {
     document.getElementById('commissionInput').value = cat.commission_percent ?? 3;
     activeInput.value = String(cat.is_active);
   } else {
-    document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
+    document.getElementById('formModalTitle').textContent = 'قسم رئيسي جديد';
     nameInput.value = '';
     descriptionInput.value = '';
     imageUrlInput.value = '';

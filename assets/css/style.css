@@ -13,8 +13,8 @@
   --danger: #e5484d;
   --warning: #f59e0b;
   --success: #16a34a;
-  --font-display: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
-  --font-heading: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  --font-display: 'Cairo', 'Tajawal', sans-serif;
+  --font-heading: 'Cairo', 'Tajawal', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 14px;
 }
@@ -36,7 +36,7 @@ body {
   font-family: var(--font-display);
   direction: rtl;
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.68;
   font-size: 15px;
 }
 

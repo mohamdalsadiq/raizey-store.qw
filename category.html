@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>اختر باقتك — RAIZEY STORE</title>
+<title>باقات وخدمات القسم — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -86,13 +86,41 @@
   .related-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .related-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
   .related-price { font-size: 12px; font-weight: 800; color: var(--primary); }
+  .category-hero-card { display:flex; align-items:center; justify-content:space-between; gap:16px; background:linear-gradient(135deg,rgba(255,106,26,.1),var(--bg-card)); border:1px solid rgba(255,106,26,.2); border-radius:18px; padding:18px; margin-bottom:14px; }
+  .category-hero-copy { min-width:0; }
+  .category-eyebrow { display:inline-flex; align-items:center; gap:6px; color:var(--primary); font-family:var(--font-mono); font-size:10px; font-weight:900; letter-spacing:.3px; text-transform:uppercase; }
+  .category-hero-copy h1 { margin:6px 0 5px; font-family:var(--font-heading); font-size:22px; font-weight:900; line-height:1.25; }
+  .category-hero-copy p { margin:0; color:var(--text-muted); font-size:12px; line-height:1.7; }
+  .category-hero-thumb { width:76px; height:76px; flex:0 0 76px; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--bg); color:var(--primary); font-size:28px; }
+  .category-hero-thumb img { width:100%; height:100%; object-fit:cover; }
+  .packages-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:22px 0 12px; }
+  .packages-heading h2 { margin:5px 0 3px; font-family:var(--font-heading); font-size:18px; font-weight:900; }
+  .packages-heading p { margin:0; color:var(--text-muted); font-size:11px; line-height:1.6; }
+  .package-count { flex:0 0 auto; padding:6px 9px; border:1px solid rgba(255,106,26,.25); border-radius:999px; color:var(--primary); background:rgba(255,106,26,.07); font-size:11px; font-weight:900; white-space:nowrap; }
+  .package-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .package-card { display:flex; min-width:0; flex-direction:column; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; color:var(--ink); text-decoration:none; transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+  .package-card:hover,.package-card:focus-visible { border-color:var(--primary); box-shadow:0 12px 25px rgba(26,29,41,.08); transform:translateY(-2px); outline:none; }
+  .package-card-media { position:relative; display:flex; align-items:center; justify-content:center; aspect-ratio:1.2; overflow:hidden; background:var(--bg); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:24px; }
+  .package-card-media img { width:100%; height:100%; object-fit:cover; }
+  .package-option-count { position:absolute; right:7px; bottom:7px; display:inline-flex; align-items:center; gap:4px; padding:4px 7px; border:1px solid rgba(255,255,255,.55); border-radius:999px; background:rgba(26,29,41,.78); color:#fff; font-size:9px; font-weight:800; }
+  .package-card-body { display:flex; flex:1; flex-direction:column; gap:6px; padding:10px; }
+  .package-card-body h3 { margin:0; font-size:13px; font-weight:900; line-height:1.4; }
+  .package-card-body p { display:-webkit-box; min-height:31px; margin:0; overflow:hidden; color:var(--text-muted); font-size:10px; line-height:1.5; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+  .package-delivery { display:inline-flex; align-items:center; gap:4px; width:max-content; max-width:100%; padding:4px 6px; border:1px solid rgba(255,106,26,.25); border-radius:999px; color:var(--primary); font-size:9px; font-weight:800; }
+  .package-delivery span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .package-card-footer { display:flex; align-items:flex-end; justify-content:space-between; gap:6px; margin-top:auto; padding-top:7px; }
+  .package-price { display:flex; flex-direction:column; color:var(--primary); font-family:var(--font-mono); font-size:11px; font-weight:900; direction:ltr; text-align:right; }
+  .package-price del { margin-top:2px; color:var(--text-muted); font-size:9px; font-weight:700; }
+  .package-open { display:inline-flex; align-items:center; gap:4px; color:var(--primary); font-size:10px; font-weight:900; white-space:nowrap; }
+  @media (min-width:700px) { .package-card-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; } }
+  @media (max-width:420px) { .category-hero-card { padding:14px; } .category-hero-thumb { width:64px; height:64px; flex-basis:64px; } .packages-heading { align-items:flex-start; flex-direction:column; } .package-count { align-self:flex-start; } }
 </style>
 </head>
 <body>
 
 <div class="product-page" id="productPage">
   <div class="product-header-actions">
-    <a href="index.html" class="back-link"><i class="fas fa-arrow-right"></i> رجوع للمتجر</a>
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-right"></i> رجوع للأقسام</a>
     <a href="cart.html" class="cart-badge-link"><i class="fas fa-shopping-cart"></i> السلة <span id="globalCartCount">0</span></a>
   </div>
 
@@ -182,96 +210,58 @@ function render() {
   document.getElementById('loadingBox').style.display = 'none';
   const content = document.getElementById('content');
   content.style.display = 'block';
-
-  const p = variants[0]; 
-  const fields = p.required_fields || [];
+  const categoryName = category?.name || 'باقات المتجر';
+  const categoryImage = category?.image_url ? sanitizeUrl(category.image_url) : null;
 
   content.innerHTML = `
-    <div class="product-hero">
-      <div class="product-hero-thumb">
-        ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}">` : (category && category.image_url ? `<img src="${escapeAttribute(sanitizeUrl(category.image_url))}" alt="${escapeAttribute(category.name)}">` : '<i class="fas fa-box-open" style="font-size:24px; color:var(--text-muted);"></i>')}
+    <section class="category-hero-card">
+      <div class="category-hero-copy">
+        <span class="category-eyebrow"><i class="fas fa-layer-group" aria-hidden="true"></i> RAIZEY CATALOG</span>
+        <h1>${escapeHtml(categoryName)}</h1>
+        <p>${escapeHtml(category?.description || 'اختر الباقة المناسبة ثم انتقل إلى الخيارات التفصيلية والسعر اللحظي.')}</p>
       </div>
-      <div class="product-hero-info"><h1>${escapeHtml(category ? category.name : p.name)}</h1></div>
-    </div>
+      <div class="category-hero-thumb">
+        ${categoryImage ? `<img src="${escapeAttribute(categoryImage)}" alt="${escapeAttribute(categoryName)}" loading="eager">` : '<i class="fas fa-gamepad" aria-hidden="true"></i>'}
+      </div>
+    </section>
 
     <div class="trust-badges">
-      <span class="trust-badge-item delivery-badge" id="deliveryBadge" hidden><i class="fas fa-bolt"></i><span class="delivery-badge-text"></span></span>
-      <span class="trust-badge-item"><i class="fas fa-shield-halved"></i> دفع آمن وموثوق</span>
-      <span class="trust-badge-item"><i class="fas fa-headset"></i> دعم فني على مدار الساعة</span>
+      <span class="trust-badge-item"><i class="fas fa-shield-halved" aria-hidden="true"></i> دفع آمن وموثوق</span>
+      <span class="trust-badge-item"><i class="fas fa-headset" aria-hidden="true"></i> دعم فني على مدار الساعة</span>
+      <span class="trust-badge-item delivery-badge"><i class="fas fa-bolt" aria-hidden="true"></i> اختر الباقة ثم الخيار النهائي</span>
     </div>
 
-    ${category && category.description ? `<div class="category-sub">${escapeHtml(category.description)}</div>` : ''}
-
-    <div class="section-label">اختر الباقة الأساسية</div>
-    <div class="variant-grid" id="mainVariantsGrid">
-      ${variants.map((v, i) => `
-        <button class="variant-btn" data-index="${i}" data-product-id="${escapeAttribute(v.id)}">
-          <div class="v-name">${escapeHtml(v.name)}</div>
-        </button>
-      `).join('')}
+    <div class="packages-heading">
+      <div><span class="category-eyebrow">PACKAGES & SERVICES</span><h2>اختر الباقة أو الخدمة</h2><p>كل بطاقة تفتح صفحة مستقلة تحتوي على الخيارات التفصيلية والأسعار المحدثة.</p></div>
+      <span class="package-count">${variants.length} باقة</span>
     </div>
 
-    <!-- حاوية الخيارات الفرعية -->
-    <div class="sub-options-container" id="subOptionsContainer">
-      <div class="section-label">اختر الخيار المطلوب (إجباري)</div>
-      <div class="sub-options-grid" id="subOptionsGrid"></div>
+    <div class="package-card-grid" aria-label="باقات وخدمات القسم">
+      ${variants.map((v) => {
+        const image = v.image_url ? sanitizeUrl(v.image_url) : categoryImage;
+        const basePrice = Number(v.price_usd) * Number(exchangeRate);
+        const comparePrice = Number(v.compare_at_price_usd) * Number(exchangeRate);
+        const optionCount = Array.isArray(v.options) ? v.options.length : 0;
+        const badge = typeof v.delivery_badge_text === 'string' ? v.delivery_badge_text.trim().slice(0, 120) : '';
+        return `
+          <a class="package-card" href="product.html?id=${encodeURIComponent(String(v.id))}" aria-label="فتح باقة ${escapeAttribute(v.name)}">
+            <div class="package-card-media">
+              ${image ? `<img src="${escapeAttribute(image)}" alt="${escapeAttribute(v.name)}" loading="lazy">` : '<i class="fas fa-box-open" aria-hidden="true"></i>'}
+              ${optionCount ? `<span class="package-option-count"><i class="fas fa-list-check" aria-hidden="true"></i> ${optionCount} خيارات</span>` : ''}
+            </div>
+            <div class="package-card-body">
+              <h3>${escapeHtml(v.name)}</h3>
+              ${v.description ? `<p>${escapeHtml(v.description)}</p>` : '<p>افتح الباقة لاختيار القيمة المناسبة وإكمال طلبك بسهولة.</p>'}
+              ${badge ? `<span class="package-delivery"><i class="fas fa-bolt" aria-hidden="true"></i><span>${escapeHtml(badge)}</span></span>` : ''}
+              <div class="package-card-footer">
+                <span class="package-price">${safeFormatSDG(basePrice)} ج.س${comparePrice > basePrice ? `<del>${safeFormatSDG(comparePrice)} ج.س</del>` : ''}</span>
+                <span class="package-open">فتح الباقة <i class="fas fa-arrow-left" aria-hidden="true"></i></span>
+              </div>
+            </div>
+          </a>`;
+      }).join('')}
     </div>
-
-    <div class="price-display" aria-live="polite"><span class="price-caption">السعر الحالي</span><span class="price-value" id="unitPriceDisplay">اختر الباقة لعرض السعر</span><del class="price-old" id="oldPriceDisplay" hidden></del></div>
-
-    ${fields.length > 0 ? `
-      <div class="section-label">بيانات الطلب المطلوبة</div>
-      ${fields.map(f => `
-        <div class="field">
-          <label>${escapeHtml(f.label)} *</label>
-          <input type="text" data-field-key="${escapeAttribute(f.key)}" data-field-label="${escapeAttribute(f.label)}" required maxlength="500" placeholder="${escapeAttribute(f.placeholder ? f.placeholder : `اكتب ${f.label} هنا...`)}">
-        </div>
-      `).join('')}
-    ` : ''}
-
-    <div class="qty-row">
-      <span class="qty-label">الكمية</span>
-      <div class="qty-stepper">
-        <button type="button" id="qtyMinus" aria-label="إنقاص الكمية">&minus;</button>
-        <span class="qty-value" id="qtyValue">1</span>
-        <button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button>
-      </div>
-    </div>
-
-    <div class="live-total-box">
-      <span class="live-total-label"><i class="fas fa-calculator"></i> الإجمالي اللحظي:</span>
-      <span class="live-total-val" id="liveTotalDisplay">0 ج.س</span>
-    </div>
-
-    <div class="form-error-box" id="formError"></div>
-
-    <button class="btn-buy-now" id="buyNowBtn"><i class="fas fa-bolt"></i> اشترِ الآن</button>
-    <button class="btn-secondary-cart" id="addToCartBtn"><i class="fas fa-cart-plus"></i> إضافة إلى سلة المشتريات</button>
-
-    ${p.instructions ? `
-      <div class="product-instructions-box">
-        <div class="product-instructions-title"><i class="fas fa-circle-info"></i> تفاصيل وطريقة استلام المنتج:</div>
-        ${escapeHtml(p.instructions).replace(/\n/g, '<br>')}
-      </div>
-    ` : ''}
-
-    ${relatedProducts.length > 0 ? `
-      <div class="related-section">
-        <div class="section-label">منتجات ذات صلة</div>
-        <div class="related-grid">
-          ${relatedProducts.map(r => `
-            <a href="category.html?id=${escapeAttribute(r.category_id)}" class="related-card">
-                <div class="related-thumb">${r.image_url ? `<img src="${escapeAttribute(sanitizeUrl(r.image_url))}" alt="${escapeAttribute(r.name)}">` : ''}</div>
-                <div class="related-name">${escapeHtml(r.name)}</div>
-              <div class="related-price">${safeFormatSDG(r.price_sdg)} ج.س</div>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : ''}
   `;
-
-  attachEvents();
 }
 
 function attachEvents() {

@@ -7,7 +7,7 @@
 <meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <!-- إضافة مكتبة الأيقونات الاحترافية لتطابق صفحة المنتج -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
@@ -593,7 +593,7 @@ function renderActiveFlashSale(products) {
   const discount = Math.max(1, Math.round((1 - current / previous) * 100));
   detail.textContent = `${active.name || 'باقة مختارة'} — خصم خاص لفترة محدودة`;
   percentEl.textContent = `-${discount}%`;
-  banner.href = `category.html?id=${encodeURIComponent(String(active.category_id || ''))}`;
+  banner.href = `product.html?id=${encodeURIComponent(String(active.product_id || active.id || ''))}`;
   banner.hidden = false;
 }
 
@@ -699,8 +699,8 @@ function renderCategories(categories, products, popularProducts, exchangeRate) {
 function createProductCard(product, categoryName, safeRate) {
   const card = document.createElement('a');
   card.className = 'catalog-product-card';
-  card.href = `category.html?id=${encodeURIComponent(String(product.category_id || ''))}`;
-  card.setAttribute('aria-label', `عرض باقات ${product.name || categoryName}`);
+  card.href = `product.html?id=${encodeURIComponent(String(product.product_id || product.id || ''))}`;
+  card.setAttribute('aria-label', `فتح باقة ${product.name || categoryName}`);
 
   const thumb = document.createElement('div');
   thumb.className = 'catalog-product-thumb';
