@@ -32,14 +32,17 @@
 
   function ensureCatalogNavigation() {
     document.querySelectorAll('.admin-nav').forEach((nav) => {
-      nav.querySelectorAll('a[href="admin-catalog.html"]').forEach((legacyLink) => legacyLink.remove());
-      if (nav.querySelector('a[href="admin-subcategories.html"]')) return;
+      nav.querySelectorAll('a[href="admin-catalog.html"], a[href="admin-subcategories.html"]').forEach((legacyLink) => legacyLink.remove());
       const categoriesLink = nav.querySelector('a[href="admin-categories.html"]');
-      if (!categoriesLink) return;
-      const link = document.createElement('a');
-      link.href = 'admin-subcategories.html';
-      link.innerHTML = '<i class="fas fa-tags" aria-hidden="true"></i> إدارة التصنيفات';
-      categoriesLink.insertAdjacentElement('afterend', link);
+      if (categoriesLink) {
+        categoriesLink.innerHTML = '<i class="fas fa-layer-group" aria-hidden="true"></i> إدارة الأقسام';
+        categoriesLink.setAttribute('aria-label', 'إدارة الأقسام الرئيسية');
+      }
+      const productsLink = nav.querySelector('a[href="admin-products.html"]');
+      if (productsLink) {
+        productsLink.innerHTML = '<i class="fas fa-boxes-stacked" aria-hidden="true"></i> إدارة المنتجات والباقات';
+        productsLink.setAttribute('aria-label', 'إدارة المنتجات والباقات');
+      }
     });
   }
 
