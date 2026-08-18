@@ -6,6 +6,16 @@
       "source": "/checkout.html",
       "destination": "/checkout-v2.html",
       "permanent": false
+    },
+    {
+      "source": "/admin-subcategories.html",
+      "destination": "/admin-categories.html",
+      "permanent": false
+    },
+    {
+      "source": "/admin-catalog.html",
+      "destination": "/admin-categories.html",
+      "permanent": false
     }
   ],
   "headers": [
