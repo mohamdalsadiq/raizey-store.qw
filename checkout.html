@@ -333,7 +333,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/receipt-pipeline.js?v=20260818-edge3"></script>
+<script src="assets/js/receipt-pipeline.js?v=20260818-edge2"></script>
 <script>
 let cart = [];
 let currentUser = null;
@@ -702,7 +702,7 @@ function attachCheckoutEvents(canUseWallet) {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row || row.valid !== true) {
         codeMsg.style.color = 'var(--danger)';
-        codeMsg.textContent = CODE_REASONS[row && row.reason] || 'الرمز غير صالح لل��ستخدام.';
+        codeMsg.textContent = CODE_REASONS[row && row.reason] || 'الرمز غير صالح للاستخدام.';
         return;
       }
       if (Number(row.amount) < currentTotal()) {
@@ -1021,7 +1021,7 @@ function attachCheckoutEvents(canUseWallet) {
     if (analysis.language === 'ar')  rows.push('لغة الإشعار: عربية');
     if (analysis.extracted.txRef)    rows.push(`رقم العملية المقروء: ${analysis.extracted.txRef}`);
     if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
-    if (analysis.extracted.dateTime) rows.push(`التار��خ والوقت: ${analysis.extracted.dateTime}`);
+    if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
     rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
     rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
     rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
@@ -1147,7 +1147,7 @@ function attachCheckoutEvents(canUseWallet) {
       `مرحباً، حوّلت مبلغاً ناقصاً في متجر Raizey وأحتاج إكمال الطلب.\n` +
       `رقم العملية: ${savedTxRef}\n` +
       `المبلغ المحوَّل: ${analysis.shortfall.paid} ج.س\n` +
-      `الم��بقي: ${analysis.shortfall.remaining} ج.س\n` +
+      `المتبقي: ${analysis.shortfall.remaining} ج.س\n` +
       `إجمالي الطلب: ${analysis.shortfall.target} ج.س\n` +
       `المنتج: ${productNames || '—'}\n` +
       `معرّف الحساب: ${currentUser ? currentUser.id : '—'}`;
@@ -1331,7 +1331,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   }
 
   placeOrderBtn.disabled = true;
-  placeOrderBtn.textContent = 'ج��رِ إرسال طلباتك...';
+  placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
 
   if (selectedPayment === 'wallet') {
     try {

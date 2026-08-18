@@ -3,31 +3,132 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="2;url=admin-categories.html">
-  <title>إدارة الكتالوج — RAIZEY STORE</title>
+  <title>هيكل الكتالوج — RAIZEY STORE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/admin.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    .catalog-compat-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-    .catalog-compat-card { width: min(100%, 560px); text-align: center; background: var(--bg-card, #fff); border: 1px solid var(--border, #e8e1d6); border-radius: 20px; padding: clamp(24px, 6vw, 48px); box-shadow: 0 18px 50px rgba(38, 32, 24, .08); }
-    .catalog-compat-icon { width: 68px; height: 68px; display: grid; place-items: center; margin: 0 auto 18px; border-radius: 20px; color: var(--primary, #ff6a1a); background: rgba(255, 106, 26, .12); font-size: 28px; }
-    .catalog-compat-card h1 { margin: 0 0 10px; font-family: Cairo, Tajawal, sans-serif; font-size: clamp(22px, 5vw, 30px); }
-    .catalog-compat-card p { margin: 0 auto 22px; color: var(--text-muted, #7a7468); line-height: 1.8; }
-    .catalog-compat-card a { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 12px; color: var(--ink, #211f1b); background: var(--primary, #ff6a1a); font-weight: 800; text-decoration: none; }
+    .catalog-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+    .catalog-toolbar select { min-width:190px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg-card); color:var(--ink); font:inherit; font-size:12px; }
+    .catalog-section { margin-bottom:22px; border:1px solid var(--border); border-radius:16px; background:var(--bg-card); overflow:hidden; }
+    .catalog-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; background:linear-gradient(135deg,rgba(255,106,26,.09),transparent); border-bottom:1px solid var(--border); }
+    .catalog-section-title { display:flex; align-items:center; gap:9px; min-width:0; font-size:16px; font-weight:900; }
+    .catalog-section-title i { color:var(--primary); }
+    .catalog-section-title span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .catalog-section-count { flex:0 0 auto; color:var(--primary); font-family:var(--font-mono); font-size:11px; font-weight:900; }
+    .catalog-packages { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:12px; }
+    .catalog-package { display:flex; flex-direction:column; gap:8px; min-width:0; padding:12px; border:1px solid var(--border); border-radius:13px; background:var(--bg); }
+    .catalog-package-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+    .catalog-package-name { min-width:0; font-size:13px; font-weight:900; line-height:1.45; }
+    .catalog-package-price { flex:0 0 auto; color:var(--primary); font-family:var(--font-mono); font-size:10px; font-weight:900; direction:ltr; }
+    .catalog-package-sub { min-height:20px; color:var(--text-muted); font-size:10px; line-height:1.6; }
+    .catalog-options { display:flex; flex-wrap:wrap; gap:5px; }
+    .catalog-option { padding:4px 7px; border:1px solid rgba(255,106,26,.24); border-radius:999px; background:rgba(255,106,26,.06); color:var(--ink); font-size:9px; font-weight:800; }
+    .catalog-option strong { color:var(--primary); font-family:var(--font-mono); font-size:9px; direction:ltr; }
+    .catalog-package-actions { display:flex; gap:6px; margin-top:auto; }
+    .catalog-package-actions a { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:32px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; color:var(--primary); font-size:10px; font-weight:900; text-decoration:none; }
+    .catalog-package-actions a:hover,.catalog-package-actions a:focus-visible { border-color:var(--primary); outline:3px solid rgba(255,106,26,.13); outline-offset:1px; }
+    .catalog-empty { padding:24px 16px; color:var(--text-muted); font-size:12px; text-align:center; }
+    @media (min-width:760px) { .catalog-packages { grid-template-columns:repeat(3,minmax(0,1fr)); padding:16px; gap:12px; } }
+    @media (max-width:500px) { .catalog-toolbar { align-items:stretch; flex-direction:column; } .catalog-toolbar select { width:100%; } .catalog-packages { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
-  <main class="catalog-compat-page">
-    <section class="catalog-compat-card" role="status" aria-live="polite">
-      <div class="catalog-compat-icon"><i class="fas fa-layer-group" aria-hidden="true"></i></div>
-      <h1>تم توحيد إدارة الكتالوج</h1>
-      <p>تم إغلاق شاشة الهيكل المتداخلة. استخدم إدارة الأقسام لإدارة الأقسام الرئيسية، ثم إدارة المنتجات والباقات لإضافة المنتجات مباشرة داخل القسم.</p>
-      <a href="admin-categories.html"><i class="fas fa-arrow-right" style="margin-left:8px" aria-hidden="true"></i> فتح إدارة الأقسام</a>
-    </section>
+  <main class="admin-page" id="adminPage" hidden>
+    <div class="page-header">
+      <h1>هيكل كتالوج المتجر</h1>
+      <a href="admin.html" class="back-link"><i class="fas fa-arrow-right" aria-hidden="true"></i> لوحة التحكم</a>
+    </div>
+    <nav class="admin-nav" aria-label="تنقل الإدارة">
+      <a href="admin.html">الرئيسية</a>
+      <a href="admin-catalog.html" class="active"><i class="fas fa-sitemap" aria-hidden="true"></i> هيكل الكتالوج</a>
+      <a href="admin-categories.html">الأقسام الرئيسية</a>
+      <a href="admin-products.html">الباقات والخدمات</a>
+      <a href="admin-orders.html">الطلبات</a>
+      <a href="admin-staff.html">المشرفون</a>
+    </nav>
+    <div class="admin-page-hint"><i class="fas fa-circle-info" aria-hidden="true"></i> الترتيب هنا واضح: <strong>قسم رئيسي</strong> ثم <strong>باقة أو خدمة</strong> ثم <strong>خيارات الشراء التفصيلية</strong>. أنشئ القسم من صفحة الأقسام، وأضف الباقة وخياراتها من صفحة الباقات والخدمات.</div>
+    <div class="catalog-toolbar">
+      <select id="categoryFilter" aria-label="تصفية حسب القسم"><option value="all">كل الأقسام الرئيسية</option></select>
+      <span id="catalogSummary" class="catalog-package-sub">جارِ تحميل هيكل الكتالوج...</span>
+    </div>
+    <div id="catalogTree"></div>
   </main>
-  <script>window.setTimeout(() => window.location.replace('admin-categories.html'), 1200);</script>
+  <section id="accessDenied" class="admin-error-state" hidden>
+    <i class="fas fa-lock" aria-hidden="true"></i>
+    <strong>هذه الصفحة مخصصة لمشرف يملك صلاحية إدارة الباقات والأقسام.</strong>
+    <a href="admin.html" class="admin-btn btn-confirm">العودة إلى لوحة التحكم</a>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script>
+    let categories = [];
+    let packages = [];
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    function escapeAttribute(value) { return escapeHtml(value); }
+    function safeNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
+    function safeFormat(value) { return typeof formatSDG === 'function' ? formatSDG(value) : Math.round(safeNumber(value)).toLocaleString('en-US'); }
+
+    async function init() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+      const { data: profile } = await supabaseClient.from('profiles').select('role, is_banned').eq('id', session.user.id).single();
+      if (!profile || profile.role !== 'admin' || profile.is_banned === true) { document.getElementById('accessDenied').hidden = false; return; }
+      const { data: allowed, error: permissionError } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_products' });
+      if (permissionError || allowed !== true) { document.getElementById('accessDenied').hidden = false; return; }
+      document.getElementById('adminPage').hidden = false;
+      document.getElementById('categoryFilter').addEventListener('change', render);
+      await loadCatalog();
+    }
+
+    async function loadCatalog() {
+      const [{ data: categoryRows, error: categoryError }, { data: packageRows, error: packageError }] = await Promise.all([
+        supabaseClient.from('categories').select('id, name, is_active, display_order').order('display_order'),
+        supabaseClient.from('products').select('id, category_id, name, description, price_usd, image_url, options, is_active').order('name')
+      ]);
+      if (categoryError || packageError) {
+        document.getElementById('catalogTree').innerHTML = '<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>تعذر تحميل هيكل الكتالوج. تحقق من الاتصال ثم أعد المحاولة.</strong><button class="admin-btn btn-confirm" type="button" onclick="loadCatalog()">إعادة المحاولة</button></div>';
+        return;
+      }
+      categories = categoryRows || [];
+      packages = packageRows || [];
+      const filter = document.getElementById('categoryFilter');
+      filter.innerHTML = '<option value="all">كل الأقسام الرئيسية</option>' + categories.map(c => `<option value="${escapeAttribute(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+      render();
+    }
+
+    function render() {
+      const selected = document.getElementById('categoryFilter').value;
+      const visibleCategories = categories.filter(category => selected === 'all' || String(category.id) === String(selected));
+      const visiblePackages = packages.filter(item => selected === 'all' || String(item.category_id) === String(selected));
+      document.getElementById('catalogSummary').textContent = `${visibleCategories.length} أقسام · ${visiblePackages.length} باقات وخدمات`;
+      document.getElementById('catalogTree').innerHTML = visibleCategories.length ? visibleCategories.map(category => {
+        const categoryPackages = visiblePackages.filter(item => String(item.category_id) === String(category.id));
+        return `<section class="catalog-section">
+          <div class="catalog-section-head"><h2 class="catalog-section-title"><i class="fas fa-layer-group" aria-hidden="true"></i><span>${escapeHtml(category.name)}</span>${category.is_active ? '' : '<small class="inactive-badge">مخفي</small>'}</h2><span class="catalog-section-count">${categoryPackages.length} باقات</span></div>
+          ${categoryPackages.length ? `<div class="catalog-packages">${categoryPackages.map(renderPackage).join('')}</div>` : '<div class="catalog-empty">لا توجد باقات داخل هذا القسم بعد. استخدم إضافة باقة أو خدمة لربطها بالقسم.</div>'}
+        </section>`;
+      }).join('') : '<div class="catalog-empty">لا توجد أقسام رئيسية متاحة.</div>';
+    }
+
+    function renderPackage(item) {
+      const options = Array.isArray(item.options) ? item.options : [];
+      const optionHtml = options.length ? options.slice(0, 8).map(option => `<span class="catalog-option">${escapeHtml(option.label || option.name || 'خيار')} <strong>${safeFormat(safeNumber(option.price_usd) * 1)}$</strong></span>`).join('') : '<span class="catalog-option">خيار أساسي</span>';
+      return `<article class="catalog-package">
+        <div class="catalog-package-top"><h3 class="catalog-package-name">${escapeHtml(item.name)}</h3><span class="catalog-package-price">$${safeNumber(item.price_usd).toFixed(2)}</span></div>
+        <p class="catalog-package-sub">${escapeHtml(item.description || 'باقة أو خدمة قابلة للشراء')}</p>
+        <div class="catalog-options" aria-label="خيارات الباقة">${optionHtml}${options.length > 8 ? `<span class="catalog-option">+${options.length - 8} أخرى</span>` : ''}</div>
+        <div class="catalog-package-actions"><a href="admin-products.html"><i class="fas fa-pen" aria-hidden="true"></i> إدارة الباقة</a><a href="product.html?id=${encodeURIComponent(String(item.id))}" target="_blank" rel="noopener"><i class="fas fa-eye" aria-hidden="true"></i> معاينة</a></div>
+      </article>`;
+    }
+
+    init();
+  </script>
 </body>
 </html>

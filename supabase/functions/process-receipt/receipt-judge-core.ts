@@ -269,19 +269,8 @@ const ReceiptJudgeCore = (() => {
     const digits = (t.match(/\d/g) || []).length;
     const letters = (t.match(/[a-z]/gi) || []).length;
     if (!digits || digits < letters) return t; // ليست سلسلة رقمية
-
-    // بادئات أرقام العمليات مثل FT / TRX / REF ليست أخطاء OCR؛ يجب
-    // الحفاظ عليها كما هي. نطبّق تصحيح الالتباس فقط بعد أول رقم، حيث
-    // تظهر فعلاً أخطاء O/0 و I/1 و S/5 داخل الجزء الرقمي.
-    let seenDigit = false;
     let out = '';
-    for (const ch of t) {
-      if (/\d/.test(ch)) seenDigit = true;
-      const replacement = seenDigit && DIGIT_CONFUSIONS[ch] !== undefined
-        ? DIGIT_CONFUSIONS[ch]
-        : ch;
-      out += replacement;
-    }
+    for (const ch of t) out += (DIGIT_CONFUSIONS[ch] !== undefined ? DIGIT_CONFUSIONS[ch] : ch);
     return out;
   }
 

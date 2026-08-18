@@ -42,9 +42,6 @@ main_css = (ROOT / 'assets/css/style.css').read_text(encoding='utf-8')
 admin_sql = (ROOT / 'supabase-SQL-التوسعة-الإدارة-والعروض.sql').read_text(encoding='utf-8')
 catalog_sql = (ROOT / 'supabase-SQL-إعادة-هيكلة-الكتالوج.sql').read_text(encoding='utf-8')
 rollback_catalog_sql = (ROOT / 'supabase-SQL-rollback-to-legacy-catalog.sql').read_text(encoding='utf-8')
-options_state_sql = (ROOT / 'supabase-SQL-إصلاح-حالة-خيارات-المنتجات.sql').read_text(encoding='utf-8')
-category_normalization_sql = (ROOT / 'supabase-SQL-توحيد-كتالوج-الأقسام-القديم.sql').read_text(encoding='utf-8')
-admin_catalog = (ROOT / 'admin-catalog.html').read_text(encoding='utf-8')
 receipt_pipeline = (ROOT / 'assets/js/receipt-pipeline.js').read_text(encoding='utf-8')
 supabase_client = (ROOT / 'assets/js/supabase-client.js').read_text(encoding='utf-8')
 receipt_migration = (ROOT / 'supabase-SQL-نقل-فحص-الإيصالات-إلى-الخادم.sql').read_text(encoding='utf-8')
@@ -61,11 +58,8 @@ check('legacy category keeps dynamic price and CTA flow', 'getCurrentPriceSDG' i
 check('product route does not load browser OCR', 'tesseract.js' not in product and 'receipt-intel.js' not in product and 'checkout-v2.html' in product)
 check('legacy admin dashboard keeps original catalog links', 'admin-products.html' in admin and 'admin-categories.html' in admin and 'admin-orders.html' in admin and 'admin-subcategories.html' not in admin)
 check('legacy subcategory page is not in active admin nav', 'admin-subcategories.html' not in admin)
-check('subcategory compatibility page cannot query legacy table', "from('subcategories')" not in subcategories_admin and 'admin-categories.html' in subcategories_admin and 'window.location.replace' in subcategories_admin)
-check('catalog compatibility page cannot render mixed hierarchy', "from('products')" not in admin_catalog and 'admin-categories.html' in admin_catalog and 'window.location.replace' in admin_catalog)
-check('admin nav removes legacy catalog routes', 'admin-subcategories.html' in nav and 'admin-catalog.html' in nav and 'legacyLink.remove' in nav and 'إدارة الأقسام' in nav)
 check('legacy admin product form scopes products to category', 'categoryInput' in products_admin and 'category_id: categoryId' in products_admin and "from('categories')" in products_admin)
-check('legacy admin keeps flat option builder', 'hasOptionsToggle' in products_admin and 'addOptionRow' in products_admin and 'collectOptions' in products_admin and 'const options = hasOptionsToggle.checked ? collectOptions() : []' in products_admin and 'has_options: hasOptions' in products_admin)
+check('legacy admin keeps flat option builder', 'hasOptionsToggle' in products_admin and 'addOptionRow' in products_admin and 'collectOptions' in products_admin and 'options: collectOptions()' in products_admin)
 check('orders labels audit and cancel', 'needs_admin_check' in orders and 'data-action="cancel"' in orders)
 check('orders uses protected RPC transitions', 'admin_update_order_status' in orders and 'admin_reject_order' in orders)
 check('orders initializes filter chips', "querySelectorAll('#filterRow .chip')" in orders)
@@ -87,8 +81,6 @@ check('referral milestone admin guard', 'manage_settings' in referral_admin and 
 check('catalog migration creates strict hierarchy', 'CREATE TABLE IF NOT EXISTS public.subcategories' in catalog_sql and 'subcategory_id' in catalog_sql and 'get_catalog_tree' in catalog_sql)
 check('catalog migration scopes subcategory RLS', "has_admin_permission('manage_products')" in catalog_sql and 'subcategories_admin_manage' in catalog_sql)
 check('legacy rollback SQL is guarded', 'products_subcategory_id_fkey' in rollback_catalog_sql and 'DROP COLUMN IF EXISTS subcategory_id' in rollback_catalog_sql and 'DROP COLUMN IF EXISTS option_tree' in rollback_catalog_sql and 'orders' in rollback_catalog_sql and 'BEGIN;' in rollback_catalog_sql)
-check('options state SQL normalizes disabled options', 'normalize_product_options_state' in options_state_sql and "NEW.options := '[]'::jsonb" in options_state_sql and 'has_options = false' in options_state_sql)
-check('category normalization SQL preserves products and orders', 'UPDATE public.products' in category_normalization_sql and 'is_active = false' in category_normalization_sql and 'orders' in category_normalization_sql and 'uq_categories_active_name_ci' in category_normalization_sql)
 check('SQL has popular products function', 'get_popular_products' in admin_sql and 'completed' in admin_sql)
 check('SQL has alert counts function', 'get_admin_notification_counts' in admin_sql and 'needs_admin_check' in admin_sql)
 check('SQL has protected order status RPC', 'admin_update_order_status' in admin_sql and 'manage_orders' in admin_sql)
@@ -107,14 +99,12 @@ check('legacy receipt endpoint removed from active Vercel path', not (ROOT / 'ap
 check('edge function authenticates and uses server secrets', 'auth.getUser' in edge_index and 'SUPABASE_SERVICE_ROLE_KEY' in edge_index and 'GEMINI_API_KEY' in edge_index and 'Bearer' in receipt_pipeline)
 check('edge function saves server scan result', 'receipt_scan_results' in edge_index and 'sha256Hex' in edge_index and 'scanId' in edge_index and 'receiptHash' in edge_index)
 check('edge judge core preserves deterministic rules', 'buildContext' in edge_core and 'judge' in edge_core and 'export { ReceiptJudgeCore }' in edge_core)
-check('edge retries structured OCR on mismatch', 'retryableRejectFlags' in edge_index and 'ref_conflict' in edge_index and 'structuredPass' in edge_index)
-check('edge preserves transaction prefixes during OCR correction', 'seenDigit' in edge_core and 'DIGIT_CONFUSIONS' in edge_core and 'fixOcrDigits' in edge_core)
 check('database binds claims to edge scan', 'receipt_scan_results' in receipt_migration and 'enforce_edge_receipt_scan_claim' in receipt_migration and 'edge_scan_id' in receipt_migration)
 check('database consumes scan after financial insert', 'mark_edge_receipt_scan_consumed' in receipt_migration and 'trg_orders_edge_scan_consumed' in receipt_migration and 'trg_wallet_topups_edge_scan_consumed' in receipt_migration)
 check('receipt rollback backup is complete', all((rollback_dir / name).exists() for name in ('receipt-intel.js', 'receipt-judge-core.js', 'verify-receipt.js', 'SHA256SUMS.txt', 'ROLLBACK.md')))
 
 pages = (
-    'index.html', 'category.html', 'product.html', 'admin.html', 'admin-catalog.html', 'admin-subcategories.html',
+    'index.html', 'category.html', 'product.html', 'admin.html', 'admin-subcategories.html',
     'admin-orders.html', 'admin-customers.html', 'admin-staff.html', 'admin-products.html',
     'admin-categories.html', 'admin-settings.html', 'admin-coupons.html', 'admin-giftcards.html',
     'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html',

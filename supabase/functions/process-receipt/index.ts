@@ -29,13 +29,11 @@ const OCR_PROMPT =
   "إذا لم تكن الصورة تحتوي على أي نص واضح فأعد نصاً فارغاً. لا تكتب أي شيء غير النص المنسوخ.";
 
 const JSON_PROMPT =
-  "أنت مدقق إشعارات تحويل بنكي. انظر إلى الصورة كاملة وأعد JSON فقط بهذا الشكل بالضبط: " +
+  "أنت مدقق إشعارات تحويل بنكي. انظر للصورة وأعد JSON فقط بهذا الشكل بالضبط: " +
   '{"transaction_number":"","amount":"","currency":"","status":"","datetime":"","to_account":"","bank":""}. ' +
-  "ابحث عن الحقل الموسوم رقم العملية/رقم الحركة/الرقم المرجعي/Transaction ID، وانسخ القيمة كاملة حرفاً ورقماً كما تظهر، " +
-  "مع الحفاظ على بادئات مثل FT أو TRX أو REF وعدم تحويل الحروف إلى أرقام. " +
-  "المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم أو العمولة). " +
-  "status يجب أن يصف نجاح التحويل إن ظهر. " +
-  'إذا لم تكن القيمة ظاهرة بوضوح تماماً اتركها سلسلة فارغة "". ' +
+  "قواعد صارمة: انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح. " +
+  "المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم). " +
+  'إذا لم تكن القيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
   "ممنوع الاختراع أو الاستنتاج. أعد JSON فقط بلا أي شرح.";
 
 type ScanOptions = {
@@ -53,48 +51,24 @@ function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
 }
 
-function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}, request?: Request) {
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      ...corsHeaders(request),
+      ...corsHeaders(),
       ...extraHeaders,
     },
   });
 }
 
-// نُعيد أصل الطلب نفسه (echo) متى كان مسموحاً، بدل قيمة ثابتة قد لا تطابق
-// النطاق الفعلي فيكسر CORS بصمت. لا نستخدم كوكيز/اعتمادات، لذا echo الأصل
-// المسموح آمن تماماً. يُضبط RAIZEY_PUBLIC_ORIGIN (أو قائمة مفصولة بفواصل)
-// في أسرار الدالة لتقييد الأصول؛ وإن لم يُضبط نسمح بأي أصل (*).
-function allowedOrigins(): string[] {
-  return env("RAIZEY_PUBLIC_ORIGIN")
-    .split(",")
-    .map((value) => value.trim().replace(/\/$/, ""))
-    .filter(Boolean);
-}
-
-function corsHeaders(request?: Request): Record<string, string> {
-  const configured = allowedOrigins();
-  const requestOrigin = (request?.headers.get("Origin") || "").trim().replace(/\/$/, "");
-  let allowOrigin = "*";
-  if (configured.length) {
-    if (requestOrigin && configured.includes(requestOrigin)) {
-      allowOrigin = requestOrigin;
-    } else {
-      // أصل غير مُدرج: نعيد أول أصل مُهيّأ حتى لا نعطي "*" على قائمة مقيّدة.
-      allowOrigin = configured[0];
-    }
-  } else if (requestOrigin) {
-    allowOrigin = requestOrigin;
-  }
+function corsHeaders(): Record<string, string> {
+  const origin = env("RAIZEY_PUBLIC_ORIGIN") || "*";
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 }
@@ -397,14 +371,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   const extraMime = normalizeMime(body?.mimeTypeExtra);
   if (extra && extraMime && extra.length <= MAX_BASE64_CHARS) imageParts.push({ inline_data: { mime_type: extraMime, data: extra } });
 
-  // لا نكتفي بالمرور الخام إذا نتج رفض بسبب خطأ OCR محتمل في رقم العملية
-  // أو المبلغ. المرور المنظم الثاني يعيد قراءة الحقول من الصورة، ثم يمررها
-  // إلى نفس ReceiptJudgeCore قبل اتخاذ قرار نهائي.
-  const retryableRejectFlags = new Set(["ref_conflict", "amount_mismatch", "not_a_receipt"]);
-  const retryableReject = result.decision === "reject" &&
-    (result.riskFlags || []).some((flag: string) => retryableRejectFlags.has(flag));
-  const needsArbitration = retryableReject ||
-    !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified);
+  const needsArbitration = !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified) && result.decision !== "reject";
   if (needsArbitration) {
     try {
       const arbitration = await structuredPass(imageParts, apiKey);
@@ -442,33 +409,31 @@ async function processScan(request: Request, admin: any, userId: string, body: a
 }
 
 Deno.serve(async (request: Request) => {
-  // preflight يمر دائماً بترويسات CORS. مع verify_jwt=false على مستوى المنصّة
-  // لن تعترضه البوابة، فيصل إلى هنا ويعيد 204 صريحة.
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
-  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405, {}, request);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
+  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
 
   const token = authToken(request);
-  if (!token) return json({ ok: false, error: "auth_required" }, 401, {}, request);
+  if (!token) return json({ ok: false, error: "auth_required" }, 401);
 
   let admin: any;
   try {
     admin = buildAdminClient();
     const { data, error } = await admin.auth.getUser(token);
-    if (error || !data?.user) return json({ ok: false, error: "auth_required" }, 401, {}, request);
+    if (error || !data?.user) return json({ ok: false, error: "auth_required" }, 401);
     const userId = data.user.id;
     const rawBody = await request.text();
-    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json({ ok: false, error: "request_too_large" }, 413, {}, request);
+    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json({ ok: false, error: "request_too_large" }, 413);
     let body: any;
-    try { body = JSON.parse(rawBody); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400, {}, request); }
-    if (!(await enforceRateLimit(admin, userId))) return json({ ok: false, error: "rate_limited" }, 429, {}, request);
+    try { body = JSON.parse(rawBody); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400); }
+    if (!(await enforceRateLimit(admin, userId))) return json({ ok: false, error: "rate_limited" }, 429);
     const result = await processScan(request, admin, userId, body);
-    return json({ ok: true, ...result }, 200, {}, request);
+    return json({ ok: true, ...result });
   } catch (error) {
     console.error("[RAIZEY] process-receipt error", String((error as any)?.message || error));
     return json({
       ok: false,
       error: "receipt_processing_failed",
       message: "تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.",
-    }, 500, {}, request);
+    }, 500);
   }
 });
