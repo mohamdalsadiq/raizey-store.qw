@@ -89,7 +89,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/receipt-pipeline.js?v=20260818-edge2"></script>
+<script src="assets/js/receipt-pipeline.js?v=20260818-edge3"></script>
 <script>
 let currentUser = null;
 let paymentMethods = [];
@@ -498,7 +498,7 @@ async function submitTopup() {
   }
   // نفس الحد المفروض في سياسة قاعدة البيانات — رسالة أوضح للمستخدم
   if (amount > 10000000) {
-    errorBox.textContent = 'المبلغ أكبر من الحد المسموح.';
+    errorBox.textContent = 'المبلغ أكبر من الح�� المسموح.';
     return;
   }
   if (!methodId) {

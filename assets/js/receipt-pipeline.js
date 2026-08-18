@@ -101,6 +101,20 @@
     };
   }
 
+  // ── تشخيص آمن ──
+  // يطبع/يخزّن فقط بيانات غير حساسة (لا base64، لا JWT، لا محتوى الصورة،
+  // لا مفتاح Gemini) لتحديد نقطة الفشل بدقة في DevTools/Network.
+  function setDiag(patch) {
+    const diag = Object.assign(
+      { at: new Date().toISOString() },
+      root.__raizeyReceiptDiag || {},
+      patch || {}
+    );
+    root.__raizeyReceiptDiag = diag;
+    try { console.info('[RAIZEY receipt diag]', JSON.stringify(patch || {})); } catch (_) {}
+    return diag;
+  }
+
   async function getAccessToken() {
     if (!root.supabaseClient || !root.supabaseClient.auth) throw new Error('supabase_client_missing');
     const { data, error } = await root.supabaseClient.auth.getSession();
@@ -111,6 +125,16 @@
   async function serverVerify(file, options, extraFile) {
     const opts = options || {};
     if (!file || !(file instanceof Blob)) throw new Error('missing_image');
+    setDiag({
+      stage: 'start',
+      imageBytes: file.size || null,
+      mimeType: file.type || null,
+      hasExtra: !!extraFile,
+      supabaseUrlPresent: !!root.SUPABASE_URL,
+      anonKeyPresent: !!root.SUPABASE_ANON_KEY,
+      clientPresent: !!root.supabaseClient
+    });
+
     const compressed = await compressForServer(file);
     const imageBase64 = compressed.base64 || await fileToBase64(file);
     let imageBase64Extra = null;
@@ -121,33 +145,63 @@
       mimeTypeExtra = compressedExtra.mimeType || extraFile.type || 'image/jpeg';
     }
 
-    const token = await getAccessToken();
+    let token;
+    try {
+      token = await getAccessToken();
+      setDiag({ stage: 'auth_ok', jwtPresent: true });
+    } catch (authErr) {
+      setDiag({ stage: 'auth_failed', jwtPresent: false, errorCode: String(authErr && authErr.message || 'auth_required') });
+      throw authErr;
+    }
+
     const endpoint = `${String(root.SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1/process-receipt`;
     if (!endpoint.startsWith('https://')) throw new Error('supabase_endpoint_missing');
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS));
+    let response;
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...(root.SUPABASE_ANON_KEY ? { apikey: root.SUPABASE_ANON_KEY } : {})
-        },
-        body: JSON.stringify({
-          imageBase64,
-          mimeType: compressed.mimeType || file.type || 'image/jpeg',
-          imageBase64Extra,
-          mimeTypeExtra,
-          expectedAmount: opts.expectedAmount,
-          manualRef: opts.manualRef,
-          expectedAccount: opts.expectedAccount
-        }),
-        signal: controller.signal
-      });
+      setDiag({ stage: 'fetch_start' });
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...(root.SUPABASE_ANON_KEY ? { apikey: root.SUPABASE_ANON_KEY } : {})
+          },
+          body: JSON.stringify({
+            imageBase64,
+            mimeType: compressed.mimeType || file.type || 'image/jpeg',
+            imageBase64Extra,
+            mimeTypeExtra,
+            expectedAmount: opts.expectedAmount,
+            manualRef: opts.manualRef,
+            expectedAccount: opts.expectedAccount
+          }),
+          signal: controller.signal
+        });
+      } catch (fetchErr) {
+        // فشل الشبكة/CORS: preflight محجوب (verify_jwt) أو انقطاع اتصال.
+        // fetch يرمي TypeError بلا استجابة ⇒ لم يصل الطلب للدالة أبداً.
+        if (fetchErr && fetchErr.name === 'AbortError') {
+          setDiag({ stage: 'fetch_timeout', httpStatus: null, errorCode: 'server_ocr_timeout' });
+          throw fetchErr;
+        }
+        setDiag({ stage: 'fetch_network_or_cors', httpStatus: null, errorCode: 'network_or_cors_blocked' });
+        const error = new Error('network_or_cors_blocked');
+        error.networkOrCors = true;
+        throw error;
+      }
+
       let data = null;
       try { data = await response.json(); } catch (_) {}
+      setDiag({
+        stage: 'response',
+        httpStatus: response.status,
+        serverErrorCode: data && data.error ? String(data.error) : null,
+        scanIdPresent: !!(data && data.scanId)
+      });
       if (response.status === 401 || response.status === 403) throw new Error('auth_required');
       if (response.status === 429) throw new Error('server_rate_limited');
       if (!response.ok || !data || data.ok === false) {
@@ -156,6 +210,7 @@
         throw error;
       }
       if (!data.scanId || !data.receiptHash) throw new Error('server_scan_contract_invalid');
+      setDiag({ stage: 'success', scanIdPresent: true });
       return data;
     } finally {
       clearTimeout(timer);
@@ -172,12 +227,19 @@
       return result;
     } catch (error) {
       if (typeof opts.onServerError === 'function') opts.onServerError(error);
-      const flag = error && error.name === 'AbortError'
-        ? 'server_ocr_timeout'
-        : String(error && error.message || '').includes('auth_required')
-          ? 'auth_required'
-          : 'server_ocr_failed';
-      return softReview(flag, error && error.serverMessage ? error.serverMessage : undefined);
+      const message = String(error && error.message || '');
+      let flag = 'server_ocr_failed';
+      let friendly;
+      if (error && (error.name === 'AbortError' || message.includes('server_ocr_timeout'))) {
+        flag = 'server_ocr_timeout';
+      } else if (error && (error.networkOrCors || message.includes('network_or_cors_blocked'))) {
+        flag = 'network_or_cors_blocked';
+        friendly = 'تعذّر الاتصال بخادم الفحص (لم يصل الطلب). تحقّق من الإنترنت وأعد المحاولة؛ لم يُنشأ أي طلب.';
+      } else if (message.includes('auth_required')) {
+        flag = 'auth_required';
+        friendly = 'انتهت جلستك أو لم تُسجّل الدخول. سجّل الدخول مجدداً ثم أعد رفع الإيصال.';
+      }
+      return softReview(flag, error && error.serverMessage ? error.serverMessage : friendly);
     }
   }
 

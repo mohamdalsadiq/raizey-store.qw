@@ -333,7 +333,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/receipt-pipeline.js?v=20260818-edge2"></script>
+<script src="assets/js/receipt-pipeline.js?v=20260818-edge3"></script>
 <script>
 let cart = [];
 let currentUser = null;
@@ -357,7 +357,7 @@ function safeFormatSDG(val) {
 
 // ── حرس زمني على كل استدعاء شبكة ──
 // سبب وجوده: أي await على الشبكة بدون مهلة قد ينتظر للأبد (شبكة معلّقة،
-// استجابة لا تصل) فيبقى الزر عالقاً على "جارِ تسجيل الإيصال..." بلا نهاية.
+// استجابة لا تصل) فيبقى ا��زر عالقاً على "جارِ تسجيل الإيصال..." بلا نهاية.
 // الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
 // ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
 const NET_TIMEOUT_MS = {
@@ -928,12 +928,15 @@ function attachCheckoutEvents(canUseWallet) {
     fileBox.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
 
-    // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
-    const softReview = (flag) => ({
+    // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة.
+    // مهم: هذه النتيجة لا تحمل scanId/receiptHash، أي أن الطلب لم يصل للخادم
+    // ولم تُنشأ نتيجة موثّقة ⇒ يُمنع إكمال الطلب (fail-closed) وتظهر رسالة
+    // واضحة تطلب إعادة المحاولة، لا رسالة توحي بأن الفحص نجح.
+    const softReview = (flag, customMessage) => ({
       decision: 'review', ocrStatus: 'needs_review',
-      message: 'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.',
+      message: customMessage || 'تعذّر إكمال الفحص الآلي للصورة. أعد المحاولة بعد لحظات — لم يُنشأ أي طلب.',
       riskFlags: [flag], confidence: null, provider: null, providerName: null, language: null,
-      passes: 0, textLength: 0, version: 3,
+      passes: 0, textLength: 0, version: 4, transportFailed: true,
       extracted: { txRef: null, amount: null, dateTime: null },
       refVerified: false, amountVerified: false
     });
@@ -961,8 +964,22 @@ function attachCheckoutEvents(canUseWallet) {
         try {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
-          console.warn('[RAIZEY] server receipt verification failed:', serverErr && serverErr.message);
-          return softReview('server_ocr_failed');
+          const msg = String(serverErr && serverErr.message || '');
+          console.warn('[RAIZEY] server receipt verification failed:', msg);
+          // تصنيف السبب الحقيقي بدل رسالة عامة موحّدة:
+          if (serverErr && (serverErr.networkOrCors || msg.includes('network_or_cors_blocked'))) {
+            return softReview('network_or_cors_blocked',
+              'تعذّر الاتصال بخادم الفحص (لم يصل الطلب إلى الخادم). تحقّق من الإنترنت وأعد المحاولة — لم يُنشأ أي طلب.');
+          }
+          if (msg.includes('auth_required')) {
+            return softReview('auth_required',
+              'انتهت جلستك أو لم تُسجّل الدخول. سجّل الدخول مجدداً ثم أعد رفع الإيصال — لم يُنشأ أي طلب.');
+          }
+          if (serverErr && (serverErr.name === 'AbortError' || msg.includes('timeout'))) {
+            return softReview('server_ocr_timeout',
+              'انتهت مهلة الفحص على الخادم قبل وصول النتيجة. أعد المحاولة — لم يُنشأ أي طلب.');
+          }
+          return softReview('server_ocr_failed', serverErr && serverErr.serverMessage);
         }
       })();
 
@@ -1007,6 +1024,34 @@ function attachCheckoutEvents(canUseWallet) {
       });
       showSupportButton('تم رفض صورة الإيصال من الفحص الذكي');
       scanResult = null;
+      return;
+    }
+
+    // ── فشل نقل (لم يصل الطلب للخادم): شبكة/CORS/انتهاء جلسة/مهلة قبل أي
+    // استجابة موثّقة. لا يوجد scanId/receiptHash ⇒ fail-closed صريح: نمنع
+    // إكمال الطلب ونعرض سبباً واضحاً وزر إعادة المحاولة، بدل إيهام العميل
+    // بأن الإيصال قُبل أو أنه "قيد المراجعة اليدوية". ──
+    const TRANSPORT_FLAGS = ['network_or_cors_blocked', 'auth_required', 'server_ocr_timeout', 'ui_scan_timeout', 'scan_error'];
+    const isTransportFail = (analysis.transportFailed || !analysis.scanId) &&
+      (analysis.riskFlags || []).some(f => TRANSPORT_FLAGS.includes(f));
+    if (isTransportFail) {
+      resetReceiptSelection();
+      reportEl.style.display = 'block';
+      reportEl.style.borderColor = 'var(--danger)';
+      const isAuth = (analysis.riskFlags || []).includes('auth_required');
+      reportEl.innerHTML =
+        `<strong style="color:var(--danger);"><i class="fas fa-triangle-exclamation"></i> لم يكتمل الفحص</strong><br>` +
+        `${escapeHtml(analysis.message)}` +
+        `<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">` +
+        `لن يُنشأ أي طلب حتى ينجح فحص الإيصال على الخادم. ` +
+        `${isAuth ? 'سجّل الدخول ثم' : 'تأكد من اتصالك بالإنترنت ثم'} اضغط لرفع الصورة مرة أخرى.` +
+        `</div>`;
+      showSupportButton('لم يصل فحص الإيصال إلى الخادم (' + ((analysis.riskFlags || [])[0] || 'transport') + ')');
+      logFraudAttempt('transport_fail_' + ((analysis.riskFlags || [])[0] || 'unknown'), {
+        risk_flags: analysis.riskFlags, diag: (window.__raizeyReceiptDiag || null)
+      });
+      scanResult = null;
+      receiptFile = null;
       return;
     }
 
@@ -1331,7 +1376,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   }
 
   placeOrderBtn.disabled = true;
-  placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+  placeOrderBtn.textContent = 'ج��رِ إرسال طلباتك...';
 
   if (selectedPayment === 'wallet') {
     try {
