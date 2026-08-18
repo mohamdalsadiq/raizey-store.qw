@@ -1,0 +1,16 @@
+# RAIZEY STORE — Supabase project config
+# ملاحظة: project_id هو مرجع مشروع Supabase (Project Ref).
+project_id = "rglbfizqolrenwfsndyv"
+
+# =========================================================================
+# Edge Function: process-receipt
+# =========================================================================
+# verify_jwt = false ضروري وليس اختيارياً:
+#   المتصفح يرسل طلب CORS preflight (OPTIONS) بلا ترويسة Authorization،
+#   ومع verify_jwt = true ترفضه بوابة Supabase بـ 401 قبل الوصول إلى
+#   معالج OPTIONS داخل الدالة، فيفشل preflight ولا يُرسَل POST إطلاقاً.
+#   لذلك نعطّل تحقق البوابة، والدالة نفسها تتحقق من JWT داخلياً عبر
+#   admin.auth.getUser(token) وترفض أي طلب بلا جلسة مستخدم صالحة —
+#   فالأمان محفوظ كاملاً، مع السماح لـ preflight بالمرور.
+[functions.process-receipt]
+verify_jwt = false

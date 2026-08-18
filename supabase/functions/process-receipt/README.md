@@ -4,7 +4,17 @@
 
 ## الأمان
 
-تم نشر الدالة مع `verify_jwt = true`. يجب أن يرسل العميل جلسة Supabase Auth في ترويسة `Authorization: Bearer <user-jwt>`. لا تستخدم الواجهة مفتاح الخدمة ولا مفتاح Gemini.
+يجب نشر الدالة مع **`verify_jwt = false`** (مضبوط في `supabase/config.toml`). هذا ليس تخفيفاً للأمان:
+
+- المتصفح يرسل قبل أي POST عابر للنطاقات طلب **CORS preflight (`OPTIONS`) بلا ترويسة `Authorization`**.
+- مع `verify_jwt = true` ترفض بوابة Supabase طلب preflight بـ `401 UNAUTHORIZED_NO_AUTH_HEADER` **قبل** الوصول إلى معالج `OPTIONS` داخل الدالة، فيفشل preflight ولا يُرسَل POST إطلاقاً، ولا يظهر أي شيء في `edge_logs`.
+- لذلك نعطّل تحقق البوابة، والدالة نفسها تتحقق من JWT داخلياً: تقرأ `Authorization: Bearer <user-jwt>` ثم تستدعي `admin.auth.getUser(token)` وترفض بـ 401 أي طلب بلا جلسة صالحة. فالأمان محفوظ كاملاً.
+
+إعادة النشر بعد أي تعديل (من جذر المشروع، بعد `supabase link`):
+
+```bash
+supabase functions deploy process-receipt --no-verify-jwt
+```
 
 `SUPABASE_URL` و`SUPABASE_SERVICE_ROLE_KEY` متاحان تلقائيًا داخل بيئة Edge Function. يجب ضبط السر التالي في Supabase Dashboard ضمن Function Secrets:
 
@@ -12,7 +22,7 @@
 GEMINI_API_KEY=<قيمة مفتاح Gemini في بيئة Supabase فقط>
 ```
 
-اختياريًا يمكن ضبط `RAIZEY_PUBLIC_ORIGIN` على أصل المتجر الفعلي بدل `*` لتقييد CORS.
+اختياريًا يمكن ضبط `RAIZEY_PUBLIC_ORIGIN` على أصل المتجر الفعلي (مثل `https://raizey-store-qw.vercel.app`، أو قائمة مفصولة بفواصل) لتقييد CORS؛ وإن تُرك فارغاً تُعيد الدالة أصل الطلب نفسه. لا تضع بعده شرطة مائلة `/`.
 
 ## قاعدة البيانات
 
