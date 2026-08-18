@@ -16,6 +16,18 @@
   .receipt-scan-report.is-review { border-color:#c98a1f; }
   .receipt-scan-report.is-error { border-color:var(--danger); color:var(--danger); }
   .receipt-file-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tx-ref-row { display:flex; gap:8px; align-items:stretch; }
+  .tx-ref-row input { flex:1; }
+  #saveTxRefBtn {
+    flex-shrink:0; min-width:84px; padding:0 20px; border-radius:10px; border:none;
+    background:var(--primary); color:var(--ink); font-weight:800; font-size:14px;
+    cursor:pointer; transition:opacity .2s ease;
+  }
+  #saveTxRefBtn:hover { opacity:.9; }
+  #saveTxRefBtn:active { opacity:.8; }
+  #saveTxRefBtn:disabled { opacity:.6; cursor:not-allowed; }
+  #transactionRefInput:disabled { opacity:.65; cursor:not-allowed; }
+  .field-hint { font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -57,19 +69,29 @@
 
     <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:14px;"></div>
 
+    <!-- الخطوة 1: رقم العملية + تحقق مبكر قبل رفع الإيصال -->
     <div class="field">
-      <label>رقم العملية (من رسالة التحويل) *</label>
-      <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234">
+      <label>الخطوة 1 — رقم العملية (من رسالة التحويل) *</label>
+      <div class="tx-ref-row">
+        <input type="text" id="transactionRefInput" placeholder="مثلاً: FT2507191234" inputmode="latin" autocomplete="off">
+        <button type="button" id="saveTxRefBtn">تحقق</button>
+      </div>
+      <div class="field-hint">اكتب رقم العملية كما ورد في رسالة التحويل ثم اضغط "تحقق" — لن تظهر خطوة رفع الإيصال إلا بعد نجاح التحقق ومنع التكرار.</div>
+      <div id="txRefMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
     </div>
 
-    <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
-    <div class="file-upload" id="fileUploadBox">
-      <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)</span>
-      <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+    <!-- الخطوة 2: رفع صورة الإيصال (تظهر بعد نجاح التحقق من رقم العملية) -->
+    <div id="receiptStep" style="display:none; margin-top:14px;">
+      <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">الخطوة 2 — صورة إشعار التحويل *</label>
+      <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
+      <div class="file-upload" id="fileUploadBox">
+        <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)</span>
+        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+      </div>
+      <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
+      <div id="receiptScanStatus" class="receipt-scan-status"></div>
+      <div id="receiptScanReport" class="receipt-scan-report"></div>
     </div>
-    <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
-    <div id="receiptScanStatus" class="receipt-scan-status"></div>
-    <div id="receiptScanReport" class="receipt-scan-report"></div>
 
     <div class="form-error" id="formError" style="margin-top:10px;"></div>
 
@@ -96,6 +118,7 @@ let paymentMethods = [];
 let receiptFile = null;
 let receiptAnalysis = null;
 let receiptScanContext = null;
+let savedWalletTxRef = null; // رقم العملية بعد التحقق المبكر (قبل رفع الإيصال)
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
 
@@ -162,16 +185,30 @@ async function init() {
     });
   });
 
+  // ── الخطوة 1: التحقق المبكر من رقم العملية قبل رفع الإيصال ──
+  document.getElementById('saveTxRefBtn').addEventListener('click', verifyWalletTxRef);
+
   // ── فحص الملف فور الاختيار (MIME + حجم + صورة صحيحة) ──
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('receiptInput');
   const fileError = document.getElementById('fileError');
 
-  fileBox.addEventListener('click', () => fileInput.click());
+  fileBox.addEventListener('click', () => {
+    if (!savedWalletTxRef) {
+      document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع صورة الإيصال.';
+      return;
+    }
+    fileInput.click();
+  });
   fileInput.addEventListener('change', async () => {
     fileError.textContent = '';
     resetReceiptScan();
     if (fileInput.files.length === 0) return;
+    if (!savedWalletTxRef) {
+      fileInput.value = '';
+      document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع صورة الإيصال.';
+      return;
+    }
     const file = fileInput.files[0];
     const validation = await validateReceiptImage(file);
     if (!validation.valid) {
@@ -188,10 +225,13 @@ async function init() {
     await runWalletReceiptScan();
   });
 
-  ['amountInput', 'transactionRefInput'].forEach((id) => {
-    document.getElementById(id).addEventListener('input', () => {
-      if (receiptAnalysis) resetReceiptScan('غيّرت بيانات التحويل؛ ارفع الإيصال من جديد للفحص.');
-    });
+  // تعديل المبلغ يبطل الفحص فقط (لا يبطل التحقق من رقم العملية)
+  document.getElementById('amountInput').addEventListener('input', () => {
+    if (receiptAnalysis) resetReceiptScan('غيّرت المبلغ؛ ارفع الإيصال من جديد للفحص.');
+  });
+  // تعديل رقم العملية يبطل التحقق المبكر ويخفي خطوة رفع الإيصال
+  document.getElementById('transactionRefInput').addEventListener('input', () => {
+    if (savedWalletTxRef) resetWalletTxRef('عدّلت رقم العملية؛ اضغط "تحقق" من جديد قبل رفع الإيصال.');
   });
   document.getElementById('methodSelect').addEventListener('change', () => {
     if (receiptAnalysis) resetReceiptScan('غيّرت وسيلة التحويل؛ ارفع الإيصال من جديد للفحص.');
@@ -208,6 +248,120 @@ function resetReceiptScan(message) {
   const report = document.getElementById('receiptScanReport');
   if (status) status.textContent = message || '';
   if (report) { report.hidden = true; report.style.display = 'none'; report.className = 'receipt-scan-report'; report.innerHTML = ''; }
+}
+
+// إبطال التحقق المبكر من رقم العملية وإخفاء خطوة رفع الإيصال، وإعادة زر "تحقق" لحالته
+function resetWalletTxRef(message) {
+  savedWalletTxRef = null;
+  const btn = document.getElementById('saveTxRefBtn');
+  const refInput = document.getElementById('transactionRefInput');
+  const refMsg = document.getElementById('txRefMessage');
+  const receiptStep = document.getElementById('receiptStep');
+  if (refInput) refInput.disabled = false;
+  if (btn) { btn.textContent = 'تحقق'; btn.dataset.mode = 'save'; btn.disabled = false; }
+  if (receiptStep) receiptStep.style.display = 'none';
+  // تنظيف أي ملف/فحص سابق حتى لا يُرسل بإيصال قديم
+  receiptFile = null;
+  const fileInput = document.getElementById('receiptInput');
+  if (fileInput) fileInput.value = '';
+  const fileBox = document.getElementById('fileUploadBox');
+  if (fileBox) {
+    fileBox.classList.remove('has-file');
+    const lbl = document.getElementById('receiptFileLabel');
+    if (lbl) lbl.innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  }
+  resetReceiptScan('');
+  if (refMsg) { refMsg.style.color = 'var(--text-muted)'; refMsg.textContent = message || ''; }
+}
+
+// التحقق المبكر (قراءة فقط، بلا حجز) — يمنع استهلاك الفحص على رقم عملية مستخدم مسبقاً
+// في الدفع المباشر أو شحن سابق. الحجز النهائي الذرّي يبقى داخل create_wallet_topup_from_receipt.
+async function verifyWalletTxRef() {
+  const btn = document.getElementById('saveTxRefBtn');
+  const refInput = document.getElementById('transactionRefInput');
+  const refMsg = document.getElementById('txRefMessage');
+  const receiptStep = document.getElementById('receiptStep');
+
+  // وضع التعديل: فتح القفل لتعديل رقم العملية
+  if (btn.dataset.mode === 'edit') {
+    resetWalletTxRef('عدّل رقم العملية ثم اضغط "تحقق" لتأكيده مجدداً.');
+    refInput.focus();
+    return;
+  }
+
+  const raw = refInput.value.trim();
+  const norm = window.RaizeyReceiptPipeline
+    ? RaizeyReceiptPipeline.normalizeRef(raw)
+    : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+  if (norm.length < 6) {
+    refMsg.style.color = 'var(--danger)';
+    refMsg.textContent = 'رقم العملية قصير جداً. انسخه كما ورد في رسالة التحويل (6 خانات على الأقل).';
+    savedWalletTxRef = null;
+    receiptStep.style.display = 'none';
+    return;
+  }
+
+  // حد للمحاولات لمنع التخمين المتكرر
+  if (typeof rateLimiter !== 'undefined' &&
+      !rateLimiter.check('wallet_check_tx_ref', 8, 60 * 1000)) {
+    refMsg.style.color = 'var(--danger)';
+    refMsg.textContent = 'محاولات كثيرة. انتظر دقيقة ثم حاول مجدداً.';
+    return;
+  }
+
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = 'جارِ التحقق...';
+  refMsg.style.color = 'var(--text-muted)';
+  refMsg.textContent = 'جارِ التحقق من رقم العملية...';
+
+  try {
+    const { data, error } = await supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: raw });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('check_tx_ref_empty');
+    if (row.available === false) {
+      btn.disabled = false;
+      btn.textContent = prevText;
+      refMsg.style.color = 'var(--danger)';
+      refMsg.textContent = row.reason === 'invalid_tx_ref'
+        ? 'رقم العملية غير صحيح. انسخه كما ورد في رسالة التحويل.'
+        : 'رقم العملية هذا مستخدم من قبل في شحن محفظة أو دفع طلب. اكتب رقم العملية الصحيح لتحويلك.';
+      savedWalletTxRef = null;
+      receiptStep.style.display = 'none';
+      return;
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = prevText;
+    refMsg.style.color = 'var(--danger)';
+    refMsg.textContent = walletTxRefCheckError(e);
+    savedWalletTxRef = null;
+    receiptStep.style.display = 'none';
+    console.warn('[RAIZEY] wallet check_tx_ref_available failed:', e?.message || e);
+    return;
+  }
+
+  // نجح التحقق: أقفل الحقل وأظهر خطوة رفع الإيصال
+  savedWalletTxRef = raw;
+  refInput.disabled = true;
+  btn.disabled = false;
+  btn.textContent = 'تعديل';
+  btn.dataset.mode = 'edit';
+  refMsg.style.color = 'var(--primary)';
+  refMsg.textContent = 'تم التحقق من رقم العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
+  receiptStep.style.display = 'block';
+  document.getElementById('formError').textContent = '';
+}
+
+function walletTxRefCheckError(error) {
+  const raw = String(error?.message || error?.hint || error?.details || error || '');
+  if (raw.includes('auth_required')) return 'انتهت جلسة الدخول؛ سجّل الدخول من جديد ثم أعد المحاولة.';
+  if (raw.includes('check_tx_ref_available') || raw.includes('PGRST202') || raw.includes('42883')) {
+    return 'خدمة التحقق من رقم العملية غير مُفعّلة على قاعدة البيانات بعد. طبّق ملف الإصلاح ثم أعد المحاولة.';
+  }
+  return 'تعذّر التحقق من رقم العملية (اتصال ضعيف). حاول مرة أخرى قبل رفع الإيصال.';
 }
 
 function isTechnicalReceiptReview(analysis) {
@@ -252,9 +406,10 @@ async function runWalletReceiptScan() {
   const status = document.getElementById('receiptScanStatus');
   const errorBox = document.getElementById('formError');
   const amount = parseFloat(document.getElementById('amountInput').value);
-  const manualRef = document.getElementById('transactionRefInput').value.trim();
+  const manualRef = savedWalletTxRef || document.getElementById('transactionRefInput').value.trim();
   const method = paymentMethods.find((item) => item.id === document.getElementById('methodSelect').value);
   errorBox.textContent = '';
+  if (!savedWalletTxRef) { errorBox.textContent = 'تحقّق من رقم العملية أولاً قبل فحص الإيصال.'; return; }
   if (!Number.isFinite(amount) || amount <= 0) { errorBox.textContent = 'أدخل المبلغ قبل فحص الإيصال.'; return; }
   if (!manualRef || manualRef.length < 6) { errorBox.textContent = 'اكتب رقم العملية (6 خانات على الأقل) قبل فحص الإيصال.'; return; }
   status.textContent = 'جارِ بدء الفحص الذكي...';
@@ -498,7 +653,7 @@ async function submitTopup() {
   }
   // نفس الحد المفروض في سياسة قاعدة البيانات — رسالة أوضح للمستخدم
   if (amount > 10000000) {
-    errorBox.textContent = 'المبلغ أكبر من الحد المسموح.';
+    errorBox.textContent = 'المبلغ أكبر من الح�� المسموح.';
     return;
   }
   if (!methodId) {
@@ -509,11 +664,15 @@ async function submitTopup() {
     errorBox.textContent = 'ارفع صورة الإيصال';
     return;
   }
+  if (!savedWalletTxRef) {
+    errorBox.textContent = 'تحقّق من رقم العملية أولاً قبل إرسال طلب الشحن.';
+    return;
+  }
   if (!receiptAnalysis || !receiptAnalysisAllowed(receiptAnalysis)) {
     errorBox.textContent = 'انتظر اكتمال فحص الإيصال قبل إرسال طلب الشحن.';
     return;
   }
-  const transactionRef = document.getElementById('transactionRefInput').value.trim();
+  const transactionRef = savedWalletTxRef || document.getElementById('transactionRefInput').value.trim();
   if (!transactionRef) {
     errorBox.textContent = 'اكتب رقم العملية من رسالة التحويل';
     return;
@@ -655,17 +814,11 @@ async function submitTopup() {
   document.getElementById('methodSelect').value = '';
   document.getElementById('transactionRefInput').value = '';
   document.getElementById('methodDetails').innerHTML = '';
-  const fBox = document.getElementById('fileUploadBox');
-  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
-  fBox.classList.remove('has-file');
-  receiptFile = null;
   receiptAnalysis = null;
   receiptScanContext = null;
-  document.getElementById('receiptInput').value = '';
-  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
-  document.getElementById('receiptScanStatus').textContent = '';
-  document.getElementById('receiptScanReport').hidden = true;
-  document.getElementById('receiptScanReport').style.display = 'none';
+  // إعادة التحقق المبكر لحالته الأولى (زر "تحقق"، إخفاء خطوة رفع الإيصال، تنظيف الملف)
+  resetWalletTxRef('');
+  document.getElementById('txRefMessage').textContent = '';
   submitBtn.disabled = false;
   submitBtn.textContent = 'إرسال طلب الشحن';
 
