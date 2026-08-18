@@ -22,8 +22,8 @@
     <a href="admin.html" class="active">الرئيسية</a>
     <a href="admin-orders.html">الطلبات</a>
     <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html">المنتجات</a>
-    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-categories.html">إدارة الأقسام</a>
+    <a href="admin-products.html">إدارة المنتجات والباقات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
@@ -90,11 +90,11 @@ async function init() {
 
   const { data: profile } = await supabaseClient
     .from('profiles')
-    .select('role')
+    .select('role, is_banned')
     .eq('id', session.user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || profile.role !== 'admin' || profile.is_banned === true) {
     document.getElementById('accessDenied').style.display = 'block';
     return;
   }

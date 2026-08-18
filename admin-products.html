@@ -23,8 +23,8 @@
     <a href="admin.html">الرئيسية</a>
     <a href="admin-orders.html">الطلبات</a>
     <a href="admin-topups.html">شحن المحافظ</a>
-    <a href="admin-products.html" class="active">المنتجات</a>
-    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-categories.html">إدارة الأقسام</a>
+    <a href="admin-products.html" class="active">إدارة المنتجات والباقات</a>
     <a href="admin-customers.html">العملاء</a>
     <a href="admin-payment-methods.html">وسائل الدفع</a>
     <a href="admin-settings.html">الإعدادات</a>
@@ -78,14 +78,15 @@
     <!-- قسم الخيارات الفرعية للمنتج -->
     <div class="field" style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <label style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
-          <i class="fas fa-list-check" style="color: var(--primary);"></i>
-          إضافة خيارات فرعية للمنتج
+          <label for="hasOptionsToggle" style="font-weight: 800; margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px;">
+          <i class="fas fa-list-check" style="color: var(--primary);" aria-hidden="true"></i>
+          خيارات فرعية اختيارية
         </label>
-        <input type="checkbox" id="hasOptionsToggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+        <input type="checkbox" id="hasOptionsToggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" aria-describedby="optionsStateHint">
       </div>
+      <div id="optionsStateHint" style="font-size:12px; color:var(--text-muted); margin-top:4px;">الخيارات الفرعية مغلقة — سيُحفظ المنتج بسعره الأساسي فقط.</div>
 
-      <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;">
+      <div id="optionsContainer" style="display: none; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px;" aria-live="polite">
         <label style="display:block; font-size:12px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">
           أدخل الخيارات وسعر كل خيار ($). يمكنك كتابة الاسم "فئة - خيار" لتقسيمها لمرحلتين، أو كتابة الاسم مباشرة لتظهر مباشرة.
         </label>
@@ -211,6 +212,9 @@ async function init() {
 
 function toggleOptionsSection(show) {
   optionsContainer.style.display = show ? 'block' : 'none';
+  document.getElementById('optionsStateHint').textContent = show
+    ? 'الخيارات الفرعية مفعّلة — يجب حفظ خيارين صالحين على الأقل.'
+    : 'الخيارات الفرعية مغلقة — سيُحفظ المنتج بسعره الأساسي فقط.';
   // التحقق: لا نضيف صفوفاً فارغة إلا إذا لم يكن هناك خيارات حالية
   if (show && optionsBuilder.children.length === 0) {
     addOptionRow('', '', '');
@@ -223,13 +227,14 @@ function addOptionRow(label = '', price = '', id = '') {
   row.className = 'option-row';
   row.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 10px;';
 
-  const cleanLabel = (label || '').replace(/"/g, '&quot;');
-  const safeId = id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+  const cleanLabel = escapeHtml(label || '');
+  const safeId = escapeAttribute(id || 'opt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6));
+  const cleanPrice = escapeAttribute(price ?? '');
 
   row.innerHTML = `
     <input type="hidden" class="opt-id" value="${safeId}">
     <input type="text" placeholder="اسم الخيار (مثلاً: حساب موثق)" class="opt-label" value="${cleanLabel}" style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
-    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${price}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
+    <input type="number" step="0.01" placeholder="السعر ($)" class="opt-price" value="${cleanPrice}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;" required>
     <button type="button" style="background: var(--danger, #e5484d); color: white; border: none; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;"><i class="fas fa-trash-can"></i></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
@@ -258,14 +263,24 @@ function collectOptions() {
 }
 
 async function loadCategories() {
-  const { data } = await supabaseClient.from('categories').select('*').order('display_order');
+  const { data, error } = await supabaseClient.from('categories').select('id,name').order('display_order').order('name');
+  if (error) {
+    document.getElementById('productsList').innerHTML = `<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>تعذر تحميل الأقسام للمنتجات.</strong><button type="button" class="admin-btn btn-confirm" id="retryProductCategoriesBtn">إعادة المحاولة</button></div>`;
+    document.getElementById('retryProductCategoriesBtn')?.addEventListener('click', loadCategories);
+    return;
+  }
   categories = data || [];
-  categoryInput.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  categoryInput.innerHTML = categories.map(c => `<option value="${escapeAttribute(c.id)}">${escapeHtml(c.name)}</option>`).join('');
 }
 
 async function loadProducts() {
-  const { data } = await supabaseClient
-    .from('products').select('*, categories(name)').order('display_order');
+  const { data, error } = await supabaseClient
+    .from('products').select('*, categories(name)').order('display_order').order('name');
+  if (error) {
+    document.getElementById('productsList').innerHTML = `<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>تعذر تحميل المنتجات.</strong><button type="button" class="admin-btn btn-confirm" id="retryProductsBtn">إعادة المحاولة</button></div>`;
+    document.getElementById('retryProductsBtn')?.addEventListener('click', loadProducts);
+    return;
+  }
   products = data || [];
   render();
 }
@@ -280,7 +295,7 @@ function render() {
   container.innerHTML = products.map(p => `
     <div class="manage-item">
       <div class="manage-item-thumb">
-        ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="" loading="lazy">` : 'لا صورة'}
+        ${sanitizeUrl(p.image_url) ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<i class="fas fa-image" aria-hidden="true"></i><span>لا صورة</span>'}
       </div>
       <div class="manage-item-info">
         <div class="manage-item-name">
@@ -288,11 +303,11 @@ function render() {
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
           ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
-        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}</div>
+        <div class="manage-item-sub">القسم: ${escapeHtml(p.categories?.name || 'بدون قسم')} — $${Number(p.price_usd || 0).toFixed(2)}</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${p.id}"><i class="fas fa-trash-can"></i></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${escapeAttribute(p.id)}" aria-label="تعديل المنتج ${escapeAttribute(p.name)}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${escapeAttribute(p.id)}" aria-label="حذف المنتج ${escapeAttribute(p.name)}"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
       </div>
     </div>
   `).join('');
@@ -316,8 +331,8 @@ function addFieldRow(key, label, placeholder = '') {
   const safeKey = key || 'field_' + Date.now() + Math.random().toString(36).substring(2, 5);
 
   row.innerHTML = `
-    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${label}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
-    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${placeholder}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${escapeHtml(label || '')}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
+    <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${escapeHtml(placeholder || '')}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: 'Tajawal'; font-size: 13px;">
     <input type="hidden" class="field-key" value="${safeKey}">
     <button type="button" style="background: var(--danger); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><i class="fas fa-xmark"></i></button>
   `;
@@ -374,6 +389,7 @@ function openForm(id) {
     optionsContainer.style.display = 'none';
   }
 
+  toggleOptionsSection(hasOptionsToggle.checked);
   formModal.classList.add('show');
 }
 
@@ -400,45 +416,55 @@ async function saveProduct() {
   const name = nameInput.value.trim();
   const price = parseFloat(priceInput.value);
   const categoryId = categoryInput.value;
+  const saveButton = document.getElementById('formSaveBtn');
 
+  formError.textContent = '';
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
-  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
-  if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
+  if (!Number.isFinite(price) || price <= 0) { formError.textContent = 'أدخل سعراً صحيحاً للمنتج'; return; }
+  if (!categoryId) { formError.textContent = 'اختر القسم الرئيسي'; return; }
 
-  if (hasOptionsToggle.checked) {
-    const opts = collectOptions();
-    if (opts.length < 2) {
-      formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
-      return;
-    }
+  // اجمع الحالة مرة واحدة فقط. عند إغلاق المفتاح يتم تنظيف الخيارات
+  // وتخزين false صراحةً، فلا تبقى قيمة قديمة في قاعدة البيانات.
+  const options = hasOptionsToggle.checked ? collectOptions() : [];
+  const hasOptions = hasOptionsToggle.checked && options.length > 0;
+  if (hasOptions && options.length < 2) {
+    formError.textContent = 'عند تفعيل الخيارات الفرعية، أضف خيارين على الأقل أو أغلق المفتاح لحفظ المنتج البسيط.';
+    return;
   }
 
   const payload = {
     name,
     description: descInput.value.trim() || null,
     instructions: instructionsInput.value.trim() || null,
-    image_url: imageInput.value.trim() || null,
+    image_url: sanitizeUrl(imageInput.value.trim()) || null,
     price_usd: price,
     category_id: categoryId,
-    display_order: parseInt(orderInput.value) || 0,
+    display_order: Number.parseInt(orderInput.value, 10) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
-    options: collectOptions(),
-    has_options: hasOptionsToggle.checked && collectOptions().length > 0
+    options,
+    has_options: hasOptions
   };
 
-  const { error } = editingId
-    ? await supabaseClient.from('products').update(payload).eq('id', editingId)
-    : await supabaseClient.from('products').insert(payload);
+  saveButton.disabled = true;
+  saveButton.textContent = 'جارِ الحفظ...';
+  try {
+    const result = editingId
+      ? await supabaseClient.from('products').update(payload).eq('id', editingId)
+      : await supabaseClient.from('products').insert(payload);
 
-  if (error) {
-    formError.textContent = 'فشل حفظ المنتج، يرجى المحاولة مجدداً.';
-    devLog('[RAIZEY] save product error:', error);
-    return;
+    if (result.error) {
+      formError.textContent = 'فشل حفظ المنتج. تأكد من الاتصال والصلاحيات ثم أعد المحاولة.';
+      devLog('[RAIZEY] save product error:', result.error);
+      return;
+    }
+
+    closeForm();
+    await loadProducts();
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = 'حفظ';
   }
-
-  closeForm();
-  await loadProducts();
 }
 
 async function deleteProduct(id) {
