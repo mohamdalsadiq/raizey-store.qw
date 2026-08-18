@@ -99,6 +99,8 @@ check('legacy receipt endpoint removed from active Vercel path', not (ROOT / 'ap
 check('edge function authenticates and uses server secrets', 'auth.getUser' in edge_index and 'SUPABASE_SERVICE_ROLE_KEY' in edge_index and 'GEMINI_API_KEY' in edge_index and 'Bearer' in receipt_pipeline)
 check('edge function saves server scan result', 'receipt_scan_results' in edge_index and 'sha256Hex' in edge_index and 'scanId' in edge_index and 'receiptHash' in edge_index)
 check('edge judge core preserves deterministic rules', 'buildContext' in edge_core and 'judge' in edge_core and 'export { ReceiptJudgeCore }' in edge_core)
+check('edge retries structured OCR on mismatch', 'retryableRejectFlags' in edge_index and 'ref_conflict' in edge_index and 'structuredPass' in edge_index)
+check('edge preserves transaction prefixes during OCR correction', 'seenDigit' in edge_core and 'DIGIT_CONFUSIONS' in edge_core and 'fixOcrDigits' in edge_core)
 check('database binds claims to edge scan', 'receipt_scan_results' in receipt_migration and 'enforce_edge_receipt_scan_claim' in receipt_migration and 'edge_scan_id' in receipt_migration)
 check('database consumes scan after financial insert', 'mark_edge_receipt_scan_consumed' in receipt_migration and 'trg_orders_edge_scan_consumed' in receipt_migration and 'trg_wallet_topups_edge_scan_consumed' in receipt_migration)
 check('receipt rollback backup is complete', all((rollback_dir / name).exists() for name in ('receipt-intel.js', 'receipt-judge-core.js', 'verify-receipt.js', 'SHA256SUMS.txt', 'ROLLBACK.md')))

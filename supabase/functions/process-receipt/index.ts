@@ -29,11 +29,13 @@ const OCR_PROMPT =
   "إذا لم تكن الصورة تحتوي على أي نص واضح فأعد نصاً فارغاً. لا تكتب أي شيء غير النص المنسوخ.";
 
 const JSON_PROMPT =
-  "أنت مدقق إشعارات تحويل بنكي. انظر للصورة وأعد JSON فقط بهذا الشكل بالضبط: " +
+  "أنت مدقق إشعارات تحويل بنكي. انظر إلى الصورة كاملة وأعد JSON فقط بهذا الشكل بالضبط: " +
   '{"transaction_number":"","amount":"","currency":"","status":"","datetime":"","to_account":"","bank":""}. ' +
-  "قواعد صارمة: انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح. " +
-  "المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم). " +
-  'إذا لم تكن القيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
+  "ابحث عن الحقل الموسوم رقم العملية/رقم الحركة/الرقم المرجعي/Transaction ID، وانسخ القيمة كاملة حرفاً ورقماً كما تظهر، " +
+  "مع الحفاظ على بادئات مثل FT أو TRX أو REF وعدم تحويل الحروف إلى أرقام. " +
+  "المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم أو العمولة). " +
+  "status يجب أن يصف نجاح التحويل إن ظهر. " +
+  'إذا لم تكن القيمة ظاهرة بوضوح تماماً اتركها سلسلة فارغة "". ' +
   "ممنوع الاختراع أو الاستنتاج. أعد JSON فقط بلا أي شرح.";
 
 type ScanOptions = {
@@ -371,7 +373,14 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   const extraMime = normalizeMime(body?.mimeTypeExtra);
   if (extra && extraMime && extra.length <= MAX_BASE64_CHARS) imageParts.push({ inline_data: { mime_type: extraMime, data: extra } });
 
-  const needsArbitration = !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified) && result.decision !== "reject";
+  // لا نكتفي بالمرور الخام إذا نتج رفض بسبب خطأ OCR محتمل في رقم العملية
+  // أو المبلغ. المرور المنظم الثاني يعيد قراءة الحقول من الصورة، ثم يمررها
+  // إلى نفس ReceiptJudgeCore قبل اتخاذ قرار نهائي.
+  const retryableRejectFlags = new Set(["ref_conflict", "amount_mismatch", "not_a_receipt"]);
+  const retryableReject = result.decision === "reject" &&
+    (result.riskFlags || []).some((flag: string) => retryableRejectFlags.has(flag));
+  const needsArbitration = retryableReject ||
+    !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified);
   if (needsArbitration) {
     try {
       const arbitration = await structuredPass(imageParts, apiKey);
