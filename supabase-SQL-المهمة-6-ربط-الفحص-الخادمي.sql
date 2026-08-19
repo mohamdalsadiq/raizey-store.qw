@@ -210,10 +210,10 @@ BEGIN
 
   -- ── وسم سجل الفحص كمُستهلَك داخل نفس المعاملة (يمنع إعادة الاستخدام) ──
   IF v_scan_id IS NOT NULL THEN
-    UPDATE public.receipt_scan_results
-    SET claimed_at         = COALESCE(claimed_at, now()),
-        claimed_receipt_id = COALESCE(claimed_receipt_id, v_id)
-    WHERE id = v_scan_id;
+    UPDATE public.receipt_scan_results rs
+    SET claimed_at         = COALESCE(rs.claimed_at, now()),
+        claimed_receipt_id = COALESCE(rs.claimed_receipt_id, v_id)
+    WHERE rs.id = v_scan_id;
   END IF;
 
   RETURN QUERY SELECT v_id, v_status, v_amount_v, v_ref_v;
