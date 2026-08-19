@@ -175,7 +175,7 @@
       <h1>إعدادات الحساب</h1>
       <p>اختر القسم الذي تريد إدارته من القائمة بالأسفل — كل قسم يفتح لوحده.</p>
     </div>
-    <a href="index.html" class="account-back"><i class="fas fa-arrow-right"></i> العودة إلى المتجر</a>
+    <a href="index.html" class="account-back"><i class="fas fa-arrow-right"></i> العودة إل�� المتجر</a>
   </header>
 
   <section class="account-summary" aria-label="ملخص الحساب">
@@ -486,9 +486,23 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/js/supabase-client.js"></script>
-<script src="assets/js/auth-ui.js"></script>
+<script>
+// ---- PREVIEW STUB (verification only) ----
+window.RaizeyAuthUI = {
+  bindOtpInputs: () => ({ clear(){}, focus(){}, value:()=> '' }),
+  createResendTimer: () => ({ start(){}, stop(){} }),
+  bindPasswordToggles(){}, bindPasswordStrength(){}, bindConfirmPassword(){},
+  setLoading(){}, isValidEmail:()=>true
+};
+window.supabaseClient = {
+  auth: {
+    getSession: async () => ({ data: { session: { user: { id:'preview', email:'preview@raizey.store', user_metadata:{ full_name:'محمد الصادق' } } } } }),
+    getUser: async () => ({ data: { user: { id:'preview', email:'preview@raizey.store', email_confirmed_at:'now', user_metadata:{ full_name:'محمد الصادق' }, identities:[] } } }),
+    mfa: { listFactors: async () => ({ data: { all: [] } }) }
+  },
+  from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data:{ full_name:'محمد الصادق', whatsapp_number:'0912345678', player_ids:{ pubg:'5123456789' }, avatar_url:null } }) }) }) })
+};
+</script>
 <script>
 const UI = window.RaizeyAuthUI;
 let currentUser = null;
