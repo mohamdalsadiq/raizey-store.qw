@@ -277,8 +277,16 @@
       <a href="register.html" style="display:block; text-align:center; font-size:13px; color:var(--accent-gold); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
     </div>
     <div id="drawerUserBox" style="display:none;">
-      <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
-      <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted);"></div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+        <div id="drawerAvatar" style="display:grid; place-items:center; width:46px; height:46px; flex:0 0 auto; overflow:hidden; border-radius:14px; background:#20222d; color:var(--accent-gold);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <img id="drawerAvatarImg" alt="" hidden style="width:100%; height:100%; object-fit:contain; padding:5px;">
+        </div>
+        <div style="min-width:0;">
+          <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
+          <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted); overflow-wrap:anywhere;"></div>
+        </div>
+      </div>
 
       <div class="drawer-wallet-box">
         <div class="drawer-wallet-label" style="color:var(--text-muted);">رصيدك الحالي</div>
@@ -435,7 +443,7 @@ async function loadDrawer() {
     document.getElementById('drawerEmail').textContent = session.user.email || '';
 
     const [{ data: profile, error: profileError }, { data: wallet, error: walletError }] = await Promise.all([
-      supabaseClient.from('profiles').select('full_name, role').eq('id', session.user.id).maybeSingle(),
+      supabaseClient.from('profiles').select('full_name, role, avatar_url').eq('id', session.user.id).maybeSingle(),
       supabaseClient.from('wallets').select('balance').eq('user_id', session.user.id).maybeSingle()
     ]);
 
@@ -444,6 +452,17 @@ async function loadDrawer() {
     document.getElementById('drawerGreeting').textContent = profile?.full_name
       ? `مرحباً، ${profile.full_name}`
       : 'مرحباً بك يا لاعب';
+
+    const drawerAvatarImg = document.getElementById('drawerAvatarImg');
+    const drawerAvatarIcon = document.querySelector('#drawerAvatar > svg');
+    if (drawerAvatarImg && profile?.avatar_url) {
+      drawerAvatarImg.src = profile.avatar_url;
+      drawerAvatarImg.hidden = false;
+      if (drawerAvatarIcon) drawerAvatarIcon.style.display = 'none';
+    } else if (drawerAvatarImg) {
+      drawerAvatarImg.hidden = true;
+      if (drawerAvatarIcon) drawerAvatarIcon.style.display = '';
+    }
 
     if (profile?.role === 'admin') {
       adminLinkBox.style.display = 'block';
