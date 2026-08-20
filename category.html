@@ -87,7 +87,10 @@ const params = new URLSearchParams(window.location.search);
 const categoryId = params.get('id');
 let exchangeRate = 1;
 function safeText(value, fallback = '') { return typeof value === 'string' && value.trim() ? value.trim() : fallback; }
-function safeUrl(value) { try { const url = new URL(value, window.location.href); return ['http:','https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } }
+function safeUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try { const url = new URL(value, window.location.href); return ['http:','https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; }
+}
 function money(value) { return typeof formatSDG === 'function' ? formatSDG(Math.max(0, Number(value) || 0)) : Math.round(Number(value) || 0).toLocaleString('ar-EG'); }
 function updateCartBadge() { try { document.getElementById('globalCartCount').textContent = String((JSON.parse(localStorage.getItem('raizey_store_cart') || '[]') || []).length); } catch { document.getElementById('globalCartCount').textContent = '0'; } }
 function showState(title, description, icon = 'fa-box-open') { const box = document.getElementById('loadingBox'); box.innerHTML = `<i class="fas ${icon}" aria-hidden="true"></i><h3>${escapeHtml(title)}</h3><p>${escapeHtml(description)}</p>`; box.hidden = false; document.getElementById('content').hidden = true; }
