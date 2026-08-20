@@ -104,3 +104,7 @@ GRANT EXECUTE ON FUNCTION public.set_store_sections_updated_at() TO authenticate
 
 -- This trigger helper is internal; clients never need to call it directly.
 REVOKE EXECUTE ON FUNCTION public.set_store_sections_updated_at() FROM PUBLIC, authenticated;
+
+-- Optional product-level delivery/promo badge, shown only when the admin fills it.
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS delivery_badge_text text;

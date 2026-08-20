@@ -113,7 +113,10 @@ function renderPackages(category, products) {
     const image = safeUrl(product.image_url) || imageUrl;
     const imageBox = document.createElement('div'); imageBox.className = 'package-image';
     if (image) { const img = document.createElement('img'); img.src = image; img.alt = safeText(product.name, 'الباقة'); img.loading = 'lazy'; img.decoding = 'async'; img.addEventListener('error', () => imageBox.replaceChildren(Object.assign(document.createElement('i'), { className:'fas fa-box-open', ariaHidden:'true' })), { once:true }); imageBox.appendChild(img); } else { imageBox.innerHTML = '<i class="fas fa-box-open" aria-hidden="true"></i>'; }
-    const badge = document.createElement('span'); badge.className = 'package-badge'; badge.textContent = product.has_options ? 'اختيارات متعددة' : 'تسليم فوري'; imageBox.appendChild(badge);
+    const badgeText = safeText(product.delivery_badge_text);
+    if (badgeText) {
+      const badge = document.createElement('span'); badge.className = 'package-badge'; badge.textContent = badgeText; imageBox.appendChild(badge);
+    }
     const body = document.createElement('div'); body.className = 'package-body';
     const name = document.createElement('h3'); name.className = 'package-name'; name.textContent = safeText(product.name, 'باقة رقمية');
     const description = document.createElement('p'); description.className = 'package-description'; description.textContent = safeText(product.description, 'تفاصيل الباقة والخيارات تظهر في الصفحة التالية.');
@@ -126,8 +129,7 @@ function renderPackages(category, products) {
     }
     const footer = document.createElement('div'); footer.className = 'package-footer';
     const price = document.createElement('span'); price.className = 'package-price'; price.innerHTML = `من ${money(Number(product.price_usd || 0) * exchangeRate)} <small>ج.س</small>`;
-    const cta = document.createElement('span'); cta.className = 'package-cta'; cta.innerHTML = 'عرض الباقة <i class="fas fa-arrow-left" aria-hidden="true"></i>';
-    footer.append(price, cta); body.append(name, description); if (optionPreview.childElementCount) body.appendChild(optionPreview); body.appendChild(footer); link.append(imageBox, body); grid.appendChild(link);
+    footer.append(price); body.append(name, description); if (optionPreview.childElementCount) body.appendChild(optionPreview); body.appendChild(footer); link.append(imageBox, body); grid.appendChild(link);
   });
   if (!products.length) { grid.innerHTML = '<div class="catalog-state"><i class="fas fa-box-open" aria-hidden="true"></i><h3>لا توجد باقات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا القسم قريبًا.</p></div>'; }
   document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false;
@@ -138,7 +140,7 @@ async function init() {
   exchangeRate = Number(await getExchangeRate()) || 1;
   const [categoryResponse, productsResponse] = await Promise.all([
     supabaseClient.from('categories').select('id,name,description,image_url').eq('id', categoryId).eq('is_active', true).single(),
-    supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')
+    supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,delivery_badge_text,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')
   ]);
   if (categoryResponse.error || !categoryResponse.data) { showState('القسم غير متاح', 'ربما تم إخفاؤه أو حُذف. ارجع للمتجر واختر قسمًا آخر.', 'fa-circle-exclamation'); return; }
   if (productsResponse.error) { showState('تعذر تحميل الباقات', 'حدّث الصفحة وحاول مرة أخرى.', 'fa-rotate'); return; }

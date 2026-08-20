@@ -25,6 +25,7 @@
   .product-hero-thumb img { width:100%; height:100%; object-fit:cover; }
   .product-hero-info { min-width:0; }
   .product-hero-info h1 { margin:0 0 8px; color:var(--product-ink); font-size:clamp(19px,5vw,25px); line-height:1.35; font-weight:900; }
+  .product-hero-badge { display:inline-flex; align-items:center; gap:6px; margin:0 0 8px; padding:5px 9px; border:1px solid rgba(255,106,26,.22); border-radius:999px; background:#fff7ef; color:var(--product-primary); font-size:11px; font-weight:900; }
   .product-hero-price { color:var(--product-primary); font:900 clamp(21px,6vw,30px)/1.2 var(--font-mono); }
   .product-hero-price.pending { color:var(--product-muted); font:800 14px/1.5 var(--font-display); }
   .section-label { display:flex; align-items:center; gap:8px; margin:20px 0 10px; color:var(--product-muted); font-size:13px; font-weight:900; }
@@ -297,16 +298,15 @@ function renderProduct() {
   $('content').innerHTML = `
     <div class="product-hero">
       <div class="product-hero-thumb">${imageUrl ? `<img src="${escapeAttribute(imageUrl)}" alt="${escapeAttribute(text(product.name, 'منتج'))}">` : '<i class="fas fa-box-open" aria-hidden="true"></i>'}</div>
-      <div class="product-hero-info"><h1>${escapeHtml(text(product.name, 'منتج رقمي'))}</h1><div class="product-hero-price ${optionGroups.length && optionsAreRequired() ? 'pending' : ''}" id="heroPriceDisplay">${optionGroups.length && optionsAreRequired() ? 'اختر الخيار المطلوب' : moneySdg(selectedUsd() * quantity)}</div></div>
+      <div class="product-hero-info"><h1>${escapeHtml(text(product.name, 'منتج رقمي'))}</h1>${text(product.delivery_badge_text) ? `<span class="product-hero-badge"><i class="fas fa-bolt" aria-hidden="true"></i>${escapeHtml(product.delivery_badge_text)}</span>` : ''}<div class="product-hero-price ${optionGroups.length && optionsAreRequired() ? 'pending' : ''}" id="heroPriceDisplay">${optionGroups.length && optionsAreRequired() ? 'اختر الخيار المطلوب' : moneySdg(selectedUsd() * quantity)}</div></div>
     </div>
     ${optionGroups.length ? '<div class="section-label"><i class="fas fa-layer-group" aria-hidden="true"></i> اختر المنتج أو الخيارات</div><div id="optionTree"></div>' : ''}
     ${(Array.isArray(product.required_fields) && product.required_fields.length) ? `<div class="section-label"><i class="fas fa-pen-to-square" aria-hidden="true"></i> بيانات الطلب</div>${product.required_fields.map(field => `<div class="field"><label>${escapeHtml(text(field.label, 'بيانات العميل'))}</label><input type="text" maxlength="500" data-field-key="${escapeAttribute(text(field.key, 'field'))}" data-field-label="${escapeAttribute(text(field.label, 'بيانات العميل'))}" placeholder="${escapeAttribute(text(field.placeholder, `اكتب ${text(field.label, 'البيانات')} هنا...`))}"></div>`).join('')}` : ''}
     <div class="product-quantity-row"><span class="product-quantity-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> الكمية</span><div class="product-qty-stepper"><button type="button" id="qtyMinus" aria-label="إنقاص الكمية">−</button><span id="qtyValue" class="product-qty-value">1</span><button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button></div></div>
     <div class="summary-box"><span>السعر الإجمالي اللحظي</span><span class="total" id="summaryTotal">${moneySdg(selectedUsd() * quantity)}</span></div>
     <div class="form-error" id="formError" tabindex="-1"></div>
-    <button class="product-confirm-btn" id="buyNowBtn" type="button"><i class="fas fa-bolt" aria-hidden="true"></i> اشتري الآن</button>
+    <button class="product-confirm-btn" id="buyNowBtn" type="button"><i class="fas fa-check-circle" aria-hidden="true"></i> تأكيد الطلب</button>
     <button class="btn-secondary-cart" id="addToCartBtn" type="button"><i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة</button>
-    <p class="product-checkout-hint"><i class="fas fa-shield-halved" aria-hidden="true"></i> ستكمل الدفع وفحص الإيصال في صفحة التأكيد الآمنة.</p>
     ${product.instructions ? `<div class="product-instructions-box"><div class="product-instructions-title"><i class="fas fa-circle-info" aria-hidden="true"></i> التفاصيل وطريقة الاستلام</div><div>${escapeHtml(product.instructions).replace(/\n/g, '<br>')}</div></div>` : ''}
   `;
   if (optionGroups.length) { renderOptionTree(); $('fixedPriceBar').hidden = false; } else { $('fixedPriceBar').hidden = false; updatePriceUI(); }
