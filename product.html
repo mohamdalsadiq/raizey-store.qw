@@ -33,14 +33,14 @@
   .option-group { margin-bottom:16px; }
   .option-group-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; color:var(--product-ink); font-size:14px; font-weight:900; }
   .option-group-title small { color:var(--product-muted); font-size:11px; font-weight:700; }
-  .option-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .option-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
   .option-button { position:relative; min-height:68px; padding:11px 10px; border:2px solid var(--product-border); border-radius:14px; background:var(--product-card); color:var(--product-ink); cursor:pointer; text-align:center; transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease; }
   .option-button:hover,.option-button:focus-visible { border-color:rgba(255,106,26,.55); outline:3px solid rgba(255,106,26,.14); outline-offset:1px; }
   .option-button:active { transform:scale(.98); }
   .option-button.selected { border-color:var(--product-primary); background:rgba(255,106,26,.09); box-shadow:0 8px 18px rgba(255,106,26,.14); }
   .option-button .check { position:absolute; top:7px; left:8px; display:none; color:var(--product-primary); font-size:12px; }
   .option-button.selected .check { display:block; }
-  .option-button .option-label { display:block; font-size:14px; line-height:1.35; font-weight:900; }
+  .option-button .option-label { display:block; font-size:clamp(11px,3.2vw,14px); line-height:1.35; font-weight:900; }
   .option-button .option-price { display:block; margin-top:5px; color:var(--product-primary); font:800 12px var(--font-mono); }
   .option-group.required .option-group-title::after { content:'إجباري'; color:var(--product-primary); font-size:10px; }
   .option-group.optional { border-right:3px solid rgba(122,116,104,.35); padding-right:10px; }
@@ -74,7 +74,8 @@
   .fixed-price-bar .fpb-label { color:var(--product-muted); font-size:11px; font-weight:800; }
   .fixed-price-bar .fpb-amount { color:var(--product-primary); font:900 19px var(--font-mono); }
   .fixed-price-bar .fpb-amount.placeholder { color:var(--product-muted); font:800 12px var(--font-display); }
-  @media (min-width:620px) { .product-page { padding-inline:22px; } .option-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width:380px) { .option-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (min-width:620px) { .product-page { padding-inline:22px; } .option-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 </style>
 </head>
 <body>
@@ -116,12 +117,13 @@ function updateCartBadge() { try { $('globalCartCount').textContent = String((JS
 function normalizeOptionTree(row) {
   const tree = Array.isArray(row.option_tree) ? row.option_tree : [];
   if (tree.length) {
-    return tree.map((group, index) => ({
+    const groups = tree.map((group, index) => ({
       id: text(group?.id, `group_${index}`),
       label: text(group?.label, 'اختر الخيار'),
       required: group?.required === true,
       options: Array.isArray(group?.options) ? group.options.map((option, optionIndex) => normalizeOption(option, `option_${index}_${optionIndex}`)) : []
     })).filter(group => group.options.length);
+    return flattenBaseOptionGroup(groups);
   }
 
   const legacy = Array.isArray(row.options) ? row.options : [];
@@ -138,7 +140,19 @@ function normalizeOptionTree(row) {
     if (!groups.has(groupId)) groups.set(groupId, { id: groupId, label: groupLabel, required: true, options: [] });
     groups.get(groupId).options.push(normalizeOption({ ...raw, label: optionLabel }, `legacy_option_${index}`));
   });
-  return [...groups.values()];
+  return flattenBaseOptionGroup([...groups.values()]);
+}
+function flattenBaseOptionGroup(groups) {
+  if (groups.length !== 1) return groups;
+  const group = groups[0];
+  if (group.options.length !== 1 || !group.options[0]?.children?.length) return groups;
+  const base = group.options[0];
+  return [{
+    id: `${group.id}__${base.id}`,
+    label: 'اختر الخيار المطلوب',
+    required: group.required || true,
+    options: base.children
+  }];
 }
 function normalizeOption(raw, fallbackId) {
   return {
@@ -174,10 +188,30 @@ function childGroupFor(group, option) {
 function selectedUsd() { return selectedFinalOption() ? selectedFinalOption().price_usd : moneyUsd(product?.price_usd); }
 function updatePriceUI() {
   const price = moneySdg(selectedUsd() * quantity);
-  $('heroPriceDisplay').textContent = price;
-  $('summaryTotal').textContent = price;
-  $('fixedPriceAmount').textContent = price;
-  $('fixedPriceAmount').classList.remove('placeholder');
+  const heroPrice = $('heroPriceDisplay');
+  const summaryTotal = $('summaryTotal');
+  const fixedPrice = $('fixedPriceAmount');
+  if (heroPrice) heroPrice.textContent = price;
+  if (summaryTotal) summaryTotal.textContent = price;
+  if (fixedPrice) {
+    fixedPrice.textContent = price;
+    fixedPrice.classList.remove('placeholder');
+  }
+}
+
+function ensureDefaultSelections() {
+  const visit = (group) => {
+    const required = group.required || optionsAreRequired();
+    if (required && !selections.has(group.id) && group.options.length) {
+      const first = group.options[0];
+      selections.set(group.id, first);
+      selectionOrder.push({ groupId: group.id, option: first });
+    }
+    const selected = selections.get(group.id);
+    const child = childGroupFor(group, selected);
+    if (child) visit(child);
+  };
+  optionGroups.forEach(visit);
 }
 
 function renderOptionTree() {
@@ -300,18 +334,14 @@ function renderProduct() {
       <div class="product-hero-thumb">${imageUrl ? `<img src="${escapeAttribute(imageUrl)}" alt="${escapeAttribute(text(product.name, 'منتج'))}">` : '<i class="fas fa-box-open" aria-hidden="true"></i>'}</div>
       <div class="product-hero-info"><h1>${escapeHtml(text(product.name, 'منتج رقمي'))}</h1>${text(product.delivery_badge_text) ? `<span class="product-hero-badge"><i class="fas fa-bolt" aria-hidden="true"></i>${escapeHtml(product.delivery_badge_text)}</span>` : ''}<div class="product-hero-price ${optionGroups.length && optionsAreRequired() ? 'pending' : ''}" id="heroPriceDisplay">${optionGroups.length && optionsAreRequired() ? 'اختر الخيار المطلوب' : moneySdg(selectedUsd() * quantity)}</div></div>
     </div>
-    ${optionGroups.length ? '<div class="section-label"><i class="fas fa-layer-group" aria-hidden="true"></i> اختر المنتج أو الخيارات</div><div id="optionTree"></div>' : ''}
+    ${optionGroups.length ? '<div class="section-label"><i class="fas fa-list-check" aria-hidden="true"></i> اختر الخيار المطلوب</div><div id="optionTree"></div>' : ''}
     ${(Array.isArray(product.required_fields) && product.required_fields.length) ? `<div class="section-label"><i class="fas fa-pen-to-square" aria-hidden="true"></i> بيانات الطلب</div>${product.required_fields.map(field => `<div class="field"><label>${escapeHtml(text(field.label, 'بيانات العميل'))}</label><input type="text" maxlength="500" data-field-key="${escapeAttribute(text(field.key, 'field'))}" data-field-label="${escapeAttribute(text(field.label, 'بيانات العميل'))}" placeholder="${escapeAttribute(text(field.placeholder, `اكتب ${text(field.label, 'البيانات')} هنا...`))}"></div>`).join('')}` : ''}
-    <div class="product-quantity-row"><span class="product-quantity-label"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> الكمية</span><div class="product-qty-stepper"><button type="button" id="qtyMinus" aria-label="إنقاص الكمية">−</button><span id="qtyValue" class="product-qty-value">1</span><button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button></div></div>
-    <div class="summary-box"><span>السعر الإجمالي اللحظي</span><span class="total" id="summaryTotal">${moneySdg(selectedUsd() * quantity)}</span></div>
     <div class="form-error" id="formError" tabindex="-1"></div>
     <button class="product-confirm-btn" id="buyNowBtn" type="button"><i class="fas fa-check-circle" aria-hidden="true"></i> تأكيد الطلب</button>
     <button class="btn-secondary-cart" id="addToCartBtn" type="button"><i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة</button>
     ${product.instructions ? `<div class="product-instructions-box"><div class="product-instructions-title"><i class="fas fa-circle-info" aria-hidden="true"></i> التفاصيل وطريقة الاستلام</div><div>${escapeHtml(product.instructions).replace(/\n/g, '<br>')}</div></div>` : ''}
   `;
-  if (optionGroups.length) { renderOptionTree(); $('fixedPriceBar').hidden = false; } else { $('fixedPriceBar').hidden = false; updatePriceUI(); }
-  $('qtyMinus').addEventListener('click', () => { quantity = Math.max(1, quantity - 1); $('qtyValue').textContent = quantity; updatePriceUI(); });
-  $('qtyPlus').addEventListener('click', () => { quantity = Math.min(99, quantity + 1); $('qtyValue').textContent = quantity; updatePriceUI(); });
+  if (optionGroups.length) { ensureDefaultSelections(); renderOptionTree(); $('fixedPriceBar').hidden = false; updatePriceUI(); } else { $('fixedPriceBar').hidden = false; updatePriceUI(); }
   $('buyNowBtn').addEventListener('click', buyNow); $('addToCartBtn').addEventListener('click', addToCart);
 }
 
