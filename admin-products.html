@@ -259,14 +259,21 @@ function collectOptions() {
 }
 
 async function loadCategories() {
-  const { data } = await supabaseClient.from('categories').select('*').order('display_order');
+  const { data } = await supabaseClient
+    .from('categories')
+    .select('id,name,section_id,is_active')
+    .eq('is_active', true)
+    .not('section_id', 'is', null)
+    .order('display_order');
   categories = data || [];
-  categoryInput.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  categoryInput.innerHTML = categories.length
+    ? categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+    : '<option value="">أضف قسمًا وتصنيفًا فعّالًا أولًا</option>';
 }
 
 async function loadProducts() {
   const { data } = await supabaseClient
-    .from('products').select('*, categories(name)').order('display_order');
+    .from('products').select('*, categories(name,section_id)').order('display_order');
   products = data || [];
   render();
 }
@@ -289,7 +296,7 @@ function render() {
           ${!p.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
           ${Array.isArray(p.options) && p.options.length > 0 ? '<span class="inactive-badge" style="background:rgba(59,130,246,0.12); color:#3b82f6;">خيارات متعددة</span>' : ''}
         </div>
-        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)}</div>
+        <div class="manage-item-sub">${escapeHtml(p.categories?.name || 'بدون تصنيف')} — $${parseFloat(p.price_usd).toFixed(2)} — ${Array.isArray(p.options) && p.options.length ? `${p.options.length} اختيارات` : 'سعر أساسي'}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${p.id}"><i class="fas fa-pen"></i></button>

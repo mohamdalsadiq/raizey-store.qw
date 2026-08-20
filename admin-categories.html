@@ -104,6 +104,13 @@
     <div class="modal-title" id="formModalTitle">تصنيف جديد</div>
 
     <div class="field">
+      <label for="sectionInput">القسم الذي يظهر تحته التصنيف</label>
+      <select id="sectionInput" style="width:100%; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:8px; color:var(--ink); font-family:inherit;">
+        <option value="">اختر القسم أولًا</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label>اسم التصنيف</label>
       <input type="text" id="nameInput" placeholder="مثلاً: PUBG Mobile">
     </div>
@@ -156,9 +163,11 @@
 <script src="assets/js/supabase-client.js"></script>
 <script>
 let categories = [];
+let sections = [];
 let editingId = null;
 
 const formModal = document.getElementById('formModal');
+const sectionInput = document.getElementById('sectionInput');
 const nameInput = document.getElementById('nameInput');
 const descriptionInput = document.getElementById('descriptionInput');
 const imageFileInput = document.getElementById('imageFileInput');
@@ -200,12 +209,24 @@ async function init() {
   document.getElementById('formCancelBtn').addEventListener('click', closeForm);
   document.getElementById('formSaveBtn').addEventListener('click', saveCategory);
 
+  await loadSections();
   await loadCategories();
+}
+
+async function loadSections() {
+  const { data, error } = await supabaseClient
+    .from('store_sections').select('id,name,is_active,display_order').order('display_order').order('name');
+  if (error) {
+    showCategoriesNotice('تعذر تحميل الأقسام. أضف قسمًا أولًا من صفحة إدارة الأقسام.', 'error');
+    return;
+  }
+  sections = data || [];
+  sectionInput.innerHTML = '<option value="">اختر القسم أولًا</option>' + sections.map(s => `<option value="${s.id}">${escapeHtml(s.name)}${s.is_active ? '' : ' — مؤرشف'}</option>`).join('');
 }
 
 async function loadCategories() {
     const { data, error } = await supabaseClient
-      .from('categories').select('*').order('display_order');
+      .from('categories').select('*').not('section_id', 'is', null).order('display_order');
     if (error) {
       formError.textContent = 'تعذر تحميل التصنيفات. حدّث الصفحة وحاول مرة أخرى.';
       devLog('[RAIZEY] load categories error:', { code: error.code, message: error.message });
@@ -236,7 +257,7 @@ function render() {
               ${escapeHtml(c.name)}
               ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
             </div>
-            <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
+            <div class="manage-item-sub">القسم: ${escapeHtml(sections.find(s => s.id === c.section_id)?.name || 'بدون قسم')} — ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
           </div>
         </div>
         <div class="manage-item-actions">
@@ -268,6 +289,7 @@ function openForm(id) {
   if (id) {
     const cat = categories.find(c => c.id === id);
     document.getElementById('formModalTitle').textContent = 'تعديل التصنيف';
+    sectionInput.value = cat.section_id || '';
     nameInput.value = cat.name;
     descriptionInput.value = cat.description || '';
     imageUrlInput.value = cat.image_url || '';
@@ -279,6 +301,7 @@ function openForm(id) {
     activeInput.value = String(cat.is_active);
   } else {
     document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
+    sectionInput.value = '';
     nameInput.value = '';
     descriptionInput.value = '';
     imageUrlInput.value = '';
@@ -316,11 +339,16 @@ async function uploadCategoryImageFile(file) {
 }
 
 async function saveCategory() {
+  const sectionId = sectionInput.value;
   const name = nameInput.value.trim();
   const description = descriptionInput.value.trim();
   const order = parseInt(orderInput.value) || 0;
   const isActive = activeInput.value === 'true';
 
+  if (!sectionId) {
+    formError.textContent = 'اختر القسم الذي سيظهر تحته التصنيف.';
+    return;
+  }
   if (!name) {
     formError.textContent = 'أدخل اسم التصنيف';
     return;
@@ -337,6 +365,7 @@ async function saveCategory() {
     }
 
     const payload = {
+      section_id: sectionId,
       name,
       description,
       image_url: finalImageUrl,

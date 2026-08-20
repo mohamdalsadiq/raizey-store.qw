@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة الأقسام — RAIZEY STORE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/auth.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <style>
+    .section-hero {
+      display:flex; align-items:center; justify-content:space-between; gap:18px;
+      margin:0 0 18px; padding:22px 24px; border:1px solid var(--border);
+      border-radius:18px; background:linear-gradient(135deg, rgba(255,106,26,.12), var(--bg-card));
+    }
+    .section-hero h2 { margin:0 0 6px; color:var(--ink); font-size:22px; }
+    .section-hero p { margin:0; color:var(--text-muted); line-height:1.7; font-size:13px; }
+    .section-hero-icon { width:56px; height:56px; display:grid; place-items:center; border-radius:16px; background:var(--primary); color:var(--ink); font-size:24px; box-shadow:0 10px 24px rgba(255,106,26,.2); }
+    .section-count { color:var(--primary); font-weight:900; }
+    .admin-inline-notice { margin:12px 0 16px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); color:var(--ink); font-size:13px; line-height:1.7; }
+    .admin-inline-notice.error { border-color:rgba(229,72,77,.35); background:rgba(229,72,77,.08); color:#a52e33; }
+    .admin-inline-notice.success { border-color:rgba(22,163,74,.3); background:rgba(22,163,74,.08); color:#176b36; }
+    .section-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; color:var(--text-muted); font-size:12px; }
+    .section-meta span { padding:3px 8px; border-radius:999px; background:rgba(127,127,127,.08); }
+    .empty-state { padding:42px 20px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:16px; background:var(--bg-card); }
+    .empty-state i { display:block; margin-bottom:10px; color:var(--primary); font-size:26px; }
+    @media (max-width:640px) { .section-hero { align-items:flex-start; } .section-hero-icon { flex-shrink:0; } }
+  </style>
+</head>
+<body>
+  <div class="admin-page" id="adminPage" style="display:none;">
+    <div class="page-header">
+      <h1>إدارة الأقسام</h1>
+      <a href="index.html" class="back-link"><i class="fas fa-store" style="margin-left:4px;"></i> المتجر</a>
+    </div>
+
+    <div class="admin-nav"></div>
+
+    <div class="section-hero">
+      <div>
+        <h2>الأقسام الرئيسية</h2>
+        <p>اكتب اسم القسم فقط، مثل «الاشتراكات» أو «شحن الألعاب». ستظهر الأقسام كعناوين مستقلة في واجهة المتجر.</p>
+      </div>
+      <div class="section-hero-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></div>
+    </div>
+
+    <button class="add-new-btn" id="addNewBtn">+ إضافة قسم جديد</button>
+    <div id="sectionsNotice" class="admin-inline-notice" role="status" aria-live="polite" hidden></div>
+    <div id="sectionsList"><div style="color:var(--text-muted);font-size:13px;">جارِ التحميل...</div></div>
+  </div>
+
+  <div class="modal-overlay" id="formModal">
+    <div class="modal-box">
+      <div class="modal-title" id="formModalTitle">قسم جديد</div>
+      <div class="field">
+        <label for="nameInput">اسم القسم</label>
+        <input type="text" id="nameInput" maxlength="120" placeholder="مثلاً: الاشتراكات">
+      </div>
+      <div class="field">
+        <label for="orderInput">ترتيب العرض</label>
+        <input type="number" id="orderInput" min="0" step="1" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="activeInput">الحالة</label>
+        <select id="activeInput">
+          <option value="true">فعّال — يظهر في المتجر</option>
+          <option value="false">غير فعّال — مخفي</option>
+        </select>
+      </div>
+      <div class="form-error" id="formError"></div>
+      <div class="modal-actions">
+        <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
+        <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary);color:var(--ink);">حفظ القسم</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);">
+    <h3 style="color:var(--ink);margin-bottom:8px;">غير مصرح لك بالدخول</h3>
+    <a href="index.html" style="color:var(--primary);font-weight:700;">← رجوع للمتجر</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-client.js"></script>
+  <script>
+    let sections = [];
+    let editingId = null;
+    const formModal = document.getElementById('formModal');
+    const nameInput = document.getElementById('nameInput');
+    const orderInput = document.getElementById('orderInput');
+    const activeInput = document.getElementById('activeInput');
+    const formError = document.getElementById('formError');
+    const notice = document.getElementById('sectionsNotice');
+
+    function showNotice(message, type = 'error') {
+      notice.textContent = message || '';
+      notice.className = `admin-inline-notice ${type}`;
+      notice.hidden = !message;
+    }
+    function errorText(error) {
+      const code = error?.code || '';
+      if (code === '23505') return 'يوجد قسم بنفس الاسم. اكتب اسمًا مختلفًا.';
+      if (code === '23503') return 'لا يمكن حذف القسم لأنه يحتوي على تصنيفات. انقل التصنيفات أولًا.';
+      if (code === '42501') return 'ليست لديك صلاحية إدارة الأقسام.';
+      return 'تعذر تنفيذ العملية. راجع البيانات وحاول مرة أخرى.';
+    }
+    async function hasAccess() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return false; }
+      const { data: profile } = await supabaseClient.from('profiles').select('role,is_banned').eq('id', session.user.id).single();
+      if (!profile || profile.role !== 'admin' || profile.is_banned === true) return false;
+      const { data: allowed, error } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_products' });
+      return !error && allowed === true;
+    }
+    async function init() {
+      if (!(await hasAccess())) { document.getElementById('accessDenied').style.display = 'block'; return; }
+      document.getElementById('adminPage').style.display = 'block';
+      document.getElementById('addNewBtn').addEventListener('click', () => openForm());
+      document.getElementById('formCancelBtn').addEventListener('click', closeForm);
+      document.getElementById('formSaveBtn').addEventListener('click', saveSection);
+      await loadSections();
+    }
+    async function loadSections() {
+      const { data, error } = await supabaseClient.from('store_sections').select('id,name,display_order,is_active,created_at').order('display_order').order('name');
+      if (error) { showNotice(errorText(error)); return; }
+      sections = data || [];
+      renderSections();
+    }
+    async function categoryCount(sectionId) {
+      const { count, error } = await supabaseClient.from('categories').select('id', { count:'exact', head:true }).eq('section_id', sectionId);
+      return error ? 0 : (count || 0);
+    }
+    async function renderSections() {
+      const container = document.getElementById('sectionsList');
+      if (!sections.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i>لا توجد أقسام بعد. أضف أول قسم ليظهر في الصفحة الرئيسية.</div>'; return; }
+      const counts = await Promise.all(sections.map(s => categoryCount(s.id)));
+      container.innerHTML = sections.map((section, index) => `
+        <div class="manage-item">
+          <div class="manage-item-info">
+            <div class="section-hero-icon" style="width:44px;height:44px;border-radius:13px;font-size:18px;margin-left:12px;"><i class="fas fa-layer-group"></i></div>
+            <div class="category-meta-text">
+              <div class="manage-item-name">${escapeHtml(section.name)} ${!section.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}</div>
+              <div class="section-meta"><span>ترتيب: ${Number(section.display_order) || 0}</span><span>${counts[index]} تصنيف</span><span class="section-count">${section.is_active ? 'ظاهر في المتجر' : 'مؤرشف'}</span></div>
+            </div>
+          </div>
+          <div class="manage-item-actions">
+            <button class="admin-action-btn" data-action="edit" data-id="${section.id}" title="تعديل"><i class="fas fa-pen"></i></button>
+            <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><i class="fas fa-trash-can" style="color:var(--danger);"></i></button>
+          </div>
+        </div>`).join('');
+      container.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openForm(btn.dataset.id)));
+      container.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteSection(btn.dataset.id)));
+    }
+    function openForm(id = null) {
+      editingId = id;
+      formError.textContent = '';
+      if (id) {
+        const section = sections.find(item => item.id === id);
+        document.getElementById('formModalTitle').textContent = 'تعديل القسم';
+        nameInput.value = section?.name || '';
+        orderInput.value = section?.display_order ?? 0;
+        activeInput.value = String(section?.is_active !== false);
+      } else {
+        document.getElementById('formModalTitle').textContent = 'قسم جديد';
+        nameInput.value = '';
+        orderInput.value = sections.length;
+        activeInput.value = 'true';
+      }
+      formModal.classList.add('show');
+      nameInput.focus();
+    }
+    function closeForm() { formModal.classList.remove('show'); editingId = null; }
+    async function saveSection() {
+      const name = nameInput.value.trim();
+      if (!name) { formError.textContent = 'اكتب اسم القسم أولًا.'; return; }
+      const button = document.getElementById('formSaveBtn');
+      button.disabled = true; button.textContent = 'جاري الحفظ...'; formError.textContent = '';
+      const payload = { name, display_order: Math.max(0, parseInt(orderInput.value, 10) || 0), is_active: activeInput.value === 'true' };
+      const response = editingId
+        ? await supabaseClient.from('store_sections').update(payload).eq('id', editingId)
+        : await supabaseClient.from('store_sections').insert(payload);
+      button.disabled = false; button.textContent = 'حفظ القسم';
+      if (response.error) { formError.textContent = errorText(response.error); return; }
+      closeForm(); showNotice('تم حفظ القسم بنجاح.', 'success'); await loadSections();
+    }
+    async function deleteSection(id) {
+      if (!confirm('هل تريد حذف هذا القسم؟ يجب نقل التصنيفات التابعة له أولًا.')) return;
+      const { error } = await supabaseClient.from('store_sections').delete().eq('id', id);
+      if (error) { showNotice(errorText(error)); return; }
+      showNotice('تم حذف القسم.', 'success'); await loadSections();
+    }
+    init();
+  </script>
+  <script src="assets/js/admin-nav.js"></script>
+</body>
+</html>

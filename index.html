@@ -66,6 +66,15 @@
   }
   .catalog-flow-hint i { color: var(--accent-gold); }
 
+  .catalog-sections { display:flex; flex-direction:column; gap:34px; padding:8px 20px 24px; }
+  .store-section { position:relative; }
+  .store-section-heading { display:flex; flex-direction:column; align-items:center; text-align:center; margin:0 auto 18px; }
+  .store-section-kicker { color:var(--accent-gold); font-size:11px; font-weight:900; letter-spacing:.35px; }
+  .store-section-title { position:relative; margin:5px 0 7px; color:var(--text-light); font-size:26px; font-weight:900; }
+  .store-section-title::after { content:''; display:block; width:54px; height:3px; margin:9px auto 0; border-radius:999px; background:var(--accent-gold); }
+  .store-section-description { max-width:620px; color:var(--text-muted); font-size:13px; line-height:1.7; }
+  .store-section .categories-grid { padding:0 !important; }
+
   /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
   .categories-grid {
     display: grid !important;
@@ -539,15 +548,14 @@ async function init() {
       }
     }
 
-    // جلب الحقول اللازمة فقط للتقليل من حجم الاستجابة.
-    const { data: categories, error: categoriesError } = await supabaseClient
-      .from('categories')
-      .select('id, name, description, image_url')
-      .eq('is_active', true)
-      .order('display_order');
+    const [{ data: sections, error: sectionsError }, { data: categories, error: categoriesError }] = await Promise.all([
+      supabaseClient.from('store_sections').select('id,name,display_order').eq('is_active', true).order('display_order').order('name'),
+      supabaseClient.from('categories').select('id,section_id,name,description,image_url,display_order').eq('is_active', true).not('section_id', 'is', null).order('display_order').order('name')
+    ]);
 
+    if (sectionsError) throw sectionsError;
     if (categoriesError) throw categoriesError;
-    renderCategories(categories || []);
+    renderCatalog(sections || [], categories || []);
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
   }
@@ -585,6 +593,102 @@ function createIcon(className, style) {
   if (style) icon.style.cssText = style;
   icon.setAttribute('aria-hidden', 'true');
   return icon;
+}
+
+function createCategoryCard(cat) {
+    const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
+    const description = typeof cat.description === 'string' && cat.description.trim()
+      ? cat.description.trim()
+      : 'تصفح الباقات المتوفرة داخل هذا التصنيف';
+    const imageUrl = getSafeImageUrl(cat.image_url);
+    const card = document.createElement('a');
+    const thumb = document.createElement('div');
+    const info = document.createElement('div');
+    const nameElement = document.createElement('div');
+    const descriptionElement = document.createElement('div');
+    const trust = document.createElement('span');
+    const button = document.createElement('div');
+    const buttonText = document.createElement('span');
+
+    card.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
+    card.className = 'game-card';
+    thumb.className = 'game-thumb';
+
+    if (imageUrl) {
+      const image = document.createElement('img');
+      image.src = imageUrl;
+      image.alt = name;
+      image.loading = 'lazy';
+      image.decoding = 'async';
+      image.addEventListener('error', () => {
+        thumb.replaceChildren(createIcon('fas fa-gamepad'));
+        thumb.style.cssText = 'color:#7a7468; font-size:32px;';
+      }, { once: true });
+      thumb.appendChild(image);
+    } else {
+      thumb.style.cssText = 'color:#7a7468; font-size:32px;';
+      thumb.appendChild(createIcon('fas fa-gamepad'));
+    }
+
+    info.className = 'game-info';
+    nameElement.className = 'game-name';
+    nameElement.textContent = name;
+    descriptionElement.className = 'game-desc';
+    descriptionElement.textContent = description;
+    descriptionElement.title = description;
+    trust.className = 'card-trust';
+    trust.append(createIcon('fas fa-bolt'), document.createTextNode(' تسليم فوري ومضمون 100%'));
+    button.className = 'game-btn';
+    buttonText.textContent = 'عرض التصنيفات';
+    button.append(buttonText, createIcon('fas fa-chevron-left', 'font-size:10px;'));
+    info.append(nameElement, descriptionElement, trust, button);
+    card.append(thumb, info);
+    return card;
+}
+
+function renderCatalog(sections, categories) {
+  const container = document.getElementById('categoriesContainer');
+  container.className = 'catalog-sections';
+
+  if (sections.length === 0 || categories.length === 0) {
+    renderMessage('لا توجد أقسام أو تصنيفات متاحة حالياً', 'أضف قسمًا ثم اربط به التصنيفات من لوحة الأدمن.');
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  let renderedSections = 0;
+  sections.forEach((section) => {
+    const sectionCategories = categories.filter(category => category.section_id === section.id);
+    if (!sectionCategories.length) return;
+    renderedSections += 1;
+    const sectionElement = document.createElement('section');
+    sectionElement.className = 'store-section';
+    sectionElement.setAttribute('aria-labelledby', `section-title-${section.id}`);
+    const heading = document.createElement('div');
+    heading.className = 'store-section-heading';
+    const kicker = document.createElement('span');
+    kicker.className = 'store-section-kicker';
+    kicker.textContent = 'RAIZEY COLLECTION';
+    const title = document.createElement('h2');
+    title.id = `section-title-${section.id}`;
+    title.className = 'store-section-title';
+    title.textContent = section.name;
+    const description = document.createElement('p');
+    description.className = 'store-section-description';
+    description.textContent = 'تصفح التصنيفات والباقات المتوفرة داخل هذا القسم.';
+    heading.append(kicker, title, description);
+    const grid = document.createElement('div');
+    grid.className = 'categories-grid';
+    sectionCategories.forEach(category => grid.appendChild(createCategoryCard(category)));
+    sectionElement.append(heading, grid);
+    fragment.appendChild(sectionElement);
+  });
+
+  if (!renderedSections) {
+    renderMessage('لا توجد تصنيفات مرتبطة بالأقسام حالياً', 'من لوحة الأدمن: أنشئ قسمًا ثم اختره عند إضافة التصنيف.');
+    return;
+  }
+  container.replaceChildren(fragment);
 }
 
 function renderCategories(categories) {

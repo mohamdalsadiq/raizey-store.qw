@@ -39,6 +39,9 @@
   .package-body { display:flex; flex:1; flex-direction:column; gap:8px; padding:13px; }
   .package-name { color:var(--ink); font-size:15px; line-height:1.45; font-weight:900; }
   .package-description { min-height:36px; overflow:hidden; color:var(--text-muted); font-size:12px; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .option-preview { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .option-preview-label { width:100%; color:var(--text-muted); font-size:10px; font-weight:800; }
+  .option-chip { display:inline-flex; align-items:center; justify-content:center; min-width:42px; padding:6px 9px; border:1px solid rgba(255,106,26,.28); border-radius:8px; background:#fff7ef; color:var(--ink); font-size:11px; font-weight:900; }
   .package-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:8px; border-top:1px dashed var(--border); }
   .package-price { color:var(--primary); font:900 13px var(--font-mono); }
   .package-price small { color:var(--text-muted); font:700 10px var(--font-display); }
@@ -114,10 +117,17 @@ function renderPackages(category, products) {
     const body = document.createElement('div'); body.className = 'package-body';
     const name = document.createElement('h3'); name.className = 'package-name'; name.textContent = safeText(product.name, 'باقة رقمية');
     const description = document.createElement('p'); description.className = 'package-description'; description.textContent = safeText(product.description, 'تفاصيل الباقة والخيارات تظهر في الصفحة التالية.');
+    const optionPreview = document.createElement('div'); optionPreview.className = 'option-preview';
+    if (product.has_options && Array.isArray(product.options) && product.options.length) {
+      const optionLabel = document.createElement('span'); optionLabel.className = 'option-preview-label'; optionLabel.textContent = 'اختر من الخيارات المتاحة'; optionPreview.appendChild(optionLabel);
+      product.options.slice(0, 6).forEach(option => {
+        const chip = document.createElement('span'); chip.className = 'option-chip'; chip.textContent = safeText(option?.label, 'خيار'); optionPreview.appendChild(chip);
+      });
+    }
     const footer = document.createElement('div'); footer.className = 'package-footer';
     const price = document.createElement('span'); price.className = 'package-price'; price.innerHTML = `من ${money(Number(product.price_usd || 0) * exchangeRate)} <small>ج.س</small>`;
     const cta = document.createElement('span'); cta.className = 'package-cta'; cta.innerHTML = 'عرض الباقة <i class="fas fa-arrow-left" aria-hidden="true"></i>';
-    footer.append(price, cta); body.append(name, description, footer); link.append(imageBox, body); grid.appendChild(link);
+    footer.append(price, cta); body.append(name, description); if (optionPreview.childElementCount) body.appendChild(optionPreview); body.appendChild(footer); link.append(imageBox, body); grid.appendChild(link);
   });
   if (!products.length) { grid.innerHTML = '<div class="catalog-state"><i class="fas fa-box-open" aria-hidden="true"></i><h3>لا توجد باقات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا القسم قريبًا.</p></div>'; }
   document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false;
@@ -128,7 +138,7 @@ async function init() {
   exchangeRate = Number(await getExchangeRate()) || 1;
   const [categoryResponse, productsResponse] = await Promise.all([
     supabaseClient.from('categories').select('id,name,description,image_url').eq('id', categoryId).eq('is_active', true).single(),
-    supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')
+    supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')
   ]);
   if (categoryResponse.error || !categoryResponse.data) { showState('القسم غير متاح', 'ربما تم إخفاؤه أو حُذف. ارجع للمتجر واختر قسمًا آخر.', 'fa-circle-exclamation'); return; }
   if (productsResponse.error) { showState('تعذر تحميل الباقات', 'حدّث الصفحة وحاول مرة أخرى.', 'fa-rotate'); return; }
