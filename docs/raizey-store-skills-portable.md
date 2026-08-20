@@ -35,6 +35,26 @@ LAYOUT, STYLE, AND COMPONENTS
 - Use short, purposeful transitions for selection, pricing, quantity changes, panels, and feedback. Respect prefers-reduced-motion.
 - Prefer skeleton loaders over raw spinners where the loading shape is known, and preserve a clear retry action on recoverable failures.
 
+FRONTEND ENGINEERING PLAYBOOK
+- Treat the frontend as a state machine with explicit states such as `idle`, `loading`, `ready`, `empty`, `error`, `submitting`, and `success`. Render each state intentionally instead of relying on hidden stale markup.
+- Keep one source of truth for selected category, selected product or variant, required-field values, quantity, unit price, exchange rate, and cart contents. Derive displayed totals and button states from that state rather than mutating several independent DOM values.
+- Keep rendering functions predictable and narrowly scoped. Separate data fetching, normalization, state transitions, DOM rendering, form validation, cart serialization, and navigation so a UI change does not silently alter checkout behavior.
+- Use progressive enhancement: the HTML should remain understandable, controls should be real links or buttons, and the page should fail with a clear message when JavaScript or a network request is unavailable.
+- Prefer event listeners and event delegation over inline `onclick` handlers. Remove or replace listeners when rerendering dynamic content, and guard against duplicate submissions with a submitting flag or disabled action state.
+- Avoid layout thrashing. Batch DOM writes, do not read layout immediately after every write, and use `requestAnimationFrame` only when it improves a visible transition. Do not use arbitrary timeouts as a substitute for waiting on real state.
+- Use CSS logical properties such as `margin-inline`, `padding-inline`, `inset-inline`, and `border-start` so RTL and future LTR support do not require duplicated styles.
+- Maintain a stable media frame with `aspect-ratio`, `object-fit`, width and height hints, and a deterministic fallback. If the product flow requires one fixed image, keep its source tied to the category or page state and do not replace it on every option selection.
+- Manage focus deliberately after dynamic updates. Preserve focus when a user selects an option, move focus to a newly revealed error summary when validation fails, and announce important status changes through a polite `aria-live` region without making the entire page noisy.
+- Use `aria-pressed` for toggle-like option buttons, `aria-expanded` for expandable panels, `aria-controls` when a control owns a panel, and native labels for form fields. Do not use a clickable `div` when a native button or link is appropriate.
+- Validate forms at the boundary. Trim text, enforce sensible maximum lengths, set appropriate `inputmode`, `autocomplete`, and input types, reject empty required values, preserve entered values across rerenders, and display field-level messages without exposing internal errors.
+- Normalize API data once at the boundary. Convert nullable values to safe defaults, validate arrays and numeric ranges, select only the columns the page needs, and handle missing images, options, descriptions, prices, and required fields without throwing.
+- Protect asynchronous UI from race conditions. Track the request associated with the current category or selection, ignore stale responses, cancel obsolete requests with `AbortController` when supported, and provide a bounded timeout plus a retry action.
+- Treat browser storage as versioned, untrusted input. Parse `localStorage` and `sessionStorage` defensively, validate the shape before use, handle corrupted values by recovering safely, and migrate or clear incompatible versions instead of crashing the page.
+- Handle money and quantity deterministically. Keep a clear distinction between unit price and total price, avoid accidental string concatenation, define rounding and currency formatting in one helper, clamp quantity to allowed bounds, and never let a client-calculated total become the source of truth for a financial mutation.
+- Make checkout actions idempotent from the user’s perspective. Disable or lock the action while submitting, prevent double clicks, preserve the exact selected option, required fields, and quantity, and show a recoverable error if navigation or persistence fails.
+- Never inject user-controlled or API-controlled text with unsanitized `innerHTML`. Prefer `textContent`, safe DOM node creation, or a reviewed sanitizer. Validate external image and link protocols, and add `rel="noopener noreferrer"` to links that open a new tab.
+- Keep browser-visible logging behind a development guard. Never log access tokens, passwords, payment details, private user data, or full API responses in production.
+
 ECOMMERCE AND DATA RULES
 - Keep Category, Subcategory/Brand, and Product Variant independently scoped in fetching, state, rendering, and CRUD operations.
 - Optional product variants and nested form fields must remain optional unless the admin explicitly enables them.
@@ -74,8 +94,10 @@ IMPLEMENTATION WORKFLOW
 6. Add accessible loading, empty, error, success, and disabled states.
 7. Test representative mobile and desktop widths and all affected interactions.
 8. Run syntax checks, lint or project verification scripts, and diff checks before delivery.
-9. Review the final UI visually and remove accidental layout shifts or unnecessary decoration.
-10. Report changed files, tested flows, known limitations, and any database or deployment impact.
+9. Run a frontend smoke test for initial load, loading-to-ready transition, empty and error states, option selection, image stability, required-field validation, quantity changes, price recalculation, add-to-cart serialization, authentication redirect, checkout navigation, and back-navigation state.
+10. Test representative narrow mobile, tablet, and desktop widths, including slow or failed network responses, refreshes, malformed browser storage, keyboard-only navigation, reduced motion, and long localized text.
+11. Review the final UI visually and remove accidental layout shifts or unnecessary decoration.
+12. Report changed files, tested flows, known limitations, and any database or deployment impact.
 
 DELIVERY CHECKLIST
 - No broken navigation or authentication redirects.
