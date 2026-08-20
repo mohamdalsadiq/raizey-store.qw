@@ -59,7 +59,7 @@ check('product route does not load browser OCR', 'tesseract.js' not in product a
 check('legacy admin dashboard keeps original catalog links', 'admin-products.html' in admin and 'admin-categories.html' in admin and 'admin-orders.html' in admin and 'admin-subcategories.html' not in admin)
 check('legacy subcategory page is not in active admin nav', 'admin-subcategories.html' not in admin)
 check('legacy admin product form scopes products to category', 'categoryInput' in products_admin and 'category_id: categoryId' in products_admin and "from('categories')" in products_admin)
-check('legacy admin keeps flat option builder', 'hasOptionsToggle' in products_admin and 'addOptionRow' in products_admin and 'collectOptions' in products_admin and 'options: collectOptions()' in products_admin)
+check('legacy admin keeps flat option builder', 'hasOptionsToggle' in products_admin and 'addOptionRow' in products_admin and 'collectOptions' in products_admin and 'options,' in products_admin and 'has_options: hasOptionsToggle.checked' in products_admin)
 check('orders labels audit and cancel', 'needs_admin_check' in orders and 'data-action="cancel"' in orders)
 check('orders uses protected RPC transitions', 'admin_update_order_status' in orders and 'admin_reject_order' in orders)
 check('orders initializes filter chips', "querySelectorAll('#filterRow .chip')" in orders)

@@ -176,10 +176,15 @@ async function init() {
 }
 
 async function loadCategories() {
-  const { data } = await supabaseClient
-    .from('categories').select('*').order('display_order');
-  categories = data || [];
-  render();
+    const { data, error } = await supabaseClient
+      .from('categories').select('*').order('display_order');
+    if (error) {
+      formError.textContent = 'تعذر تحميل التصنيفات. حدّث الصفحة وحاول مرة أخرى.';
+      devLog('[RAIZEY] load categories error:', { code: error.code, message: error.message });
+      return;
+    }
+    categories = data || [];
+    render();
 }
 
 function render() {
@@ -191,7 +196,7 @@ function render() {
 
   container.innerHTML = categories.map(c => {
     const imgHtml = c.image_url
-      ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
+      ? `<img src="${escapeHtml(c.image_url)}" class="category-thumb" alt="${escapeHtml(c.name)}">`
       : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad"></i></div>`;
 
     return `
@@ -200,7 +205,7 @@ function render() {
           ${imgHtml}
           <div class="category-meta-text">
             <div class="manage-item-name">
-              ${c.name}
+              ${escapeHtml(c.name)}
               ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
             </div>
             <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
@@ -317,7 +322,11 @@ async function saveCategory() {
       : await supabaseClient.from('categories').insert(payload);
 
     if (error) {
-      formError.textContent = 'حصل خطأ أثناء حفظ التصنيف، حاول تاني';
+      const code = error.code || '';
+      formError.textContent = code === '42501'
+        ? 'ليس لديك صلاحية إدارة التصنيفات. تأكد من سياسة categories_admin في Supabase.'
+        : 'تعذر حفظ التصنيف. تحقق من البيانات ثم حاول مرة أخرى.';
+      devLog('[RAIZEY] save category error:', { code, message: error.message });
       return;
     }
 
@@ -334,12 +343,26 @@ async function saveCategory() {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('متأكد عايز تحذف التصنيف ده؟ المنتجات المرتبطة بيه هتفضل بدون تصنيف.')) return;
-  await supabaseClient.from('categories').delete().eq('id', id);
+  if (!confirm('هل تريد حذف هذا التصنيف؟ لا يمكن حذفه إذا كانت هناك منتجات أو تصنيفات فرعية مرتبطة به.')) return;
+
+  const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+  if (error) {
+    const code = error.code || '';
+    const message = code === '23503'
+      ? 'لا يمكن حذف التصنيف لأنه مرتبط بمنتجات أو تصنيفات فرعية. انقل العناصر أولاً ثم حاول مرة أخرى.'
+      : code === '42501'
+        ? 'ليس لديك صلاحية حذف التصنيفات.'
+        : 'تعذر حذف التصنيف. حاول مرة أخرى.';
+    formError.textContent = message;
+    devLog('[RAIZEY] delete category error:', { code, message: error.message });
+    return;
+  }
+
   await loadCategories();
 }
 
 init();
 </script>
+  <script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

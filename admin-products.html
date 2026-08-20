@@ -348,14 +348,13 @@ function openForm(id) {
     orderInput.value = p.display_order;
     activeInput.value = String(p.is_active);
 
-    // تعبئة الخيارات الفرعية عند التعديل
-    if (Array.isArray(p.options) && p.options.length > 0) {
-      hasOptionsToggle.checked = true;
-      optionsContainer.style.display = 'block'; // إظهار الحاوية بدون استدعاء دالة الإضافة الفارغة
+    // اقرأ العلم المحفوظ نفسه؛ لا تستنتجه من وجود بيانات قديمة في options.
+    // هذا يمنع عودة checkbox مفعّلاً بعد أن أغلقه المشرف وحفظ المنتج.
+    const hasSavedOptions = p.has_options === true;
+    hasOptionsToggle.checked = hasSavedOptions;
+    optionsContainer.style.display = hasSavedOptions ? 'block' : 'none';
+    if (hasSavedOptions && Array.isArray(p.options)) {
       p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
-    } else {
-      hasOptionsToggle.checked = false;
-      optionsContainer.style.display = 'none';
     }
 
     (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
@@ -403,15 +402,13 @@ async function saveProduct() {
   const categoryId = categoryInput.value;
 
   if (!name) { formError.textContent = 'أدخل اسم المنتج'; return; }
-  if (!price || price <= 0) { formError.textContent = 'أدخل سعر صحيح للمنتج'; return; }
-  if (!categoryId) { formError.textContent = 'اختر تصنيف'; return; }
+  if (!price || price <= 0) { formError.textContent = 'أدخل سعرًا صحيحًا للمنتج'; return; }
+  if (!categoryId) { formError.textContent = 'اختر تصنيفًا'; return; }
 
-  if (hasOptionsToggle.checked) {
-    const opts = collectOptions();
-    if (opts.length < 2) {
-      formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
-      return;
-    }
+  const options = collectOptions();
+  if (hasOptionsToggle.checked && options.length < 2) {
+    formError.textContent = 'عند تفعيل الخيارات الفرعية، يجب إضافة خيارين على الأقل.';
+    return;
   }
 
   const payload = {
@@ -421,11 +418,11 @@ async function saveProduct() {
     image_url: imageInput.value.trim() || null,
     price_usd: price,
     category_id: categoryId,
-    display_order: parseInt(orderInput.value) || 0,
+    display_order: parseInt(orderInput.value, 10) || 0,
     is_active: activeInput.value === 'true',
     required_fields: collectFields(),
-    options: collectOptions(),
-    has_options: hasOptionsToggle.checked && collectOptions().length > 0
+    options,
+    has_options: hasOptionsToggle.checked
   };
 
   const { error } = editingId
@@ -433,8 +430,14 @@ async function saveProduct() {
     : await supabaseClient.from('products').insert(payload);
 
   if (error) {
-    formError.textContent = 'فشل حفظ المنتج، يرجى المحاولة مجدداً.';
-    devLog('[RAIZEY] save product error:', error);
+    const code = error.code || '';
+    const message = code === '42501'
+      ? 'ليس لديك صلاحية حفظ المنتجات. طبّق سياسة products_admin_all في Supabase.'
+      : code === '23503'
+        ? 'التصنيف المختار غير موجود، حدّث الصفحة واختر تصنيفًا صحيحًا.'
+        : 'تعذر حفظ المنتج. تحقق من الحقول المطلوبة ثم حاول مرة أخرى.';
+    formError.textContent = message;
+    devLog('[RAIZEY] save product error:', { code, message: error.message });
     return;
   }
 
@@ -450,5 +453,6 @@ async function deleteProduct(id) {
 
 init();
 </script>
+  <script src="assets/js/admin-nav.js"></script>
 </body>
 </html>
