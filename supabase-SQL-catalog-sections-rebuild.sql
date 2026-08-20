@@ -101,3 +101,6 @@ CREATE TRIGGER store_sections_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.set_store_sections_updated_at();
 
 GRANT EXECUTE ON FUNCTION public.set_store_sections_updated_at() TO authenticated;
+
+-- This trigger helper is internal; clients never need to call it directly.
+REVOKE EXECUTE ON FUNCTION public.set_store_sections_updated_at() FROM PUBLIC, authenticated;
