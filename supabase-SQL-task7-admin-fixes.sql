@@ -67,3 +67,24 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_admin_notification_counts() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_admin_notification_counts() TO authenticated;
+
+-- The permission helper is SECURITY DEFINER and must be callable by the
+-- client roles because it is referenced by RLS policies and the admin UI.
+DO $$
+DECLARE
+  permission_function regprocedure;
+BEGIN
+  SELECT p.oid::regprocedure
+    INTO permission_function
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'has_admin_permission'
+    AND p.pronargs = 1
+  LIMIT 1;
+
+  IF permission_function IS NOT NULL THEN
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO anon, authenticated', permission_function);
+  END IF;
+END
+$$;

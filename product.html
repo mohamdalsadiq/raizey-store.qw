@@ -275,11 +275,17 @@ function addToCart() {
   $('addToCartBtn').innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i> تمت الإضافة';
   setTimeout(() => { $('addToCartBtn').innerHTML = '<i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة'; error.textContent = ''; error.style.color = ''; }, 2200);
 }
-function buyNow() {
+async function buyNow() {
   const error = $('formError'); error.textContent = ''; error.style.color = '';
   if (!validateSelection(error)) return;
   const item = buildCartItem();
   if (!item) { error.textContent = 'أكمل بيانات العميل المطلوبة أولاً.'; return; }
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    sessionStorage.setItem('redirect_after_login', window.location.href);
+    window.location.href = 'login.html';
+    return;
+  }
   sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at: Date.now(), items: [item] }));
   window.location.href = 'checkout-v2.html';
 }
@@ -311,8 +317,7 @@ function renderProduct() {
 async function init() {
   updateCartBadge();
   if (!productId) { window.location.href = 'index.html'; return; }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { sessionStorage.setItem('redirect_after_login', window.location.href); window.location.href = 'login.html'; return; }
+  // التصفح عام، ويُطلب تسجيل الدخول فقط عند الضغط على الشراء.
   exchangeRate = Number(await getExchangeRate()) || 1;
   const { data, error } = await supabaseClient.from('products').select('*').eq('id', productId).eq('is_active', true).single();
   if (error || !data) { $('loadingBox').textContent = 'المنتج غير موجود أو غير متاح حالياً.'; return; }

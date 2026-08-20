@@ -51,6 +51,26 @@
     display: flex;
     flex-direction: column;
   }
+  .admin-inline-notice {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .admin-inline-notice.error {
+    border-color: rgba(229,72,77,.35);
+    background: rgba(229,72,77,.08);
+    color: #a52e33;
+  }
+  .admin-inline-notice.success {
+    border-color: rgba(22,163,74,.3);
+    background: rgba(22,163,74,.08);
+    color: #176b36;
+  }
 </style>
 </head>
 <body>
@@ -74,6 +94,7 @@
   </div>
 
   <button class="add-new-btn" id="addNewBtn">+ إضافة تصنيف جديد</button>
+  <div id="categoriesNotice" class="admin-inline-notice" role="status" aria-live="polite" hidden></div>
 
   <div id="categoriesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
@@ -146,6 +167,13 @@ const imageUploadStatus = document.getElementById('imageUploadStatus');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
+const categoriesNotice = document.getElementById('categoriesNotice');
+
+function showCategoriesNotice(message, type = 'error') {
+  categoriesNotice.textContent = message || '';
+  categoriesNotice.className = `admin-inline-notice ${type}`;
+  categoriesNotice.hidden = !message;
+}
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -345,19 +373,40 @@ async function saveCategory() {
 async function deleteCategory(id) {
   if (!confirm('هل تريد حذف هذا التصنيف؟ لا يمكن حذفه إذا كانت هناك منتجات أو تصنيفات فرعية مرتبطة به.')) return;
 
-  const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+  showCategoriesNotice('جاري حذف التصنيف...', '');
+  const { data: deletedRows, error } = await supabaseClient
+    .from('categories')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .select('id');
+
   if (error) {
     const code = error.code || '';
     const message = code === '23503'
       ? 'لا يمكن حذف التصنيف لأنه مرتبط بمنتجات أو تصنيفات فرعية. انقل العناصر أولاً ثم حاول مرة أخرى.'
       : code === '42501'
-        ? 'ليس لديك صلاحية حذف التصنيفات.'
+        ? 'ليست لديك صلاحية حذف التصنيفات. اطلب من المدير تفعيل صلاحية إدارة المنتجات.'
         : 'تعذر حذف التصنيف. حاول مرة أخرى.';
-    formError.textContent = message;
+    showCategoriesNotice(message, 'error');
     devLog('[RAIZEY] delete category error:', { code, message: error.message });
     return;
   }
 
+  // RLS قد يمنع الحذف بإرجاع صفوف فارغة دون خطأ صريح.
+  if (!Array.isArray(deletedRows) || deletedRows.length !== 1) {
+    const { data: canManage } = await supabaseClient.rpc('has_admin_permission', {
+      permission_key: 'manage_products'
+    });
+    const message = canManage === false
+      ? 'لم يتم الحذف لأن حسابك لا يملك صلاحية إدارة المنتجات.'
+      : 'لم يتم حذف التصنيف. قد يكون محميًا بعناصر مرتبطة أو لم يعد موجودًا.';
+    showCategoriesNotice(message, 'error');
+    devLog('[RAIZEY] delete category affected no rows:', { id, canManage });
+    await loadCategories();
+    return;
+  }
+
+  showCategoriesNotice('تم حذف التصنيف بنجاح.', 'success');
   await loadCategories();
 }
 
