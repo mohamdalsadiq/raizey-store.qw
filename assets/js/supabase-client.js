@@ -312,15 +312,12 @@ async function validateReceiptImage(file) {
     return { valid: false, message: 'لم يتم اختيار أي ملف.' };
   }
 
-  // 1. فحص نوع MIME + الامتداد
-  // ملاحظة: بعض هواتف أندرويد/آيفون ترسل الصورة بامتداد .jpg ونوع فارغ أو
-  // image/heic. لذلك نقبل امتداداً معروفاً مع نوع فارغ، ونقبل HEIC/HEIF
-  // (الخادم يقرأها بلا مشكلة) — بدل رفض العميل كلياً.
+  // 1. فحص نوع MIME + الامتداد — العقد المدعوم: JPG / PNG / WEBP فقط.
+  // نسمح بنوع MIME فارغ عند وجود امتداد صورة معروف لأن بعض الهواتف لا ترسله.
   const allowedMime = [
-    'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
-    'image/heic', 'image/heif', 'image/heic-sequence'
+    'image/jpeg', 'image/jpg', 'image/png', 'image/webp'
   ];
-  const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
   const fileExt     = (file.name.split('.').pop() || '').toLowerCase();
   const mime        = String(file.type || '').toLowerCase().split(';')[0].trim();
 
@@ -347,8 +344,8 @@ async function validateReceiptImage(file) {
   }
 
   // 4. محاولة فك ترميز الصورة في المتصفح — تشخيصية فقط (Fail-Open)
-  //    فشل هذه الخطوة لا يعني أن الملف مزيّف: قد يكون HEIC غير مدعوم في هذا
-  //    المتصفح، أو صورة ضخمة الأبعاد على جهاز ضعيف، أو خطأ فك ترميز عابر.
+  //    فشل هذه الخطوة لا يعني أن الملف مزيّف: قد تكون صورة ضخمة الأبعاد
+  //    على جهاز ضعيف، أو خطأ فك ترميز عابر.
   //    قواعد المشروع: خطأ تقني ⇒ مراجعة يدوية، لا منع العميل من إكمال الطلب.
   const decode = await new Promise(resolve => {
     let done = false;
@@ -416,45 +413,39 @@ async function logReceiptFraudAttempt({ reference, reason, provider, ocrExcerpt,
 }
 
 // =========================================================
-// ⚠️ توافق قديم: التفويض الوحيد المسموح هو Supabase Edge Function.
-// لا يوجد OCR أو قرار مالي داخل المتصفح حتى لو استدعى كود قديم هذه الدالة.
+// التوافق القديم — تفويض الفحص إلى ReceiptIntel القديم.
+// لا يوجد قرار مالي مستقل هنا؛ القبول يتطلب قرار المحرك 'accept'.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
-  // Fail-Closed افتراضياً: تعليق للمراجعة اليدوية، لا قبول.
   const NEEDS_REVIEW = { passed: false, ocr_status: 'needs_review', amount_verified: false };
-
   const canDelegate =
     typeof window !== 'undefined' &&
-    window.RaizeyReceiptPipeline &&
-    typeof window.RaizeyReceiptPipeline.analyze === 'function' &&
+    window.ReceiptIntel &&
+    typeof window.ReceiptIntel.analyze === 'function' &&
     (typeof File !== 'undefined' && fileOrUrl instanceof Blob);
 
   if (!canDelegate) {
-    devWarn('[RAIZEY receipt] verifyReceiptContent: Edge Function غير متاحة — مراجعة يدوية (fail-closed)');
+    devWarn('[RAIZEY OCR] verifyReceiptContent: تفويض غير متاح — مراجعة يدوية (fail-closed)');
     return NEEDS_REVIEW;
   }
-
   try {
-    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال على الخادم...');
-    const analysis = await window.RaizeyReceiptPipeline.analyze(fileOrUrl, {
+    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
+    const analysis = await window.ReceiptIntel.analyze(fileOrUrl, {
       manualRef: transactionRef || '',
       expectedAmount: Number(expectedAmountSDG) || 0,
       onStatus: statusCallback || undefined
     });
-
     if (!analysis || typeof analysis !== 'object') return NEEDS_REVIEW;
     return {
-      passed:          analysis.decision === 'accept' && !!analysis.scanId,
+      passed:          analysis.decision === 'accept',
       ocr_status:      analysis.ocrStatus || (analysis.decision === 'reject' ? 'rejected' : 'needs_review'),
       amount_verified: !!analysis.amountVerified,
       ref_verified:    !!analysis.refVerified,
       decision:        analysis.decision || 'review',
-      scan_id:         analysis.scanId || null,
-      receipt_hash:    analysis.receiptHash || null,
       message:         analysis.message || ''
     };
   } catch (e) {
-    devWarn('[RAIZEY receipt] Edge Function delegate error — مراجعة يدوية:', e && e.message);
+    devWarn('[RAIZEY OCR] verifyReceiptContent delegate error — مراجعة يدوية:', e && e.message);
     return NEEDS_REVIEW;
   }
 }
