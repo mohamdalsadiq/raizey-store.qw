@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,13 +167,15 @@ async function loadStats() {
   const { count: productsCount } = await supabaseClient
     .from('products').select('*', { count: 'exact', head: true });
 
-  // عدد الطلبات قيد المراجعة (جميع وسائل الدفع بما فيها المحفظة)
-  const { count: pendingOrders } = await supabaseClient
-    .from('orders').select('*', { count: 'exact', head: true })
-    .eq('status', 'pending_review');
+  // استخدم نفس مصدر الحقيقة المحمي الذي يغذي شريط التنقل.
+  const { data: alertCounts } = await supabaseClient.rpc('get_admin_notification_counts');
+  const alertRow = Array.isArray(alertCounts) ? alertCounts[0] : alertCounts;
+  const pendingOrders = alertRow
+    ? Number(alertRow.pending_orders || 0) + Number(alertRow.needs_admin_check || 0)
+    : (await supabaseClient.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending_review')).count || 0;
 
   const { count: pendingTopups } = await supabaseClient
-    .from('wallet_topups').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    .from('wallet_topups').select('id', { count: 'exact', head: true }).eq('status', 'pending');
 
   const { data: revenueRows } = await supabaseClient
     .from('orders').select('price_sdg_snapshot').in('status', ['in_progress', 'completed']);
@@ -237,5 +240,6 @@ async function loadRecentCustomers() {
 
 init();
 </script>
+  <script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

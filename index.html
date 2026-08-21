@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
 <meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
@@ -29,6 +30,15 @@
     color: var(--text-light) !important;
     font-family: 'Tajawal', sans-serif;
   }
+
+  .catalog-sections { display:flex; flex-direction:column; gap:34px; padding:8px 20px 24px; }
+  .store-section { position:relative; }
+  .store-section-heading { display:flex; flex-direction:column; align-items:center; text-align:center; margin:0 auto 18px; }
+  .store-section-kicker { color:var(--accent-gold); font-size:11px; font-weight:900; letter-spacing:.35px; }
+  .store-section-title { position:relative; margin:5px 0 7px; color:var(--text-light); font-size:26px; font-weight:900; }
+  .store-section-title::after { content:''; display:block; width:54px; height:3px; margin:9px auto 0; border-radius:999px; background:var(--accent-gold); }
+  .store-section-description { max-width:620px; color:var(--text-muted); font-size:13px; line-height:1.7; }
+  .store-section .categories-grid { padding:0 !important; }
 
   /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
   .categories-grid {
@@ -193,7 +203,6 @@
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
   }
-
   /* ستايل الدروار الجانبي الفخم وملخص المحفظة */
   .drawer-panel {
     background: var(--bg-main) !important;
@@ -276,8 +285,16 @@
       <a href="register.html" style="display:block; text-align:center; font-size:13px; color:var(--accent-gold); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
     </div>
     <div id="drawerUserBox" style="display:none;">
-      <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
-      <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted);"></div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+        <div id="drawerAvatar" style="display:grid; place-items:center; width:46px; height:46px; flex:0 0 auto; overflow:hidden; border-radius:14px; background:#20222d; color:var(--accent-gold);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <img id="drawerAvatarImg" alt="" hidden style="width:100%; height:100%; object-fit:contain; padding:5px;">
+        </div>
+        <div style="min-width:0;">
+          <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
+          <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted); overflow-wrap:anywhere;"></div>
+        </div>
+      </div>
 
       <div class="drawer-wallet-box">
         <div class="drawer-wallet-label" style="color:var(--text-muted);">رصيدك الحالي</div>
@@ -343,11 +360,7 @@
   </div>
 </div>
 
-<!-- حاوية عرض كروت الألعاب الموحدة -->
-<div style="padding: 20px 20px 0 20px;">
-  <h2 style="font-size: 18px; font-weight: 800; color: var(--text-light); margin: 0;">تصفح الألعاب والخدمات</h2>
-</div>
-<div id="categoriesContainer" class="categories-grid">
+<div id="categoriesContainer" class="catalog-sections">
   <div style="color:var(--text-muted); font-size:13px; padding:20px;">جاري تحميل الألعاب...</div>
 </div>
 
@@ -434,7 +447,7 @@ async function loadDrawer() {
     document.getElementById('drawerEmail').textContent = session.user.email || '';
 
     const [{ data: profile, error: profileError }, { data: wallet, error: walletError }] = await Promise.all([
-      supabaseClient.from('profiles').select('full_name, role').eq('id', session.user.id).maybeSingle(),
+      supabaseClient.from('profiles').select('full_name, role, avatar_url').eq('id', session.user.id).maybeSingle(),
       supabaseClient.from('wallets').select('balance').eq('user_id', session.user.id).maybeSingle()
     ]);
 
@@ -443,6 +456,17 @@ async function loadDrawer() {
     document.getElementById('drawerGreeting').textContent = profile?.full_name
       ? `مرحباً، ${profile.full_name}`
       : 'مرحباً بك يا لاعب';
+
+    const drawerAvatarImg = document.getElementById('drawerAvatarImg');
+    const drawerAvatarIcon = document.querySelector('#drawerAvatar > svg');
+    if (drawerAvatarImg && profile?.avatar_url) {
+      drawerAvatarImg.src = profile.avatar_url;
+      drawerAvatarImg.hidden = false;
+      if (drawerAvatarIcon) drawerAvatarIcon.style.display = 'none';
+    } else if (drawerAvatarImg) {
+      drawerAvatarImg.hidden = true;
+      if (drawerAvatarIcon) drawerAvatarIcon.style.display = '';
+    }
 
     if (profile?.role === 'admin') {
       adminLinkBox.style.display = 'block';
@@ -475,15 +499,14 @@ async function init() {
       }
     }
 
-    // جلب الحقول اللازمة فقط للتقليل من حجم الاستجابة.
-    const { data: categories, error: categoriesError } = await supabaseClient
-      .from('categories')
-      .select('id, name, description, image_url')
-      .eq('is_active', true)
-      .order('display_order');
+    const [{ data: sections, error: sectionsError }, { data: categories, error: categoriesError }] = await Promise.all([
+      supabaseClient.from('store_sections').select('id,name,display_order').eq('is_active', true).order('display_order').order('name'),
+      supabaseClient.from('categories').select('id,section_id,name,description,image_url,display_order').eq('is_active', true).not('section_id', 'is', null).order('display_order').order('name')
+    ]);
 
+    if (sectionsError) throw sectionsError;
     if (categoriesError) throw categoriesError;
-    renderCategories(categories || []);
+    renderCatalog(sections || [], categories || []);
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
   }
@@ -523,35 +546,21 @@ function createIcon(className, style) {
   return icon;
 }
 
-function renderCategories(categories) {
-  const container = document.getElementById('categoriesContainer');
-
-  if (categories.length === 0) {
-    renderMessage('لا توجد ألعاب أو تصنيفات متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-
-  categories.forEach((cat) => {
-    if (cat.id === null || cat.id === undefined) return;
-
+function createCategoryCard(cat) {
     const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
     const description = typeof cat.description === 'string' && cat.description.trim()
       ? cat.description.trim()
-      : 'تصفح الباقات والشدات المتوفرة حصرياً';
+      : 'تصفح الباقات المتوفرة داخل هذا التصنيف';
     const imageUrl = getSafeImageUrl(cat.image_url);
     const card = document.createElement('a');
     const thumb = document.createElement('div');
     const info = document.createElement('div');
     const nameElement = document.createElement('div');
     const descriptionElement = document.createElement('div');
-    const trust = document.createElement('span');
-    const button = document.createElement('div');
-    const buttonText = document.createElement('span');
 
     card.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
     card.className = 'game-card';
+    card.setAttribute('aria-label', `فتح تصنيف ${name}`);
     thumb.className = 'game-thumb';
 
     if (imageUrl) {
@@ -576,25 +585,58 @@ function renderCategories(categories) {
     descriptionElement.className = 'game-desc';
     descriptionElement.textContent = description;
     descriptionElement.title = description;
-    trust.className = 'card-trust';
-    trust.append(createIcon('fas fa-bolt'), document.createTextNode(' تسليم فوري ومضمون 100%'));
-    button.className = 'game-btn';
-    buttonText.textContent = 'عرض الباقات';
-    button.append(buttonText, createIcon('fas fa-chevron-left', 'font-size:10px;'));
-    info.append(nameElement, descriptionElement, trust, button);
+    info.append(nameElement, descriptionElement);
     card.append(thumb, info);
-    fragment.appendChild(card);
-  });
+    return card;
+}
 
-  if (!fragment.childNodes.length) {
-    renderMessage('لا توجد ألعاب أو تصنيفات متاحة حالياً', 'تابعنا قريباً — بنجهز عروض فخمة ليك');
+function renderCatalog(sections, categories) {
+  const container = document.getElementById('categoriesContainer');
+  container.className = 'catalog-sections';
+
+  if (sections.length === 0 || categories.length === 0) {
+    renderMessage('لا توجد أقسام أو تصنيفات متاحة حالياً', 'أضف قسمًا ثم اربط به التصنيفات من لوحة الأدمن.');
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+  let renderedSections = 0;
+  sections.forEach((section) => {
+    const sectionCategories = categories.filter(category => category.section_id === section.id);
+    if (!sectionCategories.length) return;
+    renderedSections += 1;
+    const sectionElement = document.createElement('section');
+    sectionElement.className = 'store-section';
+    sectionElement.setAttribute('aria-labelledby', `section-title-${section.id}`);
+    const heading = document.createElement('div');
+    heading.className = 'store-section-heading';
+    const kicker = document.createElement('span');
+    kicker.className = 'store-section-kicker';
+    kicker.textContent = 'RAIZEY COLLECTION';
+    const title = document.createElement('h2');
+    title.id = `section-title-${section.id}`;
+    title.className = 'store-section-title';
+    title.textContent = section.name;
+    const description = document.createElement('p');
+    description.className = 'store-section-description';
+    description.textContent = 'تصفح التصنيفات والباقات المتوفرة داخل هذا القسم.';
+    heading.append(kicker, title, description);
+    const grid = document.createElement('div');
+    grid.className = 'categories-grid';
+    sectionCategories.forEach(category => grid.appendChild(createCategoryCard(category)));
+    sectionElement.append(heading, grid);
+    fragment.appendChild(sectionElement);
+  });
+
+  if (!renderedSections) {
+    renderMessage('لا توجد تصنيفات مرتبطة بالأقسام حالياً', 'من لوحة الأدمن: أنشئ قسمًا ثم اختره عند إضافة التصنيف.');
+    return;
+  }
   container.replaceChildren(fragment);
 }
 
 init();
 </script>
+  <script src="assets/js/raizey-assistant.js"></script>
 </body>
   </html>

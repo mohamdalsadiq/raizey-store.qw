@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة التصنيفات — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,6 +51,26 @@
     display: flex;
     flex-direction: column;
   }
+  .admin-inline-notice {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .admin-inline-notice.error {
+    border-color: rgba(229,72,77,.35);
+    background: rgba(229,72,77,.08);
+    color: #a52e33;
+  }
+  .admin-inline-notice.success {
+    border-color: rgba(22,163,74,.3);
+    background: rgba(22,163,74,.08);
+    color: #176b36;
+  }
 </style>
 </head>
 <body>
@@ -73,6 +94,7 @@
   </div>
 
   <button class="add-new-btn" id="addNewBtn">+ إضافة تصنيف جديد</button>
+  <div id="categoriesNotice" class="admin-inline-notice" role="status" aria-live="polite" hidden></div>
 
   <div id="categoriesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
@@ -80,6 +102,13 @@
 <div class="modal-overlay" id="formModal">
   <div class="modal-box">
     <div class="modal-title" id="formModalTitle">تصنيف جديد</div>
+
+    <div class="field">
+      <label for="sectionInput">القسم الذي يظهر تحته التصنيف</label>
+      <select id="sectionInput" style="width:100%; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:8px; color:var(--ink); font-family:inherit;">
+        <option value="">اختر القسم أولًا</option>
+      </select>
+    </div>
 
     <div class="field">
       <label>اسم التصنيف</label>
@@ -134,9 +163,11 @@
 <script src="assets/js/supabase-client.js"></script>
 <script>
 let categories = [];
+let sections = [];
 let editingId = null;
 
 const formModal = document.getElementById('formModal');
+const sectionInput = document.getElementById('sectionInput');
 const nameInput = document.getElementById('nameInput');
 const descriptionInput = document.getElementById('descriptionInput');
 const imageFileInput = document.getElementById('imageFileInput');
@@ -145,6 +176,13 @@ const imageUploadStatus = document.getElementById('imageUploadStatus');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
+const categoriesNotice = document.getElementById('categoriesNotice');
+
+function showCategoriesNotice(message, type = 'error') {
+  categoriesNotice.textContent = message || '';
+  categoriesNotice.className = `admin-inline-notice ${type}`;
+  categoriesNotice.hidden = !message;
+}
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -171,14 +209,31 @@ async function init() {
   document.getElementById('formCancelBtn').addEventListener('click', closeForm);
   document.getElementById('formSaveBtn').addEventListener('click', saveCategory);
 
+  await loadSections();
   await loadCategories();
 }
 
+async function loadSections() {
+  const { data, error } = await supabaseClient
+    .from('store_sections').select('id,name,is_active,display_order').order('display_order').order('name');
+  if (error) {
+    showCategoriesNotice('تعذر تحميل الأقسام. أضف قسمًا أولًا من صفحة إدارة الأقسام.', 'error');
+    return;
+  }
+  sections = data || [];
+  sectionInput.innerHTML = '<option value="">اختر القسم أولًا</option>' + sections.map(s => `<option value="${s.id}">${escapeHtml(s.name)}${s.is_active ? '' : ' — مؤرشف'}</option>`).join('');
+}
+
 async function loadCategories() {
-  const { data } = await supabaseClient
-    .from('categories').select('*').order('display_order');
-  categories = data || [];
-  render();
+    const { data, error } = await supabaseClient
+      .from('categories').select('*').not('section_id', 'is', null).order('display_order');
+    if (error) {
+      formError.textContent = 'تعذر تحميل التصنيفات. حدّث الصفحة وحاول مرة أخرى.';
+      devLog('[RAIZEY] load categories error:', { code: error.code, message: error.message });
+      return;
+    }
+    categories = data || [];
+    render();
 }
 
 function render() {
@@ -190,7 +245,7 @@ function render() {
 
   container.innerHTML = categories.map(c => {
     const imgHtml = c.image_url
-      ? `<img src="${c.image_url}" class="category-thumb" alt="${c.name}">`
+      ? `<img src="${escapeHtml(c.image_url)}" class="category-thumb" alt="${escapeHtml(c.name)}">`
       : `<div class="category-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-gamepad"></i></div>`;
 
     return `
@@ -199,10 +254,10 @@ function render() {
           ${imgHtml}
           <div class="category-meta-text">
             <div class="manage-item-name">
-              ${c.name}
+              ${escapeHtml(c.name)}
               ${!c.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
             </div>
-            <div class="manage-item-sub">ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
+            <div class="manage-item-sub">القسم: ${escapeHtml(sections.find(s => s.id === c.section_id)?.name || 'بدون قسم')} — ترتيب: ${c.display_order} — عمولة: ${c.commission_percent}%</div>
           </div>
         </div>
         <div class="manage-item-actions">
@@ -234,6 +289,7 @@ function openForm(id) {
   if (id) {
     const cat = categories.find(c => c.id === id);
     document.getElementById('formModalTitle').textContent = 'تعديل التصنيف';
+    sectionInput.value = cat.section_id || '';
     nameInput.value = cat.name;
     descriptionInput.value = cat.description || '';
     imageUrlInput.value = cat.image_url || '';
@@ -245,6 +301,7 @@ function openForm(id) {
     activeInput.value = String(cat.is_active);
   } else {
     document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
+    sectionInput.value = '';
     nameInput.value = '';
     descriptionInput.value = '';
     imageUrlInput.value = '';
@@ -282,11 +339,16 @@ async function uploadCategoryImageFile(file) {
 }
 
 async function saveCategory() {
+  const sectionId = sectionInput.value;
   const name = nameInput.value.trim();
   const description = descriptionInput.value.trim();
   const order = parseInt(orderInput.value) || 0;
   const isActive = activeInput.value === 'true';
 
+  if (!sectionId) {
+    formError.textContent = 'اختر القسم الذي سيظهر تحته التصنيف.';
+    return;
+  }
   if (!name) {
     formError.textContent = 'أدخل اسم التصنيف';
     return;
@@ -303,6 +365,7 @@ async function saveCategory() {
     }
 
     const payload = {
+      section_id: sectionId,
       name,
       description,
       image_url: finalImageUrl,
@@ -316,7 +379,11 @@ async function saveCategory() {
       : await supabaseClient.from('categories').insert(payload);
 
     if (error) {
-      formError.textContent = 'حصل خطأ أثناء حفظ التصنيف، حاول تاني';
+      const code = error.code || '';
+      formError.textContent = code === '42501'
+        ? 'ليس لديك صلاحية إدارة التصنيفات. تأكد من سياسة categories_admin في Supabase.'
+        : 'تعذر حفظ التصنيف. تحقق من البيانات ثم حاول مرة أخرى.';
+      devLog('[RAIZEY] save category error:', { code, message: error.message });
       return;
     }
 
@@ -333,12 +400,47 @@ async function saveCategory() {
 }
 
 async function deleteCategory(id) {
-  if (!confirm('متأكد عايز تحذف التصنيف ده؟ المنتجات المرتبطة بيه هتفضل بدون تصنيف.')) return;
-  await supabaseClient.from('categories').delete().eq('id', id);
+  if (!confirm('هل تريد حذف هذا التصنيف؟ لا يمكن حذفه إذا كانت هناك منتجات أو تصنيفات فرعية مرتبطة به.')) return;
+
+  showCategoriesNotice('جاري حذف التصنيف...', '');
+  const { data: deletedRows, error } = await supabaseClient
+    .from('categories')
+    .delete({ count: 'exact' })
+    .eq('id', id)
+    .select('id');
+
+  if (error) {
+    const code = error.code || '';
+    const message = code === '23503'
+      ? 'لا يمكن حذف التصنيف لأنه مرتبط بمنتجات أو تصنيفات فرعية. انقل العناصر أولاً ثم حاول مرة أخرى.'
+      : code === '42501'
+        ? 'ليست لديك صلاحية حذف التصنيفات. اطلب من المدير تفعيل صلاحية إدارة المنتجات.'
+        : 'تعذر حذف التصنيف. حاول مرة أخرى.';
+    showCategoriesNotice(message, 'error');
+    devLog('[RAIZEY] delete category error:', { code, message: error.message });
+    return;
+  }
+
+  // RLS قد يمنع الحذف بإرجاع صفوف فارغة دون خطأ صريح.
+  if (!Array.isArray(deletedRows) || deletedRows.length !== 1) {
+    const { data: canManage } = await supabaseClient.rpc('has_admin_permission', {
+      permission_key: 'manage_products'
+    });
+    const message = canManage === false
+      ? 'لم يتم الحذف لأن حسابك لا يملك صلاحية إدارة المنتجات.'
+      : 'لم يتم حذف التصنيف. قد يكون محميًا بعناصر مرتبطة أو لم يعد موجودًا.';
+    showCategoriesNotice(message, 'error');
+    devLog('[RAIZEY] delete category affected no rows:', { id, canManage });
+    await loadCategories();
+    return;
+  }
+
+  showCategoriesNotice('تم حذف التصنيف بنجاح.', 'success');
   await loadCategories();
 }
 
 init();
 </script>
+  <script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

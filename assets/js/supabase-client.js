@@ -126,6 +126,31 @@ function requireClient() {
 }
 
 // =========================================================
+// Sentry: سياق الصفحة والمستخدم (بدون بيانات حساسة زي الإيميل)
+// =========================================================
+if (window.Sentry && typeof window.Sentry.onLoad === 'function') {
+  window.Sentry.onLoad(function () {
+    try {
+      window.Sentry.setTag('page', (location.pathname.split('/').pop() || 'index.html'));
+    } catch (_) {}
+  });
+}
+if (supabaseClient) {
+  supabaseClient.auth.getSession().then(({ data }) => {
+    const uid = data && data.session && data.session.user ? data.session.user.id : null;
+    if (window.Sentry && uid) window.Sentry.setUser({ id: uid });
+  }).catch(() => {});
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (!window.Sentry) return;
+    if (session && session.user) {
+      window.Sentry.setUser({ id: session.user.id });
+    } else {
+      window.Sentry.setUser(null);
+    }
+  });
+}
+
+// =========================================================
 // Cache بسيط في sessionStorage لتفادي الاستعلامات المتكررة
 // =========================================================
 async function getCachedData(key, fetchFn, ttlSeconds = 300) {

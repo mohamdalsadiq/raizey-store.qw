@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>إتمام الشراء — RAIZEY STORE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,7 +173,10 @@
   .method-pill.active { background: var(--primary); border-color: var(--primary); color: var(--ink); }
   .selected-method-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
-  #saveTxRefBtn {
+  /* أزرار "تحقق" الموحّدة: رقم العملية الأول، رمز الدفع، ورقم العملية الثاني (المبلغ المتبقي) */
+  #saveTxRefBtn,
+  #verifyCodeBtn,
+  #remainderRefBtn {
     flex-shrink: 0;
     min-width: 84px;
     padding: 0 20px;
@@ -185,15 +189,26 @@
     cursor: pointer;
     transition: opacity 0.2s ease;
   }
-  #saveTxRefBtn:hover { opacity: 0.9; }
-  #saveTxRefBtn:active { opacity: 0.8; }
+  #saveTxRefBtn:hover,
+  #verifyCodeBtn:hover,
+  #remainderRefBtn:hover { opacity: 0.9; }
+  #saveTxRefBtn:active,
+  #verifyCodeBtn:active,
+  #remainderRefBtn:active { opacity: 0.8; }
+  #saveTxRefBtn:disabled,
+  #verifyCodeBtn:disabled,
+  #remainderRefBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+  /* توحيد حقول رقم العملية الأول والثاني حتى يظهر الإيصال الثاني بنفس تصميم الأول */
+  .tx-ref-row { display: flex; gap: 8px; align-items: stretch; }
+  .tx-ref-row > input { flex: 1; }
   .field-hint {
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 6px;
     line-height: 1.6;
   }
-  #transactionRefInput:disabled {
+  #transactionRefInput:disabled,
+  #remainderRefInput:disabled {
     opacity: 0.65;
     cursor: not-allowed;
   }
@@ -302,7 +317,7 @@
 
         <div id="remainderStep" style="display:none; margin-top:12px; border:1px dashed var(--border); border-radius:12px; padding:12px;">
           <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">إشعار المبلغ المتبقي</label>
-          <div style="display:flex; gap:8px;">
+          <div class="tx-ref-row">
             <input type="text" id="remainderRefInput" placeholder="رقم عملية التحويل الثاني" inputmode="latin" autocomplete="off">
             <button type="button" id="remainderRefBtn">تحقق</button>
           </div>
@@ -357,7 +372,7 @@ function safeFormatSDG(val) {
 
 // ── حرس زمني على كل استدعاء شبكة ──
 // سبب وجوده: أي await على الشبكة بدون مهلة قد ينتظر للأبد (شبكة معلّقة،
-// استجابة لا تصل) فيبقى الزر عالقاً على "جارِ تسجيل الإيصال..." بلا نهاية.
+// استجابة لا تصل) فيبقى ا��زر عالقاً على "جارِ تسجيل الإيصال..." بلا نهاية.
 // الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
 // ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
 const NET_TIMEOUT_MS = {
@@ -1021,7 +1036,7 @@ function attachCheckoutEvents(canUseWallet) {
     if (analysis.language === 'ar')  rows.push('لغة الإشعار: عربية');
     if (analysis.extracted.txRef)    rows.push(`رقم العملية المقروء: ${analysis.extracted.txRef}`);
     if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
-    if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
+    if (analysis.extracted.dateTime) rows.push(`التار��خ والوقت: ${analysis.extracted.dateTime}`);
     rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
     rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
     rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
@@ -1331,7 +1346,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   }
 
   placeOrderBtn.disabled = true;
-  placeOrderBtn.textContent = 'جارِ إرسال طلباتك...';
+  placeOrderBtn.textContent = 'ج��رِ إرسال طلباتك...';
 
   if (selectedPayment === 'wallet') {
     try {
@@ -1749,5 +1764,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
 init();
 </script>
+  <script src="assets/js/raizey-assistant.js"></script>
 </body>
 </html>
