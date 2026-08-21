@@ -64,9 +64,10 @@
 
     <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
     <div class="file-upload" id="fileUploadBox">
-      <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)</span>
+      <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)</span>
       <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
     </div>
+    <div class="field-hint" style="margin-top:6px;">الفحص الذكي يقبل JPG / PNG / WEBP فقط، وبحد أقصى 5MB.</div>
     <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
     <div id="receiptScanStatus" class="receipt-scan-status"></div>
     <div id="receiptScanReport" class="receipt-scan-report"></div>
@@ -177,7 +178,7 @@ async function init() {
     if (!validation.valid) {
       fileInput.value = '';
       receiptFile = null;
-      document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+      document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
       fileBox.classList.remove('has-file');
       fileError.textContent = validation.message;
       return;
@@ -656,13 +657,13 @@ async function submitTopup() {
   document.getElementById('transactionRefInput').value = '';
   document.getElementById('methodDetails').innerHTML = '';
   const fBox = document.getElementById('fileUploadBox');
-  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
   fBox.classList.remove('has-file');
   receiptFile = null;
   receiptAnalysis = null;
   receiptScanContext = null;
   document.getElementById('receiptInput').value = '';
-  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP)';
+  document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
   document.getElementById('receiptScanStatus').textContent = '';
   document.getElementById('receiptScanReport').hidden = true;
   document.getElementById('receiptScanReport').style.display = 'none';

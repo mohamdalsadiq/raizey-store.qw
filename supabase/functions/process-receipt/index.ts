@@ -9,9 +9,9 @@ const GEMINI_MODELS = [
   "gemini-3-flash-preview",
 ];
 const GEMINI_TIMEOUT_MS = 24_000;
-const MAX_IMAGE_BYTES = 3.2 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
-const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 120_000;
+const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
@@ -19,8 +19,6 @@ const ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/heic",
-  "image/heif",
 ]);
 
 const OCR_PROMPT =
@@ -115,6 +113,24 @@ function decodeBase64(value: string): Uint8Array {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+type ParsedImage = { base64: string; mimeType: string; bytes: Uint8Array };
+
+function parseImagePayload(base64Value: unknown, mimeValue: unknown): ParsedImage {
+  const base64 = cleanBase64(base64Value);
+  const mimeType = normalizeMime(mimeValue);
+  if (!base64 || !mimeType) throw new Error("invalid_image_input");
+  if (base64.length > MAX_BASE64_CHARS) throw new Error("image_too_large");
+  let bytes: Uint8Array;
+  try {
+    bytes = decodeBase64(base64);
+  } catch (_) {
+    throw new Error("invalid_base64");
+  }
+  if (!bytes.byteLength) throw new Error("invalid_image_input");
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("image_too_large");
+  return { base64, mimeType, bytes };
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -292,22 +308,18 @@ async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Ar
 }
 
 async function processScan(request: Request, admin: any, userId: string, body: any): Promise<ScanResult> {
-  const imageBase64 = cleanBase64(body?.imageBase64);
-  const mimeType = normalizeMime(body?.mimeType);
-  if (!imageBase64 || !mimeType) return softReview("invalid_image_input", "بيانات الصورة غير صالحة. ارفع JPG أو PNG أو WEBP.");
-  if (imageBase64.length > MAX_BASE64_CHARS || imageBase64.length > MAX_REQUEST_CHARS) {
-    return softReview("image_too_large", "حجم الصورة كبير جداً. ارفع لقطة شاشة عادية أقل من 3 ميجابايت.");
-  }
-
-  let bytes: Uint8Array;
+  let image: ParsedImage;
   try {
-    bytes = decodeBase64(imageBase64);
-  } catch (_) {
-    return softReview("invalid_base64", "تعذّر قراءة الصورة المرسلة. أعد اختيار الملف.");
+    image = parseImagePayload(body?.imageBase64, body?.mimeType);
+  } catch (error) {
+    const code = String((error as any)?.message || "invalid_image_input");
+    if (code === "image_too_large") return softReview(code, "حجم الصورة أكبر من 5 ميجابايت. ارفع صورة JPG أو PNG أو WEBP أصغر.");
+    if (code === "invalid_base64") return softReview(code, "تعذّر قراءة الصورة المرسلة. أعد اختيار الملف.");
+    return softReview("invalid_image_input", "صيغة الصورة غير صالحة. ارفع JPG أو PNG أو WEBP.");
   }
-  if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) {
-    return softReview("image_too_large", "حجم الصورة كبير جداً. ارفع لقطة شاشة عادية أقل من 3 ميجابايت.");
-  }
+  const imageBase64 = image.base64;
+  const mimeType = image.mimeType;
+  const bytes = image.bytes;
   const hash = await sha256Hex(bytes);
   const options: ScanOptions = {
     expectedAmount: Math.max(0, Number(body?.expectedAmount) || 0),
@@ -323,10 +335,17 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     const first = await extractTextWithGemini(imageBase64, mimeType, apiKey);
     rawText = first.text;
     usedModel = first.model;
-    const extra = cleanBase64(body?.imageBase64Extra);
-    const extraMime = normalizeMime(body?.mimeTypeExtra);
-    if (extra && extraMime && extra.length <= MAX_BASE64_CHARS) {
-      const second = await extractTextWithGemini(extra, extraMime, apiKey);
+    const extraBase64 = cleanBase64(body?.imageBase64Extra);
+    let extraImage: ParsedImage | null = null;
+    if (extraBase64) {
+      try {
+        extraImage = parseImagePayload(extraBase64, body?.mimeTypeExtra);
+      } catch (error) {
+        const code = String((error as any)?.message || "invalid_image_input");
+        if (code === "image_too_large") return softReview(code, "حجم الصورة الإضافية أكبر من 5 ميجابايت. ارفع صورة أصغر.");
+        return softReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
+      }
+      const second = await extractTextWithGemini(extraImage.base64, extraImage.mimeType, apiKey);
       rawText += `\n${second.text}`;
     }
   } catch (error) {
@@ -367,9 +386,15 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     ReceiptJudgeCore.blankResult(),
   ) as ScanResult;
   const imageParts = [{ inline_data: { mime_type: mimeType, data: imageBase64 } }];
-  const extra = cleanBase64(body?.imageBase64Extra);
-  const extraMime = normalizeMime(body?.mimeTypeExtra);
-  if (extra && extraMime && extra.length <= MAX_BASE64_CHARS) imageParts.push({ inline_data: { mime_type: extraMime, data: extra } });
+  const extraBase64 = cleanBase64(body?.imageBase64Extra);
+  if (extraBase64) {
+    try {
+      const extraImage = parseImagePayload(extraBase64, body?.mimeTypeExtra);
+      imageParts.push({ inline_data: { mime_type: extraImage.mimeType, data: extraImage.base64 } });
+    } catch (_) {
+      return softReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
+    }
+  }
 
   const needsArbitration = !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified) && result.decision !== "reject";
   if (needsArbitration) {

@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
 <meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -20,7 +20,7 @@
     --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
     --border-color: #e8e1d6;    /* لون الحدود المتناسق */
     --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
-    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+    --text-muted: #5c574d;      /* نصوص ثانوية عالية التباين */
     --danger: #e5484d;
   }
 
@@ -46,7 +46,7 @@
     padding: 12px !important;
     display: flex !important;
     flex-direction: column !important;
-    transition: all 0.25s ease-in-out !important;
+    transition: transform 0.25s ease-in-out, border-color 0.25s ease-in-out, box-shadow 0.25s ease-in-out, background-color 0.25s ease-in-out !important;
     text-decoration: none !important;
     position: relative !important;
     overflow: hidden !important;
@@ -136,7 +136,7 @@
     padding: 8px 0 !important;
     font-size: 12px !important;
     font-weight: 800 !important;
-    transition: all 0.2s !important;
+    transition: transform 0.2s, opacity 0.2s, color 0.2s, background-color 0.2s !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -253,7 +253,7 @@
     <div class="logo" style="display:flex; align-items:center; gap:8px;">
       <!-- التحديث الذهبي للوجو السداسي الفخم لـ RAIZEY STORE -->
       <img class="hex-logo" src="assets/img/raizey-logo-mark.svg" width="36" height="36" alt="شعار RAIZEY STORE">
-      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color:var(--accent-gold);">STORE</span></span>
+      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900; color:var(--text-light);">RAIZEY <span style="color:var(--primary-dim);">STORE</span></span>
     </div>
     <div class="header-actions">
       <a href="search.html" class="icon-btn" title="بحث" style="color: var(--text-light);">
@@ -269,7 +269,7 @@
 
 <div class="drawer-overlay" id="drawerOverlay">
   <div class="drawer-panel">
-    <button class="drawer-close-btn" id="closeDrawerBtn" style="color: var(--text-light);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <button class="drawer-close-btn" id="closeDrawerBtn" type="button" aria-label="إغلاق القائمة" style="color: var(--text-light);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <div id="drawerGuestBox" style="display:none; padding: 20px 10px;">
       <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
       <a href="login.html" class="auth-btn" style="display:block; text-align:center; margin-bottom:14px;">تسجيل الدخول</a>
@@ -308,17 +308,17 @@
 <section class="hero-slider">
   <div class="slider-track" id="sliderTrack">
     <div class="slide slide-1" style="background: linear-gradient(135deg, #FFF4EA 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">RAIZEY STORE</div>
+      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">RAIZEY STORE</div>
       <h2 style="color: var(--text-light);">اشحن رصيدك فوراً بأفضل الأسعار</h2>
       <p style="color: var(--text-muted);">شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
     </div>
     <div class="slide slide-2" style="background: linear-gradient(135deg, #FFEFE0 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">دفع مرن</div>
+      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">دفع مرن</div>
       <h2 style="color: var(--text-light);">ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
       <p style="color: var(--text-muted);">محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
     </div>
     <div class="slide slide-3" style="background: linear-gradient(135deg, #FFF8F2 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--accent-gold); font-weight:800;">دعم فوري</div>
+      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">دعم فوري</div>
       <h2 style="color: var(--text-light);">تواصل معانا مباشرة على واتساب</h2>
       <p style="color: var(--text-muted);">فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
     </div>

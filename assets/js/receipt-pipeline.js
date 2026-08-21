@@ -10,12 +10,22 @@
   const MAX_DIMENSION = 1600;
   const JPEG_QUALITY = 0.85;
   const COMPRESS_ABOVE_BYTES = 900 * 1024;
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
   const EDGE_TIMEOUT_MS = 100000;
   const FALLBACK_FLAGS = [
     'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
     'judge_error', 'missing_image', 'image_too_large', 'invalid_image_input',
-    'invalid_base64', 'receipt_processing_failed'
+    'invalid_base64', 'invalid_image_type', 'receipt_processing_failed'
   ];
+
+  function validateImageFile(file) {
+    if (!file || !(file instanceof Blob)) throw new Error('missing_image');
+    const mimeType = String(file.type || '').toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.has(mimeType)) throw new Error('invalid_image_type');
+    if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) throw new Error('image_too_large');
+    return true;
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -110,7 +120,8 @@
 
   async function serverVerify(file, options, extraFile) {
     const opts = options || {};
-    if (!file || !(file instanceof Blob)) throw new Error('missing_image');
+    validateImageFile(file);
+    if (extraFile) validateImageFile(extraFile);
     const compressed = await compressForServer(file);
     const imageBase64 = compressed.base64 || await fileToBase64(file);
     let imageBase64Extra = null;
@@ -172,17 +183,30 @@
       return result;
     } catch (error) {
       if (typeof opts.onServerError === 'function') opts.onServerError(error);
+      const errorCode = String(error && error.message || '');
       const flag = error && error.name === 'AbortError'
         ? 'server_ocr_timeout'
-        : String(error && error.message || '').includes('auth_required')
+        : errorCode.includes('auth_required')
           ? 'auth_required'
-          : 'server_ocr_failed';
-      return softReview(flag, error && error.serverMessage ? error.serverMessage : undefined);
+          : errorCode === 'image_too_large'
+            ? 'image_too_large'
+            : errorCode === 'invalid_image_type'
+              ? 'invalid_image_type'
+              : 'server_ocr_failed';
+      const message = error && error.serverMessage
+        ? error.serverMessage
+        : flag === 'image_too_large'
+          ? 'حجم الصورة أكبر من 5 ميجابايت. ارفع JPG أو PNG أو WEBP أصغر.'
+          : flag === 'invalid_image_type'
+            ? 'صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.'
+            : undefined;
+      return softReview(flag, message);
     }
   }
 
   root.RaizeyReceiptPipeline = {
     fileToBase64,
+    validateImageFile,
     compressForServer,
     normalizeRef,
     serverVerify,
