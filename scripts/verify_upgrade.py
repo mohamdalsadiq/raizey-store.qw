@@ -25,7 +25,6 @@ checkout = (ROOT / 'checkout.html').read_text(encoding='utf-8')
 checkout_v2 = (ROOT / 'checkout-v2.html').read_text(encoding='utf-8')
 wallet = (ROOT / 'wallet.html').read_text(encoding='utf-8')
 admin = (ROOT / 'admin.html').read_text(encoding='utf-8')
-subcategories_admin = (ROOT / 'admin-subcategories.html').read_text(encoding='utf-8')
 orders = (ROOT / 'admin-orders.html').read_text(encoding='utf-8')
 staff = (ROOT / 'admin-staff.html').read_text(encoding='utf-8')
 customers = (ROOT / 'admin-customers.html').read_text(encoding='utf-8')
@@ -115,7 +114,7 @@ check('edge receipt claim and rollback SQL remain recoverable', 'enforce_edge_re
 check('Vercel deploy allowlist blocks internal files', all(pattern in vercel_ignore for pattern in ('/*', '!assets', '!*.html', '!favicon.svg')) and '!api' not in vercel_ignore)
 
 pages = (
-    'index.html', 'category.html', 'product.html', 'admin.html', 'admin-subcategories.html',
+    'index.html', 'category.html', 'product.html', 'admin.html',
     'admin-orders.html', 'admin-customers.html', 'admin-staff.html', 'admin-products.html',
     'admin-categories.html', 'admin-settings.html', 'admin-coupons.html', 'admin-giftcards.html',
     'admin-audit-log.html', 'admin-payment-codes.html', 'admin-referral-milestones.html',
