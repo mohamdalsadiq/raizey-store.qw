@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fffdfa;
+  --foreground: #1a1d29;
+  --card: #ffffff;
+  --card-foreground: #1a1d29;
+  --primary: #ff6a1a;
+  --primary-strong: #e85d00;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #1a1d29;
+  --muted: #eee8de;
+  --muted-foreground: #686257;
+  --accent: #f6f1e9;
+  --accent-foreground: #1a1d29;
+  --border: #e8e1d6;
+  --ring: #ff6a1a;
+  --success: #3bb77e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --font-sans: var(--font-cairo), "Segoe UI", sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  overflow-x: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-cairo), "Segoe UI", sans-serif;
+}
+
+::selection {
+  background: rgb(255 106 26 / 20%);
+  color: var(--foreground);
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.container-shell {
+  width: min(100% - 2rem, 75rem);
+  margin-inline: auto;
+}
+
+.hero-surface {
+  background:
+    radial-gradient(circle at 12% 18%, rgb(255 106 26 / 10%), transparent 31rem),
+    var(--accent);
+  box-shadow: 0 32px 90px -64px rgb(26 29 41 / 45%);
+}
+
+.scan-line {
+  animation: scan 2.8s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%,
+  100% {
+    transform: translateY(-2.4rem);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(2.4rem);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .container-shell {
+    width: min(100% - 3rem, 75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
