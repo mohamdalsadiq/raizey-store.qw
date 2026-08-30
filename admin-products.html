@@ -72,7 +72,7 @@
       <label>صورة المنتج</label>
       <div class="file-upload" id="fileUploadBox">
         اضغط لرفع صورة
-        <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+        <input type="file" id="imageFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
       </div>
       <input type="hidden" id="imageInput">
     </div>
@@ -196,9 +196,20 @@ async function init() {
   fileInput.addEventListener('change', async () => {
     if (fileInput.files.length === 0) return;
     const file = fileInput.files[0];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      fileBox.textContent = 'اختر صورة JPG أو PNG أو WEBP فقط';
+      fileInput.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      fileBox.textContent = 'حجم الصورة أكبر من 5MB';
+      fileInput.value = '';
+      return;
+    }
     fileBox.textContent = 'جارِ الرفع...';
 
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
     const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     const { error } = await supabaseClient.storage.from('product-images').upload(filePath, file);

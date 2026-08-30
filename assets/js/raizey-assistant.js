@@ -109,9 +109,14 @@
       addMessage('assistant', data.answer);
     } catch (error) {
       const status = error?.context?.status || error?.status;
-      addMessage('assistant', status === 401
+      const message = status === 401
         ? 'يرجى تسجيل الدخول أولاً حتى أتمكن من الوصول إلى بيانات طلباتك.'
-        : 'تعذر الاتصال بالمساعد حالياً. حاول مرة أخرى بعد قليل أو تواصل مع الدعم.');
+        : status === 429
+          ? 'وصلت للحد المؤقت من الرسائل. انتظر عدة دقائق ثم حاول مرة أخرى.'
+          : status === 413
+            ? 'الرسالة طويلة جداً. اختصرها ثم أعد الإرسال.'
+            : 'تعذر الاتصال بالمساعد حالياً. حاول مرة أخرى بعد قليل أو تواصل مع الدعم.';
+      addMessage('assistant', message);
     } finally {
       send.disabled = false;
       typing.hidden = true;

@@ -5,33 +5,89 @@ const MODEL = "gemini-3.5-flash";
 const MAX_MESSAGE_LENGTH = 1200;
 const MAX_HISTORY_ITEMS = 8;
 const MAX_OUTPUT_TOKENS = 700;
+const MAX_REQUEST_BYTES = 32 * 1024;
+const GEMINI_TIMEOUT_MS = 20_000;
+const RATE_LIMIT_REQUESTS = 12;
+const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
+const PRODUCTION_ORIGIN = "https://raizey-store-qw.vercel.app";
 
 function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
 }
 
-function corsHeaders(): Record<string, string> {
+function allowedOrigin(request: Request): string {
+  const configured = env("RAIZEY_PUBLIC_ORIGIN");
+  const origins = configured && configured !== "*"
+    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
+    : [PRODUCTION_ORIGIN];
+  const requestOrigin = request.headers.get("Origin") || "";
+  return origins.includes(requestOrigin) ? requestOrigin : origins[0];
+}
+
+function corsHeaders(request: Request): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": env("RAIZEY_PUBLIC_ORIGIN") || "*",
+    "Access-Control-Allow-Origin": allowedOrigin(request),
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
 }
 
-function json(data: unknown, status = 200): Response {
+function json(request: Request, data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      ...corsHeaders(),
+      "X-Content-Type-Options": "nosniff",
+      ...corsHeaders(request),
+      ...extraHeaders,
     },
   });
 }
 
 function cleanText(value: unknown, max: number): string {
   return typeof value === "string" ? value.replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, max) : "";
+}
+
+async function readJsonBody(request: Request): Promise<any> {
+  const declaredLength = Number(request.headers.get("Content-Length") || 0);
+  if (declaredLength > MAX_REQUEST_BYTES) throw new Error("payload_too_large");
+  if (!request.body) return {};
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_REQUEST_BYTES) {
+      await reader.cancel();
+      throw new Error("payload_too_large");
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function clientAddress(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return forwarded || request.headers.get("cf-connecting-ip") || "unknown";
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function statusLabel(status: string): string {
@@ -71,23 +127,20 @@ function formatOrders(rows: any[]): string {
 }
 
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-      },
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-      ],
-    }),
-  });
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        },
+      }),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
   if (!response.ok) {
     const detail = (await response.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 220);
     const error = new Error(`gemini_http_${response.status}:${detail}`) as Error & { status?: number };
@@ -101,24 +154,58 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
-  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
+  if (request.method !== "POST") return json(request, { error: "method_not_allowed" }, 405);
 
   const supabaseUrl = env("SUPABASE_URL");
   const anonKey = env("SUPABASE_ANON_KEY");
+  const serviceRoleKey = env("SUPABASE_SERVICE_ROLE_KEY");
   const geminiKey = env("GEMINI_CHAT_API_KEY");
-  if (!supabaseUrl || !anonKey) return json({ error: "server_not_configured" }, 500);
-  if (!geminiKey) return json({ error: "ai_not_configured" }, 503);
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) return json(request, { error: "server_not_configured" }, 500);
+  if (!geminiKey) return json(request, { error: "ai_not_configured" }, 503);
+
+  const authHeader = request.headers.get("Authorization") || "";
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  let userId = "";
+  if (authHeader.toLowerCase().startsWith("bearer ")) {
+    const token = authHeader.slice(7).trim();
+    const { data } = await admin.auth.getUser(token);
+    userId = data?.user?.id || "";
+  }
+
+  const identity = userId ? `user:${userId}` : `ip:${clientAddress(request)}`;
+  const rateKey = await sha256(`chat-assistant:${identity}`);
+  const { data: rateRows, error: rateError } = await admin.rpc("consume_chat_rate_limit", {
+    p_rate_key: rateKey,
+    p_limit: RATE_LIMIT_REQUESTS,
+    p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
+  });
+  if (rateError) {
+    console.error("chat-assistant rate limiter unavailable");
+    return json(request, { error: "rate_limiter_unavailable" }, 503);
+  }
+  const rate = Array.isArray(rateRows) ? rateRows[0] : rateRows;
+  if (!rate?.allowed) {
+    const retryAfter = Math.max(1, Number(rate?.retry_after_seconds || RATE_LIMIT_WINDOW_SECONDS));
+    return json(request, { error: "rate_limited", retry_after: retryAfter }, 429, {
+      "Retry-After": String(retryAfter),
+    });
+  }
 
   let payload: any;
   try {
-    payload = await request.json();
-  } catch (_) {
-    return json({ error: "invalid_json" }, 400);
+    payload = await readJsonBody(request);
+  } catch (error) {
+    return json(request, {
+      error: error instanceof Error && error.message === "payload_too_large" ? "payload_too_large" : "invalid_json",
+    }, error instanceof Error && error.message === "payload_too_large" ? 413 : 400);
   }
 
   const message = cleanText(payload?.message, MAX_MESSAGE_LENGTH);
-  if (!message) return json({ error: "message_required" }, 400);
+  if (!message) return json(request, { error: "message_required" }, 400);
   const history = Array.isArray(payload?.history)
     ? payload.history.slice(-MAX_HISTORY_ITEMS).map((item: any) => ({
         role: item?.role === "assistant" ? "assistant" : "user",
@@ -126,17 +213,10 @@ Deno.serve(async (request) => {
       })).filter((item: any) => item.content)
     : [];
 
-  const authHeader = request.headers.get("Authorization") || "";
   const supabase = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-
-  let userId = "";
-  if (authHeader.toLowerCase().startsWith("bearer ")) {
-    const { data } = await supabase.auth.getUser();
-    userId = data?.user?.id || "";
-  }
 
   const [{ data: products }, ordersResult, { data: settings }] = await Promise.all([
     supabase.from("products")
@@ -186,10 +266,10 @@ ${message}`;
 
   try {
     const answer = await callGemini(geminiKey, prompt);
-    return json({ answer, requires_login: !userId && /طلب|طلبات|حالة|تنفيذ|شحن/.test(message) });
+    return json(request, { answer, requires_login: !userId && /طلب|طلبات|حالة|تنفيذ|شحن/.test(message) });
   } catch (error) {
-    console.error("chat-assistant error", error);
+    console.error("chat-assistant error", error instanceof Error ? error.message.slice(0, 160) : "unknown");
     const status = Number((error as any)?.status || 0);
-    return json({ error: "ai_request_failed", detail: status ? `gemini_http_${status}` : "gemini_network_or_runtime_error" }, 502);
+    return json(request, { error: "ai_request_failed", detail: status ? `gemini_http_${status}` : "gemini_network_or_runtime_error" }, 502);
   }
 });

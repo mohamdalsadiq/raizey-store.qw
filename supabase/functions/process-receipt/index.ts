@@ -15,6 +15,7 @@ const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
+const PRODUCTION_ORIGIN = "https://raizey-store-qw.vercel.app";
 const ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/png",
@@ -49,20 +50,26 @@ function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
 }
 
-function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+function json(request: Request, data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      ...corsHeaders(),
+      "X-Content-Type-Options": "nosniff",
+      ...corsHeaders(request),
       ...extraHeaders,
     },
   });
 }
 
-function corsHeaders(): Record<string, string> {
-  const origin = env("RAIZEY_PUBLIC_ORIGIN") || "*";
+function corsHeaders(request: Request): Record<string, string> {
+  const configured = env("RAIZEY_PUBLIC_ORIGIN");
+  const origins = configured && configured !== "*"
+    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
+    : [PRODUCTION_ORIGIN];
+  const requestOrigin = request.headers.get("Origin") || "";
+  const origin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -434,28 +441,30 @@ async function processScan(request: Request, admin: any, userId: string, body: a
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
-  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
+  if (request.method !== "POST") return json(request, { ok: false, error: "method_not_allowed" }, 405);
 
   const token = authToken(request);
-  if (!token) return json({ ok: false, error: "auth_required" }, 401);
+  if (!token) return json(request, { ok: false, error: "auth_required" }, 401);
 
   let admin: any;
   try {
     admin = buildAdminClient();
     const { data, error } = await admin.auth.getUser(token);
-    if (error || !data?.user) return json({ ok: false, error: "auth_required" }, 401);
+    if (error || !data?.user) return json(request, { ok: false, error: "auth_required" }, 401);
     const userId = data.user.id;
     const rawBody = await request.text();
-    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json({ ok: false, error: "request_too_large" }, 413);
+    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json(request, { ok: false, error: "request_too_large" }, 413);
     let body: any;
-    try { body = JSON.parse(rawBody); } catch (_) { return json({ ok: false, error: "invalid_json" }, 400); }
-    if (!(await enforceRateLimit(admin, userId))) return json({ ok: false, error: "rate_limited" }, 429);
+    try { body = JSON.parse(rawBody); } catch (_) { return json(request, { ok: false, error: "invalid_json" }, 400); }
+    if (!(await enforceRateLimit(admin, userId))) {
+      return json(request, { ok: false, error: "rate_limited" }, 429, { "Retry-After": "600" });
+    }
     const result = await processScan(request, admin, userId, body);
-    return json({ ok: true, ...result });
+    return json(request, { ok: true, ...result });
   } catch (error) {
     console.error("[RAIZEY] process-receipt error", String((error as any)?.message || error));
-    return json({
+    return json(request, {
       ok: false,
       error: "receipt_processing_failed",
       message: "تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.",
