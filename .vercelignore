@@ -1,0 +1,8 @@
+# Deploy only the public storefront and the Vercel API function.
+# Database sources, audits, test artifacts, backups and agent files stay in Git
+# but must never be exposed as static production assets.
+/*
+!assets
+!vercel.json
+!*.html
+!favicon.svg

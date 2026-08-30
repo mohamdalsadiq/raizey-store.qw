@@ -334,9 +334,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="assets/js/receipt-intel.js"></script>
-<script src="assets/js/receipt-pipeline.js?v=legacy-gemini"></script>
+<script src="assets/js/receipt-pipeline.js?v=20260830-edge-secure"></script>
 <script>
 let cart = [];
 let currentUser = null;
@@ -364,7 +362,7 @@ function safeFormatSDG(val) {
 // الآن كل خطوة (رفع الصورة، الرابط الموقّع، إنشاء الطلب) لها سقف زمني
 // ينتهي بخطأ واضح يُرجع الزر لحالته الطبيعية.
 const NET_TIMEOUT_MS = {
-  upload:  45000,   // رفع صورة قد يكون بطيئاً عل���� شبكة الجوال
+  upload:  45000,   // رفع صورة قد يكون بطيئاً على شبكة الجوال
   signUrl: 20000,
   rpc:     25000
 };
@@ -881,7 +879,7 @@ function attachCheckoutEvents(canUseWallet) {
     saveRefBtn.textContent = 'تعديل';
     saveRefBtn.dataset.mode = 'edit';
     refMsg.style.color = 'var(--primary)';
-    refMsg.textContent = 'تم التحقق من ر��م العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
+    refMsg.textContent = 'تم التحقق من رقم العملية (غير مستخدم من قبل). ارفع الآن صورة إشعار التحويل لمطابقتها.';
     receiptStep.style.display = 'block';
     document.getElementById('formError').textContent = '';
   };
@@ -957,30 +955,16 @@ function attachCheckoutEvents(canUseWallet) {
         expectedAccount: selectedMethodAccount
       };
 
-      // مسار النسخة القديمة: Gemini عبر Vercel أولاً، ثم ReceiptIntel القديم كخطة بديلة.
+      // الفحص الوحيد هو Edge Function الموثّق؛ لا يوجد OCR أو قرار مالي داخل المتصفح.
       const scan = (async () => {
         statusEl.style.color = 'var(--text-muted)';
-        statusEl.textContent = 'جارِ فحص الصورة...';
+        statusEl.textContent = 'جارِ فحص الصورة بأمان على الخادم...';
         try {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
-          console.warn('[RAIZEY] server verify unavailable, falling back to browser engine:', serverErr && serverErr.message, serverErr && serverErr.serverDebug);
+          console.warn('[RAIZEY] secure receipt verification failed:', serverErr && serverErr.message);
+          return softReview('server_ocr_failed');
         }
-        if (window.ReceiptIntel && typeof ReceiptIntel.analyze === 'function') {
-          try {
-            statusEl.textContent = 'جارِ الفحص الاحتياطي في المتصفح...';
-            return await ReceiptIntel.analyze(file, {
-              expectedAmount: scanOpts.expectedAmount,
-              manualRef: scanOpts.manualRef,
-              expectedAccount: scanOpts.expectedAccount,
-              onStatus: (text) => { statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = text; }
-            });
-          } catch (clientErr) {
-            console.warn('[RAIZEY] receipt scan error:', clientErr);
-            return softReview('scan_error');
-          }
-        }
-        return softReview('engine_missing');
       })();
 
       analysis = await Promise.race([scan, uiGuard]);
@@ -1064,7 +1048,8 @@ function attachCheckoutEvents(canUseWallet) {
       'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
       'judge_error', 'missing_image', 'image_too_large'
     ];
-    const isTechReview = !ok && analysis.decision === 'review' &&
+    const isTechReview = !!analysis.scanId && !!analysis.receiptHash &&
+      !ok && analysis.decision === 'review' &&
       (analysis.riskFlags || []).some(f => TECH_FLAGS.includes(f));
 
     if (isTechReview) {
@@ -1414,7 +1399,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       devWarn('[RAIZEY] payment code order error:', msg);
       errorBox.textContent =
         /already_used/.test(msg)   ? 'هذا الرمز مستخدم من قبل.' :
-        /expired/.test(msg)        ? 'انتهت صلاحي�� الرمز. اطلب رمزاً جديداً من الإدارة.' :
+        /expired/.test(msg)        ? 'انتهت صلاحية الرمز. اطلب رمزاً جديداً من الإدارة.' :
         /amount_too_low/.test(msg) ? 'قيمة الرمز أقل من إجمالي الطلب.' :
         /not_found|invalid_code/.test(msg) ? 'الرمز غير صحيح.' :
         /not_your_code/.test(msg)  ? 'هذا الرمز مخصص لعميل آخر.' :
@@ -1429,10 +1414,11 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   // (تم التحقق من selectedMethodId / receiptFile / savedTxRef / scanResult
   // في بداية الدالة قبل احتساب محاولة الإرسال — لا داعي لتكرار الفحص هنا)
 
-  placeOrderBtn.textContent = 'جارِ تجهيز الإيصال...';
-  const receiptHash = await hashFile(receiptFile);
-  if (!receiptHash) {
-    errorBox.textContent = 'تعذّر تجهيز بصمة الإيصال. أعد اختيار الصورة ثم حاول مرة أخرى.';
+  placeOrderBtn.textContent = 'جارِ التحقق من نتيجة الفحص الخادمي...';
+  const receiptHash = scanResult && scanResult.receiptHash;
+  const receiptScanId = scanResult && scanResult.scanId;
+  if (!receiptHash || !receiptScanId) {
+    errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. أعد رفع الإيصال وانتظر النتيجة قبل الإرسال.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
     return;

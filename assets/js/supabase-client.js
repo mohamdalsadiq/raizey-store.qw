@@ -413,39 +413,41 @@ async function logReceiptFraudAttempt({ reference, reason, provider, ocrExcerpt,
 }
 
 // =========================================================
-// التوافق القديم — تفويض الفحص إلى ReceiptIntel القديم.
-// لا يوجد قرار مالي مستقل هنا؛ القبول يتطلب قرار المحرك 'accept'.
+// توافق قديم: التفويض الوحيد المسموح هو Supabase Edge Function.
+// لا يوجد OCR أو قرار مالي داخل المتصفح حتى لو استدعى كود قديم هذه الدالة.
 // =========================================================
 async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, expectedAmountSDG) {
   const NEEDS_REVIEW = { passed: false, ocr_status: 'needs_review', amount_verified: false };
   const canDelegate =
     typeof window !== 'undefined' &&
-    window.ReceiptIntel &&
-    typeof window.ReceiptIntel.analyze === 'function' &&
+    window.RaizeyReceiptPipeline &&
+    typeof window.RaizeyReceiptPipeline.analyze === 'function' &&
     (typeof File !== 'undefined' && fileOrUrl instanceof Blob);
 
   if (!canDelegate) {
-    devWarn('[RAIZEY OCR] verifyReceiptContent: تفويض غير متاح — مراجعة يدوية (fail-closed)');
+    devWarn('[RAIZEY receipt] verifyReceiptContent: Edge Function غير متاحة — مراجعة يدوية (fail-closed)');
     return NEEDS_REVIEW;
   }
   try {
-    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال...');
-    const analysis = await window.ReceiptIntel.analyze(fileOrUrl, {
+    if (statusCallback) statusCallback('جارِ فحص صورة الإيصال على الخادم...');
+    const analysis = await window.RaizeyReceiptPipeline.analyze(fileOrUrl, {
       manualRef: transactionRef || '',
       expectedAmount: Number(expectedAmountSDG) || 0,
       onStatus: statusCallback || undefined
     });
     if (!analysis || typeof analysis !== 'object') return NEEDS_REVIEW;
     return {
-      passed:          analysis.decision === 'accept',
+      passed:          analysis.decision === 'accept' && !!analysis.scanId,
       ocr_status:      analysis.ocrStatus || (analysis.decision === 'reject' ? 'rejected' : 'needs_review'),
       amount_verified: !!analysis.amountVerified,
       ref_verified:    !!analysis.refVerified,
       decision:        analysis.decision || 'review',
+      scan_id:         analysis.scanId || null,
+      receipt_hash:    analysis.receiptHash || null,
       message:         analysis.message || ''
     };
   } catch (e) {
-    devWarn('[RAIZEY OCR] verifyReceiptContent delegate error — مراجعة يدوية:', e && e.message);
+    devWarn('[RAIZEY receipt] Edge Function delegate error — مراجعة يدوية:', e && e.message);
     return NEEDS_REVIEW;
   }
 }
