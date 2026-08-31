@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>واجهة المتجر — RAIZEY STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+<style>
+  .homepage-admin-grid { display:grid; gap:22px; }
+  .content-panel { padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--bg-card); }
+  .content-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:15px; }
+  .content-panel h2 { margin:0; font-size:18px; }
+  .content-panel p { margin:4px 0 0; color:var(--text-muted); font-size:12px; line-height:1.7; }
+  .content-panel .add-new-btn { margin:0; flex:0 0 auto; }
+  .content-list { display:grid; gap:10px; }
+  .homepage-item { display:grid; grid-template-columns:96px minmax(0,1fr) auto; align-items:center; gap:13px; padding:11px; border:1px solid var(--border); border-radius:14px; background:var(--bg); }
+  .homepage-item.no-image { grid-template-columns:minmax(0,1fr) auto; }
+  .banner-preview { width:96px; aspect-ratio:16/10; overflow:hidden; border:1px solid var(--border); border-radius:11px; background:linear-gradient(135deg,#fff0e5,#fff); }
+  .banner-preview img { width:100%; height:100%; object-fit:cover; }
+  .homepage-item-copy { min-width:0; }
+  .homepage-item-copy strong { display:block; color:var(--ink); font-size:13px; overflow-wrap:anywhere; }
+  .homepage-item-copy small { display:block; margin-top:4px; color:var(--text-muted); font-size:11px; line-height:1.55; overflow-wrap:anywhere; }
+  .item-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+  .item-chip { padding:4px 7px; border-radius:999px; background:rgba(255,106,26,.09); color:var(--primary-dim); font-size:9px; font-weight:800; }
+  .item-chip.off { background:rgba(229,72,77,.09); color:var(--danger); }
+  .homepage-item-actions { display:flex; gap:6px; }
+  .mini-action { min-height:35px; padding:7px 10px; border:1px solid var(--border); border-radius:9px; background:var(--bg-card); color:var(--ink); font:700 11px inherit; }
+  .mini-action:hover { border-color:var(--primary); color:var(--primary); }
+  .mini-action.danger { color:var(--danger); }
+  .content-empty { padding:22px; border:1px dashed var(--border); border-radius:13px; color:var(--text-muted); text-align:center; font-size:12px; }
+  .admin-notice { margin:0 0 16px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); color:var(--ink); font-size:12px; line-height:1.7; }
+  .admin-notice.error { border-color:rgba(229,72,77,.32); background:rgba(229,72,77,.07); color:#a52e33; }
+  .admin-notice.success { border-color:rgba(22,163,74,.28); background:rgba(22,163,74,.07); color:#176b36; }
+  .modal-box { max-width:560px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  .form-grid .full { grid-column:1/-1; }
+  .field textarea { width:100%; min-height:92px; resize:vertical; }
+  .image-preview { display:none; width:100%; aspect-ratio:16/7; margin:8px 0 0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--bg); }
+  .image-preview.show { display:block; }
+  .image-preview img { width:100%; height:100%; object-fit:cover; }
+  .default-note { margin:0 0 18px; padding:12px 14px; border:1px solid rgba(255,106,26,.2); border-radius:13px; background:rgba(255,106,26,.06); color:var(--ink); font-size:12px; line-height:1.75; }
+  @media(max-width:680px) {
+    .content-panel { padding:14px; }
+    .content-panel-head { align-items:stretch; flex-direction:column; }
+    .homepage-item { grid-template-columns:72px minmax(0,1fr); }
+    .homepage-item.no-image { grid-template-columns:1fr; }
+    .banner-preview { width:72px; }
+    .homepage-item-actions { grid-column:1/-1; }
+    .homepage-item-actions .mini-action { flex:1; }
+    .form-grid { grid-template-columns:1fr; }
+    .form-grid .full { grid-column:auto; }
+  }
+</style>
+</head>
+<body>
+<main class="admin-page" id="adminPage" hidden>
+  <div class="page-header">
+    <h1>واجهة المتجر</h1>
+    <a href="index.html" class="back-link">→ معاينة المتجر</a>
+  </div>
+  <nav class="admin-nav" aria-label="التنقل في لوحة الإدارة"></nav>
+
+  <div class="default-note">البنرات والنصوص الأساسية في المتجر ثابتة ومحفوظة. العناصر التي تضيفها هنا تظهر معها تلقائياً، ويمكنك إخفاء أو تعديل العناصر المضافة فقط.</div>
+  <div id="pageNotice" class="admin-notice" role="status" aria-live="polite" hidden></div>
+
+  <div class="homepage-admin-grid">
+    <section class="content-panel">
+      <div class="content-panel-head">
+        <div><h2>البنرات المتحركة</h2><p>صورة وعنوان ونص ورابط اختياري لكل بنر.</p></div>
+        <button class="add-new-btn" id="addBannerBtn" type="button">+ إضافة بنر</button>
+      </div>
+      <div class="content-list" id="bannerList"><div class="content-empty">جارِ التحميل...</div></div>
+    </section>
+
+    <section class="content-panel">
+      <div class="content-panel-head">
+        <div><h2>الشريط الإخباري</h2><p>أي نص جديد يُضاف تلقائياً بعد النصوص الأساسية.</p></div>
+        <button class="add-new-btn" id="addTickerBtn" type="button">+ إضافة نص</button>
+      </div>
+      <div class="content-list" id="tickerList"><div class="content-empty">جارِ التحميل...</div></div>
+    </section>
+  </div>
+</main>
+
+<div class="modal-overlay" id="bannerModal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="bannerModalTitle">
+    <div class="modal-title" id="bannerModalTitle">إضافة بنر</div>
+    <div class="form-grid">
+      <div class="field"><label for="bannerEyebrow">النص الصغير</label><input id="bannerEyebrow" type="text" maxlength="60" placeholder="RAIZEY STORE"></div>
+      <div class="field"><label for="bannerOrder">ترتيب العرض</label><input id="bannerOrder" type="number" min="-1000" max="1000" value="0"></div>
+      <div class="field full"><label for="bannerTitle">العنوان</label><input id="bannerTitle" type="text" maxlength="120" required placeholder="عنوان البنر"></div>
+      <div class="field full"><label for="bannerSubtitle">النص المختصر</label><textarea id="bannerSubtitle" maxlength="260" placeholder="نص يظهر أسفل العنوان"></textarea></div>
+      <div class="field full"><label for="bannerLink">رابط الضغط</label><input id="bannerLink" type="text" maxlength="2048" placeholder="category.html?id=... أو https://..."></div>
+      <div class="field full">
+        <label for="bannerImage">صورة البنر — JPG أو PNG أو WEBP حتى 5MB</label>
+        <input id="bannerImage" type="file" accept="image/jpeg,image/png,image/webp">
+        <div class="image-preview" id="bannerImagePreview"><img id="bannerImagePreviewImg" width="1600" height="700" alt="معاينة صورة البنر"></div>
+      </div>
+      <div class="field full"><label for="bannerActive">الحالة</label><select id="bannerActive"><option value="true">ظاهر</option><option value="false">مخفي</option></select></div>
+    </div>
+    <div class="form-error" id="bannerError"></div>
+    <div class="modal-actions"><button class="modal-cancel-btn" id="cancelBannerBtn" type="button">إلغاء</button><button class="modal-confirm-btn" id="saveBannerBtn" type="button" style="background:var(--primary);color:var(--ink);">حفظ البنر</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tickerModal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="tickerModalTitle">
+    <div class="modal-title" id="tickerModalTitle">إضافة نص</div>
+    <div class="field"><label for="tickerText">النص</label><input id="tickerText" type="text" maxlength="140" required placeholder="مثلاً: عرض خاص هذا الأسبوع"></div>
+    <div class="field"><label for="tickerOrder">ترتيب العرض</label><input id="tickerOrder" type="number" min="-1000" max="1000" value="0"></div>
+    <div class="field"><label for="tickerActive">الحالة</label><select id="tickerActive"><option value="true">ظاهر</option><option value="false">مخفي</option></select></div>
+    <div class="form-error" id="tickerError"></div>
+    <div class="modal-actions"><button class="modal-cancel-btn" id="cancelTickerBtn" type="button">إلغاء</button><button class="modal-confirm-btn" id="saveTickerBtn" type="button" style="background:var(--primary);color:var(--ink);">حفظ النص</button></div>
+  </div>
+</div>
+
+<div id="accessDenied" hidden style="text-align:center;padding:80px 20px;color:var(--text-muted);"><h3 style="color:var(--ink);margin-bottom:8px;">غير مصرح لك بالدخول</h3><a href="index.html" style="color:var(--primary);font-weight:700;">← رجوع للمتجر</a></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+let currentAdminId = null;
+let banners = [];
+let tickerItems = [];
+let editingBannerId = null;
+let editingTickerId = null;
+let existingBannerImageUrl = null;
+
+const byId = (id) => document.getElementById(id);
+const bannerModal = byId('bannerModal');
+const tickerModal = byId('tickerModal');
+
+function setNotice(message, type = '') {
+  const notice = byId('pageNotice');
+  notice.textContent = message || '';
+  notice.className = `admin-notice${type ? ` ${type}` : ''}`;
+  notice.hidden = !message;
+}
+
+function setBusy(button, busy, label) {
+  if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent;
+  button.disabled = busy;
+  button.textContent = busy ? label : button.dataset.idleLabel;
+}
+
+function createChip(text, off = false) {
+  const chip = document.createElement('span');
+  chip.className = `item-chip${off ? ' off' : ''}`;
+  chip.textContent = text;
+  return chip;
+}
+
+function createAction(label, className, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `mini-action${className ? ` ${className}` : ''}`;
+  button.textContent = label;
+  button.addEventListener('click', action);
+  return button;
+}
+
+function renderBanners() {
+  const list = byId('bannerList');
+  if (!banners.length) {
+    const empty = document.createElement('div');
+    empty.className = 'content-empty';
+    empty.textContent = 'لا توجد بنرات إضافية بعد.';
+    list.replaceChildren(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  banners.forEach((banner) => {
+    const row = document.createElement('article');
+    const preview = document.createElement('div');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    const subtitle = document.createElement('small');
+    const meta = document.createElement('div');
+    const actions = document.createElement('div');
+    row.className = 'homepage-item';
+    preview.className = 'banner-preview';
+    if (banner.image_url) {
+      const image = document.createElement('img');
+      image.src = banner.image_url;
+      image.alt = '';
+      preview.appendChild(image);
+    }
+    copy.className = 'homepage-item-copy';
+    title.textContent = banner.title;
+    subtitle.textContent = banner.subtitle || 'بدون نص إضافي';
+    meta.className = 'item-meta';
+    meta.append(createChip(`الترتيب: ${banner.display_order || 0}`), createChip(banner.is_active ? 'ظاهر' : 'مخفي', !banner.is_active));
+    copy.append(title, subtitle, meta);
+    actions.className = 'homepage-item-actions';
+    actions.append(createAction('تعديل', '', () => openBanner(banner)), createAction('حذف', 'danger', () => deleteBanner(banner)));
+    row.append(preview, copy, actions);
+    fragment.appendChild(row);
+  });
+  list.replaceChildren(fragment);
+}
+
+function renderTickerItems() {
+  const list = byId('tickerList');
+  if (!tickerItems.length) {
+    const empty = document.createElement('div');
+    empty.className = 'content-empty';
+    empty.textContent = 'لا توجد نصوص إضافية بعد.';
+    list.replaceChildren(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  tickerItems.forEach((item) => {
+    const row = document.createElement('article');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    const meta = document.createElement('div');
+    const actions = document.createElement('div');
+    row.className = 'homepage-item no-image';
+    copy.className = 'homepage-item-copy';
+    title.textContent = item.text;
+    meta.className = 'item-meta';
+    meta.append(createChip(`الترتيب: ${item.display_order || 0}`), createChip(item.is_active ? 'ظاهر' : 'مخفي', !item.is_active));
+    copy.append(title, meta);
+    actions.className = 'homepage-item-actions';
+    actions.append(createAction('تعديل', '', () => openTicker(item)), createAction('حذف', 'danger', () => deleteTicker(item)));
+    row.append(copy, actions);
+    fragment.appendChild(row);
+  });
+  list.replaceChildren(fragment);
+}
+
+async function loadContent() {
+  const [{ data: bannerRows, error: bannerError }, { data: tickerRows, error: tickerError }] = await Promise.all([
+    supabaseClient.from('store_banners').select('*').order('display_order').order('created_at'),
+    supabaseClient.from('store_ticker_items').select('*').order('display_order').order('created_at')
+  ]);
+  if (bannerError || tickerError) {
+    setNotice('تعذر تحميل إعدادات الواجهة. يجب تطبيق تحديث قاعدة البيانات الخاص بإدارة البنرات والشريط أولاً.', 'error');
+  }
+  banners = bannerRows || [];
+  tickerItems = tickerRows || [];
+  renderBanners();
+  renderTickerItems();
+}
+
+function showBannerPreview(url) {
+  const wrapper = byId('bannerImagePreview');
+  const image = byId('bannerImagePreviewImg');
+  if (!url) {
+    wrapper.classList.remove('show');
+    image.removeAttribute('src');
+    return;
+  }
+  image.src = url;
+  wrapper.classList.add('show');
+}
+
+function openBanner(banner = null) {
+  editingBannerId = banner?.id || null;
+  existingBannerImageUrl = banner?.image_url || null;
+  byId('bannerModalTitle').textContent = banner ? 'تعديل البنر' : 'إضافة بنر';
+  byId('bannerEyebrow').value = banner?.eyebrow || 'RAIZEY STORE';
+  byId('bannerTitle').value = banner?.title || '';
+  byId('bannerSubtitle').value = banner?.subtitle || '';
+  byId('bannerLink').value = banner?.link_url || 'index.html';
+  byId('bannerOrder').value = banner?.display_order ?? 0;
+  byId('bannerActive').value = String(banner?.is_active ?? true);
+  byId('bannerImage').value = '';
+  byId('bannerError').textContent = '';
+  showBannerPreview(existingBannerImageUrl);
+  bannerModal.classList.add('show');
+  byId('bannerTitle').focus();
+}
+
+function closeBanner() { bannerModal.classList.remove('show'); }
+
+function openTicker(item = null) {
+  editingTickerId = item?.id || null;
+  byId('tickerModalTitle').textContent = item ? 'تعديل النص' : 'إضافة نص';
+  byId('tickerText').value = item?.text || '';
+  byId('tickerOrder').value = item?.display_order ?? 0;
+  byId('tickerActive').value = String(item?.is_active ?? true);
+  byId('tickerError').textContent = '';
+  tickerModal.classList.add('show');
+  byId('tickerText').focus();
+}
+
+function closeTicker() { tickerModal.classList.remove('show'); }
+
+function validateLink(value) {
+  const trimmed = value.trim();
+  if (!trimmed || /^\s*(javascript|data):/i.test(trimmed)) return null;
+  try {
+    const url = new URL(trimmed, window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? trimmed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function uploadBannerImage(file) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) throw new Error('invalid_image_type');
+  if (file.size > 5 * 1024 * 1024) throw new Error('image_too_large');
+  const extension = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const path = `home-banners/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabaseClient.storage.from('product-images').upload(path, file, { upsert: false, contentType: file.type });
+  if (error) throw error;
+  return supabaseClient.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
+
+async function saveBanner() {
+  const errorBox = byId('bannerError');
+  const button = byId('saveBannerBtn');
+  errorBox.textContent = '';
+  const title = byId('bannerTitle').value.trim();
+  const linkUrl = validateLink(byId('bannerLink').value);
+  if (!title) { errorBox.textContent = 'أدخل عنوان البنر.'; return; }
+  if (!linkUrl) { errorBox.textContent = 'أدخل رابطاً داخلياً أو رابط HTTPS صالحاً.'; return; }
+  setBusy(button, true, 'جارِ الحفظ...');
+  try {
+    let imageUrl = existingBannerImageUrl;
+    const file = byId('bannerImage').files[0];
+    if (file) imageUrl = await uploadBannerImage(file);
+    const payload = {
+      eyebrow: byId('bannerEyebrow').value.trim() || 'RAIZEY STORE',
+      title,
+      subtitle: byId('bannerSubtitle').value.trim(),
+      image_url: imageUrl,
+      link_url: linkUrl,
+      display_order: Math.max(-1000, Math.min(1000, Number(byId('bannerOrder').value) || 0)),
+      is_active: byId('bannerActive').value === 'true',
+      updated_at: new Date().toISOString()
+    };
+    const operation = editingBannerId
+      ? supabaseClient.from('store_banners').update(payload).eq('id', editingBannerId)
+      : supabaseClient.from('store_banners').insert({ ...payload, created_by: currentAdminId });
+    const { error } = await operation;
+    if (error) throw error;
+    await writeAudit(editingBannerId ? 'تعديل بنر المتجر' : 'إضافة بنر للمتجر', { banner_id: editingBannerId, title });
+    closeBanner();
+    setNotice('تم حفظ البنر بنجاح.', 'success');
+    await loadContent();
+  } catch (error) {
+    errorBox.textContent = error?.message === 'invalid_image_type'
+      ? 'استخدم صورة JPG أو PNG أو WEBP فقط.'
+      : error?.message === 'image_too_large'
+        ? 'حجم الصورة أكبر من 5MB.'
+        : 'تعذر حفظ البنر. تحقق من الصلاحيات وحاول مرة أخرى.';
+  } finally {
+    setBusy(button, false, '');
+  }
+}
+
+async function saveTicker() {
+  const errorBox = byId('tickerError');
+  const button = byId('saveTickerBtn');
+  const text = byId('tickerText').value.trim();
+  errorBox.textContent = '';
+  if (!text) { errorBox.textContent = 'أدخل نص الشريط.'; return; }
+  setBusy(button, true, 'جارِ الحفظ...');
+  try {
+    const payload = {
+      text,
+      display_order: Math.max(-1000, Math.min(1000, Number(byId('tickerOrder').value) || 0)),
+      is_active: byId('tickerActive').value === 'true',
+      updated_at: new Date().toISOString()
+    };
+    const operation = editingTickerId
+      ? supabaseClient.from('store_ticker_items').update(payload).eq('id', editingTickerId)
+      : supabaseClient.from('store_ticker_items').insert({ ...payload, created_by: currentAdminId });
+    const { error } = await operation;
+    if (error) throw error;
+    await writeAudit(editingTickerId ? 'تعديل نص الشريط' : 'إضافة نص للشريط', { ticker_id: editingTickerId, text });
+    closeTicker();
+    setNotice('تم حفظ النص بنجاح.', 'success');
+    await loadContent();
+  } catch (_) {
+    errorBox.textContent = 'تعذر حفظ النص. تحقق من الصلاحيات وحاول مرة أخرى.';
+  } finally {
+    setBusy(button, false, '');
+  }
+}
+
+async function deleteBanner(banner) {
+  if (!confirm(`هل تريد حذف البنر «${banner.title}»؟`)) return;
+  const { error } = await supabaseClient.from('store_banners').delete().eq('id', banner.id);
+  if (error) { setNotice('تعذر حذف البنر.', 'error'); return; }
+  await writeAudit('حذف بنر من المتجر', { banner_id: banner.id, title: banner.title });
+  setNotice('تم حذف البنر.', 'success');
+  await loadContent();
+}
+
+async function deleteTicker(item) {
+  if (!confirm(`هل تريد حذف النص «${item.text}»؟`)) return;
+  const { error } = await supabaseClient.from('store_ticker_items').delete().eq('id', item.id);
+  if (error) { setNotice('تعذر حذف النص.', 'error'); return; }
+  await writeAudit('حذف نص من الشريط', { ticker_id: item.id, text: item.text });
+  setNotice('تم حذف النص.', 'success');
+  await loadContent();
+}
+
+async function writeAudit(action, details) {
+  try {
+    await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
+  } catch (_) {
+    // A logging failure must not repeat a successful content write.
+  }
+}
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  const { data: profile } = await supabaseClient.from('profiles').select('role,is_banned').eq('id', session.user.id).maybeSingle();
+  const { data: canManage } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_settings' });
+  if (!profile || profile.role !== 'admin' || profile.is_banned === true || canManage !== true) {
+    byId('accessDenied').hidden = false;
+    return;
+  }
+  currentAdminId = session.user.id;
+  byId('adminPage').hidden = false;
+  await loadContent();
+}
+
+byId('addBannerBtn').addEventListener('click', () => openBanner());
+byId('addTickerBtn').addEventListener('click', () => openTicker());
+byId('cancelBannerBtn').addEventListener('click', closeBanner);
+byId('cancelTickerBtn').addEventListener('click', closeTicker);
+byId('saveBannerBtn').addEventListener('click', saveBanner);
+byId('saveTickerBtn').addEventListener('click', saveTicker);
+byId('bannerImage').addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  if (!file) { showBannerPreview(existingBannerImageUrl); return; }
+  const objectUrl = URL.createObjectURL(file);
+  showBannerPreview(objectUrl);
+  byId('bannerImagePreviewImg').addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+});
+bannerModal.addEventListener('click', (event) => { if (event.target === bannerModal) closeBanner(); });
+tickerModal.addEventListener('click', (event) => { if (event.target === tickerModal) closeTicker(); });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') { closeBanner(); closeTicker(); }
+});
+init();
+</script>
+<script src="assets/js/admin-nav.js"></script>
+</body>
+</html>

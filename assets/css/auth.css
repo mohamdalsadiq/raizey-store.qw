@@ -71,6 +71,11 @@
   gap: 10px;
   margin-bottom: 18px;
 }
+.auth-brand-logo {
+  width: min(228px, 72%);
+  height: auto;
+  object-fit: contain;
+}
 .auth-logo .brand-mark {
   width: 46px;
   height: 46px;
@@ -232,6 +237,7 @@
 }
 
 .country-btn .dial { direction: ltr; font-family: var(--font-mono); font-size: 13px; }
+.country-btn .flag { font-size: 18px; line-height: 1; }
 .country-btn .chev { color: var(--text-muted); margin-inline-start: auto; }
 
 .country-pop {

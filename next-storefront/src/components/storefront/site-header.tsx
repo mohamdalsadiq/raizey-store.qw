@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Menu, Search, ShoppingBag, UserRound, WalletCards } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-xl">
       <div className="container-shell flex h-18 items-center justify-between gap-4">
-        {/* Static preview intentionally uses a full navigation to preserve the legacy storefront. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/" className="shrink-0" aria-label="العودة إلى الرئيسية">
+        <Link href="/" className="shrink-0" aria-label="العودة إلى الرئيسية">
           <Image
             src="/brand/raizey-logo.png"
             width={1202}
@@ -37,7 +36,7 @@ export function SiteHeader() {
             priority
             className="h-auto w-36 sm:w-44"
           />
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="التنقل الرئيسي">
           {navigation.map((item) => (

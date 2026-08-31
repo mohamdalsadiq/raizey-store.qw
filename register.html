@@ -19,8 +19,7 @@
 <div class="auth-page">
   <div class="auth-card wide">
     <div class="auth-logo">
-      <span class="brand-mark"><img src="assets/img/raizey-logo-mark.svg" alt="شعار RAIZEY STORE"></span>
-      <span class="brand-text">RAIZEY <em>STORE</em></span>
+      <img class="auth-brand-logo" src="assets/img/raizey-logo.png" width="1202" height="344" alt="RAIZEY STORE">
     </div>
 
     <h1 class="auth-title">إنشاء حساب جديد</h1>
@@ -63,11 +62,11 @@
         <label for="whatsapp">رقم الواتساب</label>
         <div class="phone-row" id="phoneRow">
           <div class="country-select" id="countrySelect">
-            <button type="button" class="country-btn" id="countryBtn" aria-haspopup="listbox" aria-expanded="false"></button>
+            <button type="button" class="country-btn" id="countryBtn" aria-label="اختيار الدولة ورمز الاتصال" aria-haspopup="listbox" aria-expanded="false"></button>
             <div class="country-pop" id="countryPop">
               <div class="country-search">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
-                <input type="text" id="countrySearch" placeholder="ابحث بالاسم أو رمز الدولة" autocomplete="off">
+                <input type="text" id="countrySearch" aria-label="البحث عن دولة" placeholder="ابحث بالاسم أو رمز الدولة" autocomplete="off">
               </div>
               <div class="country-list" id="countryList" role="listbox"></div>
             </div>

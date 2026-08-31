@@ -81,6 +81,12 @@
     return country.len.indexOf(digits.length) !== -1;
   }
 
+  function flagEmoji(iso) {
+    return String(iso || '').toUpperCase().replace(/[A-Z]/g, function (letter) {
+      return String.fromCodePoint(127397 + letter.charCodeAt(0));
+    });
+  }
+
   /**
    * إنشاء منتقي الدولة داخل حاوية الحقل.
    * options: { root, button, popup, searchInput, listBox, input, onChange }
@@ -96,6 +102,7 @@
 
     function renderButton() {
       button.innerHTML =
+        '<span class="flag" aria-hidden="true">' + flagEmoji(current.iso) + '</span>' +
         '<span class="country-name">' + current.ar + '</span>' +
         '<span class="dial">+' + current.dial + '</span>' +
         '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -121,6 +128,7 @@
       list.innerHTML = items.map(function (c) {
         return '<button type="button" class="country-item' + (c.iso === current.iso ? ' active' : '') +
           '" data-iso="' + c.iso + '" data-dial="' + c.dial + '">' +
+          '<span class="flag" aria-hidden="true">' + flagEmoji(c.iso) + '</span>' +
           '<span class="nm">' + c.ar + '</span>' +
           '<span class="dial">+' + c.dial + '</span></button>';
       }).join('');

@@ -7,6 +7,7 @@
     ['admin-orders.html', 'الطلبات'],
     ['admin-topups.html', 'شحن المحافظ'],
     ['admin-products.html', 'المنتجات'],
+    ['admin-homepage.html', 'واجهة المتجر'],
     ['admin-sections.html', 'الأقسام'],
     ['admin-categories.html', 'التصنيفات'],
     ['admin-customers.html', 'العملاء'],
