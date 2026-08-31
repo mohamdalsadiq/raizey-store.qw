@@ -258,24 +258,26 @@
 
 <header class="site-header">
   <div class="header-inner">
-    <a class="site-brand" href="index.html" aria-label="RAIZEY STORE — الرئيسية">
-      <img src="assets/img/raizey-logo.png" width="1202" height="344" alt="RAIZEY STORE">
-    </a>
-    <div class="header-actions">
-      <a href="search.html" class="header-action" title="البحث" aria-label="البحث في المتجر">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-      </a>
+    <div class="header-side header-left-actions">
       <a href="cart.html" class="header-action" title="سلة المشتريات" aria-label="فتح سلة المشتريات">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L20 8H6"/></svg>
         <span class="header-cart-count" id="headerCartCount">0</span>
       </a>
-      <a href="wallet.html" class="header-action wallet-header-pill" title="المحفظة">
+      <a href="wallet.html" class="header-action wallet-header-pill" title="المحفظة" aria-label="فتح المحفظة">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7V5H5a3 3 0 0 0 0 6h15v8H5a3 3 0 0 1-3-3V5"/><path d="M16 14h4"/></svg>
-        <span class="wallet-header-copy"><small>رصيد المحفظة</small><strong id="headerBalance">المحفظة</strong></span>
+        <span class="wallet-header-copy"><small>رصيد المحفظة</small><strong id="headerBalance" aria-live="polite">...</strong></span>
       </a>
+    </div>
+    <a class="site-brand" href="index.html" aria-label="RAIZEY STORE — الرئيسية">
+      <img src="assets/img/raizey-logo.png" width="1202" height="344" alt="RAIZEY STORE">
+    </a>
+    <div class="header-side header-right-actions">
       <button class="hamburger-btn" id="openDrawerBtn" type="button" title="القائمة" aria-label="فتح القائمة" aria-expanded="false" aria-controls="drawerOverlay">
         <span></span><span></span><span></span>
       </button>
+      <a href="search.html" class="header-action" title="البحث" aria-label="البحث في المتجر">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+      </a>
     </div>
   </div>
 </header>
@@ -344,13 +346,27 @@
   <div style="color:var(--text-muted); font-size:13px; padding:20px;">جاري تحميل الألعاب...</div>
 </div>
 
-<footer class="site-footer" style="background: var(--bg-card); border-top: 1px solid var(--border-color); color: var(--text-muted); padding: 20px 10px;">
-  <img class="footer-brand" src="assets/img/raizey-logo.png" width="1202" height="344" alt="RAIZEY STORE">
-  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand-panel">
+      <img class="footer-brand" src="assets/img/raizey-logo.png" width="1202" height="344" alt="RAIZEY STORE">
+    </div>
+    <div class="footer-links">
+      <h2>روابط سريعة</h2>
+      <nav class="footer-nav" aria-label="روابط الفوتر">
+        <a href="index.html">الرئيسية</a>
+        <a href="#categoriesContainer">الألعاب</a>
+        <a href="my-orders.html">طلباتي</a>
+        <a href="privacy.html">سياسة الخصوصية</a>
+        <a href="https://wa.me/249901815039" target="_blank" rel="noopener noreferrer">تواصل معنا</a>
+      </nav>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 RAIZEY STORE — جميع الحقوق محفوظة</div>
 </footer>
 
-<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="#1a1d29"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
+<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" rel="noopener noreferrer" title="تواصل واتساب" aria-label="التواصل عبر واتساب">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -443,10 +459,13 @@ function renderBanners(banners) {
 
     if (imageUrl) {
       const image = document.createElement('img');
+      slide.classList.add('has-image');
       image.className = 'slide-media';
       image.src = imageUrl;
       image.alt = '';
       image.decoding = 'async';
+      image.loading = index === 0 ? 'eager' : 'lazy';
+      if (index === 0) image.fetchPriority = 'high';
       slide.appendChild(image);
     }
     slide.appendChild(content);
@@ -472,14 +491,19 @@ function renderBanners(banners) {
 function renderTicker(items) {
   const trackElement = document.getElementById('marqueeTrack');
   const fragment = document.createDocumentFragment();
-  [...items, ...items].forEach((text) => {
+  const iconClasses = ['fa-bolt', 'fa-shield-halved', 'fa-headset', 'fa-tags', 'fa-gift'];
+  [...items, ...items].forEach((text, index) => {
     const item = document.createElement('span');
     const marker = document.createElement('span');
+    const icon = document.createElement('i');
     item.className = 'marquee-item';
     marker.className = 'marquee-marker';
-    marker.textContent = '✦';
+    icon.className = `fas ${iconClasses[index % iconClasses.length] || 'fa-sparkles'}`;
+    icon.setAttribute('aria-hidden', 'true');
+    marker.appendChild(icon);
     marker.setAttribute('aria-hidden', 'true');
     item.append(marker, document.createTextNode(text));
+    if (index >= items.length) item.setAttribute('aria-hidden', 'true');
     fragment.appendChild(item);
   });
   trackElement.replaceChildren(fragment);
@@ -502,10 +526,16 @@ async function loadHomepageContent() {
   }
 }
 
-document.querySelector('.hero-slider').addEventListener('mouseenter', () => {
+const heroSlider = document.querySelector('.hero-slider');
+function pauseSlider() {
   if (sliderTimer) window.clearInterval(sliderTimer);
+}
+heroSlider.addEventListener('mouseenter', pauseSlider);
+heroSlider.addEventListener('mouseleave', startSlider);
+heroSlider.addEventListener('focusin', pauseSlider);
+heroSlider.addEventListener('focusout', (event) => {
+  if (!heroSlider.contains(event.relatedTarget)) startSlider();
 });
-document.querySelector('.hero-slider').addEventListener('mouseleave', startSlider);
 
 // ---------- Drawer ----------
 const drawerOverlay = document.getElementById('drawerOverlay');
@@ -615,10 +645,35 @@ function updateHeaderCartCount() {
   document.getElementById('headerCartCount').textContent = count > 99 ? '99+' : String(count);
 }
 
+let walletRealtimeChannel = null;
+
+function setHeaderBalance(balance) {
+  document.getElementById('headerBalance').textContent = `${formatSDG(balance ?? 0)} ج.س`;
+}
+
+function subscribeToWalletBalance(userId) {
+  if (walletRealtimeChannel) {
+    supabaseClient.removeChannel(walletRealtimeChannel);
+    walletRealtimeChannel = null;
+  }
+  if (!userId || typeof supabaseClient.channel !== 'function') return;
+
+  walletRealtimeChannel = supabaseClient
+    .channel(`header-wallet-${userId}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'wallets',
+      filter: `user_id=eq.${userId}`
+    }, ({ new: wallet }) => setHeaderBalance(wallet?.balance))
+    .subscribe();
+}
+
 async function updateHeaderWallet(session) {
   const balanceElement = document.getElementById('headerBalance');
   if (!session) {
     balanceElement.textContent = 'تسجيل الدخول';
+    subscribeToWalletBalance(null);
     return;
   }
   try {
@@ -628,7 +683,8 @@ async function updateHeaderWallet(session) {
       .eq('user_id', session.user.id)
       .maybeSingle();
     if (error) throw error;
-    balanceElement.textContent = `${formatSDG(data?.balance ?? 0)} ج.س`;
+    setHeaderBalance(data?.balance ?? 0);
+    subscribeToWalletBalance(session.user.id);
   } catch (_) {
     balanceElement.textContent = 'المحفظة';
   }
@@ -638,7 +694,7 @@ async function init() {
   try {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
-    updateHeaderWallet(session);
+    await updateHeaderWallet(session);
 
     const [{ data: sections, error: sectionsError }, { data: categories, error: categoriesError }] = await Promise.all([
       supabaseClient.from('store_sections').select('id,name,display_order').eq('is_active', true).order('display_order').order('name'),
@@ -727,7 +783,7 @@ function createCategoryCard(cat) {
     descriptionElement.textContent = description;
     descriptionElement.title = description;
     info.append(nameElement, descriptionElement);
-    card.append(thumb, info);
+    card.append(info, thumb);
     return card;
 }
 
@@ -772,6 +828,14 @@ function renderCatalog(sections, categories) {
 
 updateHeaderCartCount();
 window.addEventListener('storage', updateHeaderCartCount);
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  await updateHeaderWallet(session);
+});
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  window.setTimeout(() => updateHeaderWallet(session), 0);
+});
 loadHomepageContent();
 init();
 </script>

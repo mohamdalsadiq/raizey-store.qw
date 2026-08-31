@@ -5,10 +5,10 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    #raizeyAssistantRoot{position:fixed;inset:auto 20px 20px auto;z-index:9998;font-family:inherit;direction:rtl}
-    #raizeyAssistantToggle{width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(135deg,#ff7a2f,#e5482e);color:#fff;box-shadow:0 12px 30px rgba(229,72,46,.32);cursor:pointer;font-size:24px;display:grid;place-items:center;transition:transform .2s,box-shadow .2s}
-    #raizeyAssistantToggle:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(229,72,46,.4)}
-    #raizeyAssistantPanel{position:absolute;right:0;bottom:72px;width:min(390px,calc(100vw - 32px));height:min(590px,calc(100vh - 112px));background:#fff;border:1px solid rgba(20,31,48,.11);border-radius:22px;box-shadow:0 24px 70px rgba(20,31,48,.2);display:none;overflow:hidden}
+    #raizeyAssistantRoot{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:9998;font-family:inherit;direction:rtl}
+    #raizeyAssistantToggle{width:54px;height:54px;border:2px solid rgba(255,255,255,.92);border-radius:17px;background:linear-gradient(145deg,#262832,#15161c);color:#ff8a49;box-shadow:0 14px 34px rgba(24,25,31,.3);cursor:pointer;font-size:20px;display:grid;place-items:center;transition:transform .2s,box-shadow .2s,color .2s}
+    #raizeyAssistantToggle:hover,#raizeyAssistantToggle:focus-visible{transform:translateY(-3px);color:#ffad7d;box-shadow:0 18px 40px rgba(24,25,31,.4);outline:2px solid #ff6a1a;outline-offset:3px}
+    #raizeyAssistantPanel{position:absolute;right:0;bottom:68px;width:min(390px,calc(100vw - 32px));height:min(590px,calc(100vh - 112px));background:#fff;border:1px solid rgba(20,31,48,.11);border-radius:22px;box-shadow:0 24px 70px rgba(20,31,48,.2);display:none;overflow:hidden}
     #raizeyAssistantPanel.is-open{display:flex;flex-direction:column;animation:raizeyAssistantIn .18s ease-out}
     @keyframes raizeyAssistantIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
     .raizey-assistant-head{display:flex;align-items:center;gap:11px;padding:16px 17px;background:linear-gradient(135deg,#fff7f1,#fff);border-bottom:1px solid #f1e6df}
@@ -29,7 +29,8 @@
     .raizey-assistant-send{width:40px;height:40px;border:0;border-radius:12px;background:#e9512a;color:#fff;cursor:pointer;font-size:15px;display:grid;place-items:center}
     .raizey-assistant-send:disabled{opacity:.55;cursor:wait}
     .raizey-assistant-typing{color:#7d8ca0;font-size:12px;padding:0 3px 9px}
-    @media(max-width:520px){#raizeyAssistantRoot{right:16px;bottom:16px}#raizeyAssistantPanel{right:-2px;bottom:70px;height:min(580px,calc(100vh - 100px))}}
+    @media(max-width:520px){#raizeyAssistantRoot{right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom))}#raizeyAssistantToggle{width:52px;height:52px;border-radius:16px}#raizeyAssistantPanel{right:-2px;bottom:66px;height:min(580px,calc(100vh - 96px))}}
+    @media(prefers-reduced-motion:reduce){#raizeyAssistantToggle,#raizeyAssistantPanel{animation:none!important;transition:none!important}}
   `;
   document.head.appendChild(style);
 
@@ -53,7 +54,7 @@
         <button class="raizey-assistant-send" id="raizeyAssistantSend" type="submit" aria-label="إرسال"><i class="fas fa-paper-plane"></i></button>
       </form>
     </section>
-    <button id="raizeyAssistantToggle" type="button" aria-label="فتح مساعد Raizey" aria-expanded="false"><i class="fas fa-sparkles"></i></button>
+    <button id="raizeyAssistantToggle" type="button" aria-label="فتح مساعد Raizey" aria-expanded="false"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></button>
   `;
   document.body.appendChild(root);
 

@@ -19,9 +19,9 @@
   .content-panel p { margin:4px 0 0; color:var(--text-muted); font-size:12px; line-height:1.7; }
   .content-panel .add-new-btn { margin:0; flex:0 0 auto; }
   .content-list { display:grid; gap:10px; }
-  .homepage-item { display:grid; grid-template-columns:96px minmax(0,1fr) auto; align-items:center; gap:13px; padding:11px; border:1px solid var(--border); border-radius:14px; background:var(--bg); }
+  .homepage-item { display:grid; grid-template-columns:128px minmax(0,1fr) auto; align-items:center; gap:13px; padding:11px; border:1px solid var(--border); border-radius:14px; background:var(--bg); }
   .homepage-item.no-image { grid-template-columns:minmax(0,1fr) auto; }
-  .banner-preview { width:96px; aspect-ratio:16/10; overflow:hidden; border:1px solid var(--border); border-radius:11px; background:linear-gradient(135deg,#fff0e5,#fff); }
+  .banner-preview { width:128px; aspect-ratio:16/6.2; overflow:hidden; border:1px solid var(--border); border-radius:11px; background:linear-gradient(135deg,#fff0e5,#fff); }
   .banner-preview img { width:100%; height:100%; object-fit:cover; }
   .homepage-item-copy { min-width:0; }
   .homepage-item-copy strong { display:block; color:var(--ink); font-size:13px; overflow-wrap:anywhere; }
@@ -41,16 +41,16 @@
   .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
   .form-grid .full { grid-column:1/-1; }
   .field textarea { width:100%; min-height:92px; resize:vertical; }
-  .image-preview { display:none; width:100%; aspect-ratio:16/7; margin:8px 0 0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--bg); }
+  .image-preview { display:none; width:100%; aspect-ratio:16/6.2; margin:8px 0 0; overflow:hidden; border:1px solid var(--border); border-radius:12px; background:var(--bg); }
   .image-preview.show { display:block; }
   .image-preview img { width:100%; height:100%; object-fit:cover; }
   .default-note { margin:0 0 18px; padding:12px 14px; border:1px solid rgba(255,106,26,.2); border-radius:13px; background:rgba(255,106,26,.06); color:var(--ink); font-size:12px; line-height:1.75; }
   @media(max-width:680px) {
     .content-panel { padding:14px; }
     .content-panel-head { align-items:stretch; flex-direction:column; }
-    .homepage-item { grid-template-columns:72px minmax(0,1fr); }
+    .homepage-item { grid-template-columns:88px minmax(0,1fr); }
     .homepage-item.no-image { grid-template-columns:1fr; }
-    .banner-preview { width:72px; }
+    .banner-preview { width:88px; }
     .homepage-item-actions { grid-column:1/-1; }
     .homepage-item-actions .mini-action { flex:1; }
     .form-grid { grid-template-columns:1fr; }
@@ -96,11 +96,11 @@
       <div class="field"><label for="bannerOrder">ترتيب العرض</label><input id="bannerOrder" type="number" min="-1000" max="1000" value="0"></div>
       <div class="field full"><label for="bannerTitle">العنوان</label><input id="bannerTitle" type="text" maxlength="120" required placeholder="عنوان البنر"></div>
       <div class="field full"><label for="bannerSubtitle">النص المختصر</label><textarea id="bannerSubtitle" maxlength="260" placeholder="نص يظهر أسفل العنوان"></textarea></div>
-      <div class="field full"><label for="bannerLink">رابط الضغط</label><input id="bannerLink" type="text" maxlength="2048" placeholder="category.html?id=... أو https://..."></div>
+      <div class="field full"><label for="bannerLink">رابط الصفحة عند الضغط على البنر</label><input id="bannerLink" type="text" maxlength="2048" placeholder="category.html?id=... أو https://..."></div>
       <div class="field full">
-        <label for="bannerImage">صورة البنر — JPG أو PNG أو WEBP حتى 5MB</label>
+        <label for="bannerImage">صورة البنر — يُفضّل 1600×620 — JPG أو PNG أو WEBP حتى 5MB</label>
         <input id="bannerImage" type="file" accept="image/jpeg,image/png,image/webp">
-        <div class="image-preview" id="bannerImagePreview"><img id="bannerImagePreviewImg" width="1600" height="700" alt="معاينة صورة البنر"></div>
+        <div class="image-preview" id="bannerImagePreview"><img id="bannerImagePreviewImg" width="1600" height="620" alt="معاينة صورة البنر"></div>
       </div>
       <div class="field full"><label for="bannerActive">الحالة</label><select id="bannerActive"><option value="true">ظاهر</option><option value="false">مخفي</option></select></div>
     </div>
@@ -195,7 +195,11 @@ function renderBanners() {
     title.textContent = banner.title;
     subtitle.textContent = banner.subtitle || 'بدون نص إضافي';
     meta.className = 'item-meta';
-    meta.append(createChip(`الترتيب: ${banner.display_order || 0}`), createChip(banner.is_active ? 'ظاهر' : 'مخفي', !banner.is_active));
+    meta.append(
+      createChip(`الترتيب: ${banner.display_order || 0}`),
+      createChip(banner.is_active ? 'ظاهر' : 'مخفي', !banner.is_active),
+      createChip(banner.link_url ? 'مرتبط بصفحة' : 'بدون رابط', !banner.link_url)
+    );
     copy.append(title, subtitle, meta);
     actions.className = 'homepage-item-actions';
     actions.append(createAction('تعديل', '', () => openBanner(banner)), createAction('حذف', 'danger', () => deleteBanner(banner)));
@@ -308,6 +312,16 @@ async function uploadBannerImage(file) {
   const allowed = ['image/jpeg', 'image/png', 'image/webp'];
   if (!allowed.includes(file.type)) throw new Error('invalid_image_type');
   if (file.size > 5 * 1024 * 1024) throw new Error('image_too_large');
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  const isWebp = String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
+    && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+  const signatureMatches = (file.type === 'image/jpeg' && isJpeg)
+    || (file.type === 'image/png' && isPng)
+    || (file.type === 'image/webp' && isWebp);
+  if (!signatureMatches) throw new Error('invalid_image_signature');
   const extension = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
   const path = `home-banners/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabaseClient.storage.from('product-images').upload(path, file, { upsert: false, contentType: file.type });
@@ -350,6 +364,8 @@ async function saveBanner() {
   } catch (error) {
     errorBox.textContent = error?.message === 'invalid_image_type'
       ? 'استخدم صورة JPG أو PNG أو WEBP فقط.'
+      : error?.message === 'invalid_image_signature'
+        ? 'محتوى الملف لا يطابق صيغة الصورة المحددة.'
       : error?.message === 'image_too_large'
         ? 'حجم الصورة أكبر من 5MB.'
         : 'تعذر حفظ البنر. تحقق من الصلاحيات وحاول مرة أخرى.';
