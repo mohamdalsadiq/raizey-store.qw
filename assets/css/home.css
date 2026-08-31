@@ -276,6 +276,51 @@ body {
 .slide.has-image h2 { color: #fff !important; text-shadow: 0 3px 26px rgba(0, 0, 0, .32); }
 .slide.has-image p { color: rgba(255, 255, 255, .82) !important; text-shadow: 0 2px 16px rgba(0, 0, 0, .28); }
 
+.slide-visual {
+  position: absolute;
+  left: clamp(34px, 7vw, 88px);
+  top: 50%;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  width: clamp(150px, 23vw, 275px);
+  aspect-ratio: 1.16;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: clamp(25px, 4vw, 42px);
+  background:
+    linear-gradient(135deg, rgba(255, 106, 26, .2), transparent 42%),
+    linear-gradient(145deg, #2b2d38, #15161c);
+  box-shadow: 0 26px 58px rgba(35, 25, 17, .22), inset 0 1px rgba(255, 255, 255, .1);
+  transform: translateY(-50%) rotate(-2.5deg);
+}
+
+.slide-visual::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px dashed rgba(255, 151, 91, .36);
+  border-radius: calc(clamp(25px, 4vw, 42px) - 8px);
+}
+
+.slide-visual::after {
+  content: '';
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  width: 38px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--home-orange);
+  box-shadow: -48px 0 rgba(255, 255, 255, .2), -70px 0 rgba(255, 255, 255, .09);
+}
+
+.slide-visual-logo {
+  width: 44%;
+  height: auto;
+  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, .28));
+}
+
 .slider-dots {
   position: absolute;
   inset: auto 50% 16px auto;
@@ -514,6 +559,7 @@ body {
   .hamburger-btn { min-width: 36px; min-height: 36px; width: 36px; height: 36px; border-radius: 11px !important; }
   .hero-slider { width: calc(100% - 24px); aspect-ratio: 16 / 8.2; }
   .slide-content { max-width: 88%; }
+  .slide-visual { left: 28px; width: clamp(125px, 25vw, 168px); }
   .footer-inner { grid-template-columns: 1fr; gap: 30px; }
   .footer-brand-panel { margin-inline: auto; }
   .footer-links { text-align: center; }
@@ -533,6 +579,14 @@ body {
   .slide h2 { font-size: clamp(23px, 7.5vw, 29px) !important; }
   .slide p { max-width: 100% !important; }
   .slide.has-image::after { background: linear-gradient(90deg, rgba(15, 16, 22, .32), rgba(15, 16, 22, .91)); }
+  .slide-visual {
+    left: -18px;
+    top: auto;
+    bottom: 35px;
+    width: 145px;
+    opacity: .2;
+    transform: rotate(-5deg);
+  }
   .categories-grid { gap: 10px !important; }
   .game-card { border-radius: 15px !important; }
   .game-thumb { border-radius: 0 0 14px 14px !important; }
