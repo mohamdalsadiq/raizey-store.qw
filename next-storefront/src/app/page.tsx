@@ -173,14 +173,6 @@ export default async function Home() {
 
         <section className="container-shell py-16 sm:py-20 lg:py-24">
           <div className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-accent px-6 py-10 sm:px-10 sm:py-14 lg:flex lg:items-center lg:justify-between lg:px-14">
-            <Image
-              src="/brand/raizey-logo-mark.svg"
-              width={260}
-              height={268}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute -bottom-28 -left-10 w-64 opacity-[0.06]"
-            />
             <div className="relative max-w-2xl">
               <div className="mb-5 grid size-12 place-items-center rounded-xl bg-primary text-white">
                 <WalletCards className="size-6" aria-hidden="true" />
@@ -208,7 +200,13 @@ export default async function Home() {
       <footer className="border-t border-border bg-card">
         <div className="container-shell grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <Image src="/brand/raizey-logo.svg" width={168} height={44} alt="RAIZEY STORE" className="h-auto w-36" />
+            <Image
+              src="/brand/raizey-logo.png"
+              width={1202}
+              height={344}
+              alt="RAIZEY STORE"
+              className="h-auto w-40"
+            />
             <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">
               متجر رقمي سوداني بتجربة مرتبة، واضحة، وآمنة من أول اختيار حتى اكتمال طلبك.
             </p>

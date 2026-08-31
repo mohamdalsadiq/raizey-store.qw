@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, ScanLine, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
@@ -70,14 +69,6 @@ export function Hero({ categoryCount, productCount }: HeroProps) {
           transition={{ duration: 0.6, delay: reduceMotion ? 0 : 0.08, ease: [0.22, 1, 0.36, 1] }}
           className="relative m-3 min-h-[390px] overflow-hidden rounded-[1.55rem] bg-foreground p-6 text-white sm:m-5 sm:min-h-[450px] sm:p-9 lg:m-6"
         >
-          <Image
-            src="/brand/raizey-logo-mark.svg"
-            width={310}
-            height={320}
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-16 -left-16 w-64 rotate-[-10deg] opacity-[0.12] sm:w-80"
-          />
           <div className="relative flex h-full flex-col">
             <div className="flex items-start justify-between gap-4">
               <div>

@@ -29,12 +29,12 @@ export function SiteHeader() {
       <div className="container-shell flex h-18 items-center justify-between gap-4">
         <Link href="/" className="shrink-0" aria-label="العودة إلى الرئيسية">
           <Image
-            src="/brand/raizey-logo.svg"
-            width={184}
-            height={48}
+            src="/brand/raizey-logo.png"
+            width={1202}
+            height={344}
             alt="RAIZEY STORE"
             priority
-            className="h-auto w-36 sm:w-40"
+            className="h-auto w-36 sm:w-44"
           />
         </Link>
 
