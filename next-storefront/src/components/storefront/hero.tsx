@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowLeft, BadgeCheck, ScanLine, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -44,13 +43,13 @@ export function Hero({ categoryCount, productCount }: HeroProps) {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="#storefront">
+              <a href="#storefront">
                 تصفح المتجر
                 <ArrowLeft data-icon aria-hidden="true" />
-              </Link>
+              </a>
             </Button>
             <Button asChild variant="secondary" size="lg">
-              <Link href="/my-orders.html">تتبع طلبك</Link>
+              <a href="/my-orders.html">تتبع طلبك</a>
             </Button>
           </div>
           <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-6">

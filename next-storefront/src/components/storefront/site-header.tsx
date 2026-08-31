@@ -40,33 +40,33 @@ export function SiteHeader() {
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="التنقل الرئيسي">
           {navigation.map((item) => (
-            <Link
+            <a
               key={item.href}
               href={item.href}
               className="text-sm font-bold text-muted-foreground transition-colors hover:text-foreground"
             >
               {item.label}
-            </Link>
+            </a>
           ))}
         </nav>
 
         <div className="flex items-center gap-1.5">
           <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-            <Link href="/search.html" aria-label="البحث في المتجر">
+            <a href="/search.html" aria-label="البحث في المتجر">
               <Search data-icon aria-hidden="true" />
-            </Link>
+            </a>
           </Button>
           <Button asChild variant="ghost" size="icon">
-            <Link href="/cart.html" aria-label="سلة المشتريات" className="relative">
+            <a href="/cart.html" aria-label="سلة المشتريات" className="relative">
               <ShoppingBag data-icon aria-hidden="true" />
               <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
-            </Link>
+            </a>
           </Button>
           <Button asChild variant="secondary" size="sm" className="hidden sm:inline-flex">
-            <Link href="/login.html">
+            <a href="/login.html">
               <UserRound data-icon aria-hidden="true" />
               دخول
-            </Link>
+            </a>
           </Button>
 
           <Sheet>
@@ -83,31 +83,31 @@ export function SiteHeader() {
               <nav className="grid gap-1 px-4" aria-label="قائمة الهاتف">
                 {navigation.map((item) => (
                   <SheetClose key={item.href} asChild>
-                    <Link
+                    <a
                       href={item.href}
                       className="rounded-xl px-4 py-3.5 text-base font-bold transition-colors hover:bg-accent"
                     >
                       {item.label}
-                    </Link>
+                    </a>
                   </SheetClose>
                 ))}
               </nav>
               <Separator className="my-1" />
               <div className="grid gap-3 px-5">
                 <Button asChild variant="secondary" className="justify-start">
-                  <Link href="/search.html">
+                  <a href="/search.html">
                     <Search data-icon aria-hidden="true" />
                     البحث في المتجر
-                  </Link>
+                  </a>
                 </Button>
                 <Button asChild variant="secondary" className="justify-start">
-                  <Link href="/wallet.html">
+                  <a href="/wallet.html">
                     <WalletCards data-icon aria-hidden="true" />
                     المحفظة
-                  </Link>
+                  </a>
                 </Button>
                 <Button asChild className="mt-2">
-                  <Link href="/login.html">تسجيل الدخول</Link>
+                  <a href="/login.html">تسجيل الدخول</a>
                 </Button>
               </div>
             </SheetContent>

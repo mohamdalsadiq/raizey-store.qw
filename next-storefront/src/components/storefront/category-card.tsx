@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowLeft, Gamepad2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,7 @@ type CategoryCardProps = { category: StoreCategory };
 
 export function CategoryCard({ category }: CategoryCardProps) {
   return (
-    <Link
+    <a
       href={`/category.html?id=${encodeURIComponent(category.id)}`}
       className="group block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4"
       aria-label={`فتح قسم ${category.name}`}
@@ -50,6 +49,6 @@ export function CategoryCard({ category }: CategoryCardProps) {
           <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
         </CardFooter>
       </Card>
-    </Link>
+    </a>
   );
 }

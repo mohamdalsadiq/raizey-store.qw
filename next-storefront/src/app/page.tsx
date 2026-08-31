@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -96,10 +95,10 @@ export default async function Home() {
               </p>
             </div>
             <Button asChild variant="ghost" className="w-fit text-primary">
-              <Link href="/search.html">
+              <a href="/search.html">
                 البحث في كل الخدمات
                 <ArrowLeft data-icon aria-hidden="true" />
-              </Link>
+              </a>
             </Button>
           </div>
 
@@ -184,13 +183,13 @@ export default async function Home() {
             </div>
             <div className="relative mt-8 flex flex-col gap-3 sm:flex-row lg:mt-0 lg:flex-col">
               <Button asChild size="lg">
-                <Link href="/wallet.html">
+                <a href="/wallet.html">
                   <CircleDollarSign data-icon aria-hidden="true" />
                   فتح المحفظة
-                </Link>
+                </a>
               </Button>
               <Button asChild variant="secondary" size="lg">
-                <Link href="/wallet.html">شحن الرصيد</Link>
+                <a href="/wallet.html">شحن الرصيد</a>
               </Button>
             </div>
           </div>
@@ -241,9 +240,9 @@ function FooterLinks({ title, links }: { title: string; links: [string, string][
       <ul className="mt-4 grid gap-3">
         {links.map(([label, href]) => (
           <li key={href}>
-            <Link href={href} className="text-sm text-muted-foreground transition-colors hover:text-primary">
+            <a href={href} className="text-sm text-muted-foreground transition-colors hover:text-primary">
               {label}
-            </Link>
+            </a>
           </li>
         ))}
       </ul>
