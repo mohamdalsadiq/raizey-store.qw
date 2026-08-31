@@ -47,8 +47,6 @@ const promises = [
   { icon: Headphones, title: "دعم قريب", text: "مساعدة عند الحاجة بدون تعقيد" },
 ];
 
-export const revalidate = 300;
-
 export default async function Home() {
   const catalog = await getCatalog();
   const productCount = catalog.categories.reduce((sum, category) => sum + category.productCount, 0);

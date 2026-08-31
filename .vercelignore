@@ -3,6 +3,8 @@
 # but must never be exposed as static production assets.
 /*
 !assets
+!_next
+!brand
 !vercel.json
 !*.html
 !favicon.svg
