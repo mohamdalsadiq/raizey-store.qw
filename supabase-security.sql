@@ -94,6 +94,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gift_cards_code
 -- =====================================================================
 -- SECURITY DEFINER لتفادي التكرار اللانهائي في سياسات profiles،
 -- و search_path مثبّت لمنع اختطافها عبر schema مزيّف.
+-- ⚠️ النسخة الموحّدة (المهمة 6): يجب أن تتطابق مع النسخة المنشورة في قاعدة
+-- البيانات — فحص is_banned إلزامي لمنع تجاوز الحظر (is_banned bypass).
 -- =====================================================================
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
@@ -102,7 +104,9 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM profiles
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND COALESCE(is_banned, false) = false
   );
 $$;
 
