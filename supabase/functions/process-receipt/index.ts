@@ -4,11 +4,12 @@ import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 
 // نماذج Vision مستقرة ومتاحة عبر Gemini API؛ نبدأ بالنموذج الرسمي المتوازن.
 const GEMINI_MODELS = [
+  // gemini-3-flash-preview مُجرّب ويعمل مع هذا المفتاح (نجح 2026-08-30) — أولاً
+  "gemini-3-flash-preview",
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-3-flash-preview",
 ];
-const GEMINI_TIMEOUT_MS = 24_000;
+const GEMINI_TIMEOUT_MS = 15_000; // مهلة كل موديل — 3 موديلات = 45 ثانية كحد أقصى
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
 const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
@@ -212,8 +213,12 @@ async function extractTextWithGemini(base64Data: string, mimeType: string, apiKe
     } catch (error) {
       lastError = error;
       const message = String((error as any)?.message || "");
+      // أخطاء قاتلة لا يفيد معها تجربة موديل آخر: صورة بلا نص، مفتاح خاطئ/محظور، حصة منتهية
       if ((error as any)?.code === "no_visible_text") throw error;
-      if (message.startsWith("timeout:") || [401, 403, 429].includes((error as any)?.status)) throw error;
+      if ([401, 403, 429].includes((error as any)?.status)) throw error;
+      // timeout أو 404 أو 5xx → جرّب الموديل التالي بدل الرمي الفوري
+      // (كان الخطأ هنا: الـ timeout يُرمى فوراً فيُعطّل الـ fallback بالكامل)
+      console.error(`[RAIZEY] Gemini model ${model} failed, trying next:`, message.slice(0, 160));
     }
   }
   throw lastError || new Error("gemini_all_models_failed");
