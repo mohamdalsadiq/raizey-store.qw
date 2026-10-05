@@ -174,6 +174,8 @@ function smartReview(flag: string, message?: string): ScanResult {
     "تعذّر إكمال الفحص الآلي للصورة. أعد المحاولة بعد لحظات؛ لم يُنشأ أي طلب.";
   result.source = "edge";
   result.submissionAllowed = false;
+  // عقد ثابت مع الواجهة: الحقل موجود دائماً (null عند غياب أي نص مقروء).
+  result.rawExcerpt = null;
   return result;
 }
 
@@ -702,6 +704,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       rejected.source = "edge";
       rejected.submissionAllowed = false;
       rejected.mimeType = mimeType;
+      rejected.rawExcerpt = null;
       const scan = await saveScan(admin, userId, hash, bytes, options, rejected, diagnostics, "");
       return { ...rejected, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
     }
@@ -797,6 +800,11 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   result.confidence = rawText.trim().length > 20 ? 90 : null;
   result.textLength = rawText.length;
   result.submissionAllowed = result.decision !== "reject";
+  // عقد الواجهة: checkout.html / checkout-v2.html يقرآن scanResult.rawExcerpt
+  // لتعبئة p_ocr_excerpt، بينما كان الخادم لا يُرسل الحقل إطلاقاً (يعود لـ
+  // undefined) فيبقى مقتطف OCR في الطلب فارغاً دائماً. نفس النص المحفوظ
+  // خادمياً في ocr_data.raw_text_excerpt، وبنفس حد الواجهة (300 حرف).
+  result.rawExcerpt = rawText.trim() ? rawText.slice(0, 300) : null;
   const scan = await saveScan(admin, userId, hash, bytes, options, result, diagnostics, rawText, expectedMethod);
   return { ...result, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
 }

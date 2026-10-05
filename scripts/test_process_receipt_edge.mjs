@@ -212,6 +212,21 @@ console.log("\n── اكتشاف النماذج والترتيب ──");
   check("provider detected", result.json.provider, "bankak");
   check("api key not in any URL", fetchedUrls.some((u) => u.includes(API_KEY)), false);
   check("submission allowed", result.state.inserted[0].payload.submission_allowed, true);
+  // عقد p_ocr_excerpt: checkout.html/checkout-v2.html يقرآن scanResult.rawExcerpt.
+  check("rawExcerpt returned", typeof result.json.rawExcerpt === "string", true);
+  check("rawExcerpt within client cap", result.json.rawExcerpt.length <= 300, true);
+  check("rawExcerpt carries OCR text", result.json.rawExcerpt.includes("FT250719123456"), true);
+}
+
+console.log("\n── rawExcerpt: بلا نص ⇒ null (لا كسر للعقد) ──");
+{
+  const result = await runScan({
+    body: baseBody,
+    env: { GEMINI_MODEL_ORDER: "gemini-ok" },
+    fetchHandler: async () => httpResponse(200, geminiEmptyResponse()),
+  });
+  check("empty OCR → rawExcerpt null", result.json.rawExcerpt, null);
+  check("rawExcerpt (empty case) stored in ocr_data as empty excerpt", result.state.inserted[0].payload.ocr_data.raw_text_excerpt, "");
 }
 
 console.log("\n── التبديل بين النماذج (404 → 503 → نجاح) ──");
