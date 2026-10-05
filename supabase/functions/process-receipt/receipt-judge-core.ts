@@ -626,14 +626,32 @@ const ReceiptJudgeCore = (() => {
   }
 
   function extractAccounts(text) {
+    // ملاحظة: النص المدخل هنا مُطبَّع مسبقاً (normalizeText): "إلى/الى" ← "الي"،
+    // و"ة" ← "ه". الأنماط أدناه مكتوبة بالصيغة المُطبَّعة عمداً.
     const from = text.match(/(?:من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
-    const to = text.match(/(?:الى\s*حساب|الى\s*الحساب|الحساب\s*المحول\s*اليه|الى\s*البطاقه\s*رقم|to\s*account|beneficiary\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
+    const to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|to\s*account|beneficiary\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
     const phone = text.match(/\b(249\d{9}|0\d{9})\b/);
     return {
       from: from ? digitsOnly(from[1]) : null,
       to: to ? digitsOnly(to[1]) : null,
       phone: phone ? phone[1] : null
     };
+  }
+
+  // ── مطابقة اسم المستفيد (المهمة 35) ──
+  // هل اسم صاحب الحساب المُسجّل في الإدارة ظاهر في نص الإيصال؟
+  // متساهلة عمداً: تطبيع عربي + نصف الكلمات الدالة على الأقل.
+  // إشارة داعمة فقط — عدم التطابق يمنع القبول التلقائي ولا يرفض.
+  function beneficiaryNameMatches(text, name) {
+    const clean = (s) => normalizeText(String(s || ''))
+      .replace(/[^a-z\u0600-\u06FF\s]/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+    const words = clean(name).split(' ').filter(w => w.length >= 3);
+    if (!words.length) return true; // لا اسم مُسجّل — لا يمكن الحكم
+    const t = clean(text);
+    if (!t) return false;
+    const hits = words.filter(w => t.includes(w)).length;
+    return hits >= Math.max(1, Math.ceil(words.length / 2));
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -860,6 +878,35 @@ const ReceiptJudgeCore = (() => {
     result.extracted.toAccount = accounts.to;
     result.extracted.phone = accounts.phone;
 
+    // ── الطبقة الأولى (المهمة 35): هوية البنك المستلم ──
+    // قبل المبلغ ورقم العملية: بادئة BIN لحساب المستلم + اسم صاحب الحساب
+    // يجب أن يطابقا البنك الذي اختاره العميل (بيانات الوسيلة تُجلب من
+    // السيرفر — لا تُؤخذ من العميل أبداً). أي عدم تطابق يمنع القبول
+    // التلقائي ويحوّل إلى تدقيق إداري مشدّد.
+    const expectedMethod = options.expectedMethod || null;
+    if (expectedMethod) {
+      const toAcct = digitsOnly(result.extracted.toAccount || '');
+      const bins = String(expectedMethod.bin_prefixes || '')
+        .split(/[,;\s]+/).map(digitsOnly).filter(b => b.length >= 4);
+      if (bins.length > 0 && toAcct) {
+        const binOk = bins.some(b => toAcct.startsWith(b));
+        if (!binOk) result.riskFlags.push('bin_mismatch');
+        result.extracted.binChecked = true;
+        result.extracted.binMatched = binOk;
+      }
+      const holderName = String(expectedMethod.account_name || '').trim();
+      if (holderName.length >= 3) {
+        const nameOk = beneficiaryNameMatches(joined, holderName);
+        if (!nameOk) result.riskFlags.push('beneficiary_name_unverified');
+        result.extracted.beneficiaryNameChecked = true;
+        result.extracted.beneficiaryNameMatched = nameOk;
+      }
+      const bankKey = String(expectedMethod.bank_key || '').trim().toLowerCase();
+      if (bankKey && provider && provider.key !== bankKey) {
+        result.riskFlags.push('bank_provider_mismatch');
+      }
+    }
+
     // ── حالة العملية (عربي/إنجليزي) ──
     const failHits = countKeywordHits(joined, FAILURE_KEYWORDS.map(normalizeText));
 
@@ -982,17 +1029,26 @@ const ReceiptJudgeCore = (() => {
       if (refMatch.fuzzy || amtMatch.fuzzy) lowConfidence.push('مطابقة تقريبية لرقم العملية أو المبلغ');
       if (result.extracted.statusOk !== true) lowConfidence.push('لا يوجد تأكيد صريح لنجاح العملية في الإشعار');
       if (!provider) lowConfidence.push('مزوّد الإشعار غير معروف');
-      if (!dateNeedsAdmin && !destUnverified && lowConfidence.length === 0) {
+      // الطبقة الأولى (المهمة 35): هوية البنك — أي عدم تطابق يمنع القبول التلقائي
+      const bankIdentityFlags = [];
+      if (result.riskFlags.includes('bin_mismatch')) bankIdentityFlags.push('بادئة BIN لحساب المستلم لا تطابق البنك المختار');
+      if (result.riskFlags.includes('beneficiary_name_unverified')) bankIdentityFlags.push('اسم صاحب الحساب غير مؤكد في الإشعار');
+      if (result.riskFlags.includes('bank_provider_mismatch')) bankIdentityFlags.push('البنك الظاهر في الإيصال يخالف البنك المختار');
+      const bankIdentityBad = bankIdentityFlags.length > 0;
+      if (!dateNeedsAdmin && !destUnverified && !bankIdentityBad && lowConfidence.length === 0) {
         result.decision = 'accept';
         result.ocrStatus = 'passed';
         result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
       } else {
         result.decision = 'review_admin';
         result.ocrStatus = 'needs_admin_check';
-        result.reviewSeverity = (severeDate || destUnverified) ? 'high' : 'normal';
+        result.reviewSeverity = (severeDate || destUnverified || bankIdentityBad) ? 'high' : 'normal';
         if (destUnverified) {
           result.reviewReason = 'تعذّر التحقق من وصول المبلغ إلى حساب المتجر — تدقيق إداري مشدّد مطلوب (رقم العملية والمبلغ مطابقان)';
           result.message = 'إيصالك قيد التدقيق الإداري للتأكد من وصول المبلغ إلى حساب المتجر — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
+        } else if (bankIdentityBad) {
+          result.reviewReason = 'هوية البنك غير مؤكدة (' + bankIdentityFlags.join('؛ ') + ') — رقم العملية والمبلغ مطابقان';
+          result.message = 'إيصالك قيد التدقيق الإداري للتأكد من وصول المبلغ إلى حساب المتجر الصحيح — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
         } else if (lowConfidence.length > 0) {
           result.reviewReason = 'ثقة غير كافية للقبول التلقائي (' + lowConfidence.join('؛ ') + ') — رقم العملية والمبلغ مطابقان';
           result.message = 'إيصالك قيد التدقيق الإداري للتأكد من بيانات الإشعار — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
