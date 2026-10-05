@@ -4,10 +4,11 @@ import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 
 // نماذج Vision مستقرة ومتاحة عبر Gemini API؛ نبدأ بالنموذج الرسمي المتوازن.
 const GEMINI_MODELS = [
-  // gemini-3-flash-preview مُجرّب ويعمل مع هذا المفتاح (نجح 2026-08-30) — أولاً
+  // أسماء الموديلات الحالية (2026-10-05): Google أوقفت gemini-2.5-*
+  // ورسالة الخطأ الرسمية توصي بـ gemini-3.5-flash-lite
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
   "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
 ];
 const GEMINI_TIMEOUT_MS = 15_000; // مهلة كل موديل — 3 موديلات = 45 ثانية كحد أقصى
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -207,20 +208,28 @@ async function callGeminiModel(model: string, base64Data: string, mimeType: stri
 
 async function extractTextWithGemini(base64Data: string, mimeType: string, apiKey: string) {
   let lastError: any = null;
+  const attempts: Array<{ model: string; error: string }> = [];
   for (const model of GEMINI_MODELS) {
     try {
       return { text: await callGeminiModel(model, base64Data, mimeType, apiKey), model };
     } catch (error) {
       lastError = error;
       const message = String((error as any)?.message || "");
+      attempts.push({ model, error: message.slice(0, 200) });
       // أخطاء قاتلة لا يفيد معها تجربة موديل آخر: صورة بلا نص، مفتاح خاطئ/محظور، حصة منتهية
-      if ((error as any)?.code === "no_visible_text") throw error;
-      if ([401, 403, 429].includes((error as any)?.status)) throw error;
+      if ((error as any)?.code === "no_visible_text") {
+        (error as any).attempts = attempts;
+        throw error;
+      }
+      if ([401, 403, 429].includes((error as any)?.status)) {
+        (error as any).attempts = attempts;
+        throw error;
+      }
       // timeout أو 404 أو 5xx → جرّب الموديل التالي بدل الرمي الفوري
-      // (كان الخطأ هنا: الـ timeout يُرمى فوراً فيُعطّل الـ fallback بالكامل)
       console.error(`[RAIZEY] Gemini model ${model} failed, trying next:`, message.slice(0, 160));
     }
   }
+  if (lastError) (lastError as any).attempts = attempts;
   throw lastError || new Error("gemini_all_models_failed");
 }
 
@@ -420,7 +429,11 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     technical.serverErrorCode = safeError;
     technical.mimeType = mimeType;
     // للتشخيص: يُحفظ سبب الفشل التقني في ocr_data ليراه الأدمن عند المراجعة
-    technical.extracted = { ...(technical.extracted || {}), server_error_code: safeError };
+    technical.extracted = {
+      ...(technical.extracted || {}),
+      server_error_code: safeError,
+      gemini_attempts: (error as any)?.attempts || null,
+    };
     const scan = await saveScan(admin, userId, hash, bytes, options, technical, usedModel, "");
     return { ...technical, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
   }
