@@ -462,7 +462,22 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     }
   }
 
-  const needsArbitration = !((result.decision === "accept" || result.decision === "review_admin") && result.refVerified && result.amountVerified) && result.decision !== "reject";
+  // المهمة 37 — إصلاح فجوة التحكيم:
+  // قرارات الرفض بسبب عدم تطابق المبلغ تستحق رأياً ثانياً من الـ JSON المنظم
+  // (قد تكون قراءة الـ OCR للمبلغ خاطئة)، لكن فقط amount_mismatch —
+  // وليس ref_conflict أو معاملة فاشلة أو صورة ليست إيصالاً.
+  const riskFlags = result.riskFlags || [];
+  const isAmountMismatchReject =
+    result.decision === "reject" &&
+    riskFlags.includes("amount_mismatch") &&
+    !riskFlags.includes("ref_conflict") &&
+    !riskFlags.includes("not_a_receipt") &&
+    !riskFlags.some((f) => String(f).startsWith("failed_transaction"));
+
+  const needsArbitration =
+    !((result.decision === "accept" || result.decision === "review_admin") &&
+      result.refVerified && result.amountVerified) &&
+    (result.decision !== "reject" || isAmountMismatchReject);
   if (needsArbitration) {
     try {
       const arbitration = await structuredPass(imageParts, apiKey);
@@ -484,6 +499,10 @@ async function processScan(request: Request, admin: any, userId: string, body: a
         ) as ScanResult;
         result.passes = 2;
         result.arbitration = { model: arbitration.model, extracted: d };
+        // علامة تشخيصية: التحكيم طُبّق على قرار رفض (المهمة 37)
+        if (isAmountMismatchReject) {
+          result.riskFlags = (result.riskFlags || []).concat(["arbitration_on_reject"]);
+        }
       }
     } catch (_) {
       result.riskFlags = (result.riskFlags || []).concat(["arbitration_failed"]);
