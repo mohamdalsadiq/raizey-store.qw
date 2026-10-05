@@ -60,6 +60,28 @@
     </div>
 
     <div class="field">
+      <label>بادئات BIN للبنك (اختياري)</label>
+      <input type="text" id="binInput" placeholder="مثلاً: 1234, 5678" dir="ltr" style="text-align:left;">
+      <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">الأرقام الأولى التي تميّز حسابات هذا البنك في الإيصالات — مفصولة بفواصل. تُستخدم للتحقق من أن التحويل ذهب للبنك الصحيح.</div>
+    </div>
+
+    <div class="field">
+      <label>مفتاح البنك في محرك الفحص (اختياري)</label>
+      <select id="bankKeyInput">
+        <option value="">— بدون ربط —</option>
+        <option value="bankak">بنكك (بنك الخرطوم)</option>
+        <option value="ocash">أوكاش (بنك أم درمان الوطني)</option>
+        <option value="fawry">فوري (بنك فيصل الإسلامي)</option>
+        <option value="mbok">ماي بنك (بنك الخرطوم)</option>
+        <option value="cashi">كاشي</option>
+        <option value="faisal">بنك فيصل الإسلامي</option>
+        <option value="nilebank">بنك النيل / بنكي</option>
+        <option value="alsalam">بنك السلام</option>
+      </select>
+      <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">يربط الوسيلة بالبنك المكتشف في الإيصال — أي اختلاف يحوّل الطلب لتدقيق إداري.</div>
+    </div>
+
+    <div class="field">
       <label>تعليمات إضافية (اختياري)</label>
       <input type="text" id="instructionsInput" placeholder="مثلاً: ارفع صورة واضحة للإيصال">
     </div>
@@ -124,6 +146,8 @@ const formModal = document.getElementById('formModal');
 const nameInput = document.getElementById('nameInput');
 const accountNameInput = document.getElementById('accountNameInput');
 const accountNumberInput = document.getElementById('accountNumberInput');
+const binInput = document.getElementById('binInput');
+const bankKeyInput = document.getElementById('bankKeyInput');
 const instructionsInput = document.getElementById('instructionsInput');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
@@ -186,7 +210,7 @@ function render() {
           ${escapeHtml(m.name || '')}
           ${!m.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
         </div>
-        <div class="manage-item-sub">${escapeHtml(m.account_name || '')} — ${escapeHtml(m.account_number || '')}</div>
+        <div class="manage-item-sub">${escapeHtml(m.account_name || '')} — ${escapeHtml(m.account_number || '')}${m.bank_key ? ' — <span style="color:var(--primary); font-weight:700;">' + escapeHtml(m.bank_key) + '</span>' : ''}${m.bin_prefixes ? ' — <span dir="ltr">' + escapeHtml(m.bin_prefixes) + '</span>' : ''}</div>
       </div>
       <div class="manage-item-actions">
         <button class="icon-action-btn" data-action="edit" data-id="${safeDataAttr(m.id || '')}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen" aria-hidden="true"></i></button>
@@ -220,6 +244,8 @@ function openForm(id) {
     nameInput.value = m.name || '';
     accountNameInput.value = m.account_name || '';
     accountNumberInput.value = m.account_number || '';
+    binInput.value = m.bin_prefixes || '';
+    bankKeyInput.value = m.bank_key || '';
     instructionsInput.value = m.instructions || '';
     orderInput.value = m.display_order ?? 0;
     activeInput.value = String(m.is_active === true);
@@ -228,6 +254,8 @@ function openForm(id) {
     nameInput.value = '';
     accountNameInput.value = '';
     accountNumberInput.value = '';
+    binInput.value = '';
+    bankKeyInput.value = '';
     instructionsInput.value = '';
     orderInput.value = methods.length;
     activeInput.value = 'true';
@@ -254,6 +282,8 @@ async function saveMethod() {
     name,
     account_name: accountName,
     account_number: accountNumber,
+    bin_prefixes: binInput.value.trim() || null,
+    bank_key: bankKeyInput.value || null,
     instructions: instructionsInput.value.trim() || null,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true'

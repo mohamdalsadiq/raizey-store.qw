@@ -39,7 +39,17 @@ type ScanOptions = {
   expectedAmount: number;
   manualRef: string;
   expectedAccount: string;
+  expectedMethodId: string;
 };
+
+type ExpectedMethod = {
+  id: string;
+  name: string | null;
+  account_name: string | null;
+  account_number: string | null;
+  bin_prefixes: string | null;
+  bank_key: string | null;
+} | null;
 
 type ScanResult = Record<string, any> & {
   riskFlags?: string[];
@@ -268,7 +278,7 @@ async function enforceRateLimit(admin: any, userId: string): Promise<boolean> {
   return (count || 0) < MAX_SCANS_PER_WINDOW;
 }
 
-async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Array, options: ScanOptions, result: ScanResult, model: string | null, rawText: string) {
+async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Array, options: ScanOptions, result: ScanResult, model: string | null, rawText: string, expectedMethod?: ExpectedMethod) {
   const extracted = result.extracted || {};
   const scanPayload = {
     user_id: userId,
@@ -297,6 +307,8 @@ async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Ar
       text_length: result.textLength || 0,
       ref_verified: !!result.refVerified,
       amount_verified: !!result.amountVerified,
+      expected_method_id: expectedMethod ? expectedMethod.id : null,
+      expected_method_name: expectedMethod ? expectedMethod.name : null,
       engine_source: "supabase_edge",
       engine_version: result.version || 4,
       model,
@@ -332,7 +344,33 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     expectedAmount: Math.max(0, Number(body?.expectedAmount) || 0),
     manualRef: String(body?.manualRef || "").slice(0, 80),
     expectedAccount: String(body?.expectedAccount || "").slice(0, 80),
+    expectedMethodId: String(body?.expectedMethodId || "").slice(0, 40),
   };
+  // ── المهمة 35: جلب بيانات الوسيلة المختارة من السيرفر ──
+  // لا تُؤخذ بيانات التحقق (BIN/الاسم) من العميل أبداً — تُقرأ من قاعدة
+  // البيانات عبر service_role. غياب الأعمدة الجديدة (قبل ترحيل SQL) لا
+  // يكسر الفحص: تُتجاهل الطبقة الجديدة بهدوء.
+  let expectedMethod: ExpectedMethod = null;
+  if (/^[0-9a-f-]{36}$/i.test(options.expectedMethodId)) {
+    try {
+      const { data: m } = await admin
+        .from("payment_methods")
+        .select("*")
+        .eq("id", options.expectedMethodId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (m) {
+        expectedMethod = {
+          id: String(m.id),
+          name: m.name ?? null,
+          account_name: m.account_name ?? null,
+          account_number: m.account_number ?? null,
+          bin_prefixes: m.bin_prefixes ?? null,
+          bank_key: m.bank_key ?? null,
+        };
+      }
+    } catch (_) { /* بدون بيانات وسيلة — الفحص يكمل بالمنطق القديم */ }
+  }
   const apiKey = env("GEMINI_API_KEY");
   if (!apiKey) return softReview("gemini_not_configured", "محرك الفحص الخادمي غير مُفعّل حالياً. لم يُنشأ أي طلب.");
 
@@ -384,6 +422,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     expectedAmount: options.expectedAmount,
     manualRef: options.manualRef,
     expectedAccount: options.expectedAccount,
+    expectedMethod,
     ocrSource: "server",
     trustedOcr: true,
   };
@@ -436,7 +475,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   result.confidence = rawText.trim().length > 20 ? 90 : null;
   result.textLength = rawText.length;
   result.submissionAllowed = result.decision !== "reject";
-  const scan = await saveScan(admin, userId, hash, bytes, options, result, usedModel, rawText);
+  const scan = await saveScan(admin, userId, hash, bytes, options, result, usedModel, rawText, expectedMethod);
   return { ...result, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
 }
 
