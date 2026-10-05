@@ -229,6 +229,51 @@ console.log("\n── rawExcerpt: بلا نص ⇒ null (لا كسر للعقد) 
   check("rawExcerpt (empty case) stored in ocr_data as empty excerpt", result.state.inserted[0].payload.ocr_data.raw_text_excerpt, "");
 }
 
+console.log("\n── التهدئة: النموذج الميت/المزدحم لا يتصدّر الطلب التالي ──");
+{
+  // قياس حقيقي: قائمة /v1beta/models تُدرج gemini-2.5-flash بينما نداوله يُرجع
+  // 404 "no longer available to new users"، فكان يستهلك محاولة من محاولاتنا
+  // المحدودة. الفحص: بعد فشل النموذج الأعلى ترتيباً، يجب أن يبدأ الطلب التالي
+  // بالنموذج السليم مباشرة (مع بقاء الميت متاحاً كاحتياط أخير).
+  // نستخدم نفس قائمة النماذج المخزّنة مؤقتاً من فحص الاكتشاف أعلاه
+  // (gemini-3.5-flash ثم gemini-2.5-flash ثم gemini-4.0-flash-preview) ونحاكي
+  // بالضبط ما شوهد في الإنتاج: الأول مزدحم (503) والثاني ميت (404).
+  const callOrder = [];
+  const handler = async (url) => {
+    const href = String(url);
+    if (href.includes("/models?")) return httpResponse(200, MODEL_LIST_BODY);
+    const model = href.match(/\/models\/([^:]+):generateContent/)[1];
+    callOrder.push(model);
+    if (model === "gemini-3.5-flash") {
+      return httpResponse(503, { error: { message: "high demand", status: "UNAVAILABLE" } });
+    }
+    if (model === "gemini-2.5-flash") {
+      return httpResponse(404, { error: { message: "This model is no longer available to new users" } });
+    }
+    return httpResponse(200, geminiTextResponse(validBankakText()));
+  };
+
+  const first = await runScan({ body: baseBody, fetchHandler: handler });
+  check(
+    "cooldown: first request walks the ranked list (503 → 404 → success)",
+    callOrder.join(","),
+    "gemini-3.5-flash,gemini-2.5-flash,gemini-4.0-flash-preview",
+  );
+  check("cooldown: first request still succeeds on the fallback", first.json.decision, "accept");
+
+  callOrder.length = 0;
+  const second = await runScan({ body: baseBody, fetchHandler: handler });
+  check("cooldown: second request skips both cooled models", callOrder[0], "gemini-4.0-flash-preview");
+  check("cooldown: second request still accepted", second.json.decision, "accept");
+  const listedModels = second.state.inserted[0].payload.ocr_data.gemini_models;
+  check(
+    "cooldown: cooled models kept but demoted to last resort",
+    listedModels.indexOf("gemini-4.0-flash-preview") < listedModels.indexOf("gemini-3.5-flash") &&
+      listedModels.indexOf("gemini-4.0-flash-preview") < listedModels.indexOf("gemini-2.5-flash"),
+    true,
+  );
+}
+
 console.log("\n── التبديل بين النماذج (404 → 503 → نجاح) ──");
 {
   const seen = [];
@@ -433,6 +478,33 @@ console.log("\n── المهمة 37: تحكيم إضافي على رفض عد�
   check("decision no longer a plain reject", result.json.decision === "reject", false);
   check("second pass improved to accept", result.json.decision, "accept");
 }
+
+// ── عقد الميزانية الزمنية (regression) ────────────────────────────────
+// عطل حقيقي شوهد في الإنتاج بعد النشر: النموذج السليم يستغرق 11–20 ثانية،
+// ونماذج Google الأحدث ترجع 503 "high demand" بشكل متقطع، فكانت مهلة 60 ثانية
+// الكلية تنفد قبل الوصول إلى نموذج سليم فيُعاد server_ocr_timeout رغم سلامة
+// الخدمة. هذه الفحوص تمنع تكرار ضبط ميزانية لا تتسع للنماذج البديلة.
+const numConst = (source, name) => {
+  const m = source.match(new RegExp(name + "\\s*=\\s*([0-9_]+)"));
+  return m ? Number(m[1].replace(/_/g, "")) : NaN;
+};
+const rawIndexSrc = fs.readFileSync(indexPath, "utf8");
+const reqTimeout = numConst(rawIndexSrc, "GEMINI_REQUEST_TIMEOUT_MS");
+const jsonTimeout = numConst(rawIndexSrc, "GEMINI_JSON_TIMEOUT_MS");
+const totalBudget = numConst(rawIndexSrc, "GEMINI_TOTAL_BUDGET_MS");
+const maxModels = numConst(rawIndexSrc, "GEMINI_MAX_MODELS");
+const pipelineSrc = fs.readFileSync(path.join(root, "assets/js/receipt-pipeline.js"), "utf8");
+const clientTimeout = numConst(pipelineSrc, "EDGE_TIMEOUT_MS");
+
+check("timing: per-attempt timeout parsed", reqTimeout > 0, true);
+check("timing: at least 4 model attempts fit the total budget", totalBudget >= reqTimeout * 4, true);
+check("timing: structured-pass timeout <= OCR attempt timeout", jsonTimeout <= reqTimeout, true);
+check("timing: model fallback list has at least 4 entries", maxModels >= 4, true);
+check(
+  "timing: server budget leaves >=10s margin under client EDGE_TIMEOUT_MS",
+  totalBudget + 10_000 <= clientTimeout,
+  true,
+);
 
 fs.rmSync(tmpDir, { recursive: true, force: true });
 

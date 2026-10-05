@@ -18,11 +18,19 @@ import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const GEMINI_MODEL_ORDER_ENV = "GEMINI_MODEL_ORDER";
 
-const GEMINI_REQUEST_TIMEOUT_MS = 25_000;   // مهلة كل محاولة (نموذج واحد)
-const GEMINI_JSON_TIMEOUT_MS = 25_000;      // مهلة محاولة الاستخراج المهيكل
+// ملاحظة قياس حقيقية (2026-10-05): النموذج السليم يستغرق 11–20 ثانية لقراءة
+// إيصال واحد، ونماذج Google الأحدث تُرجع 503 "high demand" بشكل متقطع. لذلك:
+//   • مهلة المحاولة أقصر من الإجمالي حتى تتسع أكثر من محاولة للنماذج البديلة.
+//   • السقف الكلي أكبر من مجموع أربع مهل، وإلا نفدت المهلة قبل الوصول لنموذج سليم
+//     فيُعاد server_ocr_timeout رغم أن الخدمة تعمل (عطل حقيقي شوهد في الإنتاج).
+// العلاقة المطلوبة: GEMINI_REQUEST_TIMEOUT_MS <= GEMINI_TOTAL_BUDGET_MS / 4
+const GEMINI_REQUEST_TIMEOUT_MS = 20_000;   // مهلة كل محاولة (نموذج واحد)
+const GEMINI_JSON_TIMEOUT_MS = 20_000;      // مهلة محاولة الاستخراج المهيكل
 const GEMINI_DISCOVERY_TIMEOUT_MS = 8_000;  // مهلة قراءة قائمة النماذج
-const GEMINI_TOTAL_BUDGET_MS = 60_000;      // سقف زمني كلي لكل عمليات Gemini
-const GEMINI_MAX_MODELS = 4;                // أقصى عدد نماذج تُجرَّب في الفحص
+// يجب أن يبقى السقف الكلي أقل من EDGE_TIMEOUT_MS في receipt-pipeline.js (100 ثانية)
+// مع هامش للشبكة وحفظ الفحص في القاعدة.
+const GEMINI_TOTAL_BUDGET_MS = 85_000;      // سقف زمني كلي لكل عمليات Gemini
+const GEMINI_MAX_MODELS = 5;                // أقصى عدد نماذج تُجرَّب في الفحص
 const GEMINI_DISCOVERY_TTL_MS = 60 * 60_000;      // إعادة قراءة القائمة كل ساعة
 const GEMINI_DISCOVERY_NEGATIVE_TTL_MS = 5 * 60_000; // فشل القراءة: إعادة بعد 5 دقائق
 
@@ -229,6 +237,37 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 // ═════════════════════════════════════════════════════════════════════════
 let geminiModelCache: { at: number; models: string[] } | null = null;
 
+// ── تهدئة (cool-down) للنماذج التي أثبتت فشلها لهذا المفتاح ────────────
+// قياس حقيقي: GET /v1beta/models يُدرج gemini-2.5-flash بينما نداوله يُرجع
+// 404 "no longer available to new users" — أي أن القائمة تكذب أحياناً، وكان
+// النموذج الميت يستهلك واحدة من محاولاتنا المحدودة بينما الخدمة متاحة على
+// نموذج آخر. كذلك تُرجع النماذج الأحدث 503 "high demand" بشكل متقطع.
+// الحل: إزاحة النماذج الميتة/المزدحمة إلى آخر الترتيب بدل حذفها (فتبقى
+// متاحة كاحتياط أخير) لمدة محدودة لكل حالة:
+//   404 → ساعة كاملة (عطل دائم لهذا المفتاح)
+//   503 → دقيقتان (ازدحام مؤقت عادة)
+const GEMINI_MODEL_COOLDOWN_MS: Record<number, number> = {
+  404: 60 * 60_000,
+  503: 2 * 60_000,
+};
+const geminiModelCoolDown = new Map<string, number>();
+
+function isGeminiModelCooled(name: string): boolean {
+  const until = geminiModelCoolDown.get(name);
+  if (!until) return false;
+  if (Date.now() >= until) {
+    geminiModelCoolDown.delete(name);
+    return false;
+  }
+  return true;
+}
+
+function noteGeminiModelFailure(name: string, status: number | null | undefined): void {
+  const ttl = GEMINI_MODEL_COOLDOWN_MS[Number(status)];
+  if (!ttl) return;
+  geminiModelCoolDown.set(name, Date.now() + ttl);
+}
+
 function isStableModelName(name: string): boolean {
   return !/(preview|exp|experimental|alpha|beta|latest|deprecated)/i.test(name);
 }
@@ -292,7 +331,16 @@ async function resolveGeminiModels(apiKey: string): Promise<{ models: string[]; 
   }
   try {
     const discovered = await discoverGeminiModels(apiKey);
-    if (discovered.length) return { models: discovered.slice(0, GEMINI_MAX_MODELS), source: "discovery" };
+    if (discovered.length) {
+      // التهدئة تُطبَّق هنا وقت الاختيار لا وقت الاكتشاف: قائمة النماذج تُخزَّن
+      // مؤقتاً ساعة كاملة، فلو ثبّتنا الترتيب داخل المكتشف لما أثّر أي فشل
+      // لاحق على أول محاولاتنا في بقية الطلبات — وهي بالضبط الحالة التي
+      // تُهدر محاولة على نموذج ميت (404) أو مزدحم (503).
+      const ready = discovered.filter((m) => !isGeminiModelCooled(m));
+      const cooled = discovered.filter((m) => isGeminiModelCooled(m));
+      const ordered = ready.concat(cooled);
+      return { models: ordered.slice(0, GEMINI_MAX_MODELS), source: "discovery" };
+    }
   } catch (error) {
     console.error("[RAIZEY] Gemini model discovery failed:", String((error as any)?.message || error).slice(0, 160));
   }
@@ -410,6 +458,7 @@ async function extractTextWithGemini(
       lastError = error;
       const message = String((error as any)?.message || "");
       attempts.push({ model, error: message.slice(0, 200), status: (error as any)?.status ?? null });
+      noteGeminiModelFailure(model, (error as any)?.status);
       // أخطاء قاتلة لا يفيد معها تجربة نموذج آخر
       if ((error as any)?.code === "no_visible_text") {
         (error as any).attempts = attempts;
@@ -469,6 +518,7 @@ async function structuredPass(
     } catch (error) {
       lastError = error;
       attempts.push({ model, error: String((error as any)?.message || "").slice(0, 160), status: (error as any)?.status ?? null });
+      noteGeminiModelFailure(model, (error as any)?.status);
     }
   }
   throw lastError || new Error("gemini_json_failed");

@@ -1,2 +1,9 @@
 .upgrade-check.js
 supabase/.temp/
+
+# ── ملفات البيئة ──────────────────────────────────────────────
+# تُحمَّل تلقائياً من المنصة وليست جزءاً من الكود. تجاهلها يمنع
+# رفع أي مفتاح (Gemini / Supabase secret / access token) إلى Git.
+.env
+.env.*
+!.env.example
