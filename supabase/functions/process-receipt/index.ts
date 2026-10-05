@@ -2,15 +2,46 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 
-// نماذج Vision مستقرة ومتاحة عبر Gemini API؛ نبدأ بالنموذج الرسمي المتوازن.
-const GEMINI_MODELS = [
-  // أسماء الموديلات الحالية (2026-10-05): Google أوقفت gemini-2.5-*
-  // ورسالة الخطأ الرسمية توصي بـ gemini-3.5-flash-lite
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3-flash-preview",
+// ═════════════════════════════════════════════════════════════════════════
+// نماذج Gemini — لا تُكتب أسماء النماذج يدوياً
+// ═════════════════════════════════════════════════════════════════════════
+// السبب الجذري لفشل الفحص السابق: قائمة أسماء مكتوبة يدوياً (gemini-2.5-*،
+// gemini-3.5-*) إمّا أُوقفت من Google أو لا تُدعم لحسابنا، فيفشل كل نموذج
+// بدوره (404/400/503/timeout) ثم يعود الفحص برسالة "تعذّر إكمال الفحص".
+//
+// الإصلاح: نقرأ قائمة النماذج المتاحة فعلياً لهذا المفتاح وقت التشغيل من
+//   GET /v1beta/models
+// ونشتق منها ترتيب النماذج تلقائياً (stable قبل preview، ثم flash قبل غيرها).
+// هذا يجعل الدالة ذاتية الإصلاح عند تغيّر نماذج Google مستقبلاً.
+//
+// ترتيب مخصص (اختياري): GEMINI_MODEL_ORDER="a,b,c" في Function Secrets.
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const GEMINI_MODEL_ORDER_ENV = "GEMINI_MODEL_ORDER";
+
+const GEMINI_REQUEST_TIMEOUT_MS = 25_000;   // مهلة كل محاولة (نموذج واحد)
+const GEMINI_JSON_TIMEOUT_MS = 25_000;      // مهلة محاولة الاستخراج المهيكل
+const GEMINI_DISCOVERY_TIMEOUT_MS = 8_000;  // مهلة قراءة قائمة النماذج
+const GEMINI_TOTAL_BUDGET_MS = 60_000;      // سقف زمني كلي لكل عمليات Gemini
+const GEMINI_MAX_MODELS = 4;                // أقصى عدد نماذج تُجرَّب في الفحص
+const GEMINI_DISCOVERY_TTL_MS = 60 * 60_000;      // إعادة قراءة القائمة كل ساعة
+const GEMINI_DISCOVERY_NEGATIVE_TTL_MS = 5 * 60_000; // فشل القراءة: إعادة بعد 5 دقائق
+
+// نماذج لا تصلح لقراءة الإيصالات (توليد صور/صوت/تضمين/بحث...) — تُستبعد من
+// القائمة المشتقة حتى لا نُهدر محاولات على غير المفيد.
+const GEMINI_MODEL_DENY = [
+  "embedding", "aqa", "imagen", "veo", "tts", "native-audio", "-live",
+  "gemma", "codechat", "code-", "robotics", "computer-use", "learnlm",
 ];
-const GEMINI_TIMEOUT_MS = 15_000; // مهلة كل موديل — 3 موديلات = 45 ثانية كحد أقصى
+
+// احتياطي أخير فقط إذا تعذّرت قراءة قائمة النماذج (شبكة/مفتاح غير متاح).
+// أسماء مرنة من Google لا أسماء إصدارات مجمّدة. عند الوصول للمفتاح تُستخدم
+// القائمة الحقيقية وتُتجاهل هذه.
+const FALLBACK_GEMINI_MODELS = [
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+  "gemini-2.5-flash",
+];
+
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
 const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
@@ -30,12 +61,26 @@ const OCR_PROMPT =
   "إذا لم تكن الصورة تحتوي على أي نص واضح فأعد نصاً فارغاً. لا تكتب أي شيء غير النص المنسوخ.";
 
 const JSON_PROMPT =
-  "أنت مدقق إشعارات تحويل بنكي. انظر للصورة وأعد JSON فقط بهذا الشكل بالضبط: " +
-  '{"transaction_number":"","amount":"","currency":"","status":"","datetime":"","to_account":"","bank":""}. ' +
-  "قواعد صارمة: انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح. " +
-  "المبلغ = مبلغ التحويل فقط (وليس الرصيد أو الرسوم). " +
-  'إذا لم تكن القيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
-  "ممنوع الاختراع أو الاستنتاج. أعد JSON فقط بلا أي شرح.";
+  "أنت مدقّق إشعارات تحويل بنكية سودانية (بنكك، أوكاش، فوري، كاشي...). " +
+  "انظر للصورة وأعد JSON فقط بلا أي شرح ولا نص خارج JSON، بهذا الشكل بالضبط: " +
+  '{"bank":"","transaction_type":"","amount":"","currency":"","sender_name":"","receiver_name":"",' +
+  '"sender_account":"","receiver_account":"","phone":"","transaction_id":"","reference":"",' +
+  '"date":"","time":"","status":"","raw_text":""}. ' +
+  "قواعد صارمة: " +
+  "1) انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح ولا حذف أصفار. " +
+  "2) amount = مبلغ التحويل فقط (وليس الرصيد ولا الرسوم ولا الضريبة) بأرقام لاتينية بلا فواصل آلاف. " +
+  "3) حوّل الأرقام العربية (٠١٢٣٤٥٦٧٨٩) إلى لاتينية داخل الحقول المهيكلة. " +
+  "4) status = نتيجة العملية كما تظهر في الصورة (successful / failed / pending) ولو بالعربية انقلها كما هي. " +
+  "5) raw_text = انسخ كل النص الظاهر في الصورة حرفياً (كل سطر كما هو) بلا تلخيص ولا ترجمة. " +
+  'إذا لم تكن أي قيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
+  "ممنوع الاختراع أو الاستنتاج. أعد JSON فقط.";
+
+const SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+];
 
 type ScanOptions = {
   expectedAmount: number;
@@ -56,6 +101,14 @@ type ExpectedMethod = {
 type ScanResult = Record<string, any> & {
   riskFlags?: string[];
   extracted?: Record<string, any>;
+};
+
+type GeminiAttempt = { model: string; ok?: boolean; error?: string; status?: number | null };
+type GeminiDiagnostics = {
+  models: string[];
+  orderSource: string;
+  chosen: string | null;
+  attempts: GeminiAttempt[];
 };
 
 function env(name: string): string {
@@ -90,17 +143,29 @@ function corsHeaders(request: Request): Record<string, string> {
   };
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, tag: string): Promise<T> {
-  let timer: number | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`timeout:${tag}`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer !== undefined) clearTimeout(timer);
-  });
+/**
+ * fetch مع مهلة حقيقية: يُلغي الطلب فعلياً عبر AbortController بدل ترك
+ * الطلب معلّقاً في الخلفية (السلوك القديم كان يُبقي الطلب حياً ويستهلك
+ * مهلة الـEdge Function وأي حصة من المزوّد بلا فائدة).
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number, tag: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if ((error as any)?.name === "AbortError") {
+      const timeoutError = new Error(`timeout:${tag}`);
+      (timeoutError as any).status = 0;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-function softReview(flag: string, message?: string): ScanResult {
+function smartReview(flag: string, message?: string): ScanResult {
   const result = ReceiptJudgeCore.blankResult() as ScanResult;
   result.decision = "review";
   result.ocrStatus = "needs_review";
@@ -157,9 +222,148 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function callGeminiModel(model: string, base64Data: string, mimeType: string, apiKey: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const body = {
+// ═════════════════════════════════════════════════════════════════════════
+// اكتشاف النماذج المتاحة فعلياً (بدل التخمين)
+// ═════════════════════════════════════════════════════════════════════════
+let geminiModelCache: { at: number; models: string[] } | null = null;
+
+function isStableModelName(name: string): boolean {
+  return !/(preview|exp|experimental|alpha|beta|latest|deprecated)/i.test(name);
+}
+
+function scoreGeminiModel(name: string): number {
+  const base = name.replace(/^models\//, "").toLowerCase();
+  let score = 0;
+  // الاستقرار أولاً (نموذج preview قد يختفي بلا إنذار)
+  if (isStableModelName(base)) score += 100;
+  // التوازن بين الدقة/السرعة/التكلفة: flash ثم flash-lite ثم pro
+  if (/flash/.test(base) && !/lite/.test(base)) score += 50;
+  else if (/flash-lite/.test(base)) score += 40;
+  else if (/pro/.test(base)) score += 20;
+  // إصدار أحدث أفضل
+  const v = base.match(/gemini-(\d+)(?:\.(\d+))?/);
+  if (v) score += Math.min(90, parseInt(v[1], 10) * 10 + parseInt(v[2] || "0", 10));
+  // نماذج توليد الصور/الصوت أبطأ ولا حاجة لها هنا
+  if (/(image|audio|tts|vision-only)/.test(base)) score -= 25;
+  return score;
+}
+
+async function discoverGeminiModels(apiKey: string): Promise<string[]> {
+  const now = Date.now();
+  if (geminiModelCache) {
+    const ttl = geminiModelCache.models.length ? GEMINI_DISCOVERY_TTL_MS : GEMINI_DISCOVERY_NEGATIVE_TTL_MS;
+    if (now - geminiModelCache.at < ttl) return geminiModelCache.models;
+  }
+  // المفتاح يُرسل في ترويسة لا في الرابط حتى لا يظهر في أي سجل URLs.
+  const response = await fetchWithTimeout(
+    `${GEMINI_API_BASE}/models?pageSize=200`,
+    { method: "GET", headers: { "x-goog-api-key": apiKey } },
+    GEMINI_DISCOVERY_TIMEOUT_MS,
+    "gemini_models",
+  );
+  if (!response.ok) {
+    geminiModelCache = { at: now, models: [] };
+    throw new Error(`gemini_models_http_${response.status}`);
+  }
+  const data = await response.json();
+  const list = Array.isArray(data?.models) ? data.models : [];
+  const usable = list
+    .filter((entry: any) =>
+      Array.isArray(entry?.supportedGenerationMethods) &&
+      entry.supportedGenerationMethods.includes("generateContent"))
+    .map((entry: any) => String(entry?.name || "").replace(/^models\//, ""))
+    .filter((name: string) =>
+      !!name &&
+      name.startsWith("gemini") &&
+      !GEMINI_MODEL_DENY.some((denied) => name.toLowerCase().includes(denied)));
+  usable.sort((a: string, b: string) => scoreGeminiModel(b) - scoreGeminiModel(a));
+  const models = usable.slice(0, GEMINI_MAX_MODELS * 2);
+  geminiModelCache = { at: now, models };
+  return models;
+}
+
+async function resolveGeminiModels(apiKey: string): Promise<{ models: string[]; source: string }> {
+  const override = env(GEMINI_MODEL_ORDER_ENV);
+  if (override) {
+    const models = override.split(",").map((value) => value.trim()).filter(Boolean).slice(0, GEMINI_MAX_MODELS);
+    if (models.length) return { models, source: "env" };
+  }
+  try {
+    const discovered = await discoverGeminiModels(apiKey);
+    if (discovered.length) return { models: discovered.slice(0, GEMINI_MAX_MODELS), source: "discovery" };
+  } catch (error) {
+    console.error("[RAIZEY] Gemini model discovery failed:", String((error as any)?.message || error).slice(0, 160));
+  }
+  return { models: FALLBACK_GEMINI_MODELS.slice(0, GEMINI_MAX_MODELS), source: "fallback" };
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// نداء Gemini واحد — مع إعادة محاولة واحدة بلا thinkingConfig عند 400
+// ═════════════════════════════════════════════════════════════════════════
+async function postGeminiGenerate(
+  model: string,
+  body: Record<string, any>,
+  apiKey: string,
+  tag: string,
+  timeoutMs: number,
+): Promise<any> {
+  const url = `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
+  const attempt = async (payload: Record<string, any>) => {
+    const response = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify(payload),
+    }, timeoutMs, tag);
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 220);
+      const error = new Error(`gemini_http_${response.status}:${detail}`);
+      (error as any).status = response.status;
+      (error as any).detail = detail;
+      throw error;
+    }
+    return await response.json();
+  };
+  try {
+    return await attempt(body);
+  } catch (error) {
+    const status = (error as any)?.status;
+    const detail = String((error as any)?.detail || "");
+    // بعض النماذج لا تدعم thinkingConfig فتُرجع 400 INVALID_ARGUMENT.
+    // نعيد المحاولة مرة واحدة بعد حذفه بدل إسقاط النموذج بالكامل.
+    if (status === 400 && body?.generationConfig?.thinkingConfig && /thinking|INVALID_ARGUMENT/i.test(detail)) {
+      const retryBody = JSON.parse(JSON.stringify(body));
+      delete retryBody.generationConfig.thinkingConfig;
+      return await attempt(retryBody);
+    }
+    throw error;
+  }
+}
+
+function textFromCandidate(data: any, tag: string): string {
+  const candidate = data?.candidates?.[0];
+  const parts = candidate?.content?.parts;
+  const text = Array.isArray(parts)
+    ? parts.map((part: any) => typeof part?.text === "string" ? part.text : "").join("\n").trim()
+    : "";
+  if (text) return text;
+  const reason = candidate?.finishReason || data?.promptFeedback?.blockReason || "no_text";
+  const error = new Error(`gemini_empty_response:${reason}`);
+  (error as any).status = 200;
+  (error as any).tag = tag;
+  // STOP/no_text يعني أن النموذج اشتغل فعلاً ولم يجد نصاً → الصورة بلا نص.
+  // أي سبب آخر (MAX_TOKENS/SAFETY) عطل قابل لإعادة المحاولة بنموذج آخر.
+  if (reason === "STOP" || reason === "no_text") (error as any).code = "no_visible_text";
+  throw error;
+}
+
+async function callGeminiModel(
+  model: string,
+  base64Data: string,
+  mimeType: string,
+  apiKey: string,
+  timeoutMs: number,
+): Promise<string> {
+  const data = await postGeminiGenerate(model, {
     contents: [{
       role: "user",
       parts: [
@@ -168,35 +372,10 @@ async function callGeminiModel(model: string, base64Data: string, mimeType: stri
       ],
     }],
     generationConfig: { temperature: 0, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
-    safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-    ],
-  };
-  const response = await withTimeout(fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(body),
-  }), GEMINI_TIMEOUT_MS, "gemini_request");
-  if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 220);
-    const error = new Error(`gemini_http_${response.status}:${detail}`);
-    (error as any).status = response.status;
-    throw error;
-  }
-  const data = await response.json();
-  const candidate = data?.candidates?.[0];
-  const parts = candidate?.content?.parts;
-  let text = Array.isArray(parts) ? parts.map((part: any) => typeof part?.text === "string" ? part.text : "").join("\n").trim() : "";
-  if (!text) {
-    const reason = candidate?.finishReason || data?.promptFeedback?.blockReason || "no_text";
-    const error = new Error(`gemini_empty_response:${reason}`);
-    (error as any).status = 200;
-    if (reason === "STOP" || reason === "no_text") (error as any).code = "no_visible_text";
-    throw error;
-  }
+    safetySettings: SAFETY_SETTINGS,
+  }, apiKey, "gemini_request", timeoutMs);
+  let text = textFromCandidate(data, "gemini_request");
+  // بعض النماذج تُصرّ على إرجاع JSON حتى مع طلب نص صريح — نستخرج raw_text.
   if (text.startsWith("{") && text.includes("raw_text")) {
     try {
       const parsed = JSON.parse(text.replace(/^```(?:json)?|```$/g, "").trim());
@@ -206,17 +385,30 @@ async function callGeminiModel(model: string, base64Data: string, mimeType: stri
   return text;
 }
 
-async function extractTextWithGemini(base64Data: string, mimeType: string, apiKey: string) {
+type OcrOutcome = { text: string; model: string; attempts: GeminiAttempt[] };
+
+async function extractTextWithGemini(
+  base64Data: string,
+  mimeType: string,
+  apiKey: string,
+  models: string[],
+  deadline: number,
+): Promise<OcrOutcome> {
   let lastError: any = null;
-  const attempts: Array<{ model: string; error: string }> = [];
-  for (const model of GEMINI_MODELS) {
+  const attempts: GeminiAttempt[] = [];
+  for (const model of models) {
+    const remaining = deadline - Date.now();
+    if (remaining < 3000) break; // لا معنى لبدء محاولة لا تكفي لها المهلة
+    const timeoutMs = Math.min(GEMINI_REQUEST_TIMEOUT_MS, remaining);
     try {
-      return { text: await callGeminiModel(model, base64Data, mimeType, apiKey), model };
+      const text = await callGeminiModel(model, base64Data, mimeType, apiKey, timeoutMs);
+      attempts.push({ model, ok: true });
+      return { text, model, attempts };
     } catch (error) {
       lastError = error;
       const message = String((error as any)?.message || "");
-      attempts.push({ model, error: message.slice(0, 200) });
-      // أخطاء قاتلة لا يفيد معها تجربة موديل آخر: صورة بلا نص، مفتاح خاطئ/محظور، حصة منتهية
+      attempts.push({ model, error: message.slice(0, 200), status: (error as any)?.status ?? null });
+      // أخطاء قاتلة لا يفيد معها تجربة نموذج آخر
       if ((error as any)?.code === "no_visible_text") {
         (error as any).attempts = attempts;
         throw error;
@@ -225,17 +417,20 @@ async function extractTextWithGemini(base64Data: string, mimeType: string, apiKe
         (error as any).attempts = attempts;
         throw error;
       }
-      // timeout أو 404 أو 5xx → جرّب الموديل التالي بدل الرمي الفوري
+      // timeout / 400 / 404 / 5xx → جرّب النموذج التالي
       console.error(`[RAIZEY] Gemini model ${model} failed, trying next:`, message.slice(0, 160));
     }
   }
-  if (lastError) (lastError as any).attempts = attempts;
-  throw lastError || new Error("gemini_all_models_failed");
+  if (!lastError) {
+    lastError = new Error("timeout:gemini_budget");
+    (lastError as any).status = 0;
+  }
+  (lastError as any).attempts = attempts;
+  throw lastError;
 }
 
-async function callGeminiJson(model: string, parts: any[], apiKey: string) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const body = {
+async function callGeminiJson(model: string, parts: any[], apiKey: string, timeoutMs: number) {
+  const data = await postGeminiGenerate(model, {
     contents: [{ role: "user", parts: parts.concat([{ text: JSON_PROMPT }]) }],
     generationConfig: {
       temperature: 0,
@@ -243,32 +438,96 @@ async function callGeminiJson(model: string, parts: any[], apiKey: string) {
       responseMimeType: "application/json",
       thinkingConfig: { thinkingBudget: 0 },
     },
-  };
-  const response = await withTimeout(fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(body),
-  }), GEMINI_TIMEOUT_MS, "gemini_json");
-  if (!response.ok) throw new Error(`gemini_json_http_${response.status}`);
-  const data = await response.json();
-  const partsOut = data?.candidates?.[0]?.content?.parts;
-  const text = Array.isArray(partsOut) ? partsOut.map((part: any) => part?.text || "").join("").replace(/^```(?:json)?|```$/g, "").trim() : "";
+  }, apiKey, "gemini_json", timeoutMs);
+  const candidate = data?.candidates?.[0];
+  const partsOut = candidate?.content?.parts;
+  const text = Array.isArray(partsOut)
+    ? partsOut.map((part: any) => part?.text || "").join("").replace(/^```(?:json)?|```$/g, "").trim()
+    : "";
   if (!text) throw new Error("gemini_json_empty");
   return JSON.parse(text);
 }
 
-async function structuredPass(parts: any[], apiKey: string) {
+async function structuredPass(
+  parts: any[],
+  apiKey: string,
+  models: string[],
+  deadline: number,
+): Promise<{ data: Record<string, any>; model: string; attempts: GeminiAttempt[] }> {
   let lastError: any = null;
-  for (const model of GEMINI_MODELS) {
+  const attempts: GeminiAttempt[] = [];
+  for (const model of models) {
+    const remaining = deadline - Date.now();
+    if (remaining < 3000) break;
+    const timeoutMs = Math.min(GEMINI_JSON_TIMEOUT_MS, remaining);
     try {
-      return { data: await callGeminiJson(model, parts, apiKey), model };
+      const data = await callGeminiJson(model, parts, apiKey, timeoutMs);
+      attempts.push({ model, ok: true });
+      return { data, model, attempts };
     } catch (error) {
       lastError = error;
+      attempts.push({ model, error: String((error as any)?.message || "").slice(0, 160), status: (error as any)?.status ?? null });
     }
   }
   throw lastError || new Error("gemini_json_failed");
 }
 
+/**
+ * يحوّل حقول الاستخراج المهيكل إلى أسطر بنفس تسميات receipt-judge-core
+ * حتى تُدمج في نص الفحص بنفس صيغة إشعار حقيقي — بلا تغيير في منطق الحكم.
+ */
+function structuredFieldsToLines(data: Record<string, any>): string[] {
+  const value = (key: string): string => {
+    const raw = data?.[key];
+    if (raw === null || raw === undefined) return "";
+    return String(raw).trim().slice(0, 120);
+  };
+  const lines: string[] = [];
+  const bank = value("bank");
+  if (bank) lines.push(`البنك: ${bank}`);
+  const type = value("transaction_type");
+  if (type) lines.push(`نوع العملية: ${type}`);
+  const txId = value("transaction_id");
+  if (txId) lines.push(`رقم العملية: ${txId}`);
+  const reference = value("reference");
+  if (reference && reference !== txId) lines.push(`المرجع: ${reference}`);
+  const amount = value("amount");
+  if (amount) lines.push(`المبلغ: ${amount} ${value("currency")}`.trim());
+  const status = value("status");
+  if (status) lines.push(`الحالة: ${status}`);
+  const datetime = [value("date"), value("time")].filter(Boolean).join(" ");
+  if (datetime) lines.push(`التاريخ: ${datetime}`);
+  const toAccount = value("receiver_account");
+  if (toAccount) lines.push(`الى حساب: ${toAccount}`);
+  const fromAccount = value("sender_account");
+  if (fromAccount) lines.push(`من حساب: ${fromAccount}`);
+  const sender = value("sender_name");
+  if (sender) lines.push(`اسم المرسل: ${sender}`);
+  const receiver = value("receiver_name");
+  if (receiver) lines.push(`اسم المستفيد: ${receiver}`);
+  const phone = value("phone");
+  if (phone) lines.push(`رقم الهاتف: ${phone}`);
+  return lines;
+}
+
+function sanitizeStructuredFields(data: Record<string, any>): Record<string, string> {
+  const out: Record<string, string> = {};
+  const keys = [
+    "bank", "transaction_type", "amount", "currency", "sender_name", "receiver_name",
+    "sender_account", "receiver_account", "phone", "transaction_id", "reference",
+    "date", "time", "status",
+  ];
+  for (const key of keys) {
+    const raw = data?.[key];
+    if (raw === null || raw === undefined || raw === "") continue;
+    out[key] = String(raw).trim().slice(0, 200);
+  }
+  return out;
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Supabase + الحفظ
+// ═════════════════════════════════════════════════════════════════════════
 function authToken(request: Request): string {
   const header = request.headers.get("Authorization") || "";
   return header.startsWith("Bearer ") ? header.slice(7).trim() : "";
@@ -292,7 +551,17 @@ async function enforceRateLimit(admin: any, userId: string): Promise<boolean> {
   return (count || 0) < MAX_SCANS_PER_WINDOW;
 }
 
-async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Array, options: ScanOptions, result: ScanResult, model: string | null, rawText: string, expectedMethod?: ExpectedMethod) {
+async function saveScan(
+  admin: any,
+  userId: string,
+  hash: string,
+  bytes: Uint8Array,
+  options: ScanOptions,
+  result: ScanResult,
+  diagnostics: GeminiDiagnostics,
+  rawText: string,
+  expectedMethod?: ExpectedMethod,
+) {
   const extracted = result.extracted || {};
   const scanPayload = {
     user_id: userId,
@@ -325,7 +594,11 @@ async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Ar
       expected_method_name: expectedMethod ? expectedMethod.name : null,
       engine_source: "supabase_edge",
       engine_version: result.version || 4,
-      model,
+      model: diagnostics.chosen || null,
+      model_order_source: diagnostics.orderSource,
+      models_tried: diagnostics.attempts,
+      gemini_models: diagnostics.models,
+      extracted_fields: result.extractedFields || null,
       raw_text_excerpt: rawText.slice(0, 3000),
     },
     expires_at: new Date(Date.now() + SCAN_TTL_MINUTES * 60_000).toISOString(),
@@ -340,15 +613,18 @@ async function saveScan(admin: any, userId: string, hash: string, bytes: Uint8Ar
   return data;
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// مسار الفحص
+// ═════════════════════════════════════════════════════════════════════════
 async function processScan(request: Request, admin: any, userId: string, body: any): Promise<ScanResult> {
   let image: ParsedImage;
   try {
     image = parseImagePayload(body?.imageBase64, body?.mimeType);
   } catch (error) {
     const code = String((error as any)?.message || "invalid_image_input");
-    if (code === "image_too_large") return softReview(code, "حجم الصورة أكبر من 5 ميجابايت. ارفع صورة JPG أو PNG أو WEBP أصغر.");
-    if (code === "invalid_base64") return softReview(code, "تعذّر قراءة الصورة المرسلة. أعد اختيار الملف.");
-    return softReview("invalid_image_input", "صيغة الصورة غير صالحة. ارفع JPG أو PNG أو WEBP.");
+    if (code === "image_too_large") return smartReview(code, "حجم الصورة أكبر من 5 ميجابايت. ارفع صورة JPG أو PNG أو WEBP أصغر.");
+    if (code === "invalid_base64") return smartReview(code, "تعذّر قراءة الصورة المرسلة. أعد اختيار الملف.");
+    return smartReview("invalid_image_input", "صيغة الصورة غير صالحة. ارفع JPG أو PNG أو WEBP.");
   }
   const imageBase64 = image.base64;
   const mimeType = image.mimeType;
@@ -386,30 +662,37 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     } catch (_) { /* بدون بيانات وسيلة — الفحص يكمل بالمنطق القديم */ }
   }
   const apiKey = env("GEMINI_API_KEY");
-  if (!apiKey) return softReview("gemini_not_configured", "محرك الفحص الخادمي غير مُفعّل حالياً. لم يُنشأ أي طلب.");
+  if (!apiKey) return smartReview("gemini_not_configured", "محرك الفحص الخادمي غير مُفعّل حالياً. لم يُنشأ أي طلب.");
+
+  const diagnostics: GeminiDiagnostics = { models: [], orderSource: "unknown", chosen: null, attempts: [] };
+  const resolved = await resolveGeminiModels(apiKey);
+  diagnostics.models = resolved.models;
+  diagnostics.orderSource = resolved.source;
+  const deadline = Date.now() + GEMINI_TOTAL_BUDGET_MS;
 
   let rawText = "";
-  let usedModel: string | null = null;
   try {
-    const first = await extractTextWithGemini(imageBase64, mimeType, apiKey);
+    const first = await extractTextWithGemini(imageBase64, mimeType, apiKey, resolved.models, deadline);
+    diagnostics.chosen = first.model;
+    diagnostics.attempts = first.attempts.slice();
     rawText = first.text;
-    usedModel = first.model;
     const extraBase64 = cleanBase64(body?.imageBase64Extra);
-    let extraImage: ParsedImage | null = null;
     if (extraBase64) {
+      let extraImage: ParsedImage;
       try {
         extraImage = parseImagePayload(extraBase64, body?.mimeTypeExtra);
       } catch (error) {
         const code = String((error as any)?.message || "invalid_image_input");
-        if (code === "image_too_large") return softReview(code, "حجم الصورة الإضافية أكبر من 5 ميجابايت. ارفع صورة أصغر.");
-        return softReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
+        if (code === "image_too_large") return smartReview(code, "حجم الصورة الإضافية أكبر من 5 ميجابايت. ارفع صورة أصغر.");
+        return smartReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
       }
-      const second = await extractTextWithGemini(extraImage.base64, extraImage.mimeType, apiKey);
+      const second = await extractTextWithGemini(extraImage.base64, extraImage.mimeType, apiKey, resolved.models, deadline);
       rawText += `\n${second.text}`;
     }
   } catch (error) {
     const safeError = String((error as any)?.message || "unknown").replace(/\s+/g, " ").slice(0, 240);
     console.error("[RAIZEY] Gemini receipt OCR failed", safeError);
+    if (Array.isArray((error as any)?.attempts)) diagnostics.attempts = (error as any).attempts;
     if ((error as any)?.code === "no_visible_text") {
       const rejected = ReceiptJudgeCore.blankResult() as ScanResult;
       rejected.decision = "reject";
@@ -419,10 +702,10 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       rejected.source = "edge";
       rejected.submissionAllowed = false;
       rejected.mimeType = mimeType;
-      const scan = await saveScan(admin, userId, hash, bytes, options, rejected, usedModel, "");
+      const scan = await saveScan(admin, userId, hash, bytes, options, rejected, diagnostics, "");
       return { ...rejected, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
     }
-    const technical = softReview(
+    const technical = smartReview(
       String((error as any)?.message || "").startsWith("timeout:") ? "server_ocr_timeout" : "server_ocr_failed",
       "تعذّر تشغيل الفحص الخادمي مؤقتاً. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.",
     );
@@ -432,9 +715,9 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     technical.extracted = {
       ...(technical.extracted || {}),
       server_error_code: safeError,
-      gemini_attempts: (error as any)?.attempts || null,
+      gemini_attempts: diagnostics.attempts,
     };
-    const scan = await saveScan(admin, userId, hash, bytes, options, technical, usedModel, "");
+    const scan = await saveScan(admin, userId, hash, bytes, options, technical, diagnostics, "");
     return { ...technical, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
   }
 
@@ -458,7 +741,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       const extraImage = parseImagePayload(extraBase64, body?.mimeTypeExtra);
       imageParts.push({ inline_data: { mime_type: extraImage.mimeType, data: extraImage.base64 } });
     } catch (_) {
-      return softReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
+      return smartReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
     }
   }
 
@@ -474,31 +757,31 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     !riskFlags.includes("not_a_receipt") &&
     !riskFlags.some((f) => String(f).startsWith("failed_transaction"));
 
+  // ── الاستخراج المهيكل + التحكيم الثاني ──
+  // يُشغَّل عندما لا يصل الحكم الحتمي إلى نتيجة واثقة (قبول تلقائي بمرجع
+  // ومبلغ مؤكدين)، أو على رفض amount_mismatch (المهمة 37). حقوله تُدمج في
+  // نص الفحص بأسطر بنفس تسميات receipt-judge-core، لذا لا يتغيّر منطق
+  // القرار — يتحسّن فقط ما يقرأه من بيانات.
   const needsArbitration =
     !((result.decision === "accept" || result.decision === "review_admin") &&
       result.refVerified && result.amountVerified) &&
     (result.decision !== "reject" || isAmountMismatchReject);
   if (needsArbitration) {
     try {
-      const arbitration = await structuredPass(imageParts, apiKey);
+      const arbitration = await structuredPass(imageParts, apiKey, resolved.models, deadline);
       const d = arbitration.data || {};
-      const lines = [
-        d.bank ? `البنك: ${d.bank}` : "",
-        d.status ? `الحالة: ${d.status}` : "",
-        d.transaction_number ? `رقم العملية: ${d.transaction_number}` : "",
-        d.amount ? `المبلغ: ${d.amount} ${d.currency || ""}` : "",
-        d.datetime ? `التاريخ: ${d.datetime}` : "",
-        d.to_account ? `إلى حساب: ${d.to_account}` : "",
-      ].filter(Boolean).join("\n");
-      if (lines) {
-        rawText += `\n${lines}`;
+      result.extractedFields = sanitizeStructuredFields(d);
+      const lines = structuredFieldsToLines(d);
+      if (lines.length) {
+        rawText += `\n${lines.join("\n")}`;
         result = ReceiptJudgeCore.judge(
           ReceiptJudgeCore.buildContext([rawText], judgeOptions),
           judgeOptions,
           ReceiptJudgeCore.blankResult(),
         ) as ScanResult;
         result.passes = 2;
-        result.arbitration = { model: arbitration.model, extracted: d };
+        result.extractedFields = sanitizeStructuredFields(d);
+        result.arbitration = { model: arbitration.model, extracted: result.extractedFields };
         // علامة تشخيصية: التحكيم طُبّق على قرار رفض (المهمة 37)
         if (isAmountMismatchReject) {
           result.riskFlags = (result.riskFlags || []).concat(["arbitration_on_reject"]);
@@ -509,12 +792,12 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     }
   }
   result.source = "edge";
-  result.model = usedModel;
+  result.model = diagnostics.chosen;
   result.mimeType = mimeType;
   result.confidence = rawText.trim().length > 20 ? 90 : null;
   result.textLength = rawText.length;
   result.submissionAllowed = result.decision !== "reject";
-  const scan = await saveScan(admin, userId, hash, bytes, options, result, usedModel, rawText, expectedMethod);
+  const scan = await saveScan(admin, userId, hash, bytes, options, result, diagnostics, rawText, expectedMethod);
   return { ...result, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
 }
 

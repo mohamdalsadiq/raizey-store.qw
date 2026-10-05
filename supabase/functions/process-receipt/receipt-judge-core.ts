@@ -511,6 +511,23 @@ const ReceiptJudgeCore = (() => {
    *   8 → رمز مختلط مثل FT2507191234
    *   4 → أي سلسلة أرقام طويلة
    */
+  /**
+   * قيمة رقم العملية كما يجب حفظها:
+   *   - أرقام مراجع السودان كثيراً ما تبدأ بحروف (FT250719123456 / BOK...)،
+   *     وتصحيح لبس الأرقام (O→0، I→1، T→7) لو طُبّق على البادئة الأبجدية
+   *     لأفسدها (FT → F7) فصار المرجع المخزَّن لا يطابق ما كتبه العميل في
+   *     قاعدة البيانات ⇒ تدقيق إداري زائف لإيصال سليم.
+   *   - لذلك نفصل البادئة الأبجدية ونحفظها كما هي، ونطبّق التصحيح على بقية
+   *     الرمز فقط (حيث يكون الخلط بين 0/O و1/I شائعاً).
+   */
+  function refCandidateValue(token) {
+    const t = String(token || '');
+    const match = t.match(/^([a-z]*)(.*)$/i);
+    const prefix = (match && match[1]) || '';
+    const rest = (match && match[2]) || '';
+    return (prefix ? prefix.toUpperCase() : '') + fixOcrDigits(rest);
+  }
+
   function extractTxRef(lines, joinedText, provider) {
     const refLabels = REF_LABELS.map(normalizeText);
     const candidates = [];
@@ -523,15 +540,15 @@ const ReceiptJudgeCore = (() => {
       const after = line.slice(hit.index + hit.label.length);
       const inline = after.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || [];
       for (const tok of inline) {
-        const fixed = fixOcrDigits(tok);
-        if (digitsOnly(fixed).length >= 6) candidates.push({ value: fixed, weight: 10, labelled: true });
+        const value = refCandidateValue(tok);
+        if (digitsOnly(value).length >= 6) candidates.push({ value, weight: 10, labelled: true });
       }
       if (!inline.length) {
         const next = lines[i + 1] || '';
         const nx = next.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || [];
         for (const tok of nx) {
-          const fixed = fixOcrDigits(tok);
-          if (digitsOnly(fixed).length >= 6) candidates.push({ value: fixed, weight: 9, labelled: true });
+          const value = refCandidateValue(tok);
+          if (digitsOnly(value).length >= 6) candidates.push({ value, weight: 9, labelled: true });
         }
       }
     }

@@ -420,6 +420,10 @@ async function runWalletReceiptScan() {
       expectedAmount: amount,
       manualRef,
       expectedAccount: method ? method.account_number : null,
+      // مثل checkout-v2: تُمرَّر هوية الوسيلة للسيرفر حتى يُتحقق من BIN واسم
+      // صاحب الحساب على الخادم (المهمة 35)؛ القيم نفسها تُقرأ من قاعدة
+      // البيانات هناك لا من المتصفح.
+      expectedMethodId: method ? method.id : null,
       onStatus: (text) => { status.textContent = text; },
       onServerError: (error) => { status.textContent = 'تعذّر الفحص الخادمي؛ لم يُنشأ أي طلب. أعد المحاولة.'; console.warn('[RAIZEY] wallet edge scan failed:', error?.message || error); }
     });

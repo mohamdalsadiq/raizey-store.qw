@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "npx --yes serve . -p 3000",
-    "start": "npx --yes serve . -p 3000"
+    "start": "npx --yes serve . -p 3000",
+    "test": "node scripts/test_receipt_pipeline.mjs && node scripts/test_receipt_judge.mjs",
+    "test:edge": "bun scripts/test_process_receipt_edge.mjs"
   }
 }
