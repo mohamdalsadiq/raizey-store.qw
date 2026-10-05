@@ -886,15 +886,17 @@ const ReceiptJudgeCore = (() => {
     const expectedMethod = options.expectedMethod || null;
     if (expectedMethod) {
       const toAcct = digitsOnly(result.extracted.toAccount || '');
-      // المهمة 35 (محدّثة): أرقام حسابات البنك كاملة (7 خانات) — مطابقة تامة
-      // وليست بادئة فقط. الرقم يظهر في الإيصال تحت "الى حساب".
-      const bankAccounts = String(expectedMethod.bin_prefixes || '')
-        .split(/[,;\s]+/).map(digitsOnly).filter(b => b.length >= 4);
-      if (bankAccounts.length > 0 && toAcct) {
-        const acctOk = bankAccounts.some(b => toAcct === b);
-        if (!acctOk) result.riskFlags.push('bin_mismatch');
+      // المهمة 35 (محدّثة): رقم BIN الكامل للبنك (17 خانة مثلاً) — رقم الحساب
+      // (7 خانات) مضمّن في وسطه، والأول/الأخير ثابت لكل بنك.
+      // التحقق: رقم "الى حساب" في الإيصال يجب أن يطابق الـ BIN — إما تطابقاً
+      // تاماً، أو أن يكون مضمّناً داخل الـ BIN المُسجّل، أو العكس.
+      const bankBins = String(expectedMethod.bin_prefixes || '')
+        .split(/[,;\s]+/).map(digitsOnly).filter(b => b.length >= 8);
+      if (bankBins.length > 0 && toAcct) {
+        const binOk = bankBins.some(b => toAcct === b || b.includes(toAcct) || toAcct.includes(b));
+        if (!binOk) result.riskFlags.push('bin_mismatch');
         result.extracted.binChecked = true;
-        result.extracted.binMatched = acctOk;
+        result.extracted.binMatched = binOk;
       }
       const holderName = String(expectedMethod.account_name || '').trim();
       if (holderName.length >= 3) {
@@ -1033,7 +1035,7 @@ const ReceiptJudgeCore = (() => {
       if (!provider) lowConfidence.push('مزوّد الإشعار غير معروف');
       // الطبقة الأولى (المهمة 35): هوية البنك — أي عدم تطابق يمنع القبول التلقائي
       const bankIdentityFlags = [];
-      if (result.riskFlags.includes('bin_mismatch')) bankIdentityFlags.push('رقم حساب المستلم لا يطابق أياً من أرقام حسابات البنك المختار');
+      if (result.riskFlags.includes('bin_mismatch')) bankIdentityFlags.push('رقم الحساب في الإيصال لا يطابق رقم BIN البنك المختار');
       if (result.riskFlags.includes('beneficiary_name_unverified')) bankIdentityFlags.push('اسم صاحب الحساب غير مؤكد في الإشعار');
       if (result.riskFlags.includes('bank_provider_mismatch')) bankIdentityFlags.push('البنك الظاهر في الإيصال يخالف البنك المختار');
       const bankIdentityBad = bankIdentityFlags.length > 0;
