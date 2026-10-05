@@ -133,7 +133,8 @@
           mimeTypeExtra,
           expectedAmount: opts.expectedAmount,
           manualRef: opts.manualRef,
-          expectedAccount: opts.expectedAccount
+          expectedAccount: opts.expectedAccount,
+          expectedMethodId: opts.expectedMethodId || null
         }),
         signal: controller.signal
       });
