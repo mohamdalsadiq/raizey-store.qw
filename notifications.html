@@ -54,9 +54,9 @@ function render(notifications) {
     });
     return `
       <div class="order-card" style="${!n.is_read ? 'border-color:var(--primary);' : ''}">
-        <div class="order-product">${n.title}</div>
+        <div class="order-product">${escapeHtml(n.title)}</div>
         <div class="order-details" style="border-top:none; padding-top:6px; margin-top:6px;">
-          <div>${n.message}</div>
+          <div>${escapeHtml(n.message)}</div>
         </div>
         <div class="order-date">${date}</div>
       </div>
