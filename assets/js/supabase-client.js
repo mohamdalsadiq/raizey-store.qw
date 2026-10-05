@@ -107,6 +107,20 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
     }
   });
   window.supabaseClient = supabaseClient;
+
+  // إصلاح تدفق استعادة كلمة السر: رابط الاستعادة في الإيميل يهبط على
+  // الصفحة الرئيسية (Site URL) — نوجّهه لصفحة تعيين كلمة السر الجديدة.
+  // يعمل مع detectSessionInUrl الذي يبادل الكود تلقائياً (PKCE).
+  try {
+    supabaseClient.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        const p = window.location.pathname || '';
+        if (!p.endsWith('reset-password.html')) {
+          window.location.href = 'reset-password.html';
+        }
+      }
+    });
+  } catch (_) { /* لا نكسر تحميل الصفحة */ }
 } else {
   devWarn('[RAIZEY] Supabase SDK not loaded');
   document.addEventListener('DOMContentLoaded', () => {
