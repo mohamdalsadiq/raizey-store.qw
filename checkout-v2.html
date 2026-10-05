@@ -1696,20 +1696,8 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   }
 
   try {
-    if (appliedCoupon && couponCode) {
-      const { data: couponAtomicData, error: couponAtomicErr } = await withNetTimeout(
-        supabaseClient.rpc('use_coupon_atomic', {
-          p_code: couponCode,
-          p_order_total: currentTotal()
-        }),
-        NET_TIMEOUT_MS.rpc, 'use_coupon'
-      );
-      if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-        failOrder('انتهت صلاحية كود الخصم أو نفدت كميته أو استخدمته من قبل.');
-        return;
-      }
-    }
-
+    // ملاحظة: استهلاك الكوبون يتم بعد نجاح إدخال الطلب (بالأسفل)،
+    // والـ trigger يتحقق من صلاحية الكوبون خادمياً عبر coupon_id.
     const ordersToInsert = [];
     for (const item of cart) {
       const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
@@ -1726,6 +1714,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         field_values:          item.field_values,
         field_labels:          item.field_labels || {},
         selected_option:       item.selected_option || null,
+        coupon_id:             appliedCoupon ? appliedCoupon.coupon_id : null,
         payment_type:          'bank',
         payment_method_id:     selectedMethodId,
         receipt_id:            receiptId,
@@ -1741,6 +1730,26 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       NET_TIMEOUT_MS.rpc, 'insert_orders'
     );
     if (orderError) throw orderError;
+
+    // استهلاك الكوبون بعد نجاح الطلب فقط — حتى لا يخسره الزبون عند فشل الإدخال.
+    // الـ trigger تحقق من صلاحيته وقت الإدخال، ففشل الاستهلاك هنا حالة نادرة
+    // لا يجب أن تُفشل طلباً سليماً.
+    if (appliedCoupon && couponCode) {
+      try {
+        const { data: couponAtomicData, error: couponAtomicErr } = await withNetTimeout(
+          supabaseClient.rpc('use_coupon_atomic', {
+            p_code: couponCode,
+            p_order_total: currentTotal()
+          }),
+          NET_TIMEOUT_MS.rpc, 'use_coupon'
+        );
+        if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
+          devWarn('[RAIZEY] coupon consumed-check failed after successful order:', couponCode);
+        }
+      } catch (couponErr) {
+        devWarn('[RAIZEY] coupon post-order consumption error:', couponErr);
+      }
+    }
 
     await finishSuccess(insertedOrders);
   } catch (err) {
