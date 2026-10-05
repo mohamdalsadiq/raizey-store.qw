@@ -931,8 +931,11 @@ const ReceiptJudgeCore = (() => {
       return result;
     }
 
-    result.refVerified = !!refMatch.matched;
-    result.amountVerified = !!amtMatch.matched;
+    // المهمة 38 — توحيد refVerified: المطابقة التقريبية (fuzzy) تُعتبر
+    // غير مؤكدة في كل الطبقات — تذهب للمراجعة اليدوية بدل القبول.
+    // هذا يطابق سلوك claim_payment_receipt في قاعدة البيانات (مساواة صارمة).
+    result.refVerified = !!refMatch.matched && !refMatch.fuzzy;
+    result.amountVerified = !!amtMatch.matched && !amtMatch.fuzzy;
     result.extracted.amount = amtMatch.matched
       ? (amtMatch.value !== null ? amtMatch.value : Math.round(expectedAmount))
       : (amtMatch.value !== null ? amtMatch.value : null);
