@@ -966,7 +966,8 @@ function attachCheckoutEvents(canUseWallet) {
       const scanOpts = {
         expectedAmount: currentTotal(),
         manualRef: savedTxRef,
-        expectedAccount: selectedMethodAccount
+        expectedAccount: selectedMethodAccount,
+        expectedMethodId: selectedMethodId
       };
 
       // الفحص الوحيد هو Edge Function الموثّق؛ لا يوجد OCR أو قرار مالي داخل المتصفح.
@@ -1251,7 +1252,8 @@ function attachCheckoutEvents(canUseWallet) {
     const opts = {
       expectedAmount: splitPayment.remaining,
       manualRef: splitPayment.secondRef,
-      expectedAccount: selectedMethodAccount
+      expectedAccount: selectedMethodAccount,
+      expectedMethodId: selectedMethodId
     };
     try {
       res = await serverVerify(f, opts, null);
