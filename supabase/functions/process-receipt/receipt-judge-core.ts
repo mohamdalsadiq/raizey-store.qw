@@ -971,21 +971,30 @@ const ReceiptJudgeCore = (() => {
     const severeDate = result.riskFlags.includes('very_stale_receipt');
 
     if (result.refVerified && result.amountVerified) {
-      if (!dateNeedsAdmin) {
+      // سياسة صارمة (المهمة 3): عدم التحقق من الحساب المستلم يمنع القبول
+      // التلقائي أبداً — مهاجم قد يحوّل المبلغ الصحيح لحسابه الخاص ويرفع
+      // الإشعار الحقيقي، فيظهر رقم العملية والمبلغ مطابقين.
+      const destUnverified = result.riskFlags.includes('destination_account_unverified');
+      if (!dateNeedsAdmin && !destUnverified) {
         result.decision = 'accept';
         result.ocrStatus = 'passed';
         result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
       } else {
         result.decision = 'review_admin';
         result.ocrStatus = 'needs_admin_check';
-        result.reviewSeverity = severeDate ? 'high' : 'normal';
-        const ageTxt = (ageDays !== null && ageDays > 0)
-          ? Math.round(ageDays) + ' يوم'
-          : 'تاريخ غير متوافق';
-        result.reviewReason = result.riskFlags.includes('future_dated_receipt')
-          ? 'تاريخ الإشعار مستقبلي — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)'
-          : `إشعار قديم (${ageTxt}) — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)`;
-        result.message = 'تم قبول الإيصال ✓ — طلبك يحتاج تدقيقاً إضافياً من الإدارة لأن تاريخ الإشعار قديم. سيتم تنفيذه خلال دقائق.';
+        result.reviewSeverity = (severeDate || destUnverified) ? 'high' : 'normal';
+        if (destUnverified) {
+          result.reviewReason = 'تعذّر التحقق من وصول المبلغ إلى حساب المتجر — تدقيق إداري مشدّد مطلوب (رقم العملية والمبلغ مطابقان)';
+          result.message = 'إيصالك قيد التدقيق الإداري للتأكد من وصول المبلغ إلى حساب المتجر — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
+        } else {
+          const ageTxt = (ageDays !== null && ageDays > 0)
+            ? Math.round(ageDays) + ' يوم'
+            : 'تاريخ غير متوافق';
+          result.reviewReason = result.riskFlags.includes('future_dated_receipt')
+            ? 'تاريخ الإشعار مستقبلي — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)'
+            : `إشعار قديم (${ageTxt}) — يحتاج تدقيقاً إدارياً (رقم العملية والمبلغ مطابقان)`;
+          result.message = 'تم قبول الإيصال ✓ — طلبك يحتاج تدقيقاً إضافياً من الإدارة لأن تاريخ الإشعار قديم. سيتم تنفيذه خلال دقائق.';
+        }
       }
     } else {
       result.decision = 'review';

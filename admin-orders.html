@@ -365,6 +365,23 @@ function renderOrderCard(o) {
     scanRows.push(`حالة الفحص: ${o.ocr_status}`);
   }
 
+  // ── إبراز الرايات الحرجة (المهمة 3): تنبيه أحمر صريح لا يمكن تفويته ──
+  const CRITICAL_FLAG_LABELS = {
+    destination_account_unverified: 'المبلغ قد لا يكون وصل حساب المتجر — تحقق يدوياً قبل التنفيذ!',
+    ref_conflict: 'تعارض في رقم العملية — تحقق يدوياً قبل التنفيذ!',
+    editor_signature: 'بصمة محرر صور في الإشعار — تحقق يدوياً قبل التنفيذ!',
+    amount_mismatch: 'المبلغ غير مطابق — تحقق يدوياً قبل التنفيذ!'
+  };
+  const criticalHits = flags.filter((f) => CRITICAL_FLAG_LABELS[f]);
+  const criticalFlagsHtml = criticalHits.length
+    ? `<div style="margin:6px 0 2px;display:flex;flex-direction:column;gap:4px;">` +
+      criticalHits.map((f) =>
+        `<span style="background:rgba(239,68,68,.12);color:var(--danger);border:1px solid var(--danger);` +
+        `border-radius:8px;padding:4px 10px;font-weight:800;font-size:12.5px;">` +
+        `⚠ ${escapeHtml(CRITICAL_FLAG_LABELS[f])} <span style="font-weight:400;opacity:.75;">(${escapeHtml(f)})</span></span>`
+      ).join('') + `</div>`
+    : '';
+
   const reviewHtml = needsAdmin ? `
     <div style="margin-top:10px; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.7;
                 border:1px solid ${severity === 'high' ? 'var(--danger)' : '#c98a1f'};
@@ -373,9 +390,11 @@ function renderOrderCard(o) {
         <i class="fas fa-user-shield"></i> يحتاج تدقيق${severity === 'high' ? ' — تنبيه مشدّد' : ''}
       </strong>
       ${reviewReason ? `<div style="margin-top:4px;">${escapeHtml(reviewReason)}</div>` : ''}
+      ${criticalFlagsHtml}
       ${scanRows.length ? `<div style="margin-top:6px; color:var(--text-muted);">${scanRows.map(escapeHtml).join('<br>')}</div>` : ''}
-    </div>` : (scanRows.length ? `
+    </div>` : (scanRows.length || criticalFlagsHtml ? `
     <div style="margin-top:10px; font-size:12px; color:var(--text-muted); line-height:1.7;">
+      ${criticalFlagsHtml}
       ${scanRows.map(escapeHtml).join('<br>')}
     </div>` : '');
 
