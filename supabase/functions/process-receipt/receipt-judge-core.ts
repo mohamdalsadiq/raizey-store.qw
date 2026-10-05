@@ -975,7 +975,14 @@ const ReceiptJudgeCore = (() => {
       // التلقائي أبداً — مهاجم قد يحوّل المبلغ الصحيح لحسابه الخاص ويرفع
       // الإشعار الحقيقي، فيظهر رقم العملية والمبلغ مطابقين.
       const destUnverified = result.riskFlags.includes('destination_account_unverified');
-      if (!dateNeedsAdmin && !destUnverified) {
+      // سياسة صارمة (المهمة 7): القبول التلقائي حصري للإيصالات عالية الثقة.
+      // أي إشارة عدم يقين — مطابقة تقريبية، غياب تأكيد صريح للنجاح، أو مزوّد
+      // غير معروف — تُحوَّل إلى تدقيق إداري بدل القبول التلقائي. لا يُقبل افتراضياً.
+      const lowConfidence = [];
+      if (refMatch.fuzzy || amtMatch.fuzzy) lowConfidence.push('مطابقة تقريبية لرقم العملية أو المبلغ');
+      if (result.extracted.statusOk !== true) lowConfidence.push('لا يوجد تأكيد صريح لنجاح العملية في الإشعار');
+      if (!provider) lowConfidence.push('مزوّد الإشعار غير معروف');
+      if (!dateNeedsAdmin && !destUnverified && lowConfidence.length === 0) {
         result.decision = 'accept';
         result.ocrStatus = 'passed';
         result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
@@ -986,6 +993,9 @@ const ReceiptJudgeCore = (() => {
         if (destUnverified) {
           result.reviewReason = 'تعذّر التحقق من وصول المبلغ إلى حساب المتجر — تدقيق إداري مشدّد مطلوب (رقم العملية والمبلغ مطابقان)';
           result.message = 'إيصالك قيد التدقيق الإداري للتأكد من وصول المبلغ إلى حساب المتجر — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
+        } else if (lowConfidence.length > 0) {
+          result.reviewReason = 'ثقة غير كافية للقبول التلقائي (' + lowConfidence.join('؛ ') + ') — رقم العملية والمبلغ مطابقان';
+          result.message = 'إيصالك قيد التدقيق الإداري للتأكد من بيانات الإشعار — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.';
         } else {
           const ageTxt = (ageDays !== null && ageDays > 0)
             ? Math.round(ageDays) + ' يوم'
