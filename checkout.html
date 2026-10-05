@@ -978,6 +978,13 @@ function attachCheckoutEvents(canUseWallet) {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
           console.warn('[RAIZEY] secure receipt verification failed:', serverErr && serverErr.message);
+          const errMsg = String(serverErr && serverErr.message || '');
+          // انتهاء الجلسة سبب شائع للفشل الفوري — وجّه المستخدم لتسجيل الدخول بدل رسالة مبهمة
+          if (errMsg === 'auth_required' || errMsg === 'supabase_client_missing') {
+            const r = softReview('auth_required');
+            r.message = 'انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد رفع الإيصال.';
+            return r;
+          }
           return softReview('server_ocr_failed');
         }
       })();
