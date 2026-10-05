@@ -886,13 +886,15 @@ const ReceiptJudgeCore = (() => {
     const expectedMethod = options.expectedMethod || null;
     if (expectedMethod) {
       const toAcct = digitsOnly(result.extracted.toAccount || '');
-      const bins = String(expectedMethod.bin_prefixes || '')
+      // المهمة 35 (محدّثة): أرقام حسابات البنك كاملة (7 خانات) — مطابقة تامة
+      // وليست بادئة فقط. الرقم يظهر في الإيصال تحت "الى حساب".
+      const bankAccounts = String(expectedMethod.bin_prefixes || '')
         .split(/[,;\s]+/).map(digitsOnly).filter(b => b.length >= 4);
-      if (bins.length > 0 && toAcct) {
-        const binOk = bins.some(b => toAcct.startsWith(b));
-        if (!binOk) result.riskFlags.push('bin_mismatch');
+      if (bankAccounts.length > 0 && toAcct) {
+        const acctOk = bankAccounts.some(b => toAcct === b);
+        if (!acctOk) result.riskFlags.push('bin_mismatch');
         result.extracted.binChecked = true;
-        result.extracted.binMatched = binOk;
+        result.extracted.binMatched = acctOk;
       }
       const holderName = String(expectedMethod.account_name || '').trim();
       if (holderName.length >= 3) {
@@ -1031,7 +1033,7 @@ const ReceiptJudgeCore = (() => {
       if (!provider) lowConfidence.push('مزوّد الإشعار غير معروف');
       // الطبقة الأولى (المهمة 35): هوية البنك — أي عدم تطابق يمنع القبول التلقائي
       const bankIdentityFlags = [];
-      if (result.riskFlags.includes('bin_mismatch')) bankIdentityFlags.push('بادئة BIN لحساب المستلم لا تطابق البنك المختار');
+      if (result.riskFlags.includes('bin_mismatch')) bankIdentityFlags.push('رقم حساب المستلم لا يطابق أياً من أرقام حسابات البنك المختار');
       if (result.riskFlags.includes('beneficiary_name_unverified')) bankIdentityFlags.push('اسم صاحب الحساب غير مؤكد في الإشعار');
       if (result.riskFlags.includes('bank_provider_mismatch')) bankIdentityFlags.push('البنك الظاهر في الإيصال يخالف البنك المختار');
       const bankIdentityBad = bankIdentityFlags.length > 0;

@@ -414,6 +414,8 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     );
     technical.serverErrorCode = safeError;
     technical.mimeType = mimeType;
+    // للتشخيص: يُحفظ سبب الفشل التقني في ocr_data ليراه الأدمن عند المراجعة
+    technical.extracted = { ...(technical.extracted || {}), server_error_code: safeError };
     const scan = await saveScan(admin, userId, hash, bytes, options, technical, usedModel, "");
     return { ...technical, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
   }
