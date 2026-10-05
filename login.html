@@ -209,6 +209,14 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+/* الدخول بـ OTP لا ينشئ حسابات — المستخدم يجب أن يكون مسجلاً مسبقاً (المهمة 5) */
+function isNoAccountError(err) {
+  const msg = String((err && (err.message || err.msg)) || '').toLowerCase();
+  const code = String((err && (err.code || err.error_code)) || '').toLowerCase();
+  return /user not found|not found|no user|user_not_found/.test(msg + ' ' + code)
+    || err?.status === 400 || err?.status === 404 || err?.status === 422;
+}
+
 otpModeBtn.addEventListener('click', async () => {
   clearMessages();
   const email = emailInput.value.trim();
@@ -220,7 +228,10 @@ otpModeBtn.addEventListener('click', async () => {
 
   UI.setLoading(otpModeBtn, true, 'جارِ إرسال الكود...');
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({ email });
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false }
+    });
     if (error) throw error;
     otpTargetEmail = email;
     otpCodeSub.textContent = 'أرسلنا كودًا من 6 أرقام إلى ' + email;
@@ -230,9 +241,13 @@ otpModeBtn.addEventListener('click', async () => {
     otpTimer.start(60);
     loginOtp.focus();
   } catch (err) {
-    errorBox.textContent = err && err.status === 429
-      ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
-      : 'تعذر إرسال كود الدخول الآن، حاول مرة أخرى';
+    if (err && err.status === 429) {
+      errorBox.textContent = 'محاولات كثيرة، حاول مرة أخرى بعد قليل';
+    } else if (isNoAccountError(err)) {
+      errorBox.innerHTML = 'لا يوجد حساب مسجل بهذا البريد. <a href="register.html" style="color:var(--primary);font-weight:700;">أنشئ حساباً جديداً</a>';
+    } else {
+      errorBox.textContent = 'تعذر إرسال كود الدخول الآن، حاول مرة أخرى';
+    }
   } finally {
     UI.setLoading(otpModeBtn, false);
   }
@@ -273,7 +288,10 @@ otpResendBtn.addEventListener('click', async () => {
   clearMessages();
   otpTimer.start(60);
   try {
-    const { error } = await supabaseClient.auth.signInWithOtp({ email: otpTargetEmail });
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email: otpTargetEmail,
+      options: { shouldCreateUser: false }
+    });
     if (error) throw error;
   } catch (err) {
     errorBox.textContent = err && err.status === 429
