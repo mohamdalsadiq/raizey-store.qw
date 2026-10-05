@@ -459,9 +459,9 @@ async function handleAction(action, orderId) {
 
   const labels = { in_progress: 'تم تأكيد طلبك', completed: 'تم تنفيذ طلبك', cancelled: 'تم إلغاء طلبك' };
   const messages = {
-    in_progress: `طلبك (${order.product_name_snapshot}) قيد التنفيذ الآن.`,
-    completed: `طلبك (${order.product_name_snapshot}) اكتمل بنجاح.`,
-    cancelled: `طلبك (${order.product_name_snapshot}) تم إلغاؤه من الإدارة.`
+    in_progress: `طلبك #${order.order_code} (${order.product_name_snapshot}) قيد التنفيذ الآن.`,
+    completed: `طلبك #${order.order_code} (${order.product_name_snapshot}) اكتمل بنجاح.`,
+    cancelled: `طلبك #${order.order_code} (${order.product_name_snapshot}) تم إلغاؤه من الإدارة.`
   };
   await notifyCustomer(order.user_id, labels[nextStatus], messages[nextStatus]);
   await logAudit(labels[nextStatus], { order_id: orderId, product: order.product_name_snapshot });
