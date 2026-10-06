@@ -31,7 +31,7 @@ const FN_URL = arg(
   "fn-url",
   "https://rglbfizqolrenwfsndyv.supabase.co/functions/v1/process-receipt",
 );
-const WANTED = arg("cases", "bankak,ocash,fawry,wrong_amount,wrong_ref,invalid,auth").split(",");
+const WANTED = arg("cases", "bankak,ocash,fawry,ocash_variant,wrong_amount,wrong_ref,invalid,auth").split(",");
 
 // معرّفات وسائل الدفع الحقيقية في القاعدة (تُجلب من payment_methods)
 const METHOD_BANKAK = "b53c0263-8286-4ca9-98a7-2bd9bc668e79";
@@ -40,6 +40,12 @@ const METHOD_OCASH = "de4cc79b-df0c-448b-8c97-b22f9e8d4b2a";
 const CASES = {
   bankak: { file: "bankak.png", amount: 125000, ref: "FT250719123456", method: METHOD_BANKAK, expect: "accept" },
   ocash: { file: "ocash.png", amount: 48500, ref: "121004123456789", method: METHOD_OCASH, expect: "accept" },
+  // نفس حقول إيصال أوكاش لكن ببصمة صورة مختلفة: يفرض فحصاً كاملاً جديداً
+  // (منع إعادة الاستخدام يمنع إعادة فحص نفس البصمة) فيقيس المسار الحقيقي.
+  ocash_variant: { file: "ocash_variant.png", amount: 48500, ref: "121004123456789", method: METHOD_OCASH, expect: "accept" },
+  // ترتيب أسطر يفرض ظهور التاريخ كمرشّح موسوم (نفس ما حدث في الإنتاج): يجب أن
+  // يُخزَّن رقم العملية الموثّق في tx_ref_ocr، لا التاريخ.
+  ocash_split: { file: "ocash_split.png", amount: 48500, ref: "121004123456789", method: METHOD_OCASH, expect: "accept" },
   fawry: { file: "fawry.png", amount: 23750, ref: "987654321012", method: null, expect: "accept" },
   // صورة إيصال سليمة لكن المبلغ المعلن مختلف ⇒ يجب الرفض (لا يمرر كما لو كان مدفوعاً)
   wrong_amount: { file: "bankak.png", amount: 999, ref: "FT250719123456", method: METHOD_BANKAK, expect: "reject" },
@@ -109,7 +115,7 @@ for (const name of WANTED) {
     console.log(
       `      provider=${json?.provider || "-"} amount=${json?.amountDetected ?? json?.extracted?.amount ?? "-"} ` +
         `ref=${json?.extracted?.txRef ?? json?.txRefOcr ?? "null"} model=${json?.model || "-"} ` +
-        `rawExcerpt=${(json?.rawExcerpt || "").length}ch flags=[${flags}]`,
+        `rawExcerpt=${(json?.rawExcerpt || "").length}ch flags=[${flags}] reused=${json?.ocrReused === true}`,
     );
   } else {
     console.log(`      body=${JSON.stringify(json)}`);

@@ -8,6 +8,11 @@
  *   - التبديل بين النماذج عند 404/503/400
  *   - إعادة المحاولة بلا thinkingConfig عند 400 INVALID_ARGUMENT
  *   - انتهاء المهلة عبر AbortController حقيقي
+ *   - ترتيب flash-lite أولاً (قياس: ~55% توكنات أقل بنفس الدقة)
+ *   - إعادة المحاولة عند 429/503 بدل الفشل الفوري
+ *   - إعادة استخدام فحص سابق لنفس البصمة والمدخلات (بلا استدعاء AI)
+ *   - فلاتر IS NULL في منع التكرار (eq.null يُرجع 400 من PostgREST)
+ *   - تخزين رقم العملية الذي وثّقه القرار في tx_ref_ocr (لا التاريخ)
  *   - فشل كل النماذج → review (والدالة لا تنهار)
  *   - صورة بلا نص → reject not_a_receipt
  *   - JWT مفقود/غير صالح → 401
@@ -78,13 +83,27 @@ function createAdminMock(state) {
     const selectResult = table === "payment_methods"
       ? { data: state.paymentMethod || null, error: null }
       : { count: state.scanCount || 0, data: null, error: null };
+    // تُسجَّل كل الفلاتر حتى نتحقق من *شكل* استعلام منع التكرار: PostgREST
+    // يردّ 400 على eq.null في الأعمدة الرقمية، فيجب أن يكون IS NULL صريحاً.
+    const record = (op) => (column, value) => {
+      state.filters.push({ op, table, column, value });
+      return q;
+    };
     const q = {
       select: () => q,
-      eq: () => q,
-      gte: () => q,
+      eq: record("eq"),
+      gte: record("gte"),
+      gt: record("gt"),
+      is: record("is"),
       order: () => q,
       limit: () => q,
-      maybeSingle: async () => selectResult,
+      maybeSingle: async () => {
+        // استعلام إعادة استخدام فحص سابق (findReusableScan) يستخدم maybeSingle
+        if (table === "receipt_scan_results" && state.reusableScan) {
+          return { data: state.reusableScan, error: null };
+        }
+        return selectResult;
+      },
       single: async () => selectResult,
       then: (resolve, reject) => Promise.resolve(selectResult).then(resolve, reject),
       insert: (payload) => {
@@ -134,8 +153,22 @@ function validBankakText() {
   ].join("\n");
 }
 
+// usageMetadata مرفقة بنفس شكل رد Google الفعلي، حتى يُختبر *حساب* الاستهلاك
+// (ocr_data.tokens) لا مجرد وجود الحقل.
 function geminiTextResponse(text) {
-  return { candidates: [{ content: { parts: [{ text }] }, finishReason: "STOP" }] };
+  return {
+    candidates: [{ content: { parts: [{ text }] }, finishReason: "STOP" }],
+    usageMetadata: {
+      promptTokenCount: 1099,
+      candidatesTokenCount: 200,
+      thoughtsTokenCount: 0,
+      totalTokenCount: 1299,
+      promptTokensDetails: [
+        { modality: "TEXT", tokenCount: 10 },
+        { modality: "IMAGE", tokenCount: 1089 },
+      ],
+    },
+  };
 }
 function geminiEmptyResponse() {
   return { candidates: [{ content: { parts: [] }, finishReason: "STOP" }] };
@@ -146,6 +179,7 @@ function httpResponse(status, body) {
 
 const MODEL_LIST_BODY = {
   models: [
+    { name: "models/gemini-3.1-flash-lite", supportedGenerationMethods: ["generateContent"] },
     { name: "models/gemini-3.5-flash", supportedGenerationMethods: ["generateContent"] },
     { name: "models/gemini-2.5-flash", supportedGenerationMethods: ["generateContent"] },
     { name: "models/gemini-4.0-flash-preview", supportedGenerationMethods: ["generateContent"] },
@@ -156,8 +190,8 @@ const MODEL_LIST_BODY = {
 };
 
 /** ينفّذ فحصاً واحداً ببديل Supabase/Gemini مخصّص ويعيد النتيجة والحالة. */
-async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = null, fetchHandler, expectStatus }) {
-  const state = { inserted: [], scanCount, paymentMethod };
+async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = null, reusableScan = null, fetchHandler, expectStatus }) {
+  const state = { inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
   globalThis.__raizeyCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
     GEMINI_API_KEY: API_KEY,
@@ -204,10 +238,16 @@ console.log("\n── اكتشاف النماذج والترتيب ──");
   });
   check("result ok", result.json.ok, true);
   check("decision accept", result.json.decision, "accept");
-  check("chosen model is latest stable flash", generatedModels[0], "gemini-3.5-flash");
+  // القياس يحكم: flash-lite يقرأ نفس الإيصال بنفس الدقة بـ~55% استهلاكاً أقل
+  // (بلا توكنات تفكير)، فهو الخيار الأول — وflash العادي احتياط.
+  check("chosen model is the cheapest accurate class (flash-lite)", generatedModels[0], "gemini-3.1-flash-lite");
   const ocrData = result.state.inserted[0].payload.ocr_data;
   check("model order source", ocrData.model_order_source, "discovery");
-  check("embedding/image/gemma excluded", ocrData.gemini_models.join("|"), "gemini-3.5-flash|gemini-2.5-flash|gemini-4.0-flash-preview");
+  check(
+    "embedding/image/gemma excluded + flash-lite ranked first",
+    ocrData.gemini_models.join("|"),
+    "gemini-3.1-flash-lite|gemini-3.5-flash|gemini-2.5-flash|gemini-4.0-flash-preview",
+  );
   check("preview ranked below stable", ocrData.gemini_models.indexOf("gemini-3.5-flash") < ocrData.gemini_models.indexOf("gemini-4.0-flash-preview"), true);
   check("provider detected", result.json.provider, "bankak");
   check("api key not in any URL", fetchedUrls.some((u) => u.includes(API_KEY)), false);
@@ -216,6 +256,9 @@ console.log("\n── اكتشاف النماذج والترتيب ──");
   check("rawExcerpt returned", typeof result.json.rawExcerpt === "string", true);
   check("rawExcerpt within client cap", result.json.rawExcerpt.length <= 300, true);
   check("rawExcerpt carries OCR text", result.json.rawExcerpt.includes("FT250719123456"), true);
+  // استهلاك الإيصال يُسجَّل فعلياً كي يمكن إثبات خفض التوكنات في الإنتاج.
+  check("token usage recorded per receipt", ocrData.tokens && ocrData.tokens.total, 1299);
+  check("image tokens recorded (main cost driver)", ocrData.tokens.image, 1089);
 }
 
 console.log("\n── rawExcerpt: بلا نص ⇒ null (لا كسر للعقد) ──");
@@ -235,19 +278,19 @@ console.log("\n── التهدئة: النموذج الميت/المزدحم �
   // 404 "no longer available to new users"، فكان يستهلك محاولة من محاولاتنا
   // المحدودة. الفحص: بعد فشل النموذج الأعلى ترتيباً، يجب أن يبدأ الطلب التالي
   // بالنموذج السليم مباشرة (مع بقاء الميت متاحاً كاحتياط أخير).
-  // نستخدم نفس قائمة النماذج المخزّنة مؤقتاً من فحص الاكتشاف أعلاه
-  // (gemini-3.5-flash ثم gemini-2.5-flash ثم gemini-4.0-flash-preview) ونحاكي
-  // بالضبط ما شوهد في الإنتاج: الأول مزدحم (503) والثاني ميت (404).
+  // نستخدم نفس قائمة النماذج المخزّنة مؤقتاً من فحص الاكتشاف أعلاه، ونحاكي
+  // بالضبط ما شوهد في الإنتاج: الخيار الأول مزدحم (503) والثاني ميت (404).
+  // الترتيب المرتّب: flash-lite ثم flash ثم flash ثم preview.
   const callOrder = [];
   const handler = async (url) => {
     const href = String(url);
     if (href.includes("/models?")) return httpResponse(200, MODEL_LIST_BODY);
     const model = href.match(/\/models\/([^:]+):generateContent/)[1];
     callOrder.push(model);
-    if (model === "gemini-3.5-flash") {
+    if (model === "gemini-3.1-flash-lite") {
       return httpResponse(503, { error: { message: "high demand", status: "UNAVAILABLE" } });
     }
-    if (model === "gemini-2.5-flash") {
+    if (model === "gemini-3.5-flash") {
       return httpResponse(404, { error: { message: "This model is no longer available to new users" } });
     }
     return httpResponse(200, geminiTextResponse(validBankakText()));
@@ -255,21 +298,21 @@ console.log("\n── التهدئة: النموذج الميت/المزدحم �
 
   const first = await runScan({ body: baseBody, fetchHandler: handler });
   check(
-    "cooldown: first request walks the ranked list (503 → 404 → success)",
+    "cooldown: first request retries 503 once, skips 404, then succeeds",
     callOrder.join(","),
-    "gemini-3.5-flash,gemini-2.5-flash,gemini-4.0-flash-preview",
+    "gemini-3.1-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash,gemini-2.5-flash",
   );
   check("cooldown: first request still succeeds on the fallback", first.json.decision, "accept");
 
   callOrder.length = 0;
   const second = await runScan({ body: baseBody, fetchHandler: handler });
-  check("cooldown: second request skips both cooled models", callOrder[0], "gemini-4.0-flash-preview");
+  check("cooldown: second request skips both cooled models", callOrder[0], "gemini-2.5-flash");
   check("cooldown: second request still accepted", second.json.decision, "accept");
   const listedModels = second.state.inserted[0].payload.ocr_data.gemini_models;
   check(
     "cooldown: cooled models kept but demoted to last resort",
-    listedModels.indexOf("gemini-4.0-flash-preview") < listedModels.indexOf("gemini-3.5-flash") &&
-      listedModels.indexOf("gemini-4.0-flash-preview") < listedModels.indexOf("gemini-2.5-flash"),
+    listedModels.indexOf("gemini-2.5-flash") < listedModels.indexOf("gemini-3.1-flash-lite") &&
+      listedModels.indexOf("gemini-2.5-flash") < listedModels.indexOf("gemini-3.5-flash"),
     true,
   );
 }
@@ -288,10 +331,12 @@ console.log("\n── التبديل بين النماذج (404 → 503 → نج
       return httpResponse(200, geminiTextResponse(validBankakText()));
     },
   });
-  check("tried all three models", seen.join(","), "gemini-dead-1,gemini-dead-2,gemini-alive");
+  // 503 يُعاد مرة واحدة على نفس النموذج، و404 لا يُعاد (عطل دائم).
+  check("503 retried once on the same model", seen.join(","), "gemini-dead-1,gemini-dead-2,gemini-dead-2,gemini-alive");
+  check("404 is not retried", seen.filter((m) => m === "gemini-dead-1").length, 1);
   check("decision accept after failover", result.json.decision, "accept");
   const attempts = result.state.inserted[0].payload.ocr_data.models_tried;
-  check("attempt diagnostics recorded", attempts.length, 3);
+  check("attempt diagnostics recorded", attempts.length, 4);
   check("failed attempts carry status", attempts[0].status, 404);
   check("order source is env", result.state.inserted[0].payload.ocr_data.model_order_source, "env");
 }
@@ -341,15 +386,162 @@ console.log("\n── انتهاء المهلة عبر AbortController حقيق�
 
 console.log("\n── فشل كل النماذج → review بلا انهيار ──");
 {
+  let calls = 0;
   const result = await runScan({
     body: baseBody,
     env: { GEMINI_MODEL_ORDER: "gemini-a,gemini-b" },
-    fetchHandler: async () => httpResponse(503, { error: { message: "temporarily unavailable" } }),
+    fetchHandler: async () => { calls++; return httpResponse(503, { error: { message: "temporarily unavailable" } }); },
   });
+  check("each failing model retried once (2 models × 2 attempts)", calls, 4);
   check("all models failing → ok:true", result.json.ok, true);
   check("all models failing → review", result.json.decision, "review");
   check("all models failing → server_ocr_failed", result.json.riskFlags.includes("server_ocr_failed"), true);
   check("diagnostic saved", typeof result.state.inserted[0].payload.ocr_data.server_error_code === "string", true);
+}
+
+console.log("\n── 429 حصة: إعادة محاولة بدل الفشل الفوري ──");
+{
+  let calls = 0;
+  const result = await runScan({
+    body: baseBody,
+    env: { GEMINI_MODEL_ORDER: "gemini-quota" },
+    fetchHandler: async () => {
+      calls++;
+      if (calls === 1) {
+        return httpResponse(429, { error: { message: "You exceeded your current quota", status: "RESOURCE_EXHAUSTED" } });
+      }
+      return httpResponse(200, geminiTextResponse(validBankakText()));
+    },
+  });
+  // قبل هذا التغيير كان 429 يُعامَل كخطأ قاتل فيسقط الإيصال إلى «مراجعة» فوراً.
+  check("429 retried once then succeeded", calls, 2);
+  check("429 retry produced accept", result.json.decision, "accept");
+}
+
+console.log("\n── منع إعادة الفحص (نفس البصمة والمدخلات) ──");
+{
+  const snapshot = {
+    version: 4, decision: "accept", ocrStatus: "passed", message: "تم التحقق من الإيصال بنجاح",
+    provider: "bankak", providerName: "بنكك (بنك الخرطوم)", amountVerified: true, refVerified: true,
+    confidence: 90, passes: 1, riskFlags: [], textLength: 240, source: "edge",
+    extracted: { txRef: "FT250719123456", amount: 125000 }, submissionAllowed: true,
+    rawExcerpt: "بنكك\nرقم العملية: FT250719123456\nالمبلغ: 125,000.00 SDG",
+  };
+  const reusableRow = (overrides = {}) => ({
+    id: "scan-reused-7",
+    receipt_hash: "a".repeat(64),
+    expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+    risk_flags: [],
+    ocr_data: { expected_method_id: null, result_snapshot: snapshot },
+    ...overrides,
+  });
+
+  const reuse = await runScan({
+    body: baseBody,
+    reusableScan: reusableRow(),
+    fetchHandler: async () => httpResponse(500, { error: "gemini must not be called" }),
+  });
+  check("duplicate: zero Gemini calls made", fetchedUrls.length, 0);
+  check("duplicate: no new scan row inserted", reuse.state.inserted.length, 0);
+  check("duplicate: previous scanId returned", reuse.json.scanId, "scan-reused-7");
+  check("duplicate: decision replayed exactly", reuse.json.decision, "accept");
+  check("duplicate: flagged as reused for support", reuse.json.ocrReused, true);
+
+  // فشل فني مخزّن لا يُعاد استخدامه، وإلا بقي المستخدم محتجزاً في نتيجة عطل
+  // Google بعد زوال العطل.
+  const afterOutage = await runScan({
+    body: baseBody,
+    reusableScan: reusableRow({ risk_flags: ["server_ocr_failed"] }),
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(validBankakText())),
+  });
+  check("technical failure row is not reused", fetchedUrls.length > 0, true);
+  check("technical failure row re-scanned live", afterOutage.json.decision, "accept");
+
+  // اختلاف وسيلة الدفع يعني قراراً مختلفاً محتملاً (BIN/الاسم) ⇒ لا إعادة استخدام.
+  const otherMethod = await runScan({
+    body: baseBody,
+    reusableScan: reusableRow({ ocr_data: { expected_method_id: "de4cc79b-df0c-448b-8c97-b22f9e8d4b2a", result_snapshot: snapshot } }),
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(validBankakText())),
+  });
+  check("different payment method forces a fresh scan", fetchedUrls.length > 0, true);
+  check("fresh scan still accepted", otherMethod.json.decision, "accept");
+}
+
+console.log("\n── فلاتر منع التكرار: IS NULL بدل eq.null ──");
+{
+  const named = await runScan({
+    body: baseBody,
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(validBankakText())),
+  });
+  const amountFilter = named.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "expected_amount");
+  const refFilter = named.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "manual_ref");
+  check("dedup filter: amount compared with eq when present", amountFilter && amountFilter.op, "eq");
+  check("dedup filter: ref compared with eq when present", refFilter && refFilter.op, "eq");
+
+  // بلا مبلغ/رقم معلن: eq(null) يُرسل eq.null ⇒ PostgREST يردّ 400 على الأعمدة
+  // الرقمية (invalid input syntax for type numeric: "null") ويتعطّل الكاش بصمت.
+  // الصيغة الصحيحة هي IS NULL عبر is(column, null).
+  const anonymous = await runScan({
+    body: Object.assign({}, baseBody, { expectedAmount: 0, manualRef: "" }),
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(validBankakText())),
+  });
+  const amountNull = anonymous.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "expected_amount");
+  const refNull = anonymous.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "manual_ref");
+  check("dedup filter: empty amount uses is.null", amountNull && amountNull.op, "is");
+  check("dedup filter: empty amount value is null", amountNull && amountNull.value, null);
+  check("dedup filter: empty ref uses is.null", refNull && refNull.op, "is");
+  check("dedup filter: empty ref value is null", refNull && refNull.value, null);
+}
+
+console.log("\n── تخزين رقم العملية الذي وثّقه القرار (إشعار RTL: القيمة قبل التسمية) ──");
+{
+  // نفس ترتيب الأسطر الذي أرجعه Gemini فعلاً لإيصال أوكاش في الإنتاج: القيمة
+  // قبل التسمية، فيفوز التاريخ كمرشّح «موسوم» في حقل العرض بينما المطابقة
+  // الحقيقية تجد رقم العميل داخل النص. تخزين التاريخ في tx_ref_ocr يجعل
+  // claim_payment_receipt يعيد ref_verified=false ⇒ هبوط الطلب إلى مراجعة رغم
+  // أن الفحص قبله (عطل حقيقي شوهد في الإنتاج).
+  // نفس النص الذي أرجعه Gemini حرفياً لإيصال أوكاش في الإنتاج (rawExcerpt)،
+  // مع تاريخ اليوم حتى يبقى الإيصال «حديثاً» ولا يعتمد الاختبار على يوم تشغيله.
+  const today = new Date();
+  const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const ocashRtlText = [
+    "أوكاش",
+    "بنك أم درمان الوطني",
+    "تفاصيل الحركة",
+    "121004123456789 رقم الحركة",
+    `${day} 09:15:22 تاريخ الحركة`,
+    "تحويل نوع الحركة",
+    "عبدالله محمد ابراهيم اسم العميل",
+    "48,500.00 SDG قيمة الحركة",
+    "0991234567 رقم الهاتف المحمول",
+    "نادوسلالنيز مقدم الخدمة",
+    "1234567890 التحويل الى حساب مصرفي",
+    "1234567890 الحساب المحلي",
+    "حركة ناجحة",
+    "أ",
+  ].join("\n");
+
+  const verified = await runScan({
+    body: Object.assign({}, baseBody, { expectedAmount: 48500, manualRef: "121004123456789" }),
+    env: { GEMINI_MODEL_ORDER: "gemini-ok" },
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(ocashRtlText)),
+  });
+  check("RTL ref: decision stays accept", verified.json.decision, "accept");
+  check("RTL ref: refVerified true", verified.json.refVerified, true);
+  // الواجهة لا تتغيّر: نفس القيمة المعروضة قبل الإصلاح (لا نلمس الرد).
+  check("RTL ref: display value untouched", verified.json.extracted.txRef, day);
+  // المخزَّن للربط = الرقم الذي وثّقه القرار، لا التاريخ.
+  check("RTL ref: stored tx_ref_ocr is the verified ref", verified.state.inserted[0].payload.tx_ref_ocr, "121004123456789");
+
+  // بلا توثيق للرقم (رقم لا وجود له في الإيصال) لا نُرقّي شيئاً: يُخزَّن
+  // الاستخراج كما هو ولا يُكتب رقم العميل في القاعدة.
+  const unverified = await runScan({
+    body: Object.assign({}, baseBody, { expectedAmount: 48500, manualRef: "555555555555" }),
+    env: { GEMINI_MODEL_ORDER: "gemini-ok" },
+    fetchHandler: async () => httpResponse(200, geminiTextResponse(ocashRtlText)),
+  });
+  check("RTL ref: unverified ref is not promoted", unverified.state.inserted[0].payload.tx_ref_ocr, day);
+  check("RTL ref: manual ref never written without verification", unverified.state.inserted[0].payload.tx_ref_ocr === "555555555555", false);
 }
 
 console.log("\n── صورة بلا نص → reject ──");

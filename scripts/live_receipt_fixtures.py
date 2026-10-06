@@ -19,6 +19,7 @@ RAIZEY STORE — مولّد صور إيصالات اختبارية لاختبا�
 المتطلبات: pillow, arabic-reshaper, python-bidi + خط عربي TTF (يُمرَّر
 بالوسيط الثاني أو متغير البيئة RAIZEY_FIXTURE_FONT).
 """
+import datetime
 import os
 import random
 import sys
@@ -50,6 +51,15 @@ BG = (255, 255, 255)
 def ar(text):
     """تشكيل عربي صحيح + ترتيب RTL."""
     return get_display(arabic_reshaper.reshape(text))
+
+
+def fresh_stamp(with_seconds=True):
+    """توقيت حديث (قبل ساعة) بدل تاريخ مجمّد: الإيصال المجمّد يصبح «قديماً» بعد
+    يومين فتتحول القرارات إلى تدقيق إداري بمرور الوقت لا بعطل في الكود، فتفشل
+    اختبارات القبول الحقيقية بلا سبب. ساعة واحدة في الماضي تبقى «حديثة» دائماً
+    ولا تصل أبداً إلى نطاق التاريخ المستقبلي."""
+    moment = datetime.datetime.now() - datetime.timedelta(hours=1)
+    return moment.strftime("%Y-%m-%d %H:%M:%S" if with_seconds else "%Y-%m-%d %H:%M")
 
 
 def load(size):
@@ -126,7 +136,7 @@ def bankak(path):
     s.band("بنكك", "بنك الخرطوم — إشعار تحويل")
     s.section("تحويلات")
     s.row("رقم العملية", "FT250719123456", strong=True)
-    s.row("التاريخ و الزمن", "2026-10-04 11:32:05")
+    s.row("التاريخ و الزمن", fresh_stamp())
     # اسم المستفيد ورقم BIN يجب أن يطابقا حساب الاستقبال الحقيقي المسجّل في
     # payment_methods، وإلا أطلق الحكم الأعلام bin_mismatch /
     # beneficiary_name_unverified (سلوك مقصود في الإنتاج).
@@ -141,12 +151,39 @@ def bankak(path):
     s.save(path)
 
 
-def ocash(path):
-    s = Sheet((88, 34, 138))  # أوكاش — بنفسجي
+def ocash(path, accent=(88, 34, 138), extra_footer=None):
+    s = Sheet(accent)
     s.band("أوكاش", "بنك أم درمان الوطني")
     s.section("تفاصيل الحركة")
     s.row("رقم الحركة", "121004123456789", strong=True)
-    s.row("تاريخ الحركة", "2026-10-04 09:15:22")
+    s.row("تاريخ الحركة", fresh_stamp())
+    s.row("نوع الحركة", "تحويل", arabic_value=True)
+    s.row("اسم العميل", "عبدالله محمد ابراهيم", arabic_value=True)
+    s.row("قيمة الحركة", "48,500.00 SDG", strong=True, value_color=(88, 34, 138))
+    s.row("رقم الهاتف المحمول", "0991234567")
+    s.row("مقدم الخدمة", "زين السودان")
+    s.row("التحويل الى حساب مصرفي", "1234567890")
+    s.row("الحساب المحلي", "1234567890")
+    s.status("حركة ناجحة")
+    footer = ["أوكاش — لكل الناس", "خدمة العملاء 1555"]
+    if extra_footer:
+        footer.append(extra_footer)
+    s.footer(footer)
+    s.save(path)
+
+
+def ocash_split(path):
+    """إيصال أوكاش بترتيب أسطر يفرض تسمية "رقم الحركة" بعد قيمتها (كما حدث فعلاً
+    في الإنتاج: قرأ Gemini السطر بصرياً "121004123456789 رقم الحركة")، والسطر
+    التالي يبدأ بتاريخ. هذا يجعل الحكم يعرض التاريخ كمرشّح موسوم — وهو بالضبط
+    المدخل الذي يجب أن يخزّن فيه tx_ref_ocr رقم العملية الموثّق لا التاريخ.
+    الحقول الأخرى مطابقة لـ ocash() حتى يبقى القرار accept."""
+    s = Sheet((88, 34, 138))
+    s.band("أوكاش", "بنك أم درمان الوطني")
+    s.section("تفاصيل الحركة")
+    s.row("", "121004123456789", strong=True)
+    s.row("رقم الحركة", "")
+    s.row("تاريخ الحركة", fresh_stamp())
     s.row("نوع الحركة", "تحويل", arabic_value=True)
     s.row("اسم العميل", "عبدالله محمد ابراهيم", arabic_value=True)
     s.row("قيمة الحركة", "48,500.00 SDG", strong=True, value_color=(88, 34, 138))
@@ -169,7 +206,7 @@ def fawry(path):
     s.row("اسم البنك", "بنك البركة", arabic_value=True)
     s.row("المبلغ", "23,750.00 SDG", strong=True, value_color=(180, 40, 22))
     s.row("رقم الهاتف", "0911223344")
-    s.row("التاريخ", "2026-10-04 16:40")
+    s.row("التاريخ", fresh_stamp(with_seconds=False))
     s.row("التعليق", "دفع فاتورة")
     s.status("ناجح")
     s.footer(["فوري — شبكة المدفوعات", "Fawry reference 987654321012"])
@@ -205,6 +242,13 @@ def main():
     bankak(os.path.join(out, "bankak.png"))
     ocash(os.path.join(out, "ocash.png"))
     fawry(os.path.join(out, "fawry.png"))
+    # نسخة ثانية من إيصال أوكاش بنفس الحقول (نفس رقم الحركة والمبلغ) لكن ببصمة
+    # صورة مختلفة: الطبقات التي تمنع إعادة الاستخدام (receipt_hash) تمنع إعادة
+    # فحص نفس الصورة، فنحتاج بصمة جديدة للتحقق الحقيقي من مسار الفحص الكامل.
+    if os.environ.get("RAIZEY_FIXTURE_OCASH_VARIANT"):
+        ocash(os.path.join(out, "ocash_variant.png"), accent=(96, 44, 152),
+              extra_footer="نسخة اختبار")
+        ocash_split(os.path.join(out, "ocash_split.png"))
     not_receipt(os.path.join(out, "not_receipt.png"))
     noise(os.path.join(out, "noise.png"))
 

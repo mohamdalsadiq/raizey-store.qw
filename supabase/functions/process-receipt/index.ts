@@ -31,6 +31,15 @@ const GEMINI_DISCOVERY_TIMEOUT_MS = 8_000;  // مهلة قراءة قائمة ا
 // مع هامش للشبكة وحفظ الفحص في القاعدة.
 const GEMINI_TOTAL_BUDGET_MS = 85_000;      // سقف زمني كلي لكل عمليات Gemini
 const GEMINI_MAX_MODELS = 5;                // أقصى عدد نماذج تُجرَّب في الفحص
+
+// ── إعادة محاولة سريعة الفشل (429/5xx) على نفس النموذج قبل تجربة التالي ──
+// قياس حقيقي: 503 "high demand" ظهر في 3 من 6 مكالمات متتالية، وكان الفشل
+// الفوري عليها يُسقط إيصالاً سليماً إلى «مراجعة» رغم أن إعادة المحاولة
+// الواحدة تنجح. لا تُطبَّق على انتهاء المهلة: كلفتها 20 ثانية وتلتهم الميزانية
+// قبل الوصول إلى نموذج سليم.
+const GEMINI_MAX_ATTEMPTS_PER_MODEL = 2;
+const GEMINI_RETRY_BACKOFF_MS = 800;
+const GEMINI_RETRYABLE_STATUS = [429, 500, 502, 503, 504];
 const GEMINI_DISCOVERY_TTL_MS = 60 * 60_000;      // إعادة قراءة القائمة كل ساعة
 const GEMINI_DISCOVERY_NEGATIVE_TTL_MS = 5 * 60_000; // فشل القراءة: إعادة بعد 5 دقائق
 
@@ -112,12 +121,55 @@ type ScanResult = Record<string, any> & {
 };
 
 type GeminiAttempt = { model: string; ok?: boolean; error?: string; status?: number | null };
+
+// استهلاك فعلي بالتوكنات (من usageMetadata) — يُسجَّل في تشخيصات الفحص حتى
+// يمكن التحقق من تكلفة كل إيصال فعلياً في الإنتاج لا في القياس فقط.
+type GeminiUsage = {
+  prompt: number;
+  image: number;
+  thoughts: number;
+  output: number;
+  total: number;
+};
+
 type GeminiDiagnostics = {
   models: string[];
   orderSource: string;
   chosen: string | null;
   attempts: GeminiAttempt[];
+  tokens?: GeminiUsage | null;
 };
+
+function readUsage(data: any): GeminiUsage | null {
+  const u = data?.usageMetadata;
+  if (!u) return null;
+  const image = Number(
+    ((Array.isArray(u.promptTokensDetails) ? u.promptTokensDetails : [])
+      .find((d: any) => d?.modality === "IMAGE") || {}).tokenCount,
+  ) || 0;
+  return {
+    prompt: Number(u.promptTokenCount) || 0,
+    image,
+    thoughts: Number(u.thoughtsTokenCount) || 0,
+    output: Number(u.candidatesTokenCount) || 0,
+    total: Number(u.totalTokenCount) || 0,
+  };
+}
+
+/** يجمع استهلاك كل مسارات Gemini في الفحص الواحد (قراءة + صورة إضافية + تحكيم). */
+function addGeminiUsage(diagnostics: GeminiDiagnostics, usage?: GeminiUsage | null): void {
+  if (!usage) return;
+  const prev = diagnostics.tokens;
+  diagnostics.tokens = prev
+    ? {
+        prompt: prev.prompt + usage.prompt,
+        image: prev.image + usage.image,
+        thoughts: prev.thoughts + usage.thoughts,
+        output: prev.output + usage.output,
+        total: prev.total + usage.total,
+      }
+    : { ...usage };
+}
 
 function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
@@ -277,9 +329,14 @@ function scoreGeminiModel(name: string): number {
   let score = 0;
   // الاستقرار أولاً (نموذج preview قد يختفي بلا إنذار)
   if (isStableModelName(base)) score += 100;
-  // التوازن بين الدقة/السرعة/التكلفة: flash ثم flash-lite ثم pro
-  if (/flash/.test(base) && !/lite/.test(base)) score += 50;
-  else if (/flash-lite/.test(base)) score += 40;
+  // التوازن بين الدقة/السرعة/التكلفة — والقياس هو الحكم:
+  // قراءة نفس الإيصال بنفس الدقة تماماً (رقم العملية والمبلغ مطابقان) كلّفت
+  //   gemini-3.5-flash  → 2900 توكن إجمالي (منها 1575 توكن تفكير)
+  //   flash-lite        → ~1290 توكن إجمالي (بلا توكنات تفكير)
+  // أي أن flash-lite يقرأ الإيصال بـ~55% استهلاكاً أقل وبلا أي خسارة دقة،
+  // فهو الخيار الأول للفحص، وبقية النماذج تبقى احتياطاً عند الازدحام.
+  if (/flash-lite/.test(base)) score += 70;
+  else if (/flash/.test(base)) score += 50;
   else if (/pro/.test(base)) score += 20;
   // إصدار أحدث أفضل
   const v = base.match(/gemini-(\d+)(?:\.(\d+))?/);
@@ -347,6 +404,44 @@ async function resolveGeminiModels(apiKey: string): Promise<{ models: string[]; 
   return { models: FALLBACK_GEMINI_MODELS.slice(0, GEMINI_MAX_MODELS), source: "fallback" };
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * يعيد المحاولة على نفس النموذج عند فشل *سريع* من Google (429/5xx)، ثم يرمي
+ * الخطأ ليجرّب النداء النموذج التالي. المهلة الكلية محترمة في كل خطوة حتى لا
+ * تلتهم إعادة المحاولة الميزانية قبل الوصول إلى نموذج سليم.
+ */
+async function withRetryableBackoff<T>(
+  model: string,
+  deadline: number,
+  callOnce: () => Promise<T>,
+  onRetry?: (info: { model: string; status: number; waitMs: number; attempt: number }) => void,
+): Promise<T> {
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS_PER_MODEL; attempt++) {
+    try {
+      return await callOnce();
+    } catch (error) {
+      lastError = error;
+      const status = Number((error as any)?.status);
+      const wait = GEMINI_RETRY_BACKOFF_MS * attempt;
+      const canRetry =
+        GEMINI_RETRYABLE_STATUS.includes(status) &&
+        attempt < GEMINI_MAX_ATTEMPTS_PER_MODEL &&
+        deadline - Date.now() > wait + 3000;
+      if (!canRetry) throw error;
+      // يُسجَّل في تشخيصات الفحص حتى يرى الأدمن أن الازدحام أُعيدت محاولته
+      // (مفيد لتفسير تأخّر فحص كان سينجح لولاً).
+      if (onRetry) onRetry({ model, status, waitMs: wait, attempt });
+      console.warn(`[RAIZEY] Gemini ${model} HTTP ${status} — retrying in ${wait}ms`);
+      await sleep(wait);
+    }
+  }
+  throw lastError;
+}
+
 // ═════════════════════════════════════════════════════════════════════════
 // نداء Gemini واحد — مع إعادة محاولة واحدة بلا thinkingConfig عند 400
 // ═════════════════════════════════════════════════════════════════════════
@@ -412,7 +507,7 @@ async function callGeminiModel(
   mimeType: string,
   apiKey: string,
   timeoutMs: number,
-): Promise<string> {
+): Promise<{ text: string; usage: GeminiUsage | null }> {
   const data = await postGeminiGenerate(model, {
     contents: [{
       role: "user",
@@ -424,6 +519,7 @@ async function callGeminiModel(
     generationConfig: { temperature: 0, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
     safetySettings: SAFETY_SETTINGS,
   }, apiKey, "gemini_request", timeoutMs);
+  const usage = readUsage(data);
   let text = textFromCandidate(data, "gemini_request");
   // بعض النماذج تُصرّ على إرجاع JSON حتى مع طلب نص صريح — نستخرج raw_text.
   if (text.startsWith("{") && text.includes("raw_text")) {
@@ -432,10 +528,15 @@ async function callGeminiModel(
       if (typeof parsed?.raw_text === "string") text = parsed.raw_text;
     } catch (_) { /* استخدم النص كما هو */ }
   }
-  return text;
+  return { text, usage };
 }
 
-type OcrOutcome = { text: string; model: string; attempts: GeminiAttempt[] };
+type OcrOutcome = {
+  text: string;
+  model: string;
+  attempts: GeminiAttempt[];
+  usage: GeminiUsage | null;
+};
 
 async function extractTextWithGemini(
   base64Data: string,
@@ -449,11 +550,19 @@ async function extractTextWithGemini(
   for (const model of models) {
     const remaining = deadline - Date.now();
     if (remaining < 3000) break; // لا معنى لبدء محاولة لا تكفي لها المهلة
-    const timeoutMs = Math.min(GEMINI_REQUEST_TIMEOUT_MS, remaining);
     try {
-      const text = await callGeminiModel(model, base64Data, mimeType, apiKey, timeoutMs);
+      const { text, usage } = await withRetryableBackoff(
+        model,
+        deadline,
+        () =>
+          callGeminiModel(
+            model, base64Data, mimeType, apiKey,
+            Math.min(GEMINI_REQUEST_TIMEOUT_MS, Math.max(3000, deadline - Date.now())),
+          ),
+        (info) => attempts.push({ model: info.model, error: `retry_after_http_${info.status}`, status: info.status }),
+      );
       attempts.push({ model, ok: true });
-      return { text, model, attempts };
+      return { text, model, attempts, usage };
     } catch (error) {
       lastError = error;
       const message = String((error as any)?.message || "");
@@ -464,7 +573,9 @@ async function extractTextWithGemini(
         (error as any).attempts = attempts;
         throw error;
       }
-      if ([401, 403, 429].includes((error as any)?.status)) {
+      // 429 ليس قاتلاً: قد تكون حصة نموذج واحد، ونموذج آخر قد يستجيب —
+      // وقد تُنظَّف نافذة المعدل السريعة خلال إعادة المحاولة أعلاه.
+      if ([401, 403].includes((error as any)?.status)) {
         (error as any).attempts = attempts;
         throw error;
       }
@@ -492,11 +603,12 @@ async function callGeminiJson(model: string, parts: any[], apiKey: string, timeo
   }, apiKey, "gemini_json", timeoutMs);
   const candidate = data?.candidates?.[0];
   const partsOut = candidate?.content?.parts;
+  const usage = readUsage(data);
   const text = Array.isArray(partsOut)
     ? partsOut.map((part: any) => part?.text || "").join("").replace(/^```(?:json)?|```$/g, "").trim()
     : "";
   if (!text) throw new Error("gemini_json_empty");
-  return JSON.parse(text);
+  return { data: JSON.parse(text), usage };
 }
 
 async function structuredPass(
@@ -504,17 +616,25 @@ async function structuredPass(
   apiKey: string,
   models: string[],
   deadline: number,
-): Promise<{ data: Record<string, any>; model: string; attempts: GeminiAttempt[] }> {
+): Promise<{ data: Record<string, any>; model: string; attempts: GeminiAttempt[]; usage: GeminiUsage | null }> {
   let lastError: any = null;
   const attempts: GeminiAttempt[] = [];
   for (const model of models) {
     const remaining = deadline - Date.now();
     if (remaining < 3000) break;
-    const timeoutMs = Math.min(GEMINI_JSON_TIMEOUT_MS, remaining);
     try {
-      const data = await callGeminiJson(model, parts, apiKey, timeoutMs);
+      const { data, usage } = await withRetryableBackoff(
+        model,
+        deadline,
+        () =>
+          callGeminiJson(
+            model, parts, apiKey,
+            Math.min(GEMINI_JSON_TIMEOUT_MS, Math.max(3000, deadline - Date.now())),
+          ),
+        (info) => attempts.push({ model: info.model, error: `retry_after_http_${info.status}`, status: info.status }),
+      );
       attempts.push({ model, ok: true });
-      return { data, model, attempts };
+      return { data, model, attempts, usage };
     } catch (error) {
       lastError = error;
       attempts.push({ model, error: String((error as any)?.message || "").slice(0, 160), status: (error as any)?.status ?? null });
@@ -603,6 +723,45 @@ async function enforceRateLimit(admin: any, userId: string): Promise<boolean> {
   return (count || 0) < MAX_SCANS_PER_WINDOW;
 }
 
+/**
+ * تطبيع رقم العملية بنفس منطق normalize_tx_ref في قاعدة البيانات
+ * (أحرف كبيرة + إزالة كل ما ليس A-Z0-9) حتى تكون مقارنة الربط مطابقة تماماً.
+ */
+function normalizeRefForStorage(value: unknown): string {
+  return String(value == null ? "" : value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/**
+ * قيمة tx_ref_ocr التي تُخزَّن — وهي نفسها التي يُعيد بها claim_payment_receipt
+ * حساب ref_verified في قاعدة البيانات. في إشعارات RTL تُقرأ التسمية بعد القيمة
+ * ("121004123456789 رقم الحركة")، فيُسجّل ترتيب المرشحات التاريخَ كمرشّح موسوم
+ * ويفوز على رقم العملية في حقل العرض، بينما المطابقة نفسها (refVerified) تكون
+ * قد وجدت رقم العميل فعلاً داخل نص الإيصال. تخزين قيمة لا تساوي رقم العميل
+ * يُهبط الطلب إلى «مراجعة» عند الربط رغم أن الفحص قبله — عطل شوهد فعلاً في
+ * إنتاج أوكاش. لذلك: إذا وثّق القرار رقم العملية (refVerified) نخزّن المرشّح
+ * المطابق لرقم العميل من مرشحات القراءة نفسها؛ وإلا نُبقي الاستخراج كما هو
+ * (حتى لا نُرقّي مطابقة تقريبية رفضها القرار إلى «مطابقة» في قاعدة البيانات).
+ * لا يغيّر هذا القرار ولا ردّ الواجهة — فقط القيمة المحفوظة للربط.
+ */
+function txRefForStorage(result: ScanResult, manualRef: string): string | null {
+  const extracted = (result?.extracted || {}) as Record<string, any>;
+  const extractedRef = typeof extracted.txRef === "string" && extracted.txRef.trim()
+    ? extracted.txRef.trim()
+    : null;
+  if (!result?.refVerified) return extractedRef;
+  const manual = normalizeRefForStorage(manualRef);
+  if (!manual) return extractedRef;
+  const candidates: string[] = [];
+  if (extractedRef) candidates.push(extractedRef);
+  if (Array.isArray(extracted.txRefCandidates)) {
+    for (const candidate of extracted.txRefCandidates) {
+      if (typeof candidate === "string" && candidate.trim()) candidates.push(candidate.trim());
+    }
+  }
+  // مرشّح واحد على الأقل يطابق رقم العميل بالضبط ⇒ هو رقم العملية الحقيقي.
+  return candidates.find((candidate) => normalizeRefForStorage(candidate) === manual) || extractedRef;
+}
+
 async function saveScan(
   admin: any,
   userId: string,
@@ -626,7 +785,7 @@ async function saveScan(
     decision: result.decision || "review",
     ocr_status: result.ocrStatus || "needs_review",
     amount_detected: extracted.amount ?? null,
-    tx_ref_ocr: extracted.txRef || null,
+    tx_ref_ocr: txRefForStorage(result, options.manualRef),
     provider: result.provider || null,
     provider_name: result.providerName || null,
     ocr_confidence: result.confidence ?? null,
@@ -650,8 +809,12 @@ async function saveScan(
       model_order_source: diagnostics.orderSource,
       models_tried: diagnostics.attempts,
       gemini_models: diagnostics.models,
+      tokens: diagnostics.tokens || null,
       extracted_fields: result.extractedFields || null,
       raw_text_excerpt: rawText.slice(0, 3000),
+      // لقطة الرد الكامل: تُتيح إعادة إجابة مطابقة بلا أي استدعاء Gemini عند
+      // إعادة رفع نفس الإيصال بنفس المدخلات (انظر findReusableScan).
+      result_snapshot: result,
     },
     expires_at: new Date(Date.now() + SCAN_TTL_MINUTES * 60_000).toISOString(),
     submission_allowed: result.decision !== "reject",
@@ -668,6 +831,64 @@ async function saveScan(
 // ═════════════════════════════════════════════════════════════════════════
 // مسار الفحص
 // ═════════════════════════════════════════════════════════════════════════
+/**
+ * منع إعادة الفحص (توفير استدعاء AI كامل لنفس المدخل):
+ * نفس بصمة الصورة + نفس المبلغ المطلوب + نفس رقم العملية + نفس وسيلة الدفع
+ * = نفس القرار تماماً. نُعيد السجل المخزّن بدل إعادة قراءة الصورة، وهذا آمن
+ * لأن claim_payment_receipt يرفض استهلاك نفس الفحص مرتين (claimed_at)، ولأن
+ * إعادة الاستخدام محصورة في سجلات **غير مُطالَب بها** ولم تنتهِ صلاحيتها.
+ *
+ * لا نعيد استخدام نتيجة فحص فني فاشل (server_ocr_*) حتى يستطيع المستخدم
+ * إعادة المحاولة بعد زوال عطل Google — وإلا بقي محتجزاً في نتيجة فشل مخزّنة.
+ */
+async function findReusableScan(
+  admin: any,
+  userId: string,
+  hash: string,
+  options: ScanOptions,
+): Promise<ScanResult | null> {
+  try {
+    // ملاحظة مهمة: eq("col", null) يُرسل eq.null إلى PostgREST فيردّ 400 على
+    // الأعمدة الرقمية (invalid input syntax for type numeric: "null") ويفشل
+    // الفلتر على النصية (يقارن بالسلسلة 'null') — أي أن الكاش يتعطّل بصمت
+    // كلما كان المبلغ/الرقم فارغاً. is("col", null) هو الصيغة الصحيحة لـ IS NULL.
+    let query = admin
+      .from("receipt_scan_results")
+      .select("id, receipt_hash, expires_at, risk_flags, ocr_data")
+      .eq("user_id", userId)
+      .eq("receipt_hash", hash);
+    query = options.expectedAmount
+      ? query.eq("expected_amount", options.expectedAmount)
+      : query.is("expected_amount", null);
+    query = options.manualRef
+      ? query.eq("manual_ref", options.manualRef)
+      : query.is("manual_ref", null);
+    const { data, error } = await query
+      .gt("expires_at", new Date().toISOString())
+      .is("claimed_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    const flags: string[] = Array.isArray(data.risk_flags) ? data.risk_flags : [];
+    if (flags.some((flag) => String(flag).startsWith("server_ocr_"))) return null;
+    const ocrData = data.ocr_data || {};
+    if (String(ocrData.expected_method_id || "") !== String(options.expectedMethodId || "")) return null;
+    const snapshot = ocrData.result_snapshot;
+    if (!snapshot || typeof snapshot !== "object") return null;
+    return {
+      ...(snapshot as ScanResult),
+      scanId: data.id,
+      receiptHash: hash,
+      expiresAt: data.expires_at,
+      ocrReused: true,
+    };
+  } catch (_) {
+    // أي خطأ في قراءة الكاش يعني فقط أننا نكمل الفحص العادي — لا نُسقط الطلب.
+    return null;
+  }
+}
+
 async function processScan(request: Request, admin: any, userId: string, body: any): Promise<ScanResult> {
   let image: ParsedImage;
   try {
@@ -713,6 +934,10 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       }
     } catch (_) { /* بدون بيانات وسيلة — الفحص يكمل بالمنطق القديم */ }
   }
+  // قبل أي استدعاء AI: هل فحصنا هذا الإيصال نفسه بنفس المدخلات للتوّ؟
+  const reused = await findReusableScan(admin, userId, hash, options);
+  if (reused) return reused;
+
   const apiKey = env("GEMINI_API_KEY");
   if (!apiKey) return smartReview("gemini_not_configured", "محرك الفحص الخادمي غير مُفعّل حالياً. لم يُنشأ أي طلب.");
 
@@ -727,6 +952,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     const first = await extractTextWithGemini(imageBase64, mimeType, apiKey, resolved.models, deadline);
     diagnostics.chosen = first.model;
     diagnostics.attempts = first.attempts.slice();
+    addGeminiUsage(diagnostics, first.usage);
     rawText = first.text;
     const extraBase64 = cleanBase64(body?.imageBase64Extra);
     if (extraBase64) {
@@ -739,6 +965,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
         return smartReview("invalid_image_input", "صيغة الصورة الإضافية غير صالحة. استخدم JPG أو PNG أو WEBP.");
       }
       const second = await extractTextWithGemini(extraImage.base64, extraImage.mimeType, apiKey, resolved.models, deadline);
+      addGeminiUsage(diagnostics, second.usage);
       rawText += `\n${second.text}`;
     }
   } catch (error) {
@@ -822,6 +1049,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   if (needsArbitration) {
     try {
       const arbitration = await structuredPass(imageParts, apiKey, resolved.models, deadline);
+      addGeminiUsage(diagnostics, arbitration.usage);
       const d = arbitration.data || {};
       result.extractedFields = sanitizeStructuredFields(d);
       const lines = structuredFieldsToLines(d);
