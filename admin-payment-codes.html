@@ -178,6 +178,8 @@ function render() {
 
   list.innerHTML = filtered.map(c => {
     const st = effectiveState(c);
+    const stKnown = Object.prototype.hasOwnProperty.call(stateLabels, st);
+    const stKey = stKnown ? st : 'unknown';
     const created = new Date(c.created_at).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
     const usedAt = c.used_at ? new Date(c.used_at).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : null;
     const target = c.target_profile;
@@ -186,7 +188,7 @@ function render() {
       <div class="code-card">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <span class="code-value">${escapeHtml(c.code)}</span>
-          <span class="code-state state-${st}">${stateLabels[st] || st}</span>
+          <span class="code-state state-${stKey}">${stKnown ? stateLabels[st] : escapeHtml(st)}</span>
         </div>
         <div class="code-meta">
           المبلغ: <strong>${formatSDG(c.amount)} ج.س</strong><br>
