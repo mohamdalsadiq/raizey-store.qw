@@ -67,8 +67,12 @@ const UI = window.RaizeyAuthUI;
 const email = sessionStorage.getItem('pending_email');
 if (!email) window.location.href = 'register.html';
 
-document.getElementById('subText').innerHTML =
-  'أرسلنا كودًا من 6 أرقام إلى <strong dir="ltr">' + email + '</strong>';
+const subTextEl = document.getElementById('subText');
+subTextEl.textContent = 'أرسلنا كودًا من 6 أرقام إلى ';
+const emailStrong = document.createElement('strong');
+emailStrong.dir = 'ltr';
+emailStrong.textContent = email;
+subTextEl.appendChild(emailStrong);
 
 const errorBox = document.getElementById('formError');
 const successBox = document.getElementById('formSuccess');
