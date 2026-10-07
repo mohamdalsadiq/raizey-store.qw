@@ -51,6 +51,21 @@ async function init() {
   await loadLogs();
 }
 
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = text;
+  return n;
+}
+
+function formatDetails(details) {
+  if (!details || typeof details !== 'object') return '';
+  return Object.entries(details).map(([k, v]) => {
+    const val = (v !== null && typeof v === 'object') ? JSON.stringify(v) : String(v);
+    return `${k}: ${val}`;
+  }).join(' — ');
+}
+
 async function loadLogs() {
   const { data: logs } = await supabaseClient
     .from('audit_logs')
@@ -59,29 +74,41 @@ async function loadLogs() {
     .limit(100);
 
   const container = document.getElementById('logsList');
+  container.textContent = '';
   if (!logs || logs.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد نشاطات مسجلة بعد</div>`;
+    const empty = el('div', null, 'لا توجد نشاطات مسجلة بعد');
+    empty.style.cssText = 'color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;';
+    container.appendChild(empty);
     return;
   }
 
-  container.innerHTML = logs.map(l => {
+  for (const l of logs) {
     const date = new Date(l.created_at).toLocaleDateString('ar-EG', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     const adminName = l.profiles?.full_name || 'أدمن';
-    const detailsText = l.details ? Object.entries(l.details).map(([k, v]) => `${k}: ${v}`).join(' — ') : '';
+    const detailsText = formatDetails(l.details);
 
-    return `
-      <div class="mini-list-item" style="flex-direction:column; align-items:stretch;">
-        <div style="display:flex; justify-content:space-between;">
-          <div class="name">${l.action}</div>
-          <div class="sub">${date}</div>
-        </div>
-        <div class="sub" style="margin-top:4px;">بواسطة: ${adminName}</div>
-        ${detailsText ? `<div class="sub" style="margin-top:2px;">${detailsText}</div>` : ''}
-      </div>
-    `;
-  }).join('');
+    const item = el('div', 'mini-list-item');
+    item.style.cssText = 'flex-direction:column; align-items:stretch;';
+
+    const row = el('div');
+    row.style.cssText = 'display:flex; justify-content:space-between;';
+    row.appendChild(el('div', 'name', l.action));
+    row.appendChild(el('div', 'sub', date));
+    item.appendChild(row);
+
+    const by = el('div', 'sub', `بواسطة: ${adminName}`);
+    by.style.marginTop = '4px';
+    item.appendChild(by);
+
+    if (detailsText) {
+      const d = el('div', 'sub', detailsText);
+      d.style.marginTop = '2px';
+      item.appendChild(d);
+    }
+    container.appendChild(item);
+  }
 }
 
 init();
