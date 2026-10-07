@@ -727,10 +727,10 @@ async function submitTopup() {
 
   if (isDuplicateHash || isDuplicateRef || isInvalidRef) {
     try {
-      await supabaseClient.from('audit_logs').insert({
-        admin_id: null,
-        action: 'تنبيه احتيال: إيصال أو رقم عملية مكرر (wallet topup)',
-        details: { user_id: currentUser.id, receipt_hash: receiptHash, transaction_ref: transactionRef }
+      // P0-SEC-001: fraud alerts go through the narrow server-side RPC
+      // (direct audit_logs INSERT by customers is no longer allowed).
+      await supabaseClient.rpc('report_fraud_alert', {
+        p_details: { receipt_hash: receiptHash, transaction_ref: transactionRef }
       });
     } catch (e) {}
     errorBox.style.color = 'var(--danger)';
