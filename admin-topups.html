@@ -83,6 +83,7 @@ function mapTopupError(msg) {
   if (m.includes('topup_not_found'))   return 'الطلب غير موجود.';
   if (m.includes('reason_required'))   return 'يجب كتابة سبب الرفض.';
   if (m.includes('invalid_amount'))    return 'مبلغ الطلب غير صالح.';
+  if (m.includes('topup_amount_mismatch')) return 'المبلغ غير مطابق للإيصال — اكتب سبب التجاوز للمتابعة.';
   if (m.includes('manage_wallets'))    return 'ليست لديك صلاحية إدارة المحافظ.';
   if (m.includes('access_denied'))     return 'غير مصرح بهذا الإجراء.';
   return 'تعذّر تنفيذ العملية. حاول مجدداً.';
@@ -231,7 +232,7 @@ async function init() {
 async function loadTopups() {
   const { data, error } = await supabaseClient
     .from('wallet_topups')
-    .select('*, profiles(full_name, whatsapp_number)')
+    .select('*, profiles(full_name, whatsapp_number), payment_receipts!wallet_topups_receipt_id_fkey(amount_detected, ocr_status)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -303,6 +304,18 @@ function renderTopupCard(t) {
   const rejectionReason = escapeHtml(t.rejection_reason || '');
   const statusLabel = escapeHtml(statusLabels[t.status] || t.status || '');
 
+  // P1-FIN-001: show server-verified receipt amount next to the requested amount
+  const detected = t.payment_receipts ? t.payment_receipts.amount_detected : null;
+  const mismatch = detected !== null && detected !== undefined &&
+    Math.abs(Number(detected) - Number(t.amount)) > Math.max(Number(detected) * 0.01, 2);
+  const verifyBadge = (detected === null || detected === undefined)
+    ? `<div class="order-date">المبلغ المكتشف: غير متوفر (مسار قديم)</div>`
+    : `<div class="order-date">المبلغ المكتشف: ${formatSDG(detected)} ج.س ` +
+      (mismatch
+        ? '<span class="inactive-badge" style="color:var(--danger); background:rgba(229,72,77,0.15);">غير متطابق</span>'
+        : '<span class="inactive-badge" style="color:#2bed33; background:rgba(43,237,51,0.15);">متطابق</span>') +
+      `</div>`;
+
   const actions = t.status === 'pending' ? `
     <div class="admin-order-actions">
       <button class="admin-btn btn-confirm" data-action="confirm" data-topup-id="${safeTopupId}">تأكيد</button>
@@ -323,6 +336,7 @@ function renderTopupCard(t) {
         <button type="button" class="mini-copy-btn" data-copy="${customerWhatsappCopy}">نسخ الرقم</button>
       </div>
       <div class="order-details">
+        ${verifyBadge}
         ${t.transaction_reference ? `
           <div class="copyable-row">
             <span>رقم العملية: ${transactionReference}</span>
@@ -349,10 +363,31 @@ async function handleAction(action, topupId) {
     const btn = document.querySelector(`[data-action="confirm"][data-topup-id="${CSS.escape(topupId)}"]`);
     if (btn) { btn.disabled = true; btn.textContent = '...'; }
 
-    // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، تضيف
-    // الرصيد، وتكتب سجل الحركة (wallet_transactions) وسجل النشاط
-    // والإشعار — كل ذلك في السيرفر بمعاملة واحدة
-    const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId });
+    // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، تتحقق خادمياً
+    // من مطابقة المبلغ مع الإيصال (P1-FIN-001)، تضيف الرصيد، وتكتب سجل
+    // الحركة والإشعار — كل ذلك في السيرفر بمعاملة واحدة
+    const detectedAmt = topup.payment_receipts ? topup.payment_receipts.amount_detected : null;
+    const isMismatch = detectedAmt !== null && detectedAmt !== undefined &&
+      Math.abs(Number(detectedAmt) - Number(topup.amount)) > Math.max(Number(detectedAmt) * 0.01, 2);
+    let overrideReason = null;
+    if (isMismatch) {
+      const input = window.prompt(
+        `تنبيه: المبلغ المطلوب (${formatSDG(topup.amount)} ج.س) لا يطابق المبلغ المكتشف في الإيصال (${formatSDG(detectedAmt)} ج.س).\n\nللمتابعة اكتب سبب التجاوز (سيُسجَّل في سجل التدقيق)، أو اضغط إلغاء للرجوع.`
+      );
+      if (input === null) {
+        actionInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+        return;
+      }
+      overrideReason = input.trim();
+      if (!overrideReason) {
+        showToast('يجب كتابة سبب التجاوز للمتابعة.');
+        actionInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+        return;
+      }
+    }
+    const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId, p_override_reason: overrideReason });
 
     actionInFlight = false;
     if (error) {
