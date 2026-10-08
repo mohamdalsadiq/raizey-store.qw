@@ -290,6 +290,11 @@
           الفحص الذكي يدعم صور JPG / PNG / WEBP بحد أقصى 5MB، ويقرأ الإشعارات بالعربية والإنجليزية (بنكك / أوكاش / فوري / كاشي).
           الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
         </div>
+        <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر Google Gemini -->
+        <label style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin:10px 0; cursor:pointer; line-height:1.7;">
+          <input type="checkbox" id="geminiConsent" style="margin-top:4px; flex-shrink:0;">
+          <span>أوافق على معالجة صورة الإيصال عبر Google Gemini للتحقق الآلي من التحويل. بدون الموافقة سيُراجع إيصالك يدوياً من الإدارة. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">سياسة الخصوصية</a></span>
+        </label>
         <div id="extraReceiptWrap" style="display:none; margin-top:10px;">
           <label style="display:block; font-size:12.5px; font-weight:700; margin-bottom:6px;">
             صورة إضافية للإشعار (اختياري — لإكمال البيانات الناقصة)
@@ -922,6 +927,44 @@ function attachCheckoutEvents(canUseWallet) {
     const reportEl = document.getElementById('scanReport');
 
     document.getElementById('formError').textContent = '';
+
+    // P2-SEC-001: بدون موافقة صريحة لا يُرسل أي شيء إلى Gemini —
+    // مسار المراجعة اليدوية: بصمة محلية فقط، والقرار للإدارة
+    const consentBox = document.getElementById('geminiConsent');
+    if (!consentBox || !consentBox.checked) {
+      const fileBoxEl = document.getElementById('fileUploadBox');
+      statusEl.textContent = 'جارِ تجهيز الإيصال للمراجعة اليدوية...';
+      let localHash = null;
+      try {
+        const buf = await file.arrayBuffer();
+        const digest = await crypto.subtle.digest('SHA-256', buf);
+        localHash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) { /* fallback below */ }
+      if (!localHash) {
+        statusEl.textContent = '';
+        document.getElementById('formError').textContent = 'تعذّر تجهيز الصورة. وافق على الفحص الآلي أو أعد المحاولة.';
+        return;
+      }
+      reportEl.style.display = 'block';
+      reportEl.style.borderColor = 'var(--border)';
+      reportEl.innerHTML =
+        `<strong style="color:var(--ink);"><i class="fas fa-clock" style="color:#c98a1f;"></i> مراجعة يدوية</strong><br>` +
+        `اخترت عدم الفحص الآلي — لن تُرسل صورتك إلى أي خدمة خارجية. سيُراجع إيصالك يدوياً من الإدارة قبل تنفيذ الطلب. يمكنك إكمال الطلب الآن.`;
+      if (fileBoxEl) {
+        fileBoxEl.innerHTML = `<i class="fas fa-check-circle" style="color:var(--primary);"></i> تم اختيار: ${escapeHtml(file.name)}`;
+        fileBoxEl.classList.add('has-file');
+      }
+      statusEl.textContent = '';
+      receiptFile = file;
+      scanResult = {
+        decision: 'review', ocrStatus: 'needs_review', scanId: null, receiptHash: localHash,
+        riskFlags: ['consent_declined'], refVerified: false, amountVerified: false,
+        provider: null, providerName: null, confidence: null, version: null, source: 'manual_consent_declined',
+        message: 'مراجعة يدوية — بدون فحص آلي (رفض الموافقة)',
+        extracted: { txRef: null, amount: null, dateTime: null }
+      };
+      return;
+    }
     reportEl.style.display = 'none';
     reportEl.innerHTML = '';
     splitPayment = null;
@@ -1426,7 +1469,10 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   placeOrderBtn.textContent = 'جارِ التحقق من نتيجة الفحص الخادمي...';
   const receiptHash = scanResult && scanResult.receiptHash;
   const receiptScanId = scanResult && scanResult.scanId;
-  if (!receiptHash || !receiptScanId) {
+  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة Gemini) يسمح بـ scanId فارغ —
+  // البصمة المحلية موجودة والقرار للإدارة
+  const isManualReview = scanResult && (scanResult.riskFlags || []).includes('consent_declined');
+  if (!receiptHash || (!receiptScanId && !isManualReview)) {
     errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. أعد رفع الإيصال وانتظر النتيجة قبل الإرسال.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
