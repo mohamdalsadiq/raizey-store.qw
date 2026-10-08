@@ -244,7 +244,15 @@ otpModeBtn.addEventListener('click', async () => {
     if (err && err.status === 429) {
       errorBox.textContent = 'محاولات كثيرة، حاول مرة أخرى بعد قليل';
     } else if (isNoAccountError(err)) {
-      errorBox.innerHTML = 'لا يوجد حساب مسجل بهذا البريد. <a href="register.html" style="color:var(--primary);font-weight:700;">أنشئ حساباً جديداً</a>';
+      // P2-AUTH-001: لا نكشف وجود الحساب — نفس رسالة النجاح المحايدة.
+      // لوحة الكود تظهر أيضاً؛ التحقق سيفشل بشكل طبيعي لبريد غير مسجل.
+      otpTargetEmail = email;
+      otpCodeSub.textContent = 'إذا كان هذا البريد مسجلاً لدينا، أرسلنا إليه كودًا من 6 أرقام.';
+      form.hidden = true;
+      otpModeBtn.hidden = true;
+      otpLoginPanel.hidden = false;
+      otpTimer.start(60);
+      loginOtp.focus();
     } else {
       errorBox.textContent = 'تعذر إرسال كود الدخول الآن، حاول مرة أخرى';
     }
