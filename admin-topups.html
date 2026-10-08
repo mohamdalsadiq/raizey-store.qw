@@ -387,6 +387,23 @@ async function handleAction(action, topupId) {
         return;
       }
     }
+    if (!topup.receipt_id) {
+      const input = window.prompt(
+        'تنبيه: طلب الشحن هذا بلا إيصال مرتبط، ولا يوجد أي دليل دفع خادمي للمبلغ.\n\nلا يمكن شحن الرصيد إلا بسبب تجاوز مكتوب يُسجَّل في سجل التدقيق. اكتب السبب للمتابعة، أو اضغط إلغاء.'
+      );
+      if (input === null) {
+        actionInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+        return;
+      }
+      overrideReason = (input || '').trim();
+      if (!overrideReason) {
+        showToast('يجب كتابة سبب التجاوز للمتابعة.', 'error');
+        actionInFlight = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+        return;
+      }
+    }
     const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId, p_override_reason: overrideReason });
 
     actionInFlight = false;

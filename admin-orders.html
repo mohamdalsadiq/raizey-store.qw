@@ -449,7 +449,28 @@ async function handleAction(action, orderId) {
   const button = document.querySelector(`[data-action="${CSS.escape(action)}"][data-order-id="${CSS.escape(orderId)}"]`);
   if (button) { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التنفيذ'; }
 
-  const { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus });
+  let overrideReason = null;
+  let { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus });
+  if (error && /unverified_payment_evidence/i.test(error.message || '')) {
+    const input = window.prompt(
+      'تنبيه: لا يوجد دليل دفع موثّق خادمياً لهذا الطلب\n(لا إيصال مُتحقق، ولا خصم محفظة مطابق، ولا رمز دفع مستخدم).\n\nلا يكفي تأكيد الطلب بدون تجاوز موثّق. اكتب سبب التجاوز (سيُسجَّل في سجل التدقيق)، أو اضغط إلغاء للرجوع.'
+    );
+    if (input !== null) {
+      overrideReason = (input || '').trim();
+      if (overrideReason) {
+        ({ error } = await supabaseClient.rpc('admin_update_order_status', {
+          p_order_id: orderId, p_status: nextStatus, p_override_reason: overrideReason
+        }));
+      } else {
+        showToast('يجب كتابة سبب التجاوز للمتابعة.', 'error');
+        if (button) { button.disabled = false; button.innerHTML = button.dataset.originalLabel || 'تنفيذ'; }
+        return;
+      }
+    } else {
+      if (button) { button.disabled = false; button.innerHTML = button.dataset.originalLabel || 'تنفيذ'; }
+      return;
+    }
+  }
   if (error) {
     if (button) { button.disabled = false; button.innerHTML = button.dataset.originalLabel || 'تنفيذ'; }
     showToast(mapOrderError(error.message), 'error');
@@ -464,7 +485,7 @@ async function handleAction(action, orderId) {
     cancelled: `طلبك #${order.order_code} (${order.product_name_snapshot}) تم إلغاؤه من الإدارة.`
   };
   await notifyCustomer(order.user_id, labels[nextStatus], messages[nextStatus]);
-  await logAudit(labels[nextStatus], { order_id: orderId, product: order.product_name_snapshot });
+  await logAudit(labels[nextStatus], { order_id: orderId, product: order.product_name_snapshot, override_reason: overrideReason });
   if (nextStatus === 'in_progress') {
     await supabaseClient.rpc('process_referral_commission', { p_user_id: order.user_id, p_order_id: orderId });
   }
