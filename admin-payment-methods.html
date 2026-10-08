@@ -278,6 +278,17 @@ async function saveMethod() {
   if (!accountName) { formError.textContent = 'أدخل اسم صاحب الحساب'; return; }
   if (!accountNumber) { formError.textContent = 'أدخل رقم الحساب'; return; }
 
+  // P2-RCP-001: تحقق من صيغة BIN — كل قيمة 17 خانة رقمية (فواصل مسموحة)
+  const binRaw = binInput.value.trim();
+  if (binRaw) {
+    const parts = binRaw.split(/[,;\s]+/).filter(Boolean);
+    const invalid = parts.find(p => !/^\d{17}$/.test(p));
+    if (invalid) {
+      formError.textContent = 'رقم BIN غير صالح: "' + invalid.slice(0, 20) + '" — يجب أن يكون 17 خانة رقمية (مثال: 57040290563000001). افصل عدة قيم بفاصلة.';
+      return;
+    }
+  }
+
   const payload = {
     name,
     account_name: accountName,
