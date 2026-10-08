@@ -7,3 +7,6 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+
+# Agent skills (UI/UX Pro Max suite) — kept in Git, never deployed (.vercelignore)
+.cache/
