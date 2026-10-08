@@ -225,6 +225,28 @@ const withWrongName = run(bankakText, {
 check("Beneficiary name mismatch → review_admin", withWrongName.decision, "review_admin");
 check("Beneficiary name flag", (withWrongName.riskFlags || []).includes("beneficiary_name_unverified"), true);
 
+// P2-RCP-001: BIN matching modes (exact / embedded / reverse-embedded / mismatch)
+console.log("\n── مطابقة BIN (تامة/مضمّنة/عكسية/غير متطابقة) ──");
+function binTest(binPrefixes, label) {
+  const m = Object.assign({}, methodMatching, { bin_prefixes: binPrefixes });
+  const r = run(bankakText, {
+    expectedAmount: AMOUNT, manualRef: "FT250719123456",
+    expectedAccount: MERCHANT_ACCOUNT, expectedMethod: m,
+  });
+  return r;
+}
+let r1 = binTest("2050123456789012", "exact");
+check("BIN exact match", r1.extracted.binMatched, true);
+let r2 = binTest("99205012345678901234", "embedded");
+check("BIN embedded (toAcct inside BIN)", r2.extracted.binMatched, true);
+let r3 = binTest("12345678", "reverse");
+check("BIN reverse-embedded (BIN inside toAcct)", r3.extracted.binMatched, true);
+let r4 = binTest("99999999999999999", "mismatch");
+check("BIN mismatch flag", (r4.riskFlags || []).includes("bin_mismatch"), true);
+check("BIN mismatch → binMatched false", r4.extracted.binMatched, false);
+let r5 = binTest("57040290563000001, 2050123456789012", "multi");
+check("BIN multi-value (one matches)", r5.extracted.binMatched, true);
+
 console.log("\n── التطبيع (normalization) ──");
 check("normalizeRef strips separators", Core.normalizeRef("ft2507-19123456"), Core.normalizeRef("FT250719123456"));
 check("latinizeDigits ar-indic", Core.latinizeDigits("١٢٣٤٥"), "12345");
