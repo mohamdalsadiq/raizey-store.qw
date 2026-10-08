@@ -174,5 +174,14 @@ checks AS (
            AND (SELECT qual ILIKE '%is_admin()%' FROM pg_policies
                 WHERE tablename='audit_logs' AND cmd='SELECT')
          ), 'audit_logs writes/reads require an admin session'
+  UNION ALL
+  -- 21) customer cancellation is server-side and ownership-checked
+  SELECT 'customer_cancel_rpc',
+         has_function_privilege('authenticated','public.cancel_my_order(uuid)','EXECUTE')
+         AND NOT has_function_privilege('anon','public.cancel_my_order(uuid)','EXECUTE')
+         AND (SELECT pg_get_functiondef(p.oid) ILIKE '%v_order.user_id <> v_user_id%'
+              FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+              WHERE n.nspname='public' AND p.proname='cancel_my_order'),
+         'order cancellation runs through cancel_my_order with ownership + status checks'
 )
 SELECT check_name, passed, details FROM checks ORDER BY passed, check_name;

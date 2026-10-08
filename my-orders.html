@@ -249,17 +249,21 @@ function renderOrderCard(o) {
 async function cancelOrder(orderId) {
   if (!confirm('هل أنت تأكد من رغبتك في إلغاء هذا الطلب؟')) return;
 
-  const { error } = await supabaseClient
-    .from('orders')
-    .update({ status: 'cancelled' })
-    .eq('id', orderId)
-    .eq('user_id', currentUser.id)
-    .eq('status', 'pending_review');
+  // الإلغاء يتم عبر RPC خادمي (cancel_my_order) وليس بتحديث مباشر على الجدول:
+  // الصلاحيات المباشرة على orders مسحوبة، والـ RPC تتحقق من المالك والحالة خادمياً.
+  const { error } = await supabaseClient.rpc('cancel_my_order', { p_order_id: orderId });
 
   if (!error) {
     await loadOrders();
   } else {
-    alert('حدث خطأ أثناء إلغاء الطلب، يرجى المحاولة لاحقاً.');
+    const msg = (error && error.message) || '';
+    if (msg.includes('wallet_order_requires_support')) {
+      alert('لا يمكن إلغاء هذا الطلب تلقائياً لأنه مدفوع من المحفظة — تواصل مع الدعم ليتم رد المبلغ.');
+    } else if (msg.includes('invalid_status_transition')) {
+      alert('لا يمكن إلغاء الطلب في حالته الحالية، حدّث الصفحة.');
+    } else {
+      alert('حدث خطأ أثناء إلغاء الطلب، يرجى المحاولة لاحقاً.');
+    }
   }
 }
 
