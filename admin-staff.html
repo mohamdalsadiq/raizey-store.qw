@@ -1,13 +1,27 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إدارة المشرفين — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
@@ -21,37 +35,50 @@
   .staff-meta { color:var(--text-muted); font-size:12px; margin-top:3px; }
   .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
   .permission-item { display:flex; align-items:center; gap:8px; min-height:42px; padding:9px 10px; background:var(--bg); border:1px solid var(--border); border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; }
-  .permission-item input { width:17px; height:17px; accent-color:var(--primary); }
+  .permission-item input { width:17px; height:17px; accent-color: var(--rz-accent-text); }
   .permission-all { border-color:rgba(255,106,26,.35); background:rgba(255,106,26,.07); }
   .staff-actions { display:flex; gap:8px; margin-top:14px; }
   .staff-actions button { flex:1; min-height:40px; border-radius:10px; font-weight:800; }
   .staff-role { min-height:38px; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--ink); font-family:inherit; }
   @media (max-width:520px) { .permission-grid { grid-template-columns:1fr; } .staff-card-head { flex-direction:column; } }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 <div class="admin-page" id="adminPage" style="display:none;">
-  <div class="page-header"><h1>إدارة المشرفين</h1><a href="index.html" class="back-link"><i class="fas fa-store"></i> المتجر</a></div>
+  <div class="page-header"><h1>إدارة المشرفين</h1><a href="index.html" class="back-link"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> المتجر</a></div>
   <div class="admin-nav">
     <a href="admin.html">الرئيسية</a><a href="admin-orders.html">الطلبات</a><a href="admin-topups.html">شحن المحافظ</a><a href="admin-products.html">المنتجات</a><a href="admin-categories.html">التصنيفات</a><a href="admin-customers.html">العملاء</a><a href="admin-staff.html" class="active">المشرفون</a><a href="admin-settings.html">الإعدادات</a><a href="admin-audit-log.html">سجل النشاطات</a>
   </div>
-  <div class="staff-intro"><strong><i class="fas fa-user-shield" style="color:var(--primary);"></i> تحكم بصلاحيات الفريق</strong><p>هذه الصفحة للسوبر أدمن فقط. لا يتم تعديل الدور أو الصلاحيات من المتصفح مباشرة؛ كل تغيير يمر عبر تحقق خادمي ويسجل في سجل النشاطات.</p></div>
+  <div class="staff-intro"><strong><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-user"></use></svg> تحكم بصلاحيات الفريق</strong><p>هذه الصفحة للسوبر أدمن فقط. لا يتم تعديل الدور أو الصلاحيات من المتصفح مباشرة؛ كل تغيير يمر عبر تحقق خادمي ويسجل في سجل النشاطات.</p></div>
   <div id="staffList"><div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px 0;">جارِ التحميل...</div></div>
 </div>
-<div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);"><h3 style="color:var(--ink);">غير مصرح لك بالدخول</h3><p>تحتاج إلى صلاحية السوبر أدمن لإدارة المشرفين.</p><a href="index.html" style="color:var(--primary);font-weight:800;">رجوع للمتجر</a></div>
+<div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);"><h3 style="color:var(--ink);">غير مصرح لك بالدخول</h3><p>تحتاج إلى صلاحية السوبر أدمن لإدارة المشرفين.</p><a href="index.html" style="color: var(--rz-accent-text);font-weight:800;">رجوع للمتجر</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
 const permissionFields = [
-  ['can_manage_orders','إدارة الطلبات','fa-clipboard-list'],
-  ['can_manage_wallets','إدارة المحافظ','fa-wallet'],
-  ['can_manage_products','إدارة المنتجات','fa-box-open'],
-  ['can_manage_settings','إدارة الإعدادات','fa-sliders'],
-  ['can_manage_maintenance','وضع الصيانة','fa-screwdriver-wrench'],
-  ['can_manage_admins','إدارة المشرفين','fa-user-shield'],
-  ['can_manage_coupons','إدارة الكوبونات','fa-ticket'],
-  ['can_manage_gift_cards','إدارة كروت الهدايا','fa-gift'],
-  ['can_view_audit_logs','عرض سجل النشاطات','fa-clock-rotate-left']
+  ['can_manage_orders','إدارة الطلبات','clipboard-list'],
+  ['can_manage_wallets','إدارة المحافظ','wallet'],
+  ['can_manage_products','إدارة المنتجات','package-open'],
+  ['can_manage_settings','إدارة الإعدادات','sliders-horizontal'],
+  ['can_manage_maintenance','وضع الصيانة','wrench'],
+  ['can_manage_admins','إدارة المشرفين','shield-user'],
+  ['can_manage_coupons','إدارة الكوبونات','ticket'],
+  ['can_manage_gift_cards','إدارة كروت الهدايا','gift'],
+  ['can_view_audit_logs','عرض سجل النشاطات','history']
 ];
 let staff = [];
 
@@ -62,7 +89,7 @@ function toast(message, error = false) {
 }
 function permissionMarkup(id, perms) {
   const allChecked = !!perms?.is_super_admin;
-  return `<label class="permission-item permission-all"><input type="checkbox" data-perm="all" ${allChecked ? 'checked' : ''}> كل الصلاحيات</label>` + permissionFields.map(([key,label,icon]) => `<label class="permission-item"><input type="checkbox" data-perm="${key}" ${allChecked || perms?.[key] ? 'checked' : ''}> <i class="fas ${icon}" aria-hidden="true"></i> ${label}</label>`).join('');
+  return `<label class="permission-item permission-all"><input type="checkbox" data-perm="all" ${allChecked ? 'checked' : ''}> كل الصلاحيات</label>` + permissionFields.map(([key,label,icon]) => `<label class="permission-item"><input type="checkbox" data-perm="${key}" ${allChecked || perms?.[key] ? 'checked' : ''}> ${window.rzIconMarkup(icon)} ${label}</label>`).join('');
 }
 function normalizePermissionRow(row) {
   return row || {};
@@ -84,7 +111,7 @@ function render() {
     return `<article class="staff-card" data-id="${escapeAttribute(person.id)}">
       <div class="staff-card-head"><div><div class="staff-name">${escapeHtml(person.full_name || 'بدون اسم')} ${isSuper ? '<span class="inactive-badge">سوبر أدمن</span>' : ''}</div><div class="staff-meta">${escapeHtml(person.whatsapp_number || '—')} · ${person.role === 'admin' ? 'مشرف' : 'عميل'}</div></div><select class="staff-role" data-role><option value="admin" ${person.role === 'admin' ? 'selected' : ''}>مشرف</option><option value="customer" ${person.role !== 'admin' ? 'selected' : ''}>عميل</option></select></div>
       <div class="permission-grid">${permissionMarkup(person.id, perms)}</div>
-      <div class="staff-actions"><button class="btn-confirm" data-save><i class="fas fa-save"></i> حفظ الصلاحيات</button></div>
+      <div class="staff-actions"><button class="btn-confirm" data-save><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-save"></use></svg> حفظ الصلاحيات</button></div>
     </article>`;
   }).join('');
   container.querySelectorAll('[data-perm="all"]').forEach((toggle) => toggle.addEventListener('change', () => { const card=toggle.closest('.staff-card'); card.querySelectorAll('[data-perm]').forEach(input => input.checked=toggle.checked); }));
@@ -96,13 +123,13 @@ async function saveStaff(card) {
   card.querySelectorAll('[data-perm]:not([data-perm="all"])').forEach(input => { permissions[input.dataset.perm] = input.checked; });
   const button = card.querySelector('[data-save]'); button.disabled=true; button.textContent='جارِ الحفظ...';
   const { error } = await supabaseClient.rpc('admin_set_staff_permissions', { p_profile_id: card.dataset.id, p_role: role, p_permissions: permissions });
-  button.disabled=false; button.innerHTML='<i class="fas fa-save"></i> حفظ الصلاحيات';
+  button.disabled=false; button.innerHTML='<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-save"></use></svg> حفظ الصلاحيات';
   if (error) { toast(String(error.message || '').includes('super admin') ? 'تحتاج صلاحية السوبر أدمن.' : 'تعذر حفظ الصلاحيات.', true); return; }
   toast('تم حفظ صلاحيات المشرف وتسجيل العملية.'); await loadStaff();
 }
 async function loadStaff() {
   const container = document.getElementById('staffList');
-  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px 0;"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارِ التحميل...</div>';
+  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:30px 0;"><svg class="rz-i rz-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارِ التحميل...</div>';
 
   const [profilesResponse, permissionsResponse] = await Promise.all([
     supabaseClient.from('profiles').select('id, full_name, whatsapp_number, role, is_banned, created_at').order('created_at', { ascending: false }),
@@ -112,7 +139,7 @@ async function loadStaff() {
   if (profilesResponse.error || permissionsResponse.error) {
     const error = profilesResponse.error || permissionsResponse.error;
     devLog('[RAIZEY] staff load error:', error);
-    container.innerHTML = `<div class="admin-error-state"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>${escapeHtml(getStaffErrorMessage(error))}</strong><button type="button" class="admin-btn btn-confirm" id="retryStaffBtn"><i class="fas fa-rotate-right"></i> إعادة المحاولة</button></div>`;
+    container.innerHTML = `<div class="admin-error-state"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-triangle-alert"></use></svg><strong>${escapeHtml(getStaffErrorMessage(error))}</strong><button type="button" class="admin-btn btn-confirm" id="retryStaffBtn"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-rotate-cw"></use></svg> إعادة المحاولة</button></div>`;
     document.getElementById('retryStaffBtn')?.addEventListener('click', loadStaff);
     return;
   }

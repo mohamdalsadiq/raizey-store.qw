@@ -1,12 +1,26 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>إدارة الأقسام — RAIZEY STORE</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/auth.css">
   <link rel="stylesheet" href="assets/css/admin.css">
@@ -19,22 +33,35 @@
     .section-hero h2 { margin:0 0 6px; color:var(--ink); font-size:22px; }
     .section-hero p { margin:0; color:var(--text-muted); line-height:1.7; font-size:13px; }
     .section-hero-icon { width:56px; height:56px; display:grid; place-items:center; border-radius:16px; background:var(--primary); color:var(--ink); font-size:24px; box-shadow:0 10px 24px rgba(255,106,26,.2); }
-    .section-count { color:var(--primary); font-weight:900; }
+    .section-count { color: var(--rz-accent-text); font-weight:900; }
     .admin-inline-notice { margin:12px 0 16px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); color:var(--ink); font-size:13px; line-height:1.7; }
-    .admin-inline-notice.error { border-color:rgba(229,72,77,.35); background:rgba(229,72,77,.08); color:#a52e33; }
+    .admin-inline-notice.error { border-color:rgba(179,38,30,.35); background:rgba(179,38,30,.08); color:#B3261E; }
     .admin-inline-notice.success { border-color:rgba(22,163,74,.3); background:rgba(22,163,74,.08); color:#176b36; }
     .section-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; color:var(--text-muted); font-size:12px; }
     .section-meta span { padding:3px 8px; border-radius:999px; background:rgba(127,127,127,.08); }
     .empty-state { padding:42px 20px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:16px; background:var(--bg-card); }
-    .empty-state i { display:block; margin-bottom:10px; color:var(--primary); font-size:26px; }
+    .empty-state i { display:block; margin-bottom:10px; color: var(--rz-accent-text); font-size:26px; }
     @media (max-width:640px) { .section-hero { align-items:flex-start; } .section-hero-icon { flex-shrink:0; } }
   </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
   <div class="admin-page" id="adminPage" style="display:none;">
     <div class="page-header">
       <h1>إدارة الأقسام</h1>
-      <a href="index.html" class="back-link"><i class="fas fa-store" style="margin-left:4px;"></i> المتجر</a>
+      <a href="index.html" class="back-link"><svg class="rz-i" style="margin-left:4px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> المتجر</a>
     </div>
 
     <div class="admin-nav"></div>
@@ -44,7 +71,7 @@
         <h2>الأقسام الرئيسية</h2>
         <p>اكتب اسم القسم فقط، مثل «الاشتراكات» أو «شحن الألعاب». ستظهر الأقسام كعناوين مستقلة في واجهة المتجر.</p>
       </div>
-      <div class="section-hero-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></div>
+      <div class="section-hero-icon" aria-hidden="true"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
     </div>
 
     <button class="add-new-btn" id="addNewBtn">+ إضافة قسم جديد</button>
@@ -80,7 +107,7 @@
 
   <div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);">
     <h3 style="color:var(--ink);margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-    <a href="index.html" style="color:var(--primary);font-weight:700;">← رجوع للمتجر</a>
+    <a href="index.html" style="color: var(--rz-accent-text);font-weight:700;">← رجوع للمتجر</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -135,20 +162,20 @@
     }
     async function renderSections() {
       const container = document.getElementById('sectionsList');
-      if (!sections.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i>لا توجد أقسام بعد. أضف أول قسم ليظهر في الصفحة الرئيسية.</div>'; return; }
+      if (!sections.length) { container.innerHTML = '<div class="empty-state"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg>لا توجد أقسام بعد. أضف أول قسم ليظهر في الصفحة الرئيسية.</div>'; return; }
       const counts = await Promise.all(sections.map(s => categoryCount(s.id)));
       container.innerHTML = sections.map((section, index) => `
         <div class="manage-item">
           <div class="manage-item-info">
-            <div class="section-hero-icon" style="width:44px;height:44px;border-radius:13px;font-size:18px;margin-left:12px;"><i class="fas fa-layer-group"></i></div>
+            <div class="section-hero-icon" style="width:44px;height:44px;border-radius:13px;font-size:18px;margin-left:12px;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
             <div class="category-meta-text">
               <div class="manage-item-name">${escapeHtml(section.name)} ${!section.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}</div>
               <div class="section-meta"><span>ترتيب: ${Number(section.display_order) || 0}</span><span>${counts[index]} تصنيف</span><span class="section-count">${section.is_active ? 'ظاهر في المتجر' : 'مؤرشف'}</span></div>
             </div>
           </div>
           <div class="manage-item-actions">
-            <button class="admin-action-btn" data-action="edit" data-id="${section.id}" title="تعديل"><i class="fas fa-pen"></i></button>
-            <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><i class="fas fa-trash-can" style="color:var(--danger);"></i></button>
+            <button class="admin-action-btn" data-action="edit" data-id="${section.id}" title="تعديل"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
+            <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><svg class="rz-i" style="color:var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
           </div>
         </div>`).join('');
       container.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openForm(btn.dataset.id)));
