@@ -75,7 +75,10 @@ export function spriteSymbolIds() {
 }
 
 // Icons referenced by name from raizey-ui.js (theme toggle, toast tones, confirm dialog).
+// Icons referenced by name (not via markup) — theme toggle / toast tones /
+// confirm dialog in raizey-ui.js, plus the admin-staff.html permission rows.
 export const SYSTEM_ICONS = [
   "sun", "moon", "circle-help", "check", "x",
-  "circle-check", "circle-x", "triangle-alert", "info"
+  "circle-check", "circle-x", "triangle-alert", "info",
+  "clipboard-list", "ticket", "wrench"
 ];
