@@ -1,15 +1,29 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إعدادات الحساب — RAIZEY STORE</title>
 <meta name="description" content="إدارة بياناتك الشخصية وأمان حسابك وتفضيلاتك في RAIZEY STORE.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
@@ -21,32 +35,32 @@
   body { overflow-x: hidden; }
 
   .account-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
-  .account-kicker { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 7px; color: var(--primary); font-size: 12px; font-weight: 900; letter-spacing: .02em; }
+  .account-kicker { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 7px; color: var(--rz-accent-text); font-size: 12px; font-weight: 900; letter-spacing: .02em; }
   .account-kicker i { font-size: 11px; }
   .account-header h1 { margin: 0; font-size: clamp(24px, 4vw, 32px); line-height: 1.2; }
   .account-header p { margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.7; }
   .account-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-card); color: var(--ink); font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; }
-  .account-back:hover { border-color: var(--primary); color: var(--primary); }
+  .account-back:hover { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
 
   /* بطاقة ملخص الحساب */
-  .account-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 18px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 17px; background: linear-gradient(120deg, #fffdfa, #fff7ef); box-shadow: 0 10px 30px rgba(26,29,41,.05); }
-  .account-avatar { position: relative; display: grid; place-items: center; width: 58px; height: 58px; overflow: hidden; border-radius: 16px; background: #20222d; color: var(--primary); font-size: 22px; }
+  .account-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 18px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 17px; background: linear-gradient(120deg, #fffdfa, #fff7ef); box-shadow: 0 10px 30px rgba(23,16,12,.05); }
+  .account-avatar { position: relative; display: grid; place-items: center; width: 58px; height: 58px; overflow: hidden; border-radius: 16px; background: #211A16; color: var(--rz-accent-text); font-size: 22px; }
   .account-avatar img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6px; }
   .account-summary strong { display: block; font-size: 15px; }
   .account-summary small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11.5px; direction: ltr; text-align: right; overflow-wrap: anywhere; }
-  .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #15803d; font-size: 11px; font-weight: 800; }
+  .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #16794F; font-size: 11px; font-weight: 800; }
   .account-summary-status i { font-size: 9px; }
 
   /* القائمة الرئيسية (Accordion) */
   .acc { display: grid; gap: 12px; margin-bottom: 20px; }
-  .acc-item { border: 1px solid var(--border); border-radius: 16px; background: var(--account-surface); overflow: hidden; box-shadow: 0 8px 24px rgba(26,29,41,.035); }
+  .acc-item { border: 1px solid var(--border); border-radius: 16px; background: var(--account-surface); overflow: hidden; box-shadow: 0 8px 24px rgba(23,16,12,.035); }
   .acc-head { display: flex; align-items: center; gap: 13px; width: 100%; padding: 15px 16px; border: 0; background: transparent; color: var(--ink); font-family: inherit; cursor: pointer; text-align: right; }
-  .acc-ic { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; background: rgba(255,106,26,.1); color: var(--primary); font-size: 16px; }
+  .acc-ic { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px; background: rgba(255,106,26,.1); color: var(--rz-accent-text); font-size: 16px; }
   .acc-titles { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
   .acc-title { font-size: 15px; font-weight: 900; }
   .acc-desc { color: var(--text-muted); font-size: 11.5px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
   .acc-arrow { color: var(--text-muted); font-size: 13px; transition: transform .25s ease; flex: 0 0 auto; }
-  .acc-item.open .acc-arrow { transform: rotate(180deg); color: var(--primary); }
+  .acc-item.open .acc-arrow { transform: rotate(180deg); color: var(--rz-accent-text); }
   .acc-item.open .acc-head { border-bottom: 1px solid var(--border); background: rgba(255,106,26,.045); }
   .acc-body { display: none; padding: 18px; }
   .acc-item.open .acc-body { display: block; animation: accIn .25s ease; }
@@ -60,7 +74,7 @@
   .password-stage { margin-top: 12px; min-width: 0; }
 
   .profile-photo-card { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(120deg, #fffdfa, #fff8f1); }
-  .profile-photo-preview { display: grid; place-items: center; width: 88px; height: 88px; overflow: hidden; flex: 0 0 auto; border: 3px solid #fff; border-radius: 22px; background: #20222d; color: var(--primary); box-shadow: 0 5px 16px rgba(26,29,41,.14); font-size: 26px; aspect-ratio: 1 / 1; }
+  .profile-photo-preview { display: grid; place-items: center; width: 88px; height: 88px; overflow: hidden; flex: 0 0 auto; border: 3px solid #fff; border-radius: 22px; background: #211A16; color: var(--rz-accent-text); box-shadow: 0 5px 16px rgba(23,16,12,.14); font-size: 26px; aspect-ratio: 1 / 1; }
   .profile-photo-preview img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6px; }
   .profile-photo-preview img[hidden], .account-avatar img[hidden] { display: none !important; }
   .profile-photo-copy { min-width: 0; }
@@ -79,26 +93,26 @@
   .email-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
   .email-row input { flex: 1; min-width: 0; }
   .verified-badge, .pending-badge { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 7px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
-  .verified-badge { color: #15803d; background: rgba(21,128,61,.09); }
-  .pending-badge { color: #a16207; background: rgba(234,179,8,.13); }
-  .email-action { margin-top: 7px; border: 0; background: none; color: var(--primary); font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .verified-badge { color: #16794F; background: rgba(22,121,79,.09); }
+  .pending-badge { color: #A85B00; background: rgba(168,91,0,.13); }
+  .email-action { margin-top: 7px; border: 0; background: none; color: var(--rz-accent-text); font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
   .email-action:hover { text-decoration: underline; }
 
   .security-card, .preference-card { padding: 15px; border: 1px solid var(--border); border-radius: 13px; background: var(--bg-card); min-width: 0; }
   .card-title { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; font-weight: 900; }
-  .card-title i { width: 18px; color: var(--primary); text-align: center; }
+  .card-title i { width: 18px; color: var(--rz-accent-text); text-align: center; }
   .card-description { margin: 0 0 12px; color: var(--text-muted); font-size: 11.5px; line-height: 1.7; min-width: 0; overflow-wrap: anywhere; }
   .stack { display: grid; gap: 14px; }
   .password-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .pw-rules { margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; list-style: none; color: var(--text-muted); font-size: 10.5px; }
   .pw-rules li { display: flex; align-items: center; gap: 5px; }
-  .pw-rules li.ok { color: #15803d; font-weight: 800; }
+  .pw-rules li.ok { color: #16794F; font-weight: 800; }
   .pw-rules [data-rule-icon] { display: inline-flex; color: var(--text-muted); }
-  .pw-rules li.ok [data-rule-icon] { color: #15803d; }
+  .pw-rules li.ok [data-rule-icon] { color: #16794F; }
   .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .action-row .auth-btn { flex: 1 1 180px; margin-top: 0; min-height: 42px; font-size: 12px; }
   .auth-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--ink); }
-  .auth-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }
+  .auth-btn.secondary:hover { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
   .auth-btn.danger { background: rgba(255,77,79,.1); border: 1px solid rgba(255,77,79,.25); color: var(--danger); }
   .auth-btn.danger:hover { background: rgba(255,77,79,.17); }
   .status-line { min-height: 19px; margin: 9px 0 0; font-size: 11.5px; line-height: 1.6; }
@@ -113,27 +127,27 @@
   .player-id-row select, .player-id-row input { min-height: 42px; }
   .icon-remove { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(255,77,79,.24); border-radius: 10px; background: rgba(255,77,79,.08); color: var(--danger); cursor: pointer; }
   .icon-remove:hover { background: rgba(255,77,79,.15); }
-  .inline-button { padding: 0; border: 0; background: none; color: var(--primary); font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
+  .inline-button { padding: 0; border: 0; background: none; color: var(--rz-accent-text); font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
   .inline-button:hover { text-decoration: underline; }
   .info-callout { display: flex; align-items: flex-start; gap: 10px; padding: 13px; border: 1px solid rgba(255,106,26,.22); border-radius: 12px; background: rgba(255,106,26,.07); color: var(--ink); }
-  .info-callout i { margin-top: 2px; color: var(--primary); }
+  .info-callout i { margin-top: 2px; color: var(--rz-accent-text); }
   .info-callout p { margin: 0; font-size: 11.5px; line-height: 1.75; }
 
   /* نصوص السياسات القانونية */
   .legal-prose > p { margin: 0 0 10px; color: var(--ink); font-size: 12.5px; font-weight: 600; line-height: 1.85; }
   .legal-prose h3 { display: flex; align-items: center; gap: 8px; margin: 16px 0 7px; font-size: 13.5px; font-weight: 900; }
-  .legal-prose h3 i { color: var(--primary); font-size: 12px; }
+  .legal-prose h3 i { color: var(--rz-accent-text); font-size: 12px; }
   .legal-prose ul { margin: 4px 0 12px; padding-inline-start: 20px; }
   .legal-prose li { margin-bottom: 6px; color: var(--text-muted); font-size: 12px; line-height: 1.8; }
   .legal-note { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 12px 13px; border: 1px solid rgba(255,106,26,.22); border-radius: 12px; background: rgba(255,106,26,.06); }
-  .legal-note i { color: var(--primary); margin-top: 2px; }
+  .legal-note i { color: var(--rz-accent-text); margin-top: 2px; }
   .legal-note p { margin: 0; color: var(--ink); font-size: 11.5px; line-height: 1.75; }
   .legal-updated { margin: 14px 0 0; color: var(--text-muted); font-size: 10.5px; }
 
   .account-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 4px; }
   .account-link-item { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 9px; border: 1px solid var(--border); border-radius: 11px; color: var(--ink); background: var(--bg-card); font-size: 12px; font-weight: 800; text-decoration: none; }
-  .account-link-item:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,106,26,.05); }
-  .account-link-item i { color: var(--primary); }
+  .account-link-item:hover { border-color: var(--rz-accent-text); color: var(--rz-accent-text); background: rgba(255,106,26,.05); }
+  .account-link-item i { color: var(--rz-accent-text); }
   .account-footer-actions { display: flex; gap: 10px; margin-top: 18px; }
   .account-footer-actions .auth-btn { margin-top: 0; }
 
@@ -167,24 +181,36 @@
     .acc-title { font-size: 14px; }
   }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
-<body>
+<body class="rz-has-bottom-nav">
 <div class="account-shell">
   <header class="account-header">
     <div>
-      <div class="account-kicker"><i class="fas fa-sliders"></i> مركز التحكم بالحساب</div>
+      <div class="account-kicker"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-sliders-horizontal"></use></svg> مركز التحكم بالحساب</div>
       <h1>إعدادات الحساب</h1>
       <p>اختر القسم الذي تريد إدارته من القائمة بالأسفل — كل قسم يفتح لوحده.</p>
     </div>
-    <a href="index.html" class="account-back"><i class="fas fa-arrow-right"></i> العودة إلى المتجر</a>
+    <a href="index.html" class="account-back"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> العودة إلى المتجر</a>
   </header>
 
   <section class="account-summary" aria-label="ملخص الحساب">
-    <div class="account-avatar" id="summaryAvatar"><i class="fas fa-user-shield"></i><img id="summaryAvatarImg" alt="" hidden></div>
+    <div class="account-avatar" id="summaryAvatar"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-user"></use></svg><img id="summaryAvatarImg" alt="" hidden></div>
     <div>
       <strong id="summaryName">حساب RAIZEY STORE</strong>
       <small id="summaryEmail">—</small>
-      <span class="account-summary-status" id="summaryStatus"><i class="fas fa-circle-check"></i> حساب محمي</span>
+      <span class="account-summary-status" id="summaryStatus"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> حساب محمي</span>
     </div>
   </section>
 
@@ -196,18 +222,18 @@
     <!-- 1) الأمان والخصوصية -->
     <section class="acc-item" id="acc-security">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-security">
-        <span class="acc-ic"><i class="fas fa-shield-halved"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">الأمان والخصوصية</span><span class="acc-desc">كلمة المرور، التحقق بخطوتين، تسجيل الخروج من كل الأجهزة</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-security">
         <div class="stack">
           <article class="security-card">
-            <div class="card-title"><i class="fas fa-key"></i> تغيير كلمة السر</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-key-round"></use></svg> تغيير كلمة السر</div>
             <p class="card-description">لن تظهر حقول كلمة السر إلا بعد أن تضغط الزر وتؤكد بريدك بالكود المرسل إليه.</p>
             <div class="password-intro" id="passwordIntro">
-              <p><i class="fas fa-envelope-circle-check" style="color:var(--primary);margin-left:5px"></i> سنرسل كود تأكيد إلى بريدك الحالي قبل إظهار نموذج التغيير.</p>
-              <button class="auth-btn secondary" id="startPasswordChangeBtn" type="button"><i class="fas fa-lock" style="margin-left:6px"></i> تغيير كلمة المرور</button>
+              <p><svg class="rz-i" style="color: var(--rz-accent-text);margin-left:5px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-mail-check"></use></svg> سنرسل كود تأكيد إلى بريدك الحالي قبل إظهار نموذج التغيير.</p>
+              <button class="auth-btn secondary" id="startPasswordChangeBtn" type="button"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-lock"></use></svg> تغيير كلمة المرور</button>
             </div>
             <div class="password-stage" id="passwordFormStage" hidden>
               <div class="password-grid">
@@ -235,12 +261,12 @@
                   <div class="field-hint"></div>
                 </div>
               </div>
-              <button class="auth-btn" id="changePasswordBtn" type="button"><i class="fas fa-check" style="margin-left:6px"></i> حفظ كلمة المرور الجديدة</button>
+              <button class="auth-btn" id="changePasswordBtn" type="button"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg> حفظ كلمة المرور الجديدة</button>
             </div>
           </article>
 
           <article class="security-card">
-            <div class="card-title"><i class="fas fa-mobile-screen-button"></i> التحقق بخطوتين</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-smartphone"></use></svg> التحقق بخطوتين</div>
             <p class="card-description">اربط تطبيق Authenticator للحصول على طبقة حماية إضافية عند تسجيل الدخول. دعم الواتساب وSMS سيكون متاحًا قريبًا.</p>
             <div id="mfaStatus" class="status-line"></div>
             <div class="action-row" id="mfaActions"></div>
@@ -259,9 +285,9 @@
           </article>
 
           <article class="security-card">
-            <div class="card-title"><i class="fas fa-laptop"></i> الأجهزة النشطة</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-laptop"></use></svg> الأجهزة النشطة</div>
             <p class="card-description">لأقصى درجات الأمان، سجّل الخروج من جميع الأجهزة التي دخلت منها إلى حسابك بضغطة واحدة.</p>
-            <button class="auth-btn danger" id="globalSignOutBtn" type="button"><i class="fas fa-right-from-bracket" style="margin-left:6px"></i> تسجيل الخروج من كل الأجهزة</button>
+            <button class="auth-btn danger" id="globalSignOutBtn" type="button"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-log-out"></use></svg> تسجيل الخروج من كل الأجهزة</button>
           </article>
         </div>
         <div class="form-error status-line" id="securityError"></div>
@@ -272,18 +298,18 @@
     <!-- 2) البيانات الشخصية -->
     <section class="acc-item" id="acc-personal">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-personal">
-        <span class="acc-ic"><i class="fas fa-id-card"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-id-card"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">البيانات الشخصية</span><span class="acc-desc">الصورة، الاسم، الواتساب، البريد، ومعرّفات اللاعب</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-personal">
         <div class="profile-photo-card">
-          <div class="profile-photo-preview" id="profilePhotoPreview"><i class="fas fa-user"></i><img id="profileAvatarImg" alt="الصورة الشخصية" hidden></div>
+          <div class="profile-photo-preview" id="profilePhotoPreview"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><img id="profileAvatarImg" alt="الصورة الشخصية" hidden></div>
           <div class="profile-photo-copy">
-            <div class="card-title"><i class="fas fa-camera"></i> الصورة الشخصية</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-camera"></use></svg> الصورة الشخصية</div>
             <p class="card-description">تظهر صورتك بجانب اسمك في قائمة الحساب بالصفحة الرئيسية. الصيغ المدعومة JPG وPNG وWEBP، بحد أقصى 5MB.</p>
             <div class="profile-photo-actions">
-              <label class="auth-btn secondary" for="avatarFileInput"><i class="fas fa-upload" style="margin-left:6px"></i> اختيار صورة</label>
+              <label class="auth-btn secondary" for="avatarFileInput"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-upload"></use></svg> اختيار صورة</label>
               <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" hidden>
             </div>
             <div class="avatar-status" id="avatarStatus"></div>
@@ -302,33 +328,33 @@
             <label for="emailInput">البريد الإلكتروني</label>
             <div class="email-row">
               <input type="email" id="emailInput" autocomplete="email">
-              <span class="verified-badge" id="verifiedBadge" hidden><i class="fas fa-circle-check"></i> موثّق</span>
-              <span class="pending-badge" id="pendingBadge" hidden><i class="fas fa-clock"></i> بانتظار التأكيد</span>
+              <span class="verified-badge" id="verifiedBadge" hidden><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> موثّق</span>
+              <span class="pending-badge" id="pendingBadge" hidden><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> بانتظار التأكيد</span>
             </div>
             <button class="email-action" id="resendConfirmBtn" type="button" hidden>إرسال تأكيد البريد مرة أخرى</button>
           </div>
         </div>
         <div class="security-card" style="margin-top:4px">
-          <div class="card-title"><i class="fas fa-gamepad"></i> معرّفات اللاعب المفضّلة</div>
+          <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg> معرّفات اللاعب المفضّلة</div>
           <p class="card-description">احفظ معرّفك لكل لعبة ليكون جاهزًا عند الشراء. يمكنك إضافة أكثر من لعبة.</p>
           <div class="player-id-list" id="playerIdList"></div>
-          <button class="inline-button" id="addPlayerIdBtn" type="button"><i class="fas fa-plus"></i> إضافة معرّف لعبة</button>
+          <button class="inline-button" id="addPlayerIdBtn" type="button"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-plus"></use></svg> إضافة معرّف لعبة</button>
         </div>
-        <button class="auth-btn" id="saveBtn" type="button" style="margin-top:14px"><i class="fas fa-floppy-disk" style="margin-left:6px"></i> حفظ البيانات الشخصية</button>
+        <button class="auth-btn" id="saveBtn" type="button" style="margin-top:14px"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-save"></use></svg> حفظ البيانات الشخصية</button>
       </div>
     </section>
 
     <!-- 3) إعدادات المحفظة والتفضيلات -->
     <section class="acc-item" id="acc-preferences">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-preferences">
-        <span class="acc-ic"><i class="fas fa-wallet"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">إعدادات المحفظة والتفضيلات</span><span class="acc-desc">عملة العرض ومعلومات شحن الرصيد</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-preferences">
         <div class="stack">
           <article class="preference-card">
-            <div class="card-title"><i class="fas fa-coins"></i> عملة العرض</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-coins"></use></svg> عملة العرض</div>
             <p class="card-description">تغيير بصري فقط؛ التسعير الفعلي للمتجر ثابت بالجنيه السوداني.</p>
             <div class="field" style="margin-bottom:0">
               <label for="currencySelect">العملة المفضّلة</label>
@@ -341,12 +367,12 @@
             </div>
           </article>
           <article class="preference-card">
-            <div class="card-title"><i class="fas fa-wallet"></i> المحفظة</div>
+            <div class="card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> المحفظة</div>
             <p class="card-description">الرصيد يُضاف بعد مراجعة إيصال التحويل واعتماده. لا تشارك بيانات دخولك مع أي طرف.</p>
             <a href="wallet.html" class="auth-btn secondary" style="display:block;text-align:center;text-decoration:none;margin-top:0">فتح المحفظة</a>
           </article>
           <article class="preference-card">
-            <div class="info-callout"><i class="fas fa-circle-info"></i><p><strong>معلومة مهمة:</strong> شحن المحفظة يخضع لمراجعة الإيصال، ولا يتم اعتماد الرصيد إلا بعد التأكد من بيانات التحويل ورقم العملية.</p></div>
+            <div class="info-callout"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-info"></use></svg><p><strong>معلومة مهمة:</strong> شحن المحفظة يخضع لمراجعة الإيصال، ولا يتم اعتماد الرصيد إلا بعد التأكد من بيانات التحويل ورقم العملية.</p></div>
           </article>
         </div>
       </div>
@@ -355,28 +381,28 @@
     <!-- 4) من نحن -->
     <section class="acc-item" id="acc-about">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-about">
-        <span class="acc-ic"><i class="fas fa-store"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">من نحن</span><span class="acc-desc">تعريف بمتجر RAIZEY STORE وخدماته</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-about">
         <div class="legal-prose">
           <p>RAIZEY STORE هو متجر رقمي سوداني متخصص في شحن الألعاب وبيع البطاقات والخدمات الرقمية بأسعار تنافسية وتسليم فوري وموثوق.</p>
-          <h3><i class="fas fa-bullseye"></i> رسالتنا</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-target"></use></svg> رسالتنا</h3>
           <p class="lead">نوفّر لك تجربة شراء رقمية سلسة وآمنة: تشحن رصيدك أو تشتري بطاقتك في دقائق، مع دعم مباشر يتابع طلبك خطوة بخطوة.</p>
-          <h3><i class="fas fa-gamepad"></i> خدماتنا</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg> خدماتنا</h3>
           <ul>
             <li>شحن شدات ببجي (PUBG Mobile) وجواهر فري فاير (Free Fire) وعملات eFootball وغيرها.</li>
             <li>بطاقات Google Play وبطاقات الهدايا والخدمات الرقمية المتنوعة.</li>
             <li>محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب عبر تحويل بنكي.</li>
           </ul>
-          <h3><i class="fas fa-shield-halved"></i> التزامنا</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> التزامنا</h3>
           <ul>
             <li>التسليم الفوري بعد اعتماد الدفع، ومتابعة أي طلب يتأخر لأسباب فنية.</li>
             <li>دفع آمن ومراجعة دقيقة لكل إيصال تحويل قبل اعتماد الرصيد.</li>
             <li>خصوصية كاملة لبياناتك وعدم مشاركتها مع أي طرف ثالث.</li>
           </ul>
-          <div class="legal-note"><i class="fas fa-headset"></i><p>للتواصل الرسمي والدعم الفني، اعتمد فقط على رقم الواتساب المعتمد داخل المتجر لتجنّب أي محاولة احتيال.</p></div>
+          <div class="legal-note"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-headset"></use></svg><p>للتواصل الرسمي والدعم الفني، اعتمد فقط على رقم الواتساب المعتمد داخل المتجر لتجنّب أي محاولة احتيال.</p></div>
           <p class="legal-updated">© جميع الحقوق محفوظة لمتجر RAIZEY STORE.</p>
         </div>
       </div>
@@ -385,33 +411,33 @@
     <!-- 5) سياسة الخصوصية -->
     <section class="acc-item" id="acc-privacy">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-privacy">
-        <span class="acc-ic"><i class="fas fa-user-lock"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user-lock"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">سياسة الخصوصية</span><span class="acc-desc">كيف نجمع بياناتك ونحميها ولا نشاركها</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-privacy">
         <div class="legal-prose">
           <p>خصوصيتك أمانة لدينا. نجمع الحد الأدنى من البيانات اللازمة فقط لتشغيل خدمات المتجر وتنفيذ طلباتك.</p>
-          <h3><i class="fas fa-database"></i> البيانات التي نجمعها</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-database"></use></svg> البيانات التي نجمعها</h3>
           <ul>
             <li>الاسم الكامل والبريد الإلكتروني لإنشاء الحساب وتأكيده.</li>
             <li>رقم الواتساب للتواصل بخصوص الطلبات وإشعارات التنفيذ.</li>
             <li>بيانات الطلبات والمحفظة اللازمة لإتمام عمليات الشراء والشحن.</li>
             <li>معرّفات اللاعب التي تحفظها اختياريًا لتسهيل عمليات الشراء.</li>
           </ul>
-          <h3><i class="fas fa-gears"></i> كيف نستخدم بياناتك</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-settings"></use></svg> كيف نستخدم بياناتك</h3>
           <ul>
             <li>تنفيذ الطلبات وإرسال تحديثات حالتها.</li>
             <li>حماية الحساب ومنع الاستخدام المشبوه أو الاحتيالي.</li>
             <li>تحسين تجربة الاستخدام وجودة خدمة العملاء.</li>
           </ul>
-          <h3><i class="fas fa-lock"></i> حماية البيانات</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-lock"></use></svg> حماية البيانات</h3>
           <p class="lead">بياناتك الشخصية ومعاملاتك المالية مشفّرة بالكامل ولا يتم مشاركتها مع أي طرف ثالث. كلمات السر مُخزّنة بصيغة مشفّرة لا يمكن لأي أحد الاطلاع عليها، ويتم تأكيد البريد واستعادة كلمة السر عبر كود مؤقت من 6 أرقام.</p>
-          <h3><i class="fas fa-share-nodes"></i> مشاركة البيانات</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-share-2"></use></svg> مشاركة البيانات</h3>
           <p>لا نبيع بياناتك ولا نشاركها مع أي جهة خارجية، باستثناء ما يلزم فنيًا لتنفيذ عملية الدفع، أو عند وجود التزام قانوني.</p>
-          <h3><i class="fas fa-user-check"></i> حقوقك</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user-check"></use></svg> حقوقك</h3>
           <p>يمكنك طلب تعديل بياناتك أو حذف حسابك في أي وقت عبر التواصل مع خدمة العملاء على الواتساب الرسمي.</p>
-          <div class="legal-note"><i class="fas fa-triangle-exclamation"></i><p>لتجنّب الاحتيال، تحقق دائمًا من أنك تتواصل مع الدعم الفني عبر رقم الواتساب الرسمي المعتمد في المتجر فقط.</p></div>
+          <div class="legal-note"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-triangle-alert"></use></svg><p>لتجنّب الاحتيال، تحقق دائمًا من أنك تتواصل مع الدعم الفني عبر رقم الواتساب الرسمي المعتمد في المتجر فقط.</p></div>
         </div>
       </div>
     </section>
@@ -419,29 +445,29 @@
     <!-- 6) سياسة الاسترداد والاسترجاع -->
     <section class="acc-item" id="acc-refund">
       <button class="acc-head" type="button" data-acc aria-expanded="false" aria-controls="body-refund">
-        <span class="acc-ic"><i class="fas fa-rotate-left"></i></span>
+        <span class="acc-ic"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-rotate-ccw"></use></svg></span>
         <span class="acc-titles"><span class="acc-title">سياسة الاسترداد والاسترجاع</span><span class="acc-desc">متى يحق الاسترجاع وكيف تقدّم شكوى</span></span>
-        <i class="fas fa-chevron-down acc-arrow"></i>
+        <svg class="rz-i acc-arrow" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-down"></use></svg>
       </button>
       <div class="acc-body" id="body-refund">
         <div class="legal-prose">
           <p>البطاقات والخدمات الرقمية التي تم تسليمها بنجاح غير قابلة للإرجاع، نظرًا لطبيعتها الرقمية الفورية، إلا في حال وجود خلل فعلي في الكود المُسلَّم.</p>
-          <h3><i class="fas fa-circle-check"></i> حالات يحق فيها الاسترداد</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> حالات يحق فيها الاسترداد</h3>
           <ul>
             <li>وصول كود أو بطاقة غير صالحة أو مستخدَمة من قبل نتيجة خطأ من المتجر.</li>
             <li>عدم تنفيذ الطلب نهائيًا رغم خصم قيمته من المحفظة أو التحويل.</li>
             <li>خصم قيمة الطلب مرتين لنفس العملية (طلب مكرر مؤكَّد من سجلاتنا).</li>
           </ul>
-          <h3><i class="fas fa-circle-xmark"></i> حالات لا يشملها الاسترداد</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-x"></use></svg> حالات لا يشملها الاسترداد</h3>
           <ul>
             <li>إدخال Player ID (آيدي اللاعب) خاطئ من طرف العميل عند الطلب.</li>
             <li>شراء منتج أو فئة خاطئة بعد تأكيد الطلب وتسليمه بنجاح.</li>
             <li>الرغبة في التراجع بعد استلام الخدمة الرقمية فعليًا.</li>
           </ul>
-          <div class="legal-note"><i class="fas fa-triangle-exclamation"></i><p>تأكد دائمًا من صحة الآيدي (Player ID) المرفق قبل تأكيد الطلب؛ المتجر غير مسؤول عن الإدخال الخاطئ من طرف العميل.</p></div>
-          <h3><i class="fas fa-clock-rotate-left"></i> تأخر التسليم</h3>
+          <div class="legal-note"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-triangle-alert"></use></svg><p>تأكد دائمًا من صحة الآيدي (Player ID) المرفق قبل تأكيد الطلب؛ المتجر غير مسؤول عن الإدخال الخاطئ من طرف العميل.</p></div>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-history"></use></svg> تأخر التسليم</h3>
           <p>في حال تأخّر التسليم عن الوقت المعتاد لأسباب فنية، تواصل معنا فورًا؛ نتابع الطلب حتى تنفيذه، وإن تعذّر التنفيذ نهائيًا يُعاد المبلغ إلى محفظتك بالكامل.</p>
-          <h3><i class="fas fa-file-lines"></i> آلية تقديم شكوى</h3>
+          <h3><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-file-text"></use></svg> آلية تقديم شكوى</h3>
           <ul>
             <li>احتفظ برقم الطلب وصورة الإيصال أو رقم العملية.</li>
             <li>راسل الدعم على الواتساب الرسمي موضّحًا المشكلة مع المرفقات.</li>
@@ -455,18 +481,18 @@
   </div>
 
   <div class="account-links">
-    <a href="my-orders.html" class="account-link-item"><i class="fas fa-box"></i> طلباتي</a>
-    <a href="referrals.html" class="account-link-item"><i class="fas fa-gift"></i> إحالاتي</a>
-    <a href="notifications.html" class="account-link-item"><i class="fas fa-bell"></i> الإشعارات</a>
+    <a href="my-orders.html" class="account-link-item"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg> طلباتي</a>
+    <a href="referrals.html" class="account-link-item"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gift"></use></svg> إحالاتي</a>
+    <a href="notifications.html" class="account-link-item"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bell"></use></svg> الإشعارات</a>
   </div>
   <div class="account-footer-actions">
-    <button class="auth-btn danger" id="logoutBtn" type="button"><i class="fas fa-right-from-bracket" style="margin-left:6px"></i> تسجيل الخروج</button>
+    <button class="auth-btn danger" id="logoutBtn" type="button"><svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-log-out"></use></svg> تسجيل الخروج</button>
   </div>
 </div>
 
 <div class="auth-modal" id="reauthModal" hidden>
   <div class="auth-modal-box" role="dialog" aria-modal="true" aria-labelledby="reauthTitle">
-    <h2 class="auth-modal-title" id="reauthTitle"><i class="fas fa-shield-halved"></i> أكّد هويتك</h2>
+    <h2 class="auth-modal-title" id="reauthTitle"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> أكّد هويتك</h2>
     <p class="auth-modal-sub" id="reauthSub">للمتابعة، أرسلنا كودًا من 6 أرقام إلى بريدك الحالي.</p>
     <form id="reauthForm" novalidate>
       <div class="otp-inputs" id="reauthOtpBox" dir="ltr">
@@ -602,7 +628,7 @@ function addPlayerIdRow(game, value) {
   row.className = 'player-id-row';
   row.innerHTML = '<select aria-label="اللعبة" data-player-game>' +
     '<option value="pubg">PUBG Mobile</option><option value="free_fire">Free Fire</option><option value="efootball">eFootball</option><option value="call_of_duty">Call of Duty</option><option value="other">لعبة أخرى</option>' +
-    '</select><input type="text" inputmode="text" placeholder="Player ID" aria-label="معرّف اللاعب" data-player-value><button class="icon-remove" type="button" aria-label="حذف المعرّف"><i class="fas fa-trash-can"></i></button>';
+    '</select><input type="text" inputmode="text" placeholder="Player ID" aria-label="معرّف اللاعب" data-player-value><button class="icon-remove" type="button" aria-label="حذف المعرّف"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>';
   const select = row.querySelector('[data-player-game]');
   const input = row.querySelector('[data-player-value]');
   select.value = [...select.options].some((option) => option.value === game) ? game : 'other';
@@ -643,14 +669,14 @@ async function loadMfa() {
   const factor = (data.all || data.totp || []).find((item) => item.factor_type === 'totp' && item.status === 'verified');
   actions.innerHTML = '';
   if (factor) {
-    status.innerHTML = '<span style="color:#15803d;font-weight:800"><i class="fas fa-circle-check"></i> التحقق بخطوتين مفعّل عبر Authenticator.</span>';
+    status.innerHTML = '<span style="color:#16794F;font-weight:800"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> التحقق بخطوتين مفعّل عبر Authenticator.</span>';
     const button = document.createElement('button');
-    button.className = 'auth-btn danger'; button.type = 'button'; button.innerHTML = '<i class="fas fa-shield-halved" style="margin-left:6px"></i> إيقاف التحقق بخطوتين';
+    button.className = 'auth-btn danger'; button.type = 'button'; button.innerHTML = '<svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> إيقاف التحقق بخطوتين';
     button.addEventListener('click', () => unenrollMfa(factor.id)); actions.appendChild(button);
   } else {
     status.textContent = 'لم يتم تفعيل التحقق بخطوتين بعد.';
     const button = document.createElement('button');
-    button.className = 'auth-btn secondary'; button.type = 'button'; button.innerHTML = '<i class="fas fa-mobile-screen-button" style="margin-left:6px"></i> إعداد Authenticator';
+    button.className = 'auth-btn secondary'; button.type = 'button'; button.innerHTML = '<svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-smartphone"></use></svg> إعداد Authenticator';
     button.addEventListener('click', enrollMfa); actions.appendChild(button);
   }
 }
@@ -881,5 +907,12 @@ document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && 
 init();
 </script>
   <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
 </html>

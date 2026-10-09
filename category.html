@@ -1,16 +1,30 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الباقات — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
-  :root { --cat-bg:#fff; --cat-card:#f5f1ea; --cat-border:#e8e1d6; --cat-ink:#1a1d29; --cat-muted:#7a7468; --cat-primary:#ff6a1a; --cat-danger:#e5484d; }
+  :root { --cat-bg:#fff; --cat-card:#F8EBDD; --cat-border:#E8D6C6; --cat-ink:#17100C; --cat-muted:#70645C; --cat-primary:#FF6500; --cat-danger:#B3261E; }
   body { margin:0; background:var(--cat-bg)!important; color:var(--cat-ink)!important; font-family:var(--font-display); }
   .catalog-page { width:min(100%,680px); margin:0 auto; padding:18px 16px 116px; box-sizing:border-box; }
   .catalog-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
@@ -82,35 +96,47 @@
   .qty-price-summary b { font-family:var(--font-mono); color:var(--cat-ink); }
   .qty-price-summary .qty-total b { color:var(--cat-primary); }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
-<body>
+<body class="rz-has-bottom-nav">
 <main class="catalog-page">
   <div class="catalog-topbar">
-    <a href="index.html" class="catalog-back"><i class="fas fa-arrow-right" aria-hidden="true"></i> رجوع للمتجر</a>
-    <a href="cart.html" class="catalog-cart" aria-label="فتح السلة"><i class="fas fa-shopping-cart" aria-hidden="true"></i> السلة <span id="globalCartCount">0</span></a>
+    <a href="index.html" class="catalog-back"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للمتجر</a>
+    <a href="cart.html" class="catalog-cart" aria-label="فتح السلة"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> السلة <span id="globalCartCount">0</span></a>
   </div>
-  <div id="loadingBox" class="catalog-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><h3>جارِ تحميل الخيارات...</h3><p>لحظات ونجهز لك الباقات المتاحة.</p></div>
+  <div id="loadingBox" class="catalog-state"><svg class="rz-i rz-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg><h3>جارِ تحميل الخيارات...</h3><p>لحظات ونجهز لك الباقات المتاحة.</p></div>
   <div id="content" hidden>
     <section class="category-hero" aria-labelledby="categoryTitle">
       <div class="category-hero-copy">
-        <span class="category-eyebrow"><i class="fas fa-layer-group" aria-hidden="true"></i> RAIZEY STORE</span>
+        <span class="category-eyebrow"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> RAIZEY STORE</span>
         <h1 id="categoryTitle">الباقات</h1>
         <p id="categoryDescription">اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.</p>
       </div>
-      <div class="category-hero-art" id="categoryArt"><i class="fas fa-gamepad" aria-hidden="true"></i></div>
+      <div class="category-hero-art" id="categoryArt"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg></div>
     </section>
     <div class="trust-row" aria-label="مزايا المتجر">
-      <span class="trust-pill"><i class="fas fa-bolt" aria-hidden="true"></i> تسليم سريع</span>
-      <span class="trust-pill"><i class="fas fa-shield-halved" aria-hidden="true"></i> دفع آمن</span>
-      <span class="trust-pill"><i class="fas fa-headset" aria-hidden="true"></i> دعم مباشر</span>
+      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> تسليم سريع</span>
+      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> دفع آمن</span>
+      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-headset"></use></svg> دعم مباشر</span>
     </div>
     <div class="catalog-heading"><h2>اختر الخيار المطلوب</h2><p id="packageCount">0 خيار متاح</p></div>
     <section id="productOptions" class="option-grid" aria-label="خيارات الباقات"></section>
     <section id="selectedPanel" class="selected-panel" hidden></section>
   </div>
 </main>
-<div class="fixed-price-bar" id="fixedPriceBar" hidden><span class="fixed-price-label"><i class="fas fa-tag" aria-hidden="true"></i> السعر الإجمالي</span><span class="fixed-price-value" id="fixedPriceAmount">اختر خيارًا</span></div>
-<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" rel="noopener" title="تواصل واتساب" aria-label="تواصل واتساب"><i class="fab fa-whatsapp" aria-hidden="true"></i></a>
+<div class="fixed-price-bar" id="fixedPriceBar" hidden><span class="fixed-price-label"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-tag"></use></svg> السعر الإجمالي</span><span class="fixed-price-value" id="fixedPriceAmount">اختر خيارًا</span></div>
+<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" rel="noopener" title="تواصل واتساب" aria-label="تواصل واتساب"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg></a>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
@@ -129,7 +155,7 @@ function safeUrl(value) { if (typeof value !== 'string' || !value.trim()) return
 function money(value) { return typeof formatSDG === 'function' ? formatSDG(Math.max(0, Number(value) || 0)) : Math.round(Number(value) || 0).toLocaleString('ar-EG'); }
 function usd(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
 function updateCartBadge() { try { document.getElementById('globalCartCount').textContent = String((JSON.parse(localStorage.getItem('raizey_store_cart') || '[]') || []).length); } catch { document.getElementById('globalCartCount').textContent = '0'; } }
-function showState(title, description, icon = 'fa-box-open') { const box = document.getElementById('loadingBox'); box.innerHTML = `<i class="fas ${icon}" aria-hidden="true"></i><h3>${escapeHtml(title)}</h3><p>${escapeHtml(description)}</p>`; box.hidden = false; document.getElementById('content').hidden = true; }
+function showState(title, description, icon = 'package-open') { const box = document.getElementById('loadingBox'); box.innerHTML = `${window.rzIconMarkup(icon)}<h3>${escapeHtml(title)}</h3><p>${escapeHtml(description)}</p>`; box.hidden = false; document.getElementById('content').hidden = true; }
 function getUnitPrice() { return selectedInternalOption ? usd(selectedInternalOption.price_usd ?? selectedInternalOption.price) : usd(selectedProduct?.price_usd); }
 function getCurrentPrice() { return getUnitPrice() * (quantity > 0 ? quantity : 1); }
 function updateQtyUI() { const valueEl = document.getElementById('qtyValue'); if (valueEl) valueEl.textContent = String(quantity); const minusBtn = document.getElementById('qtyMinusBtn'); if (minusBtn) minusBtn.disabled = quantity <= 1; }
@@ -153,7 +179,7 @@ function renderOptions() {
   products.forEach((product, index) => {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'product-option'; button.dataset.productId = product.id; button.setAttribute('aria-pressed', selectedProduct?.id === product.id ? 'true' : 'false');
     if (selectedProduct?.id === product.id) button.classList.add('selected');
-    const check = document.createElement('i'); check.className = 'fas fa-check check'; check.setAttribute('aria-hidden', 'true');
+    const check = window.rzIcon('check'); check.classList.add('check');
     const name = document.createElement('span'); name.className = 'product-option-name'; name.textContent = safeText(product.name, `خيار ${index + 1}`);
     const price = document.createElement('span'); price.className = 'product-option-price'; price.textContent = `${money(usd(product.price_usd) * exchangeRate)} ج.س`;
     button.append(check, name, price); button.addEventListener('click', () => selectProduct(product.id)); grid.appendChild(button);
@@ -166,19 +192,19 @@ function renderSelectedProduct() {
   const panel = document.getElementById('selectedPanel'); panel.hidden = false; panel.replaceChildren();
   const head = document.createElement('div'); head.className = 'selected-product-head';
   const imageBox = document.createElement('div'); imageBox.className = 'selected-product-image'; const image = categoryImageUrl;
-  if (image) { const img = document.createElement('img'); img.src = image; img.alt = safeText(selectedProduct.name, 'المنتج'); img.onerror = () => imageBox.replaceChildren(Object.assign(document.createElement('i'), { className:'fas fa-box-open', ariaHidden:'true' })); imageBox.appendChild(img); } else imageBox.innerHTML = '<i class="fas fa-box-open" aria-hidden="true"></i>';
+  if (image) { const img = document.createElement('img'); img.src = image; img.alt = safeText(selectedProduct.name, 'المنتج'); img.onerror = () => imageBox.replaceChildren(window.rzIcon('package-open')); imageBox.appendChild(img); } else imageBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>';
   const headCopy = document.createElement('div'); const title = document.createElement('h3'); title.textContent = safeText(selectedProduct.name, 'المنتج'); const desc = document.createElement('p'); desc.textContent = safeText(selectedProduct.description, 'أكمل بيانات الطلب المطلوبة للمتابعة.'); headCopy.append(title, desc);
-  if (safeText(selectedProduct.delivery_badge_text)) { const badge = document.createElement('span'); badge.className = 'product-badge'; badge.innerHTML = '<i class="fas fa-bolt" aria-hidden="true"></i> ' + escapeHtml(selectedProduct.delivery_badge_text); headCopy.appendChild(badge); }
+  if (safeText(selectedProduct.delivery_badge_text)) { const badge = document.createElement('span'); badge.className = 'product-badge'; badge.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> ' + escapeHtml(selectedProduct.delivery_badge_text); headCopy.appendChild(badge); }
   head.append(imageBox, headCopy); panel.appendChild(head);
   const options = normalizedOptions(selectedProduct);
   if (options.length) {
-    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<i class="fas fa-list-check" aria-hidden="true"></i> اختر العرض'; panel.appendChild(titleBox);
+    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> اختر العرض'; panel.appendChild(titleBox);
     const optionGrid = document.createElement('div'); optionGrid.className = 'option-grid';
     options.forEach((option, index) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'product-option'; button.dataset.internalId = option.id; button.setAttribute('aria-pressed', (selectedInternalOption?.id || options[0].id) === option.id ? 'true' : 'false'); if ((selectedInternalOption?.id || options[0].id) === option.id) { button.classList.add('selected'); if (!selectedInternalOption) selectedInternalOption = options[0]; } button.innerHTML = `<span class="product-option-name">${escapeHtml(option.label)}</span><span class="product-option-price">${money(option.price_usd * exchangeRate)} ج.س</span>`; button.addEventListener('click', () => { selectedInternalOption = option; optionGrid.querySelectorAll('.product-option').forEach(btn => { const isSel = btn.dataset.internalId === option.id; btn.classList.toggle('selected', isSel); btn.setAttribute('aria-pressed', isSel ? 'true' : 'false'); }); updatePrice(); }); optionGrid.appendChild(button); });
     panel.appendChild(optionGrid);
   }
   const qtyBox = document.createElement('div'); qtyBox.className = 'qty-stepper';
-  const qtyLabel = document.createElement('span'); qtyLabel.className = 'qty-stepper-label'; qtyLabel.innerHTML = '<i class="fas fa-layer-group" aria-hidden="true"></i> الكمية';
+  const qtyLabel = document.createElement('span'); qtyLabel.className = 'qty-stepper-label'; qtyLabel.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> الكمية';
   const qtyControls = document.createElement('div'); qtyControls.className = 'qty-stepper-controls';
   const minusBtn = document.createElement('button'); minusBtn.type = 'button'; minusBtn.id = 'qtyMinusBtn'; minusBtn.className = 'qty-btn'; minusBtn.setAttribute('aria-label', 'إنقاص الكمية'); minusBtn.disabled = quantity <= 1; minusBtn.innerHTML = '&minus;'; minusBtn.addEventListener('click', () => changeQuantity(-1));
   const qtyValueEl = document.createElement('span'); qtyValueEl.id = 'qtyValue'; qtyValueEl.className = 'qty-value'; qtyValueEl.textContent = String(quantity);
@@ -187,14 +213,14 @@ function renderSelectedProduct() {
   const qtySummary = document.createElement('div'); qtySummary.id = 'qtyPriceSummary'; qtySummary.className = 'qty-price-summary'; qtySummary.hidden = true; panel.appendChild(qtySummary);
   const fields = readFields(selectedProduct);
   if (fields.length) {
-    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<i class="fas fa-pen-to-square" aria-hidden="true"></i> بيانات الطلب'; panel.appendChild(titleBox);
+    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-square-pen"></use></svg> بيانات الطلب'; panel.appendChild(titleBox);
     fields.forEach(field => { const wrap = document.createElement('div'); wrap.className = 'field'; const label = document.createElement('label'); label.textContent = safeText(field.label, 'بيانات العميل'); const input = document.createElement('input'); input.type = 'text'; input.maxLength = 500; input.dataset.fieldKey = safeText(field.key, 'field'); input.dataset.fieldLabel = safeText(field.label, 'بيانات العميل'); input.placeholder = safeText(field.placeholder, `اكتب ${safeText(field.label, 'البيانات')} هنا...`); wrap.append(label, input); panel.appendChild(wrap); });
   }
   const error = document.createElement('div'); error.className = 'form-error'; error.id = 'formError'; error.tabIndex = -1; panel.appendChild(error);
-  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'action-btn confirm-btn'; confirm.id = 'confirmOrderBtn'; confirm.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i> تأكيد الطلب'; confirm.addEventListener('click', confirmOrder);
-  const add = document.createElement('button'); add.type = 'button'; add.className = 'action-btn cart-btn'; add.id = 'addToCartBtn'; add.innerHTML = '<i class="fas fa-cart-plus" aria-hidden="true"></i> إضافة إلى السلة'; add.addEventListener('click', addToCart);
+  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'action-btn confirm-btn'; confirm.id = 'confirmOrderBtn'; confirm.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تأكيد الطلب'; confirm.addEventListener('click', confirmOrder);
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'action-btn cart-btn'; add.id = 'addToCartBtn'; add.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> إضافة إلى السلة'; add.addEventListener('click', addToCart);
   panel.append(confirm, add);
-  if (safeText(selectedProduct.instructions)) { const notes = document.createElement('div'); notes.className = 'product-instructions'; notes.innerHTML = `<strong><i class="fas fa-circle-info" aria-hidden="true"></i> التفاصيل وطريقة الاستلام</strong>${escapeHtml(selectedProduct.instructions).replace(/\n/g, '<br>')}`; panel.appendChild(notes); }
+  if (safeText(selectedProduct.instructions)) { const notes = document.createElement('div'); notes.className = 'product-instructions'; notes.innerHTML = `<strong><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-info"></use></svg> التفاصيل وطريقة الاستلام</strong>${escapeHtml(selectedProduct.instructions).replace(/\n/g, '<br>')}`; panel.appendChild(notes); }
   updatePrice();
 }
 function selectProduct(id) { selectedProduct = products.find(product => String(product.id) === String(id)) || products[0] || null; selectedInternalOption = null; renderOptions(); renderSelectedProduct(); document.getElementById('selectedPanel')?.scrollIntoView({ behavior:'smooth', block:'start' }); }
@@ -203,10 +229,17 @@ function buildCartItem() { if (!selectedProduct) return null; const fields = col
 function setError(message, success = false) { const box = document.getElementById('formError'); if (!box) return; box.textContent = message; box.style.color = success ? 'var(--cat-primary)' : ''; box.focus?.(); }
 function addToCart() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } let cart = []; try { cart = JSON.parse(localStorage.getItem('raizey_store_cart') || '[]') || []; } catch { cart = []; } cart.push(item); localStorage.setItem('raizey_store_cart', JSON.stringify(cart)); updateCartBadge(); setError('تمت إضافة الخيار إلى السلة.', true); }
 async function confirmOrder() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } const { data:{ session } } = await supabaseClient.auth.getSession(); if (!session) { sessionStorage.setItem('redirect_after_login', window.location.href); window.location.href = 'login.html'; return; } sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at:Date.now(), items:[item] })); window.location.href = 'checkout-v2.html'; }
-function renderCategory(category) { document.title = `${safeText(category.name, 'الباقات')} — RAIZEY STORE`; document.getElementById('categoryTitle').textContent = safeText(category.name, 'الباقات'); document.getElementById('categoryDescription').textContent = safeText(category.description, 'اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.'); const image = safeUrl(category.image_url); categoryImageUrl = image; if (image) document.getElementById('categoryArt').replaceChildren(Object.assign(document.createElement('img'), { src:image, alt:safeText(category.name, 'القسم') })); document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false; if (products.length) selectProduct(products[0].id); else { document.getElementById('productOptions').innerHTML = '<div class="catalog-state"><i class="fas fa-box-open" aria-hidden="true"></i><h3>لا توجد خيارات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا التصنيف قريبًا.</p></div>'; } }
-async function init() { updateCartBadge(); if (!categoryId) { window.location.href = 'index.html'; return; } exchangeRate = Number(await getExchangeRate()) || 1; const [categoryResponse, productsResponse] = await Promise.all([supabaseClient.from('categories').select('id,name,description,image_url').eq('id', categoryId).eq('is_active', true).single(), supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,delivery_badge_text,instructions,required_fields,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')]); if (categoryResponse.error || !categoryResponse.data) { showState('القسم غير متاح', 'ربما تم إخفاؤه أو حُذف. ارجع للمتجر واختر قسمًا آخر.', 'fa-circle-exclamation'); return; } if (productsResponse.error) { showState('تعذر تحميل الخيارات', 'حدّث الصفحة وحاول مرة أخرى.', 'fa-rotate'); return; } products = productsResponse.data || []; renderCategory(categoryResponse.data); }
-init().catch((error) => { devLog('[RAIZEY] category init error:', error); showState('تعذر تحميل الخيارات', 'تحقق من اتصالك ثم أعد المحاولة.', 'fa-triangle-exclamation'); });
+function renderCategory(category) { document.title = `${safeText(category.name, 'الباقات')} — RAIZEY STORE`; document.getElementById('categoryTitle').textContent = safeText(category.name, 'الباقات'); document.getElementById('categoryDescription').textContent = safeText(category.description, 'اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.'); const image = safeUrl(category.image_url); categoryImageUrl = image; if (image) document.getElementById('categoryArt').replaceChildren(Object.assign(document.createElement('img'), { src:image, alt:safeText(category.name, 'القسم') })); document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false; if (products.length) selectProduct(products[0].id); else { document.getElementById('productOptions').innerHTML = '<div class="catalog-state"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg><h3>لا توجد خيارات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا التصنيف قريبًا.</p></div>'; } }
+async function init() { updateCartBadge(); if (!categoryId) { window.location.href = 'index.html'; return; } exchangeRate = Number(await getExchangeRate()) || 1; const [categoryResponse, productsResponse] = await Promise.all([supabaseClient.from('categories').select('id,name,description,image_url').eq('id', categoryId).eq('is_active', true).single(), supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,delivery_badge_text,instructions,required_fields,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')]); if (categoryResponse.error || !categoryResponse.data) { showState('القسم غير متاح', 'ربما تم إخفاؤه أو حُذف. ارجع للمتجر واختر قسمًا آخر.', 'circle-alert'); return; } if (productsResponse.error) { showState('تعذر تحميل الخيارات', 'حدّث الصفحة وحاول مرة أخرى.', 'rotate-cw'); return; } products = productsResponse.data || []; renderCategory(categoryResponse.data); }
+init().catch((error) => { devLog('[RAIZEY] category init error:', error); showState('تعذر تحميل الخيارات', 'تحقق من اتصالك ثم أعد المحاولة.', 'triangle-alert'); });
 </script>
 <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
 </html>

@@ -1,13 +1,27 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>إيصال الطلب — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
@@ -33,18 +47,18 @@
   }
   .receipt-success-icon .icon-circle i {
     font-size: 32px;
-    color: #22c55e;
+    color: #16794F;
   }
   .receipt-success-icon.rejected .icon-circle {
-    background: rgba(229, 72, 77, 0.12);
-    border-color: rgba(229, 72, 77, 0.3);
+    background: rgba(179,38,30, 0.12);
+    border-color: rgba(179,38,30, 0.3);
   }
-  .receipt-success-icon.rejected .icon-circle i { color: var(--danger, #e5484d); }
+  .receipt-success-icon.rejected .icon-circle i { color: var(--danger, #B3261E); }
   .receipt-success-icon.pending .icon-circle {
     background: rgba(255, 106, 26, 0.12);
     border-color: rgba(255, 106, 26, 0.3);
   }
-  .receipt-success-icon.pending .icon-circle i { color: var(--primary, #ff6a1a); }
+  .receipt-success-icon.pending .icon-circle i { color: var(--primary, #FF6500); }
 
   .receipt-title {
     font-size: 20px;
@@ -92,7 +106,7 @@
   }
   .receipt-row .value.price {
     font-size: 16px;
-    color: var(--primary);
+    color: var(--rz-accent-text);
     font-family: 'JetBrains Mono', monospace;
   }
   .receipt-id {
@@ -110,10 +124,10 @@
     font-size: 12px;
     font-weight: 700;
   }
-  .receipt-status-badge.pending_review { background: rgba(255,106,26,0.12); color: #ff6a1a; }
-  .receipt-status-badge.in_progress    { background: rgba(59,130,246,0.12);  color: #3b82f6; }
-  .receipt-status-badge.completed      { background: rgba(34,197,94,0.12);   color: #22c55e; }
-  .receipt-status-badge.rejected       { background: rgba(229,72,77,0.12);   color: #e5484d; }
+  .receipt-status-badge.pending_review { background: rgba(255,106,26,0.12); color: var(--rz-accent-text); }
+  .receipt-status-badge.in_progress    { background: rgba(255,101,0,0.12);  color: var(--rz-accent-text); }
+  .receipt-status-badge.completed      { background: rgba(34,197,94,0.12);   color: #16794F; }
+  .receipt-status-badge.rejected       { background: rgba(179,38,30,0.12);   color: #B3261E; }
   .receipt-status-badge.cancelled      { background: rgba(120,120,120,0.12); color: #888;    }
 
   .receipt-actions {
@@ -172,7 +186,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--primary);
+    color: var(--rz-accent-text);
     font-size: 13px;
     font-weight: 700;
     text-decoration: none;
@@ -191,20 +205,32 @@
   }
   #errorBox h3 { color: var(--ink); margin-bottom: 8px; }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
 
 <div class="receipt-page">
   <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
     <div style="display:flex; align-items:center; gap:8px;">
-      <i class="fas fa-receipt" style="color:var(--primary); font-size:18px;"></i>
+      <svg class="rz-i" style="color: var(--rz-accent-text); font-size:18px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg>
       <h1 style="font-size:18px; margin:0;">إيصال الطلب</h1>
     </div>
-    <a href="index.html" class="back-link" style="margin-bottom:0;"><i class="fas fa-home"></i></a>
+    <a href="index.html" class="back-link" style="margin-bottom:0;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg></a>
   </div>
 
   <div id="loadingBox">
-    <i class="fas fa-circle-notch fa-spin" style="font-size:28px; margin-bottom:12px; color:var(--primary);"></i>
+    <svg class="rz-i rz-spin" style="font-size:28px; margin-bottom:12px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
     <div>جارِ تحميل بيانات الطلب...</div>
   </div>
 
@@ -212,7 +238,7 @@
     <h3>تعذّر تحميل الطلب</h3>
     <p>تأكد من الرابط أو ادخل إلى صفحة طلباتي</p>
     <a href="my-orders.html" class="receipt-btn-primary" style="display:inline-block; margin-top:14px; width:auto; padding:12px 24px;">
-      <i class="fas fa-box-open"></i> طلباتي
+      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> طلباتي
     </a>
   </div>
 
@@ -279,24 +305,24 @@ function renderReceipt(o) {
   });
 
   let iconClass = 'pending';
-  let iconName  = 'fa-clock';
+  let iconName  = 'clock';
   let titleText = 'تم إرسال طلبك بنجاح!';
   let subText   = 'طلبك قيد المراجعة، سيتم تنفيذه في أقرب وقت.';
 
   if (o.status === 'completed') {
-    iconClass = ''; iconName = 'fa-circle-check';
+    iconClass = ''; iconName = 'circle-check';
     titleText = 'تم تنفيذ طلبك!';
     subText = 'طلبك اكتمل بنجاح. شكراً لثقتك بـ RAIZEY STORE.';
   } else if (o.status === 'in_progress') {
-    iconClass = ''; iconName = 'fa-circle-check';
+    iconClass = ''; iconName = 'circle-check';
     titleText = 'جارِ تنفيذ طلبك';
     subText = 'فريقنا يعمل على طلبك الآن.';
   } else if (o.status === 'rejected') {
-    iconClass = 'rejected'; iconName = 'fa-circle-xmark';
+    iconClass = 'rejected'; iconName = 'circle-x';
     titleText = 'تم رفض الطلب';
     subText = o.rejection_reason ? `السبب: ${escapeHtml(o.rejection_reason)}` : 'تواصل مع الدعم لمزيد من التفاصيل.';
   } else if (o.status === 'cancelled') {
-    iconClass = 'rejected'; iconName = 'fa-ban';
+    iconClass = 'rejected'; iconName = 'ban';
     titleText = 'تم إلغاء الطلب';
     subText = 'قمت بإلغاء هذا الطلب.';
   }
@@ -322,7 +348,7 @@ function renderReceipt(o) {
     optionHtml = `
       <div class="receipt-row">
         <span class="label">الخيار المختار</span>
-        <span class="value" style="color: var(--primary); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
+        <span class="value" style="color: var(--rz-accent-text); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
       </div>
     `;
   }
@@ -331,7 +357,7 @@ function renderReceipt(o) {
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
       <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
-        <i class="fas fa-image"></i> عرض الإيصال
+        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض الإيصال
       </a>
     </div>
   ` : '';
@@ -344,20 +370,20 @@ function renderReceipt(o) {
   ` : '';
 
   const rejectionHtml = (o.status === 'rejected' && o.rejection_reason) ? `
-    <div style="background:rgba(229,72,77,0.08); border:1px solid rgba(229,72,77,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:13px; color:#e5484d;">
+    <div style="background:rgba(179,38,30,0.08); border:1px solid rgba(179,38,30,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:13px; color:#B3261E;">
       <strong>سبب الرفض:</strong> ${escapeHtml(o.rejection_reason)}
     </div>
   ` : '';
 
   document.getElementById('receiptContent').innerHTML = `
     <div class="receipt-success-icon ${iconClass}">
-      <div class="icon-circle"><i class="fas ${iconName}"></i></div>
+      <div class="icon-circle">${window.rzIconMarkup(iconName)}</div>
       <p class="receipt-title">${titleText}</p>
       <p class="receipt-sub">${subText}</p>
     </div>
 
     <div class="receipt-card">
-      <div class="receipt-card-title"><i class="fas fa-box"></i> تفاصيل المنتج</div>
+      <div class="receipt-card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg> تفاصيل المنتج</div>
 
       <div class="receipt-row">
         <span class="label">المنتج</span>
@@ -402,10 +428,10 @@ function renderReceipt(o) {
 
     <div class="receipt-actions">
       <a href="my-orders.html" class="receipt-btn-primary">
-        <i class="fas fa-box-open"></i> عرض جميع طلباتي
+        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> عرض جميع طلباتي
       </a>
       <a href="index.html" class="receipt-btn-secondary">
-        <i class="fas fa-store"></i> متابعة التسوق
+        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> متابعة التسوق
       </a>
     </div>
   `;

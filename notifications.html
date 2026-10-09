@@ -1,12 +1,27 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الإشعارات — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
@@ -18,32 +33,45 @@
   border-radius: 18px; padding: 16px; margin-bottom: 12px;
   box-shadow: 0 2px 10px rgba(120, 80, 20, .05);
 }
-.notif-card.unread { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), 0 4px 14px rgba(200, 120, 30, .12); }
+.notif-card.unread { border-color: var(--rz-accent-text); box-shadow: 0 0 0 1px var(--primary), 0 4px 14px rgba(200, 120, 30, .12); }
 .notif-icon {
   flex: 0 0 46px; width: 46px; height: 46px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.notif-icon.success { background: rgba(22, 163, 74, .12); color: #16a34a; }
+.notif-icon.success { background: rgba(22, 163, 74, .12); color: #16794F; }
 .notif-icon.failed  { background: rgba(220, 38, 38, .10); color: #dc2626; }
 .notif-icon.pending { background: rgba(217, 119, 6, .12); color: #d97706; }
-.notif-icon.info    { background: rgba(37, 99, 235, .10); color: #2563eb; }
+.notif-icon.info    { background: rgba(255,101,0, .10); color: var(--rz-accent-text); }
 .notif-body { flex: 1; min-width: 0; }
 .notif-title { font-weight: 800; font-size: 15.5px; color: var(--ink); margin-bottom: 6px; }
 .notif-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .notif-order {
   font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
   direction: ltr; unicode-bidi: embed;
-  background: rgba(200, 120, 30, .10); color: var(--primary);
+  background: rgba(200, 120, 30, .10); color: var(--rz-accent-text);
   border: 1px solid rgba(200, 120, 30, .25);
   padding: 2px 10px; border-radius: 8px;
 }
 .notif-msg { font-size: 13.5px; color: var(--text-muted); line-height: 1.8; }
 .notif-date { display: inline-flex; align-items: center; gap: 5px; }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="orders-page">
+<div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header">
     <h1>الإشعارات</h1>
     <a href="index.html" class="back-link">→ المتجر</a>

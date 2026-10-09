@@ -1,20 +1,35 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>محفظتي — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
   .receipt-scan-status { margin-top:8px; color:var(--text-muted); font-size:12px; line-height:1.7; }
   .receipt-scan-report { display:none; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; color:var(--text-muted); font-size:12px; line-height:1.8; background:var(--bg-card); }
-  .receipt-scan-report.is-success { border-color:var(--primary); }
-  .receipt-scan-report.is-review { border-color:#c98a1f; }
+  .receipt-scan-report.is-success { border-color: var(--rz-accent-text); }
+  .receipt-scan-report.is-review { border-color:#A85B00; }
   .receipt-scan-report.is-error { border-color:var(--danger); color:var(--danger); }
   .receipt-file-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tx-ref-row { display:flex; gap:8px; align-items:stretch; }
@@ -30,10 +45,23 @@
   #transactionRefInput:disabled { opacity:.65; cursor:not-allowed; }
   .field-hint { font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.6; }
 </style>
-</head>
-<body>
 
-<div class="orders-page">
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
+</head>
+<body class="rz-has-bottom-nav">
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+
+<div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header">
     <h1>محفظتي</h1>
     <a href="index.html" class="back-link">→ المتجر</a>
@@ -44,10 +72,10 @@
     <div class="wallet-balance-amount" id="balanceAmount">...</div>
   </div>
 
-  <button class="topup-toggle-btn" id="toggleFormBtn"><i class="fas fa-wallet" style="margin-left:7px;"></i> اطلب شحن رصيد</button>
+  <button class="topup-toggle-btn" id="toggleFormBtn"><svg class="rz-i" style="margin-left:7px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> اطلب شحن رصيد</button>
 
   <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;"><i class="fas fa-gift" style="color:var(--primary);"></i> عندك كود هدية؟</div>
+    <div class="section-label" style="margin-top:0;"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gift"></use></svg> عندك كود هدية؟</div>
     <div style="display:flex; gap:8px;">
       <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--ink); font-family:var(--font-mono); font-size:13px;">
       <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px;">استبدال</button>
@@ -86,14 +114,14 @@
       <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">الخطوة 2 — صورة إشعار التحويل *</label>
       <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
       <div class="file-upload" id="fileUploadBox">
-        <span class="receipt-file-label" id="receiptFileLabel"><i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)</span>
+        <span class="receipt-file-label" id="receiptFileLabel"><svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)</span>
         <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
       </div>
       <div class="field-hint" style="margin-top:6px;">الفحص الذكي يقبل JPG / PNG / WEBP فقط، وبحد أقصى 5MB.</div>
       <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر Google Gemini -->
       <label style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin:10px 0; cursor:pointer; line-height:1.7;">
         <input type="checkbox" id="geminiConsentWallet" style="margin-top:4px; flex-shrink:0;">
-        <span>أوافق على معالجة صورة الإيصال عبر Google Gemini للتحقق الآلي. بدون الموافقة سيُراجع إيصالك يدوياً. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--primary);">سياسة الخصوصية</a></span>
+        <span>أوافق على معالجة صورة الإيصال عبر Google Gemini للتحقق الآلي. بدون الموافقة سيُراجع إيصالك يدوياً. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">سياسة الخصوصية</a></span>
       </label>
       <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
       <div id="receiptScanStatus" class="receipt-scan-status"></div>
@@ -105,12 +133,12 @@
     <button class="auth-btn" id="submitTopupBtn" style="margin-top:10px;">إرسال طلب الشحن</button>
   </div>
 
-  <div class="section-label"><i class="fas fa-receipt" style="color:var(--primary);"></i> سجل الشحن</div>
+  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg> سجل الشحن</div>
   <div id="topupsList">
     <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
   </div>
 
-  <div class="section-label"><i class="fas fa-arrow-right-arrow-left" style="color:var(--primary);"></i> حركات الرصيد</div>
+  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right-left"></use></svg> حركات الرصيد</div>
   <div id="transactionsList">
     <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
   </div>
@@ -221,7 +249,7 @@ async function init() {
     if (!validation.valid) {
       fileInput.value = '';
       receiptFile = null;
-      document.getElementById('receiptFileLabel').innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
+      document.getElementById('receiptFileLabel').innerHTML = '<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
       fileBox.classList.remove('has-file');
       fileError.textContent = validation.message;
       return;
@@ -275,7 +303,7 @@ function resetWalletTxRef(message) {
   if (fileBox) {
     fileBox.classList.remove('has-file');
     const lbl = document.getElementById('receiptFileLabel');
-    if (lbl) lbl.innerHTML = '<i class="fas fa-cloud-arrow-up" style="margin-left:6px;"></i> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
+    if (lbl) lbl.innerHTML = '<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
   }
   resetReceiptScan('');
   if (refMsg) { refMsg.style.color = 'var(--text-muted)'; refMsg.textContent = message || ''; }
@@ -406,7 +434,7 @@ function renderWalletScanReport(analysis, amount, manualRef) {
   report.className = 'receipt-scan-report ' + (technicalReview ? 'is-review' : receiptAnalysisAllowed(analysis) ? 'is-success' : 'is-error');
   report.style.display = 'block';
   report.hidden = false;
-  report.innerHTML = `<strong><i class="fas ${technicalReview ? 'fa-clock' : receiptAnalysisAllowed(analysis) ? 'fa-circle-check' : 'fa-circle-xmark'}"></i> ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top:7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
+  report.innerHTML = `<strong>${window.rzIconMarkup(technicalReview ? 'clock' : receiptAnalysisAllowed(analysis) ? 'circle-check' : 'circle-x')} ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top:7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
 }
 
 async function runWalletReceiptScan() {
@@ -864,5 +892,12 @@ async function submitTopup() {
 init();
 </script>
   <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
 </html>

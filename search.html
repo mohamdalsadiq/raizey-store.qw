@@ -1,26 +1,41 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>البحث — RAIZEY STORE</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <!-- مكتبة الأيقونات الاحترافية للوحة التحكم والمتجر -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/style.css">
 
 <style>
   /* لوحة الألوان الملكية المتوافقة مع الهوية الجديدة للمتجر */
   :root {
     --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
-    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
-    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
-    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
-    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
-    --text-muted: #7a7468;      /* نصوص ثانوية مريحة */
+    --bg-card: #F8EBDD;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #FF6500;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #E8D6C6;    /* لون الحدود المتناسق */
+    --text-light: #17100C;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #70645C;      /* نصوص ثانوية مريحة */
   }
 
   body {
@@ -57,7 +72,7 @@
     overflow: hidden !important;
   }
   .game-card:hover, .game-card:active {
-    border-color: var(--accent-gold) !important;
+    border-color: var(--rz-accent-text)!important;
     box-shadow: 0 0 15px rgba(255, 106, 26, 0.12) !important;
     transform: translateY(-2px) !important;
   }
@@ -105,7 +120,7 @@
   .game-btn {
     width: 100% !important;
     background: rgba(255, 106, 26, 0.06) !important;
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     border: 1px solid rgba(255, 106, 26, 0.3) !important;
     border-radius: 8px !important;
     text-align: center !important;
@@ -120,8 +135,8 @@
   }
   .game-card:hover .game-btn {
     background: var(--accent-gold) !important;
-    color: #1a1d29 !important;
-    border-color: var(--accent-gold) !important;
+    color: #17100C !important;
+    border-color: var(--rz-accent-text)!important;
   }
 
   /* كروت باقات الشحن الفردية */
@@ -145,7 +160,7 @@
   }
   .products-grid .voucher-card:hover, 
   .products-grid .voucher-card:active {
-    border-color: var(--accent-gold) !important;
+    border-color: var(--rz-accent-text)!important;
     box-shadow: 0 0 12px rgba(255, 106, 26, 0.15) !important;
   }
   .voucher-thumb {
@@ -182,7 +197,7 @@
     align-items: center !important;
   }
   .voucher-price {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     font-size: 14px !important;
     font-weight: 900 !important;
   }
@@ -193,7 +208,7 @@
   .buy-btn {
     width: 100% !important;
     background: rgba(255, 106, 26, 0.08) !important;
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     border: 1px solid var(--accent-gold) !important;
     border-radius: 8px !important;
     text-align: center !important;
@@ -204,7 +219,7 @@
   }
   .voucher-card:hover .buy-btn {
     background: var(--accent-gold) !important;
-    color: #1a1d29 !important;
+    color: #17100C !important;
   }
 
   .section-title {
@@ -214,16 +229,28 @@
     font-weight: 700;
   }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
-<body>
+<body class="rz-has-bottom-nav">
 
 <header class="site-header">
   <div class="header-inner">
     <div class="logo" style="display:flex; align-items:center; gap:8px;">
       <img class="hex-logo" src="assets/img/raizey-logo-mark.svg" width="36" height="36" alt="شعار RAIZEY STORE">
-      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color:var(--accent-gold);">STORE</span></span>
+      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900;">RAIZEY <span style="color: var(--rz-accent-text);">STORE</span></span>
     </div>
-    <a href="index.html" class="back-link" style="margin:0; color: var(--accent-gold); text-decoration: none; font-weight: 700;">← الرئيسية</a>
+    <a href="index.html" class="back-link" style="margin:0; color: var(--rz-accent-text); text-decoration: none; font-weight: 700;">← الرئيسية</a>
   </div>
 </header>
 
@@ -336,7 +363,7 @@ async function search(query) {
       categoriesGrid.innerHTML = categoryResults.map(cat => {
         const imgHtml = cat.image_url 
           ? `<img src="${escapeAttribute(sanitizeUrl(cat.image_url))}" alt="${escapeAttribute(cat.name)}" loading="lazy">`
-          : `<div style="color:#7a7468; font-size:32px;"><i class="fas fa-gamepad"></i></div>`;
+          : `<div style="color:#70645C; font-size:32px;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg></div>`;
         const descText = escapeHtml(cat.description ? cat.description : 'تصفح الباقات والشدات المتوفرة حصرياً');
 
         return `
@@ -347,7 +374,7 @@ async function search(query) {
               <div class="game-desc" title="${descText}">${descText}</div>
               <div class="game-btn">
                 <span>عرض الباقات</span>
-                <i class="fas fa-chevron-left" style="font-size:10px;"></i>
+                <svg class="rz-i" style="font-size:10px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-chevron-left"></use></svg>
               </div>
             </div>
           </a>
@@ -362,7 +389,7 @@ async function search(query) {
         <a href="category.html?id=${encodeURIComponent(p.category_id)}" class="voucher-card">
           <div class="voucher-top">
             <div class="voucher-thumb">
-              ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<div style="color:#7a7468; font-size:24px;"><i class="fas fa-box"></i></div>'}
+              ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<div style="color:#70645C; font-size:24px;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg></div>'}
             </div>
             <div class="voucher-name">${escapeHtml(p.name)}</div>
           </div>
@@ -387,5 +414,12 @@ async function search(query) {
 init();
 </script>
   <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
 </html>
