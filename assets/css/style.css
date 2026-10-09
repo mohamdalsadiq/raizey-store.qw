@@ -3,16 +3,16 @@
    ========================================================= */
 :root {
   --bg: #ffffff;              /* الورقي الصافي — خلفية الموقع الأساسية */
-  --bg-card: #f5f1ea;         /* الورقي الخافت — خلفية الصناديق والحقول */
-  --primary: #ff6a1a;         /* البرتقالي الحيوي — العنصر التفاعلي الأساسي */
-  --primary-dim: #e85d00;     /* درجة برتقالية أغمق للتأثيرات والهوفر */
-  --ink: #1a1d29;             /* الحبري الداكن — لون النصوص الأساسية */
+  --bg-card: #F8EBDD;         /* الورقي الخافت — خلفية الصناديق والحقول */
+  --primary: #FF6500;         /* البرتقالي الحيوي — العنصر التفاعلي الأساسي */
+  --primary-dim: #C24E00;     /* درجة برتقالية أغمق للتأثيرات والهوفر */
+  --ink: #17100C;             /* الحبري الداكن — لون النصوص الأساسية */
   --white: #ffffff;
-  --border: #e8e1d6;          /* حدود فاتحة متناسقة مع الهوية الورقية */
-  --text-muted: #7a7468;      /* نصوص فرعية دافئة مريحة للعين */
-  --danger: #e5484d;
+  --border: #E8D6C6;          /* حدود فاتحة متناسقة مع الهوية الورقية */
+  --text-muted: #70645C;      /* نصوص فرعية دافئة مريحة للعين */
+  --danger: #B3261E;
   --warning: #f59e0b;
-  --success: #16a34a;
+  --success: #16794F;
   --font-display: 'Cairo', 'Tajawal', sans-serif;
   --font-heading: 'Cairo', 'Tajawal', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -84,7 +84,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 20px;
   letter-spacing: 0.5px;
 }
-.logo span { color: var(--primary); }
+.logo span { color: var(--rz-accent-text); }
 
 .header-actions {
   display: flex;
@@ -119,7 +119,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 10px;
   height: 10px;
   background: var(--danger);
-  box-shadow: 0 0 0 3px rgba(229,72,77,.14);
+  box-shadow: 0 0 0 3px rgba(179,38,30,.14);
 }
 
 /* ---------- Hero Slider ---------- */
@@ -156,7 +156,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .slide-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   letter-spacing: 1px;
   position: relative;
 }
@@ -217,7 +217,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--primary);
+  color: var(--rz-accent-text);
 }
 
 /* ---------- Category chips ---------- */
@@ -245,7 +245,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .chip.active {
   background: var(--primary);
   color: var(--ink);
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
 }
 
 /* ---------- Voucher Product Cards ---------- */
@@ -275,7 +275,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 .voucher-card:active { transform: scale(0.97); }
-.voucher-card:hover { border-color: var(--primary); }
+.voucher-card:hover { border-color: var(--rz-accent-text); }
 
 .voucher-top {
   padding: 14px 14px 10px;
@@ -288,7 +288,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 100%;
   aspect-ratio: 1.4;
   border-radius: 10px;
-  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,7 +339,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .voucher-price {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-size: 14px;
 }
 .voucher-price small {
@@ -377,7 +377,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .category-header .see-all {
   font-size: 12px;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-weight: 700;
 }
 
@@ -463,7 +463,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .product-hero-thumb {
   width: 100%;
   aspect-ratio: 1.8;
-  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -486,7 +486,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .product-hero-price {
   font-family: var(--font-mono);
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-weight: 700;
   font-size: 20px;
   margin-top: 8px;
@@ -521,7 +521,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .field input[type="text"]:focus {
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
   outline: none;
 }
@@ -543,8 +543,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .variant-btn.active {
   background: var(--bg-card);
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--rz-accent-text);
+  color: var(--rz-accent-text);
   box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
 }
 
@@ -560,7 +560,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transition: border-color 0.2s ease;
 }
 .payment-option.selected {
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   background: rgba(255, 106, 26,0.06);
 }
 .payment-option.disabled {
@@ -575,13 +575,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .payment-option-title { font-weight: 700; font-size: 14px; }
 .payment-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .recharge-highlight-link {
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-weight: 700;
   text-decoration: underline;
   pointer-events: auto;
   cursor: pointer;
 }
-.recharge-highlight-link:hover { color: var(--primary-dim); }
+.recharge-highlight-link:hover { color: var(--rz-accent-text); }
 
 .bank-details {
   background: var(--bg);
@@ -605,7 +605,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   margin-top: 10px;
   cursor: pointer;
 }
-.file-upload.has-file { border-color: var(--primary); color: var(--primary); }
+.file-upload.has-file { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
 
 .summary-box {
   background: var(--bg-card);
@@ -620,7 +620,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .summary-box .total {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
 }
 
 /* ---------- My Orders ---------- */
@@ -664,7 +664,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   padding: 5px 10px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   cursor: pointer;
 }
 .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
@@ -680,7 +680,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .status-in_progress { background: rgba(245, 158, 11,0.15); color: var(--warning); }
 .status-completed { background: rgba(22, 163, 74,0.15); color: var(--success); }
 .status-cancelled { background: rgba(122, 116, 104,0.15); color: var(--text-muted); }
-.status-rejected { background: rgba(229, 72, 77,0.15); color: var(--danger); }
+.status-rejected { background: rgba(179,38,30,0.15); color: var(--danger); }
 
 .order-details {
   font-size: 13px;
@@ -693,8 +693,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .order-details strong { color: var(--ink); }
 
 .order-rejection {
-  background: rgba(229, 72, 77,0.08);
-  border: 1px solid rgba(229, 72, 77,0.3);
+  background: rgba(179,38,30,0.08);
+  border: 1px solid rgba(179,38,30,0.3);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
@@ -727,7 +727,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-family: var(--font-mono);
   font-size: 32px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   margin-top: 8px;
 }
 .wallet-balance-amount small {
@@ -757,7 +757,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .topup-form.show { display: block; }
 
 .status-pending { background: rgba(245, 158, 11,0.15); color: var(--warning); }
-.status-confirmed { background: rgba(255, 106, 26,0.15); color: var(--primary); }
+.status-confirmed { background: rgba(255, 106, 26,0.15); color: var(--rz-accent-text); }
 
 /* ---------- Cyber-Hex Logo ---------- */
 .hex-logo {
@@ -840,7 +840,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   margin-top: 4px;
   text-shadow: 0 0 12px rgba(255, 106, 26,0.5);
 }
@@ -905,7 +905,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   flex-shrink: 0;
 }
 .marquee-item svg {
-  color: var(--primary);
+  color: var(--rz-accent-text);
   flex-shrink: 0;
 }
 
@@ -935,7 +935,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -998,13 +998,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .option-card .opt-price {
   font-weight: 800;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
 .option-card.selected {
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   background: rgba(255, 106, 26, 0.05);
   box-shadow: 0 0 12px rgba(255, 106, 26, 0.1);
 }
@@ -1096,7 +1096,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 @media (prefers-contrast: more) {
   :root {
     --border: #b8ad9c;
-    --text-muted: #5c574d;
+    --text-muted: #4A3B32;
   }
 }
 
@@ -1107,7 +1107,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   --primary-softer: rgba(255, 106, 26, .055);
   --surface-elevated: #fffdfa;
   --focus-ring: 0 0 0 4px rgba(255, 106, 26, .18);
-  --shadow-card: 0 12px 30px -22px rgba(26, 29, 41, .40);
+  --shadow-card: 0 12px 30px -22px rgba(23,16,12, .40);
   --shadow-button: 0 10px 22px -15px rgba(232, 93, 0, .72);
 }
 
@@ -1134,7 +1134,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .icon-btn, .hamburger-btn {
   transition: transform .18s ease, color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.icon-btn:hover, .hamburger-btn:hover { transform: translateY(-1px); color: var(--primary); border-color: rgba(255,106,26,.40); box-shadow: var(--shadow-card); }
+.icon-btn:hover, .hamburger-btn:hover { transform: translateY(-1px); color: var(--rz-accent-text); border-color: rgba(255,106,26,.40); box-shadow: var(--shadow-card); }
 .back-link {
   min-height: 40px;
   padding: 9px 13px;
@@ -1145,7 +1145,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 800;
   transition: transform .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
 }
-.back-link:hover { transform: translateY(-1px); color: var(--primary-dim); border-color: rgba(255,106,26,.42); box-shadow: var(--shadow-card); }
+.back-link:hover { transform: translateY(-1px); color: var(--rz-accent-text); border-color: rgba(255,106,26,.42); box-shadow: var(--shadow-card); }
 .field input, .field select, input[type="text"], input[type="number"], input[type="email"], input[type="tel"], select, textarea {
   min-height: 44px;
   border-radius: 12px;
@@ -1153,7 +1153,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .field input:focus, .field select:focus, input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="tel"]:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   background: var(--surface-elevated);
   box-shadow: var(--focus-ring);
 }
@@ -1164,7 +1164,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .payment-option:hover:not(.disabled) { transform: translateY(-1px); border-color: rgba(255,106,26,.48); box-shadow: var(--shadow-card), 0 0 0 3px var(--primary-softer); }
 .payment-option.selected { box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow-card); }
 .file-upload { transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease; }
-.file-upload:hover { transform: translateY(-1px); border-color: rgba(255,106,26,.55); background: var(--primary-softer); color: var(--primary-dim); }
+.file-upload:hover { transform: translateY(-1px); border-color: rgba(255,106,26,.55); background: var(--primary-softer); color: var(--rz-accent-text); }
 .file-upload.has-file { background: var(--primary-softer); box-shadow: 0 0 0 3px var(--primary-soft); }
 .copy-account-btn { min-height: 34px; padding: 6px 12px; border-radius: 9px; transition: transform .18s ease, border-color .18s ease, color .18s ease, background .18s ease; }
 .copy-account-btn:hover { transform: translateY(-1px); border-color: rgba(255,106,26,.46); background: var(--primary-softer); }
@@ -1202,7 +1202,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .catalog-subcategory-card:hover,
 .catalog-subcategory-card:focus-visible {
   transform: translateY(-2px);
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   box-shadow: 0 12px 28px rgba(255, 106, 26, .14);
   outline: none;
 }
@@ -1216,7 +1216,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   overflow: hidden;
   border-radius: 15px;
   background: linear-gradient(135deg, rgba(255, 106, 26, .16), rgba(255, 208, 143, .18));
-  color: var(--primary);
+  color: var(--rz-accent-text);
   font-size: 25px;
 }
 
@@ -1247,7 +1247,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   line-height: 1.5;
 }
 
-.catalog-subcategory-info > i { color: var(--primary); }
+.catalog-subcategory-info > i { color: var(--rz-accent-text); }
 
 @media (max-width: 520px) {
   .catalog-subcategories-grid { gap: 10px; }

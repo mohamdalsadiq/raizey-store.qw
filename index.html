@@ -1,28 +1,43 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
 <meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <!-- إضافة مكتبة الأيقونات الاحترافية لتطابق صفحة المنتج -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/style.css">
 
 <style>
   /* تفعيل لوحة الألوان الملكية الفخمة لـ RAIZEY STORE */
   :root {
     --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
-    --bg-card: #f5f1ea;         /* الورقي الخافت - خلفية البطاقات */
-    --accent-gold: #ff6a1a;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
-    --border-color: #e8e1d6;    /* لون الحدود المتناسق */
-    --text-light: #1a1d29;      /* الحبري الداكن - لون النصوص */
-    --text-muted: #5c574d;      /* نصوص ثانوية عالية التباين */
-    --danger: #e5484d;
+    --bg-card: #F8EBDD;         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: #FF6500;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
+    --border-color: #E8D6C6;    /* لون الحدود المتناسق */
+    --text-light: #17100C;      /* الحبري الداكن - لون النصوص */
+    --text-muted: #4A3B32;      /* نصوص ثانوية عالية التباين */
+    --danger: #B3261E;
   }
 
   body {
@@ -34,7 +49,7 @@
   .catalog-sections { display:flex; flex-direction:column; gap:34px; padding:8px 20px 24px; }
   .store-section { position:relative; }
   .store-section-heading { display:flex; flex-direction:column; align-items:center; text-align:center; margin:0 auto 18px; }
-  .store-section-kicker { color:var(--accent-gold); font-size:11px; font-weight:900; letter-spacing:.35px; }
+  .store-section-kicker { color: var(--rz-accent-text); font-size:11px; font-weight:900; letter-spacing:.35px; }
   .store-section-title { position:relative; margin:5px 0 7px; color:var(--text-light); font-size:26px; font-weight:900; }
   .store-section-title::after { content:''; display:block; width:54px; height:3px; margin:9px auto 0; border-radius:999px; background:var(--accent-gold); }
   .store-section-description { max-width:620px; color:var(--text-muted); font-size:13px; line-height:1.7; }
@@ -65,7 +80,7 @@
   /* تأثير التوهج الذهبي المضيء الفخم عند التفاعل مع الكارت */
   .game-card:hover, 
   .game-card:active {
-    border-color: var(--accent-gold) !important;
+    border-color: var(--rz-accent-text)!important;
     box-shadow: 0 0 15px rgba(255, 106, 26, 0.12) !important;
     transform: translateY(-2px) !important;
   }
@@ -132,14 +147,14 @@
     margin-bottom: 10px !important;
   }
   .card-trust i {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     font-size: 10px !important;
   }
 
   .game-btn {
     width: 100% !important;
     background: rgba(255, 106, 26, 0.06) !important;
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     border: 1px solid rgba(255, 106, 26, 0.3) !important;
     border-radius: 8px !important;
     text-align: center !important;
@@ -154,8 +169,8 @@
   }
   .game-card:hover .game-btn {
     background: var(--accent-gold) !important;
-    color: #1a1d29 !important;
-    border-color: var(--accent-gold) !important;
+    color: #17100C !important;
+    border-color: var(--rz-accent-text)!important;
   }
 
   /* ستايل الهيدر اللامع واللوجو السداسي الذهبي */
@@ -195,7 +210,7 @@
     direction: rtl !important;
   }
   .marquee-item svg {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     flex-shrink: 0 !important;
   }
 
@@ -215,21 +230,21 @@
     padding: 14px !important;
   }
   .drawer-wallet-amount {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     font-weight: 900 !important;
   }
   .drawer-nav a {
     color: var(--text-light) !important;
   }
   .drawer-nav a:hover {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
     background: rgba(255, 106, 26, 0.04) !important;
   }
   .drawer-nav a svg {
     color: var(--text-muted) !important;
   }
   .drawer-nav a:hover svg {
-    color: var(--accent-gold) !important;
+    color: var(--rz-accent-text)!important;
   }
   .drawer-divider {
     border-top: 1px solid var(--border-color) !important;
@@ -238,7 +253,7 @@
   /* زر تسجيل الدخول داخل الدروار */
   .auth-btn {
     background: var(--accent-gold) !important;
-    color: #1a1d29 !important;
+    color: #17100C !important;
     font-weight: 900 !important;
     padding: 12px;
     border-radius: 10px;
@@ -251,8 +266,20 @@
     box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
   }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
-<body>
+<body class="rz-has-bottom-nav">
 
 <header class="site-header">
   <div class="header-inner">
@@ -262,7 +289,7 @@
     <div class="logo" style="display:flex; align-items:center; gap:8px;">
       <!-- التحديث الذهبي للوجو السداسي الفخم لـ RAIZEY STORE -->
       <img class="hex-logo" src="assets/img/raizey-logo-mark.svg" width="36" height="36" alt="شعار RAIZEY STORE">
-      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900; color:var(--text-light);">RAIZEY <span style="color:var(--primary-dim);">STORE</span></span>
+      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900; color:var(--text-light);">RAIZEY <span style="color: var(--rz-accent-text);">STORE</span></span>
     </div>
     <div class="header-actions">
       <a href="search.html" class="icon-btn" title="بحث" style="color: var(--text-light);">
@@ -282,11 +309,11 @@
     <div id="drawerGuestBox" style="display:none; padding: 20px 10px;">
       <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
       <a href="login.html" class="auth-btn" style="display:block; text-align:center; margin-bottom:14px;">تسجيل الدخول</a>
-      <a href="register.html" style="display:block; text-align:center; font-size:13px; color:var(--accent-gold); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
+      <a href="register.html" style="display:block; text-align:center; font-size:13px; color: var(--rz-accent-text); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
     </div>
     <div id="drawerUserBox" style="display:none;">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
-        <div id="drawerAvatar" style="display:grid; place-items:center; width:46px; height:46px; flex:0 0 auto; overflow:hidden; border-radius:14px; background:#20222d; color:var(--accent-gold);">
+        <div id="drawerAvatar" style="display:grid; place-items:center; width:46px; height:46px; flex:0 0 auto; overflow:hidden; border-radius:14px; background:#211A16; color: var(--rz-accent-text);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <img id="drawerAvatarImg" alt="" hidden style="width:100%; height:100%; object-fit:contain; padding:5px;">
         </div>
@@ -325,17 +352,17 @@
 <section class="hero-slider">
   <div class="slider-track" id="sliderTrack">
     <div class="slide slide-1" style="background: linear-gradient(135deg, #FFF4EA 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">RAIZEY STORE</div>
+      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">RAIZEY STORE</div>
       <h2 style="color: var(--text-light);">اشحن رصيدك فوراً بأفضل الأسعار</h2>
       <p style="color: var(--text-muted);">شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
     </div>
     <div class="slide slide-2" style="background: linear-gradient(135deg, #FFEFE0 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">دفع مرن</div>
+      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">دفع مرن</div>
       <h2 style="color: var(--text-light);">ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
       <p style="color: var(--text-muted);">محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
     </div>
     <div class="slide slide-3" style="background: linear-gradient(135deg, #FFF8F2 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color:var(--primary-dim); font-weight:800;">دعم فوري</div>
+      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">دعم فوري</div>
       <h2 style="color: var(--text-light);">تواصل معانا مباشرة على واتساب</h2>
       <p style="color: var(--text-muted);">فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
     </div>
@@ -369,7 +396,7 @@
 </footer>
 
 <a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="#1a1d29"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="#17100C"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -538,11 +565,10 @@ function getSafeImageUrl(value) {
   }
 }
 
-function createIcon(className, style) {
-  const icon = document.createElement('i');
-  icon.className = className;
+function createIcon(name, style) {
+  // Single icon system: Lucide sprite (see assets/icons/lucide-sprite.svg)
+  const icon = window.rzIcon(name);
   if (style) icon.style.cssText = style;
-  icon.setAttribute('aria-hidden', 'true');
   return icon;
 }
 
@@ -570,13 +596,13 @@ function createCategoryCard(cat) {
       image.loading = 'lazy';
       image.decoding = 'async';
       image.addEventListener('error', () => {
-        thumb.replaceChildren(createIcon('fas fa-gamepad'));
-        thumb.style.cssText = 'color:#7a7468; font-size:32px;';
+        thumb.replaceChildren(createIcon('gamepad-2'));
+        thumb.style.cssText = 'color:#70645C; font-size:32px;';
       }, { once: true });
       thumb.appendChild(image);
     } else {
-      thumb.style.cssText = 'color:#7a7468; font-size:32px;';
-      thumb.appendChild(createIcon('fas fa-gamepad'));
+      thumb.style.cssText = 'color:#70645C; font-size:32px;';
+      thumb.appendChild(createIcon('gamepad-2'));
     }
 
     info.className = 'game-info';
@@ -638,5 +664,12 @@ function renderCatalog(sections, categories) {
 init();
 </script>
   <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
   </html>

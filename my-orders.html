@@ -1,14 +1,29 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>طلباتي — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
@@ -54,10 +69,10 @@
     font-weight: 700;
     white-space: nowrap;
   }
-  .status-pending_review { background: rgba(255,106,26,0.12); color: #ff6a1a; }
-  .status-in_progress    { background: rgba(59,130,246,0.12);  color: #3b82f6; }
-  .status-completed      { background: rgba(34,197,94,0.12);   color: #22c55e; }
-  .status-rejected       { background: rgba(229,72,77,0.12);   color: #e5484d; }
+  .status-pending_review { background: rgba(255,106,26,0.12); color: var(--rz-accent-text); }
+  .status-in_progress    { background: rgba(255,101,0,0.12);  color: var(--rz-accent-text); }
+  .status-completed      { background: rgba(34,197,94,0.12);   color: #16794F; }
+  .status-rejected       { background: rgba(179,38,30,0.12);   color: #B3261E; }
   .status-cancelled      { background: rgba(120,120,120,0.12); color: #888;    }
 
   .order-details {
@@ -83,18 +98,18 @@
     padding: 2px 0;
   }
   .order-rejection {
-    background: rgba(229,72,77,0.08);
-    border: 1px solid rgba(229,72,77,0.2);
+    background: rgba(179,38,30,0.08);
+    border: 1px solid rgba(179,38,30,0.2);
     border-radius: 8px;
     padding: 10px;
     margin-top: 10px;
     font-size: 12px;
-    color: #e5484d;
+    color: #B3261E;
   }
   .cancel-order-btn {
     background: transparent;
-    border: 1px solid var(--danger, #e5484d);
-    color: var(--danger, #e5484d);
+    border: 1px solid var(--danger, #B3261E);
+    color: var(--danger, #B3261E);
     border-radius: 8px;
     padding: 6px 12px;
     font-size: 12px;
@@ -104,24 +119,37 @@
     transition: 0.2s;
   }
   .cancel-order-btn:hover {
-    background: rgba(229,72,77,0.1);
+    background: rgba(179,38,30,0.1);
   }
 </style>
-</head>
-<body>
 
-<div class="orders-page">
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
+</head>
+<body class="rz-has-bottom-nav">
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+
+<div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <div style="display:flex; align-items:center; gap:8px;">
-      <i class="fas fa-box-open" style="color:var(--primary); font-size:20px;"></i>
+      <svg class="rz-i" style="color: var(--rz-accent-text); font-size:20px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>
       <h1 style="font-size:20px; margin:0;">طلباتي</h1>
     </div>
-    <a href="index.html" class="back-link" style="margin-bottom:0;"><i class="fas fa-store"></i> المتجر</a>
+    <a href="index.html" class="back-link" style="margin-bottom:0;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> المتجر</a>
   </div>
 
   <div id="ordersList">
     <div style="text-align:center; padding:60px 0; color:var(--text-muted);">
-      <i class="fas fa-circle-notch fa-spin" style="font-size:26px; margin-bottom:10px; color:var(--primary);"></i>
+      <svg class="rz-i rz-spin" style="font-size:26px; margin-bottom:10px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
       <div>جارِ تحميل الطلبات...</div>
     </div>
   </div>
@@ -168,7 +196,7 @@ async function loadOrders() {
   if (error || !orders || orders.length === 0) {
     container.innerHTML = `
       <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-        <i class="fas fa-box-open" style="font-size:42px; color:var(--border); margin-bottom:12px; display:block;"></i>
+        <svg class="rz-i" style="font-size:42px; color:var(--border); margin-bottom:12px; display:block;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>
         <h3 style="color:var(--ink); margin-bottom:8px; font-size:16px;">لا توجد طلبات بعد</h3>
         <p style="font-size:13px;">ابدأ التسوق من الصفحة الرئيسية وستظهر طلباتك هنا</p>
         <a href="index.html" class="auth-btn" style="display:inline-block; text-decoration:none; margin-top:14px; width:auto; padding:10px 20px;">تصفح المتجر</a>
@@ -205,7 +233,7 @@ function renderOrderCard(o) {
   if (o.selected_option && o.selected_option.label) {
     optionHtml = `
       <div style="background: rgba(255, 106, 26, 0.05); border: 1px solid var(--primary); border-radius: 8px; padding: 8px; margin-top: 6px;">
-        <strong>الخيار المختار:</strong> <span style="color: var(--primary);">${escapeHtml(o.selected_option.label)}</span>
+        <strong>الخيار المختار:</strong> <span style="color: var(--rz-accent-text);">${escapeHtml(o.selected_option.label)}</span>
       </div>
     `;
   }
@@ -215,23 +243,23 @@ function renderOrderCard(o) {
       <div class="order-top">
         <div>
           <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
-          <div class="order-date"><i class="far fa-clock" style="margin-left:4px;"></i>${date}</div>
+          <div class="order-date"><svg class="rz-i" style="margin-left:4px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg>${date}</div>
           <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">طلب #${escapeHtml(o.order_code || o.id.slice(0, 8))}</div>
         </div>
         <span class="status-badge status-${escapeHtml(o.status)}">${statusLabels[o.status] || escapeHtml(o.status)}</span>
       </div>
 
       <div class="order-details">
-        <div><strong>السعر:</strong> <span style="color:var(--primary); font-family:'JetBrains Mono', monospace; font-weight:700;">${formatSDG(o.price_sdg_snapshot)} ج.س</span></div>
+        <div><strong>السعر:</strong> <span style="color: var(--rz-accent-text); font-family:'JetBrains Mono', monospace; font-weight:700;">${formatSDG(o.price_sdg_snapshot)} ج.س</span></div>
         <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</div>
         ${optionHtml} <!-- عرض الخيار المختار هنا -->
         ${fieldsHtml}
-        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color:var(--primary); font-weight:700; text-decoration:none;"><i class="fas fa-image"></i> عرض صورة الإيصال</a></div>` : ''}
+        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text); font-weight:700; text-decoration:none;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض صورة الإيصال</a></div>` : ''}
       </div>
 
       <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-        <a href="receipt.html?order_id=${escapeHtml(o.id)}" style="color:var(--primary); font-size:13px; font-weight:700; text-decoration:none;">
-          <i class="fas fa-receipt"></i> عرض الإيصال والتفاصيل
+        <a href="receipt.html?order_id=${escapeHtml(o.id)}" style="color: var(--rz-accent-text); font-size:13px; font-weight:700; text-decoration:none;">
+          <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg> عرض الإيصال والتفاصيل
         </a>
       </div>
 
@@ -240,7 +268,7 @@ function renderOrderCard(o) {
       ` : ''}
 
       ${o.status === 'pending_review' ? `
-        <button class="cancel-order-btn" data-order-id="${escapeHtml(o.id)}"><i class="fas fa-times-circle"></i> إلغاء الطلب</button>
+        <button class="cancel-order-btn" data-order-id="${escapeHtml(o.id)}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-x"></use></svg> إلغاء الطلب</button>
       ` : ''}
     </div>
   `;
@@ -270,5 +298,12 @@ async function cancelOrder(orderId) {
 init();
 </script>
   <script src="assets/js/raizey-assistant.js"></script>
+<nav class="rz-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
 </body>
 </html>

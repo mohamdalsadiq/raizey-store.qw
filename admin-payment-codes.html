@@ -1,27 +1,55 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>رموز الدفع — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
 <style>
   .code-card { background: var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
-  .code-value { font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:700; color:var(--primary); letter-spacing:1px; }
+  .code-value { font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:700; color: var(--rz-accent-text); letter-spacing:1px; }
   .code-meta { font-size:12.5px; color:var(--text-muted); line-height:1.9; margin-top:6px; }
   .code-state { font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; }
-  .state-active { background:rgba(34,197,94,.14); color:#16a34a; }
+  .state-active { background:rgba(34,197,94,.14); color:#16794F; }
   .state-used { background:rgba(148,163,184,.18); color:#64748b; }
-  .state-expired { background:rgba(239,68,68,.12); color:#ef4444; }
-  .state-cancelled { background:rgba(239,68,68,.12); color:#ef4444; }
+  .state-expired { background:rgba(179,38,30,.12); color:#B3261E; }
+  .state-cancelled { background:rgba(179,38,30,.12); color:#B3261E; }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="admin-page" id="adminPage" style="display:none;">
   <div class="page-header">
@@ -82,7 +110,7 @@
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
   <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

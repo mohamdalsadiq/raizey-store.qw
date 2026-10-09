@@ -141,7 +141,12 @@ function requireClient() {
 
 // =========================================================
 // Sentry: سياق الصفحة والمستخدم (بدون بيانات حساسة زي الإيميل)
+// الحماية: قد يُحمَّل الـ loader جزئياً (حاجب إعلانات أو حجب شبكة)، فنتحقق من الدالة نفسها
+// بدلاً من وجود الكائن فقط لتجنّب أخطاء TypeError في الصفحة.
 // =========================================================
+function hasSentryUserApi() {
+  return !!(window.Sentry && typeof window.Sentry.setUser === 'function');
+}
 if (window.Sentry && typeof window.Sentry.onLoad === 'function') {
   window.Sentry.onLoad(function () {
     try {
@@ -152,10 +157,10 @@ if (window.Sentry && typeof window.Sentry.onLoad === 'function') {
 if (supabaseClient) {
   supabaseClient.auth.getSession().then(({ data }) => {
     const uid = data && data.session && data.session.user ? data.session.user.id : null;
-    if (window.Sentry && uid) window.Sentry.setUser({ id: uid });
+    if (hasSentryUserApi() && uid) window.Sentry.setUser({ id: uid });
   }).catch(() => {});
   supabaseClient.auth.onAuthStateChange((_event, session) => {
-    if (!window.Sentry) return;
+    if (!hasSentryUserApi()) return;
     if (session && session.user) {
       window.Sentry.setUser({ id: session.user.id });
     } else {

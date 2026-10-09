@@ -1,15 +1,30 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إحالاتي — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
   .referral-panel { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:20px; box-shadow:var(--shadow-card); }
   .referral-panel.is-primary { border-color:rgba(255,106,26,.55); background:linear-gradient(135deg,#fff8f1,var(--bg-card)); }
@@ -17,42 +32,55 @@
   .referral-action-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:stretch; }
   .referral-action-row input { min-width:0; width:100%; }
   .referral-copy-btn { min-width:84px; padding:0 16px; border-radius:11px; background:var(--primary); color:var(--ink); font-weight:800; }
-  .referral-code-value { direction:ltr; text-align:center; letter-spacing:2px; font-family:var(--font-mono); font-weight:800; color:var(--primary-dim); }
+  .referral-code-value { direction:ltr; text-align:center; letter-spacing:2px; font-family:var(--font-mono); font-weight:800; color: var(--rz-accent-text); }
   .referral-help { margin-top:8px; color:var(--text-muted); font-size:12px; line-height:1.7; }
   .referral-howto p { margin:5px 0; }
   @media (max-width:420px) { .referral-action-row { grid-template-columns:1fr; } .referral-copy-btn { min-height:44px; } }
 </style>
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="orders-page">
+<div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header">
     <h1>إحالاتي وأرباحي</h1>
     <a href="account.html" class="back-link">→ حسابي</a>
   </div>
 
   <div class="referral-panel is-primary">
-    <div class="section-label"><i class="fas fa-link" style="color:var(--primary);"></i> رابط الإحالة الخاص بك</div>
+    <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-link"></use></svg> رابط الإحالة الخاص بك</div>
     <div class="referral-action-row">
-      <input type="text" id="referralLinkInput" readonly aria-label="رابط الإحالة الخاص بك" style="padding:12px 14px; border-radius:11px; border:1px solid var(--border); background:var(--bg); color:var(--primary); font-family:var(--font-mono); font-size:12px;">
-      <button id="copyRefBtn" class="referral-copy-btn" type="button"><i class="fas fa-copy" style="margin-left:6px;"></i> نسخ الرابط</button>
+      <input type="text" id="referralLinkInput" readonly aria-label="رابط الإحالة الخاص بك" style="padding:12px 14px; border-radius:11px; border:1px solid var(--border); background:var(--bg); color: var(--rz-accent-text); font-family:var(--font-mono); font-size:12px;">
+      <button id="copyRefBtn" class="referral-copy-btn" type="button"><svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-copy"></use></svg> نسخ الرابط</button>
     </div>
   </div>
 
   <div class="referral-panel">
-    <div class="section-label"><i class="fas fa-hashtag" style="color:var(--primary);"></i> كود الإحالة القصير</div>
+    <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-hash"></use></svg> كود الإحالة القصير</div>
     <div class="referral-action-row">
       <input type="text" id="referralShortCodeInput" class="referral-code-value" readonly aria-label="كود الإحالة القصير">
-      <button id="copyShortRefBtn" class="referral-copy-btn" type="button"><i class="fas fa-copy" style="margin-left:6px;"></i> نسخ الكود</button>
+      <button id="copyShortRefBtn" class="referral-copy-btn" type="button"><svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-copy"></use></svg> نسخ الكود</button>
     </div>
     <div class="referral-help">شارك هذا الكود يدويًا؛ يمكن لصديقك كتابته أثناء إنشاء الحساب بدل فتح الرابط.</div>
   </div>
 
   <div class="referral-panel referral-howto" style="font-size:13px; line-height:1.9;">
-    <div class="section-label"><i class="fas fa-circle-info" style="color:var(--primary);"></i> كيف يشتغل النظام؟</div>
+    <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-info"></use></svg> كيف يشتغل النظام؟</div>
     <p>• شارك رابطك مع أصحابك عبر الواتساب أو أي مكان.</p>
-    <p>• لما حد يسجل برابطك، بياخد <strong id="welcomeDiscountText" style="color:var(--primary);">خصم ترحيبي</strong> تلقائياً على أول طلب ليه.</p>
-    <p>• وانت تاخد <strong style="color:var(--primary);">عمولة</strong> من قيمة أول طلب فعلي يعمله (النسبة بتفرق حسب نوع الباقة).</p>
+    <p>• لما حد يسجل برابطك، بياخد <strong id="welcomeDiscountText" style="color: var(--rz-accent-text);">خصم ترحيبي</strong> تلقائياً على أول طلب ليه.</p>
+    <p>• وانت تاخد <strong style="color: var(--rz-accent-text);">عمولة</strong> من قيمة أول طلب فعلي يعمله (النسبة بتفرق حسب نوع الباقة).</p>
     <p>• العمولة بتنزل في محفظتك تلقائياً <strong>بس بعد ما الأدمن يأكد الدفع فعلياً</strong> — مفيش تلاعب ممكن.</p>
     <p>• كل ما تجمع عدد إحالات ناجحة أكتر، تفتح مستويات مكافآت إضافية (تفاصيلها تحت).</p>
   </div>
@@ -60,7 +88,7 @@
   <div class="stat-grid" style="grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px;">
     <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px;">
       <div style="font-size:12px; color:var(--text-muted);">عدد الإحالات الناجحة</div>
-      <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--primary); margin-top:6px;" id="successCount">...</div>
+      <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color: var(--rz-accent-text); margin-top:6px;" id="successCount">...</div>
     </div>
     <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px;">
       <div style="font-size:12px; color:var(--text-muted);">عدد المسجلين برابطك</div>
@@ -68,13 +96,13 @@
     </div>
   </div>
 
-  <div class="section-label"><i class="fas fa-layer-group" style="color:var(--primary);"></i> مستويات المكافآت</div>
+  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> مستويات المكافآت</div>
   <div id="milestonesBox" style="margin-bottom:24px;"></div>
 
-  <div class="section-label"><i class="fas fa-users" style="color:var(--primary);"></i> قائمة إحالاتك</div>
+  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-users"></use></svg> قائمة إحالاتك</div>
   <div id="referralsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 
-  <div class="section-label"><i class="fas fa-coins" style="color:var(--primary);"></i> سجل أرباح الإحالة</div>
+  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-coins"></use></svg> سجل أرباح الإحالة</div>
   <div id="earningsList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
 </div>
 
@@ -139,8 +167,8 @@ function bindCopyButton(buttonId, inputId, idleLabel) {
       input.focus(); input.select(); document.execCommand('copy');
     }
     const btn = document.getElementById(buttonId);
-    btn.innerHTML = '<i class="fas fa-check" style="margin-left:6px;"></i> تم النسخ';
-    setTimeout(() => { btn.innerHTML = `<i class="fas fa-copy" style="margin-left:6px;"></i> ${idleLabel}`; }, 1800);
+    btn.innerHTML = '<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg> تم النسخ';
+    setTimeout(() => { btn.innerHTML = `<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-copy"></use></svg> ${idleLabel}`; }, 1800);
   });
 }
 

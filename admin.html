@@ -1,17 +1,45 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="admin-page" id="adminPage" style="display:none;">
   <div class="page-header">
@@ -78,7 +106,7 @@
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
   <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
   <p>هذه الصفحة مخصصة للإدارة فقط</p>
-  <a href="index.html" style="color:var(--primary); font-weight:700; display:inline-block; margin-top:14px;">← رجوع للمتجر</a>
+  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700; display:inline-block; margin-top:14px;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -141,7 +169,7 @@ async function loadSalesChart() {
       datasets: [{
         label: 'المبيعات (ج.س)',
         data: totals,
-        borderColor: '#ff6a1a',
+        borderColor: '#FF6500',
         backgroundColor: 'rgba(43,237,51,0.1)',
         tension: 0.3,
         fill: true
@@ -150,8 +178,8 @@ async function loadSalesChart() {
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } },
-        y: { ticks: { color: '#7a7468' }, grid: { color: '#e8e1d6' } }
+        x: { ticks: { color: '#70645C' }, grid: { color: '#E8D6C6' } },
+        y: { ticks: { color: '#70645C' }, grid: { color: '#E8D6C6' } }
       }
     }
   });

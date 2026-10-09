@@ -28,7 +28,7 @@
 .admin-nav a.active {
   background: var(--primary);
   color: var(--ink); /* متوافق مع الخلفية الفحمية الداكنة */
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
 }
 
 .stat-grid {
@@ -55,13 +55,13 @@
   margin-top: 6px;
   color: var(--ink);
 }
-.stat-card.highlight .stat-card-value { color: var(--primary); }
+.stat-card.highlight .stat-card-value { color: var(--rz-accent-text); }
 .stat-card.alert .stat-card-value { color: var(--warning); }
 
 .stat-card-link {
   display: inline-block;
   font-size: 11px;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   margin-top: 6px;
   font-weight: 700;
 }
@@ -99,7 +99,7 @@
   font-weight: 700;
 }
 .btn-confirm { background: var(--primary); color: var(--ink); }
-.btn-reject { background: rgba(229, 72, 77,0.15); color: var(--danger); }
+.btn-reject { background: rgba(179,38,30,0.15); color: var(--danger); }
 .btn-complete { background: var(--primary); color: var(--ink); }
 
 .customer-info {
@@ -129,7 +129,7 @@
   padding: 4px 9px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--rz-accent-text);
   cursor: pointer;
 }
 .mini-copy-btn.copied { color: var(--success); border-color: var(--success); }
@@ -175,7 +175,7 @@
 }
 .reason-option.selected {
   border-color: var(--danger);
-  background: rgba(229, 72, 77,0.08);
+  background: rgba(179,38,30,0.08);
   color: var(--danger);
   font-weight: 700;
 }
@@ -231,7 +231,7 @@
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #F5F1EA, #EDE6D9);
+  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -291,7 +291,7 @@
 .field-row button {
   width: 36px;
   border-radius: 8px;
-  background: rgba(229, 72, 77,0.15);
+  background: rgba(179,38,30,0.15);
   color: var(--danger);
 }
 
@@ -336,11 +336,11 @@
   gap: 7px;
   min-height: 38px;
   padding: 8px 13px;
-  box-shadow: 0 2px 8px rgba(26,29,41,.03);
+  box-shadow: 0 2px 8px rgba(23,16,12,.03);
 }
 .admin-nav a:focus-visible,
 .admin-nav a:hover {
-  border-color: var(--primary);
+  border-color: var(--rz-accent-text);
   outline: 3px solid rgba(255,106,26,.16);
   outline-offset: 1px;
 }
@@ -359,7 +359,7 @@
   font-weight: 800;
   line-height: 1;
   direction: ltr;
-  box-shadow: 0 0 0 3px rgba(229,72,77,.12);
+  box-shadow: 0 0 0 3px rgba(179,38,30,.12);
 }
 .admin-nav-alert[hidden] { display: none; }
 .stat-grid { gap: 14px; }
@@ -368,11 +368,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: 0 8px 22px rgba(26,29,41,.035);
+  box-shadow: 0 8px 22px rgba(23,16,12,.035);
 }
 .stat-card.alert {
-  border-color: rgba(229,72,77,.28);
-  background: linear-gradient(135deg, rgba(229,72,77,.05), var(--bg-card));
+  border-color: rgba(179,38,30,.28);
+  background: linear-gradient(135deg, rgba(179,38,30,.05), var(--bg-card));
 }
 .stat-card.alert .stat-card-value { color: var(--danger); }
 .admin-section-title {
@@ -398,17 +398,17 @@
 }
 .admin-btn:hover:not(:disabled), .admin-btn:focus-visible:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(26,29,41,.08);
+  box-shadow: 0 8px 16px rgba(23,16,12,.08);
   outline: none;
 }
 .admin-btn:disabled { cursor: wait; opacity: .58; }
 .order-card, .manage-item, .mini-list-item, .stat-card {
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-.order-card:hover, .manage-item:hover { border-color: rgba(255,106,26,.3); box-shadow: 0 10px 22px rgba(26,29,41,.05); }
+.order-card:hover, .manage-item:hover { border-color: rgba(255,106,26,.3); box-shadow: 0 10px 22px rgba(23,16,12,.05); }
 .field input:focus, .field select:focus, .field textarea:focus,
 #orderSearchInput:focus, #searchInput:focus {
-  border-color: var(--primary) !important;
+  border-color: var(--rz-accent-text)!important;
   outline: 3px solid rgba(255,106,26,.13);
   outline-offset: 1px;
 }
@@ -437,9 +437,9 @@
   justify-items: center;
   gap: 10px;
   padding: 28px 18px;
-  border: 1px dashed rgba(229, 72, 77, .38);
+  border: 1px dashed rgba(179,38,30, .38);
   border-radius: 16px;
-  background: rgba(229, 72, 77, .06);
+  background: rgba(179,38,30, .06);
   color: var(--text-muted);
   text-align: center;
   line-height: 1.7;

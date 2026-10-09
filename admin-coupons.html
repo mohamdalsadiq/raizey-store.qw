@@ -1,17 +1,45 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+
+
+
+<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+
+
+
+
+
+
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الكوبونات — RAIZEY STORE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
+
+
+
+
+
+
+
+
+
+<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/raizey.css">
+<script src="assets/js/raizey-ui.js"></script>
 </head>
 <body>
+<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="admin-page" id="adminPage" style="display:none;">
   <div class="page-header">
@@ -67,7 +95,7 @@
 
 <div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
   <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color:var(--primary); font-weight:700;">← رجوع للمتجر</a>
+  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -135,8 +163,8 @@ function render() {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${c.id}"><i class="fas fa-pen"></i></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${c.id}"><i class="fas fa-trash-can"></i></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${c.id}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${c.id}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
       </div>
     </div>
   `).join('');
