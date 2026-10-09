@@ -46,12 +46,26 @@ function convertTag(tag) {
   return `<svg ${parts.join(" ")}><use href="${SPRITE}#i-${resolved}"></use></svg>`;
 }
 
+// Cleanup of artefacts from the first pass: a trailing </i> after the sprite <svg>
+// and leftover Font Awesome style tokens ("fas"/"far"/"fab") inside class lists.
+const MODIFIERS = ["fas", "far", "fab", "fal", "fad", "fa-solid", "fa-regular", "fa-brands"];
+
+function cleanup(text) {
+  let out = text.replace(/(<svg[^>]*class="rz-i[^"]*"[^>]*>[\s\S]*?<\/svg>)\s*<\/i>/g, "$1");
+  out = out.replace(/class="([^"]*)"/g, (match, classes) => {
+    if (!/\brz-i\b/.test(classes)) return match;
+    const cleaned = classes.split(/\s+/).filter((c) => c && !MODIFIERS.includes(c));
+    return `class="${cleaned.join(" ")}"`;
+  });
+  return out;
+}
+
 let touched = 0;
 let converted = 0;
 
 for (const file of sourceFiles()) {
   const before = fs.readFileSync(file, "utf8");
-  let after = before.replace(/<i\b[^>]*>/g, (tag) => {
+  let after = cleanup(before).replace(/<i\b[^>]*>/g, (tag) => {
     const replaced = convertTag(tag.replace(/\s+$/, ""));
     if (replaced !== tag) converted++;
     return replaced;

@@ -49,6 +49,7 @@
   --rz-primary-strong: var(--rz-orange-deep);
   --rz-on-primary: var(--rz-espresso);
   --rz-link: var(--rz-orange-deep);
+  --rz-accent-text: var(--rz-orange-deep); /* orange as text on paper: 7.2:1 */
   --rz-ring: rgba(255, 101, 0, .32);
   --rz-shadow-sm: 0 1px 2px rgba(23, 16, 12, .06), 0 1px 3px rgba(23, 16, 12, .04);
   --rz-shadow-md: 0 6px 18px -6px rgba(23, 16, 12, .16), 0 2px 6px rgba(23, 16, 12, .05);
@@ -128,6 +129,7 @@
   --rz-border-strong: #4A3A30;
   --rz-on-primary: var(--rz-espresso);
   --rz-link: var(--rz-orange);
+  --rz-accent-text: var(--rz-orange); /* orange as text on espresso: 6.5:1 */
   --rz-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
   --rz-shadow-md: 0 8px 24px -10px rgba(0, 0, 0, .6);
   --rz-shadow-lg: 0 24px 56px -20px rgba(0, 0, 0, .7);
@@ -150,6 +152,7 @@
     --rz-border-strong: #4A3A30;
     --rz-on-primary: var(--rz-espresso);
     --rz-link: var(--rz-orange);
+    --rz-accent-text: var(--rz-orange);
     --rz-shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
     --rz-shadow-md: 0 8px 24px -10px rgba(0, 0, 0, .6);
     --rz-shadow-lg: 0 24px 56px -20px rgba(0, 0, 0, .7);
@@ -937,3 +940,35 @@ table tbody tr:hover { background: var(--rz-surface-3) !important; }
   .site-header, .site-footer, .rz-bottom-nav, .whatsapp-fab, .rz-toasts, .drawer-panel, .drawer-overlay { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+/* ── 21. Touch ergonomics for inline text links (mobile only) ──────────────
+   Text links stay visually inline but get a comfortable 44px hit area so the
+   whole row is tappable, as required by the mobile touch-target rule. */
+/* standalone text actions get real padding everywhere (>=24px hit box, WCAG 2.5.8),
+   and a 44px touch area on phones */
+.link-muted, .auth-switch a, .auth-switch .link-button, .back-link, .link-button, .resend-btn,
+.otp-mode-btn, .country-btn, .pw-toggle, .step-note a {
+  padding-block: 7px;
+}
+@media (max-width: 767px) {
+  .link-muted, .auth-switch a, .auth-switch .link-button, .back-link, .link-button, .resend-btn,
+  .otp-mode-btn, .country-btn, .pw-toggle, .step-note a, .auth-card > p a {
+    display: inline-flex; align-items: center; min-height: 44px;
+  }
+  .auth-switch, .row-between:has(.link-muted) { gap: var(--rz-s2); }
+  .auth-switch { padding-block: 2px; }
+}
+
+/* ── 22. Contrast guards ───────────────────────────────────────────────────
+   Brand-orange text uses --rz-accent-text (deep ember on paper, bright on espresso),
+   and text sitting on the dark ember surfaces is forced to paper white. */
+.marquee-strip .marquee-item,
+.marquee-strip .marquee-item span,
+.marquee-strip a { color: var(--rz-paper-50) !important; }
+:root:not([data-theme="dark"]) .link-muted,
+:root:not([data-theme="dark"]) .auth-switch a,
+:root:not([data-theme="dark"]) .store-section-kicker,
+:root:not([data-theme="dark"]) .step-badge,
+:root:not([data-theme="dark"]) .section-label,
+:root:not([data-theme="dark"]) .hero-rate { color: var(--rz-accent-text); }
+.rz-toast__body, .rz-hint, .rz-counter { color: var(--rz-text-muted); }
