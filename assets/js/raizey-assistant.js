@@ -38,9 +38,9 @@
   root.innerHTML = `
     <section id="raizeyAssistantPanel" aria-label="مساعد Raizey" aria-hidden="true">
       <header class="raizey-assistant-head">
-        <div class="raizey-assistant-avatar"><i class="fas fa-sparkles" aria-hidden="true"></i></div>
+        <div class="raizey-assistant-avatar"><svg class="rz-i" aria-hidden="true" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-sparkles"></use></svg></div>
         <div class="raizey-assistant-title">مساعد Raizey<small>المنتجات والطلبات في مكان واحد</small></div>
-        <button class="raizey-assistant-close" type="button" aria-label="إغلاق المساعد"><i class="fas fa-xmark"></i></button>
+        <button class="raizey-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
       </header>
       <div class="raizey-assistant-messages" id="raizeyAssistantMessages"></div>
       <div class="raizey-assistant-quick">
@@ -50,10 +50,10 @@
       <div class="raizey-assistant-typing" id="raizeyAssistantTyping" hidden>المساعد يكتب الآن...</div>
       <form class="raizey-assistant-form" id="raizeyAssistantForm">
         <textarea class="raizey-assistant-input" id="raizeyAssistantInput" rows="1" maxlength="1200" placeholder="اكتب سؤالك هنا..." aria-label="رسالتك"></textarea>
-        <button class="raizey-assistant-send" id="raizeyAssistantSend" type="submit" aria-label="إرسال"><i class="fas fa-paper-plane"></i></button>
+        <button class="raizey-assistant-send" id="raizeyAssistantSend" type="submit" aria-label="إرسال"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
       </form>
     </section>
-    <button id="raizeyAssistantToggle" type="button" aria-label="فتح مساعد Raizey" aria-expanded="false"><i class="fas fa-sparkles"></i></button>
+    <button id="raizeyAssistantToggle" type="button" aria-label="فتح مساعد Raizey" aria-expanded="false"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-sparkles"></use></svg></button>
   `;
   document.body.appendChild(root);
 
