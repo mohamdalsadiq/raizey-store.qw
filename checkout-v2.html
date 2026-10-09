@@ -1693,7 +1693,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       : 'my-orders.html';
   };
 
-  let needsLegacyPath = false;
   try {
     const { data, error } = await withNetTimeout(
       supabaseClient.rpc('create_bank_orders_bulk', {
@@ -1713,103 +1712,18 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     //   2) الدالة منشورة لكنها معطوبة بتعارض متغيّرات (42702 ambiguous)
     //      ← هذا هو ما كان يُفشل كل طلب بنكي. المعاملة تُرجَع بالكامل عند
     //      هذا الخطأ فلا يُحجز أي إيصال، لذا إعادة المحاولة آمنة تماماً.
-    needsLegacyPath = errIsMissingFunction(err) || errIsAmbiguous(err);
-    if (!needsLegacyPath) { failFromError(err); return; }
-    devWarn('[RAIZEY] create_bank_orders_bulk unusable — using legacy path:', msg);
-  }
-
-  // ── (4) مسار احتياطي مؤقت: يعمل فقط قبل تشغيل supabase-critical-fixes-6.sql ──
-  // ملاحظة: هذا المسار خطوتان (حجز ثم إدخال) وهو سبب "قفل رقم العملية"
-  // القديم؛ يبقى هنا فقط لضمان عمل المتجر حتى تُنشر الدالة الذرّية.
-  placeOrderBtn.textContent = 'جارِ تسجيل الإيصال...';
-  let receiptId = null;
-  try {
-    const { data: claimData, error: claimErr } = await withNetTimeout(
-      supabaseClient.rpc('claim_payment_receipt', {
-        p_purpose:           'order',
-        p_tx_ref:             savedTxRef,
-        p_receipt_hash:       receiptHash,
-        p_receipt_path:       filePath,
-        p_provider:           receiptPayload.provider,
-        p_payment_method_id:  selectedMethodId,
-        p_amount_expected:    currentTotal(),
-        p_amount_detected:    receiptPayload.amount_detected,
-        p_tx_ref_ocr:         receiptPayload.tx_ref_ocr,
-        p_ocr_status:         receiptPayload.ocr_status,
-        p_ocr_confidence:     receiptPayload.ocr_confidence,
-        p_risk_flags:         receiptPayload.risk_flags,
-        p_ocr_data:           receiptPayload.ocr_data
-      }),
-      NET_TIMEOUT_MS.rpc, 'claim_receipt'
-    );
-    if (claimErr) throw claimErr;
-    receiptId = claimData && claimData.length ? claimData[0].id : null;
-    if (!receiptId) throw new Error('receipt_claim_failed');
-  } catch (err) {
+    devWarn('[RAIZEY] create_bank_orders_bulk failed:', msg);
     failFromError(err);
     return;
   }
 
-  try {
-    // ملاحظة: استهلاك الكوبون يتم بعد نجاح إدخال الطلب (بالأسفل)،
-    // والـ trigger يتحقق من صلاحية الكوبون خادمياً عبر coupon_id.
-    const ordersToInsert = [];
-    for (const item of cart) {
-      const qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
-      const unitPrice = parseFloat(item.price_sdg) || 0;
-      const itemPrice = appliedCoupon
-        ? unitPrice - (unitPrice * appliedCoupon.discount_percent / 100)
-        : unitPrice;
-
-      const baseRow = {
-        user_id:               currentUser.id,
-        product_id:            item.product_id,
-        product_name_snapshot: item.name,
-        price_sdg_snapshot:    Math.round(itemPrice),
-        field_values:          item.field_values,
-        field_labels:          item.field_labels || {},
-        selected_option:       item.selected_option || null,
-        coupon_id:             appliedCoupon ? appliedCoupon.coupon_id : null,
-        payment_type:          'bank',
-        payment_method_id:     selectedMethodId,
-        receipt_id:            receiptId,
-        receipt_url:           receiptUrl,
-        status:                'pending_review'
-      };
-
-      for (let i = 0; i < qty; i++) ordersToInsert.push({ ...baseRow });
-    }
-
-    const { data: insertedOrders, error: orderError } = await withNetTimeout(
-      supabaseClient.from('orders').insert(ordersToInsert).select('id'),
-      NET_TIMEOUT_MS.rpc, 'insert_orders'
-    );
-    if (orderError) throw orderError;
-
-    // استهلاك الكوبون بعد نجاح الطلب فقط — حتى لا يخسره الزبون عند فشل الإدخال.
-    // الـ trigger تحقق من صلاحيته وقت الإدخال، ففشل الاستهلاك هنا حالة نادرة
-    // لا يجب أن تُفشل طلباً سليماً.
-    if (appliedCoupon && couponCode) {
-      try {
-        const { data: couponAtomicData, error: couponAtomicErr } = await withNetTimeout(
-          supabaseClient.rpc('use_coupon_atomic', {
-            p_code: couponCode,
-            p_order_total: currentTotal()
-          }),
-          NET_TIMEOUT_MS.rpc, 'use_coupon'
-        );
-        if (couponAtomicErr || !couponAtomicData || couponAtomicData.length === 0) {
-          devWarn('[RAIZEY] coupon consumed-check failed after successful order:', couponCode);
-        }
-      } catch (couponErr) {
-        devWarn('[RAIZEY] coupon post-order consumption error:', couponErr);
-      }
-    }
-
-    await finishSuccess(insertedOrders);
-  } catch (err) {
-    failFromError(err);
-  }
+  // ── (4) [2026-10-08 hardening] أُزيل المسار الاحتياطي القديم نهائياً ──
+  // السبب: كان يُدرج الطلبات بإدراج مباشر في جدول orders من المتصفح، وقد أُلغي
+  // ذلك على مستوى القاعدة: سُحبت صلاحيات INSERT/UPDATE عن authenticated، وربط
+  // التريجر أي طلب بنكي بإيصال موثّق خادمياً. المسار الآمن الوحيد الآن هو الدالة
+  // الذرّية create_bank_orders_bulk (تحجز الإيصال + تُنشئ الطلبات في معاملة واحدة).
+  // عند تعذّرها لا نُنشئ أي طلب صامت، بل نُبلّغ الزبون بوضوح.
+  failFromError(new Error('bank_checkout_unavailable: تعذّر تثبيت الطلب البنكي (لم يُسجَّل أي طلب ولم يُحجز الإيصال). الرجاء إعادة المحاولة أو التواصل مع الدعم.'));
 }
 
 init();
