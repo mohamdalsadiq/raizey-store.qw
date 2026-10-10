@@ -1046,12 +1046,13 @@ const ReceiptJudgeCore = (() => {
       // التلقائي أبداً — مهاجم قد يحوّل المبلغ الصحيح لحسابه الخاص ويرفع
       // الإشعار الحقيقي، فيظهر رقم العملية والمبلغ مطابقين.
       const destUnverified = result.riskFlags.includes('destination_account_unverified');
-      // سياسة صارمة (المهمة 7): القبول التلقائي حصري للإيصالات عالية الثقة.
-      // أي إشارة عدم يقين — مطابقة تقريبية، غياب تأكيد صريح للنجاح، أو مزوّد
-      // غير معروف — تُحوَّل إلى تدقيق إداري بدل القبول التلقائي. لا يُقبل افتراضياً.
+      // سياسة القبول التلقائي (المهمة 3): يُقبل الإيصال تلقائياً متى طابق رقم
+      // العملية والمبلغ وتاريخ الإشعار حديث وبدت هوية البنك سليمة. غياب عبارة
+      // تأكيد النجاح في الإشعار لا يمنع القبول (كثير من إشعارات البنوك لا تتضمّنها)،
+      // ويُمنع القبول فقط عند رصد إشارة فشل صريحة أو مطابقة تقريبية أو مزوّد مجهول.
       const lowConfidence = [];
       if (refMatch.fuzzy || amtMatch.fuzzy) lowConfidence.push('مطابقة تقريبية لرقم العملية أو المبلغ');
-      if (result.extracted.statusOk !== true) lowConfidence.push('لا يوجد تأكيد صريح لنجاح العملية في الإشعار');
+      if (result.extracted.statusOk === false) lowConfidence.push('رُصدت إشارة فشل صريحة في الإشعار');
       if (!provider) lowConfidence.push('مزوّد الإشعار غير معروف');
       // الطبقة الأولى (المهمة 35): هوية البنك — أي عدم تطابق يمنع القبول التلقائي
       const bankIdentityFlags = [];
@@ -1062,7 +1063,7 @@ const ReceiptJudgeCore = (() => {
       if (!dateNeedsAdmin && !destUnverified && !bankIdentityBad && lowConfidence.length === 0) {
         result.decision = 'accept';
         result.ocrStatus = 'passed';
-        result.message = `تم التحقق من الإيصال بنجاح${result.providerName ? ' (' + result.providerName + ')' : ''}: رقم العملية والمبلغ مطابقان.`;
+        result.message = `تم قبول الإشعار ✓ — رقم العملية والمبلغ${result.providerName ? ' (' + result.providerName + ')' : ''} مطابقان. يتم الآن التدقيق من الإدارة وتنفيذ طلبك.`;
       } else {
         result.decision = 'review_admin';
         result.ocrStatus = 'needs_admin_check';
