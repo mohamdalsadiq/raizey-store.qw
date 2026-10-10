@@ -27,12 +27,39 @@
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
-  :root { --account-surface: #fffdfa; }
+  :root {
+    --account-surface: var(--rz-surface);
+    --account-ring: var(--rz-surface);
+    --account-ok: #0F6B45;
+    --account-ok-soft: rgba(22,121,79,.12);
+    --account-ok-border: rgba(22,121,79,.22);
+    --account-warn: #9A5200;
+    --account-warn-soft: rgba(168,91,0,.14);
+    --account-warn-border: rgba(168,91,0,.26);
+    --account-protected: #16794F;
+  }
+  /* حالة داكنة — تباين عالٍ لنصوص النجاح/الانتظار على الخلفية الداكنة */
+  :root[data-theme="dark"] {
+    --account-ring: var(--rz-espresso-2);
+    --account-ok: #6EE7A8; --account-ok-soft: rgba(110,231,168,.14); --account-ok-border: rgba(110,231,168,.30);
+    --account-warn: #FBBF5C; --account-warn-soft: rgba(251,191,92,.14); --account-warn-border: rgba(251,191,92,.32);
+    --account-protected: #6EE7A8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --account-ring: var(--rz-espresso-2);
+      --account-ok: #6EE7A8; --account-ok-soft: rgba(110,231,168,.14); --account-ok-border: rgba(110,231,168,.30);
+      --account-warn: #FBBF5C; --account-warn-soft: rgba(251,191,92,.14); --account-warn-border: rgba(251,191,92,.32);
+      --account-protected: #6EE7A8;
+    }
+  }
   body { background: var(--bg, #f7f7f5); }
   .account-shell { width: min(100% - 28px, 760px); margin: 0 auto; padding: 28px 0 44px; }
   .account-shell, .account-shell * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body { overflow-x: hidden; }
+
+  .form-error:empty, .form-success:empty { display: none !important; }
 
   .account-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
   .account-kicker { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 7px; color: var(--rz-accent-text); font-size: 12px; font-weight: 900; letter-spacing: .02em; }
@@ -43,12 +70,13 @@
   .account-back:hover { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
 
   /* بطاقة ملخص الحساب */
-  .account-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 18px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 17px; background: linear-gradient(120deg, #fffdfa, #fff7ef); box-shadow: 0 10px 30px rgba(23,16,12,.05); }
-  .account-avatar { position: relative; display: grid; place-items: center; width: 58px; height: 58px; overflow: hidden; border-radius: 16px; background: #211A16; color: var(--rz-accent-text); font-size: 22px; }
-  .account-avatar img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6px; }
-  .account-summary strong { display: block; font-size: 15px; }
-  .account-summary small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11.5px; direction: ltr; text-align: right; overflow-wrap: anywhere; }
-  .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: #16794F; font-size: 11px; font-weight: 800; }
+  .account-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 14px; padding: 18px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 17px; background: linear-gradient(120deg, var(--rz-surface), var(--bg)); box-shadow: 0 10px 30px rgba(23,16,12,.05); }
+  .account-avatar { position: relative; display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; place-items: center; width: 62px; height: 62px; overflow: hidden; border-radius: 50%; border: 2px solid rgba(255,106,26,.28); background: radial-gradient(120% 120% at 30% 20%, #2c2119, #17100C); color: #FFD9B3; font-size: 25px; box-shadow: 0 8px 20px rgba(23,16,12,.18); }
+  .account-avatar > * { grid-area: 1 / 1; }
+  .account-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .account-summary strong { display: block; font-size: 17px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; }
+  .account-summary small { display: block; margin-top: 5px; color: var(--text-muted); font-size: 12px; direction: ltr; text-align: right; overflow-wrap: anywhere; }
+  .account-summary-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--account-protected); font-size: 11px; font-weight: 800; }
   .account-summary-status i { font-size: 9px; }
 
   /* القائمة الرئيسية (Accordion) */
@@ -73,10 +101,11 @@
   .password-intro .auth-btn { flex: 0 0 auto; margin: 0; min-height: 40px; }
   .password-stage { margin-top: 12px; min-width: 0; }
 
-  .profile-photo-card { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(120deg, #fffdfa, #fff8f1); }
-  .profile-photo-preview { display: grid; place-items: center; width: 88px; height: 88px; overflow: hidden; flex: 0 0 auto; border: 3px solid #fff; border-radius: 22px; background: #211A16; color: var(--rz-accent-text); box-shadow: 0 5px 16px rgba(23,16,12,.14); font-size: 26px; aspect-ratio: 1 / 1; }
-  .profile-photo-preview img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 6px; }
-  .profile-photo-preview img[hidden], .account-avatar img[hidden] { display: none !important; }
+  .profile-photo-card { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 14px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(120deg, var(--rz-surface), var(--bg)); }
+  .profile-photo-preview { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; place-items: center; width: 88px; height: 88px; overflow: hidden; flex: 0 0 auto; border: 3px solid var(--account-ring); border-radius: 50%; background: radial-gradient(120% 120% at 30% 20%, #2c2119, #17100C); color: #FFD9B3; box-shadow: 0 8px 20px rgba(23,16,12,.16); font-size: 30px; aspect-ratio: 1 / 1; }
+  .profile-photo-preview > * { grid-area: 1 / 1; }
+  .profile-photo-preview img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .profile-photo-preview img[hidden], .account-avatar img[hidden], .account-avatar > svg[hidden], .profile-photo-preview > svg[hidden] { display: none !important; }
   .profile-photo-copy { min-width: 0; }
   .profile-photo-copy .card-title { margin-bottom: 4px; }
   .profile-photo-copy .card-description { margin-bottom: 10px; }
@@ -92,10 +121,11 @@
   .field input, .field select { width: 100%; }
   .email-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
   .email-row input { flex: 1; min-width: 0; }
-  .verified-badge, .pending-badge { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 7px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
-  .verified-badge { color: #16794F; background: rgba(22,121,79,.09); }
-  .pending-badge { color: #A85B00; background: rgba(168,91,0,.13); }
-  .email-action { margin-top: 7px; border: 0; background: none; color: var(--rz-accent-text); font-family: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .verified-badge, .pending-badge { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+  .verified-badge { color: var(--account-ok); background: var(--account-ok-soft); border: 1px solid var(--account-ok-border); }
+  .pending-badge { color: var(--account-warn); background: var(--account-warn-soft); border: 1px solid var(--account-warn-border); }
+  .verified-badge[hidden], .pending-badge[hidden], .email-action[hidden] { display: none !important; }
+  .email-action { margin-top: 7px; border: 0; background: none; color: var(--rz-accent-text); font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
   .email-action:hover { text-decoration: underline; }
 
   .security-card, .preference-card { padding: 15px; border: 1px solid var(--border); border-radius: 13px; background: var(--bg-card); min-width: 0; }
@@ -106,9 +136,9 @@
   .password-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .pw-rules { margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; list-style: none; color: var(--text-muted); font-size: 10.5px; }
   .pw-rules li { display: flex; align-items: center; gap: 5px; }
-  .pw-rules li.ok { color: #16794F; font-weight: 800; }
+  .pw-rules li.ok { color: var(--account-ok); font-weight: 800; }
   .pw-rules [data-rule-icon] { display: inline-flex; color: var(--text-muted); }
-  .pw-rules li.ok [data-rule-icon] { color: #16794F; }
+  .pw-rules li.ok [data-rule-icon] { color: var(--account-ok); }
   .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .action-row .auth-btn { flex: 1 1 180px; margin-top: 0; min-height: 42px; font-size: 12px; }
   .auth-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--ink); }
@@ -177,7 +207,7 @@
     .account-back { justify-content: center; }
     .account-header h1 { font-size: 24px; }
     .profile-photo-card { grid-template-columns: 74px minmax(0, 1fr); gap: 10px; }
-    .profile-photo-preview { width: 74px; height: 74px; border-radius: 17px; }
+    .profile-photo-preview { width: 74px; height: 74px; border-radius: 50%; }
     .acc-title { font-size: 14px; }
   }
 </style>
@@ -206,7 +236,7 @@
   </header>
 
   <section class="account-summary" aria-label="ملخص الحساب">
-    <div class="account-avatar" id="summaryAvatar"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-user"></use></svg><img id="summaryAvatarImg" alt="" hidden></div>
+    <div class="account-avatar" id="summaryAvatar"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><img id="summaryAvatarImg" alt="" hidden></div>
     <div>
       <strong id="summaryName">حساب RAIZEY STORE</strong>
       <small id="summaryEmail">—</small>
@@ -669,7 +699,7 @@ async function loadMfa() {
   const factor = (data.all || data.totp || []).find((item) => item.factor_type === 'totp' && item.status === 'verified');
   actions.innerHTML = '';
   if (factor) {
-    status.innerHTML = '<span style="color:#16794F;font-weight:800"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> التحقق بخطوتين مفعّل عبر Authenticator.</span>';
+    status.innerHTML = '<span style="color:var(--account-ok);font-weight:800"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> التحقق بخطوتين مفعّل عبر Authenticator.</span>';
     const button = document.createElement('button');
     button.className = 'auth-btn danger'; button.type = 'button'; button.innerHTML = '<svg class="rz-i" style="margin-left:6px" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> إيقاف التحقق بخطوتين';
     button.addEventListener('click', () => unenrollMfa(factor.id)); actions.appendChild(button);
@@ -729,8 +759,14 @@ async function unenrollMfa(factorId) {
 function renderAvatar(url) {
   const summaryImg = document.getElementById('summaryAvatarImg');
   const profileImg = document.getElementById('profileAvatarImg');
-  [summaryImg, profileImg].forEach((img) => { if (!img) return; img.hidden = !url; if (url) img.src = url; });
-  document.querySelectorAll('#summaryAvatar > i, #profilePhotoPreview > i').forEach((icon) => { icon.hidden = !!url; });
+  [summaryImg, profileImg].forEach((img) => {
+    if (!img) return;
+    if (url) { img.src = url; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
+  });
+  document.querySelectorAll('#summaryAvatar > svg, #profilePhotoPreview > svg').forEach((icon) => {
+    // عناصر SVG لا تدعم خاصية hidden كخاصية DOM — نستخدم السمة مباشرة
+    if (url) icon.setAttribute('hidden', ''); else icon.removeAttribute('hidden');
+  });
 }
 
 async function init() {
