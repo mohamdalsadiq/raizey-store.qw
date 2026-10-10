@@ -80,5 +80,6 @@ export function spriteSymbolIds() {
 export const SYSTEM_ICONS = [
   "sun", "moon", "circle-help", "check", "x",
   "circle-check", "circle-x", "triangle-alert", "info",
-  "clipboard-list", "ticket", "wrench"
+  "clipboard-list", "ticket", "wrench",
+  "bot"
 ];

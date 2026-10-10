@@ -708,8 +708,12 @@ input.rz-input, select.rz-select, textarea.rz-textarea {
 }
 .drawer-nav a:hover, .drawer-nav a:focus-visible { background: var(--rz-surface-2); color: var(--rz-text); transform: translateX(-2px); }
 .drawer-nav a.is-active { background: var(--rz-orange-tint); color: var(--rz-link); }
-.drawer-wallet-box { background: var(--rz-hero-gradient, linear-gradient(150deg, var(--rz-espresso-2), var(--rz-espresso))) !important; color: var(--rz-paper-50); border-radius: var(--rz-radius-lg) !important; border: 1px solid rgba(255, 101, 0, .2); }
-.drawer-wallet-amount { font-family: var(--rz-font-mono); font-weight: 700; }
+/* Drawer wallet balance — the box keeps its ember-night look on BOTH themes,
+   so the balance must use light-on-dark colours (WCAG >= 4.5:1):
+   label #F2E4D7 on #17100C ≈ 13.5:1 · amount #FFD9B3 on #17100C ≈ 12.6:1. */
+.drawer-wallet-box { background: var(--rz-hero-gradient, linear-gradient(150deg, var(--rz-espresso-2), var(--rz-espresso))) !important; color: var(--rz-paper-50) !important; border-radius: var(--rz-radius-lg) !important; border: 1px solid rgba(255, 101, 0, .22); }
+.drawer-wallet-label { color: #F2E4D7 !important; font-size: 13px !important; font-weight: 700 !important; letter-spacing: .3px; line-height: 1.5; }
+.drawer-wallet-amount { color: #FFD9B3 !important; font-family: var(--rz-font-mono); font-size: clamp(21px, 6.4vw, 25px) !important; font-weight: 800 !important; letter-spacing: .2px; line-height: 1.3; margin-top: 2px; }
 .drawer-divider, .drawer-divider * { border-color: var(--rz-border) !important; }
 
 .site-footer {
@@ -738,17 +742,23 @@ input.rz-input, select.rz-select, textarea.rz-textarea {
 @media (min-width: 768px) { .rz-bottom-nav { display: none; } }
 body.rz-has-bottom-nav { padding-bottom: 68px; }
 
+/* WhatsApp FAB — deliberately compact so it never crowds content or controls.
+   Sits in the inline-start corner, above the mobile bottom navigation, with a
+   soft WhatsApp-green identity and a comfortable tap size (>=40px). */
 .whatsapp-fab {
-  position: fixed; inset-inline-start: var(--rz-s4); inset-block-end: calc(var(--rz-s4) + env(safe-area-inset-bottom));
+  position: fixed; left: 12px; right: auto; bottom: calc(14px + env(safe-area-inset-bottom));
   z-index: var(--rz-z-sticky);
-  width: 52px; height: 52px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 24px;
-  background: var(--rz-text); color: var(--rz-bg);
-  box-shadow: var(--rz-shadow-lg);
-  transition: transform var(--rz-t) var(--rz-ease), box-shadow var(--rz-t) var(--rz-ease);
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #25D366; color: #fff;
+  border: 1px solid rgba(255, 248, 240, .28);
+  box-shadow: 0 6px 16px -6px rgba(37, 211, 102, .55), 0 2px 6px rgba(23, 16, 12, .12);
+  opacity: .96;
+  transition: transform var(--rz-t) var(--rz-ease), box-shadow var(--rz-t) var(--rz-ease), opacity var(--rz-t) var(--rz-ease);
 }
-.whatsapp-fab:hover { transform: translateY(-3px) scale(1.03); box-shadow: var(--rz-shadow-glow); }
-body.rz-has-bottom-nav .whatsapp-fab { inset-block-end: calc(78px + env(safe-area-inset-bottom)); }
+.whatsapp-fab .rz-i, .whatsapp-fab svg { width: 20px; height: 20px; }
+.whatsapp-fab:hover, .whatsapp-fab:focus-visible { transform: translateY(-2px) scale(1.05); opacity: 1; box-shadow: 0 10px 22px -8px rgba(37, 211, 102, .7), 0 3px 8px rgba(23, 16, 12, .16); }
+body.rz-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-bottom)); }
 
 /* ── 19. Legacy component harmonisation (same classes, upgraded look) ────── */
 /* primary call-to-action buttons used across storefront & checkout */
@@ -838,6 +848,22 @@ body.rz-has-bottom-nav .whatsapp-fab { inset-block-end: calc(78px + env(safe-are
 }
 .payment-option, .variant-btn { border-radius: var(--rz-radius) !important; border: 1px solid var(--rz-border) !important; background: var(--rz-surface) !important; padding: var(--rz-s3) !important; transition: all var(--rz-t) var(--rz-ease) !important; }
 .payment-option:hover, .variant-btn:hover { border-color: var(--rz-primary) !important; transform: translateY(-1px); }
+
+/* ── Payment typography: clearer bank / method names (بنكك، أوكاش…) ───────── */
+.payment-option-title {
+  font-weight: 800 !important;
+  font-size: var(--rz-fs-md) !important;
+  letter-spacing: 0 !important;
+  line-height: 1.65 !important;
+}
+.payment-option-title .rz-i, .payment-option-title svg { width: 20px; height: 20px; }
+.payment-option-sub { font-size: var(--rz-fs-sm) !important; line-height: 1.7 !important; }
+.method-pill, .method-card-name, .selected-method-box .bank-account-row > span {
+  font-weight: 800 !important;
+  letter-spacing: .1px;
+  line-height: 1.6;
+}
+.selected-method-box .bank-account-row { font-size: var(--rz-fs-base); }
 
 /* storefront grids */
 .game-card, .voucher-card, .catalog-subcategory-card {

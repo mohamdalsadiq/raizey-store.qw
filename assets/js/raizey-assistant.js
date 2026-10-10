@@ -3,12 +3,25 @@
   if (window.__RAIZEY_ASSISTANT_LOADED__) return;
   window.__RAIZEY_ASSISTANT_LOADED__ = true;
 
+  // ── Draggable floating assistant ───────────────────────────────────────────
+  // The toggle can be dragged anywhere on screen and its position is remembered
+  // in localStorage. A comfort zone (EDGE) plus the bottom-nav height guarantee
+  // it never covers the bottom navigation or important content at rest.
+  const POS_KEY = 'raizey-assistant-pos';
+  const FAB = 54;
+  const EDGE = 12;
+  const BOTTOM_NAV = 76;
+  const GAP = 12;
+
   const style = document.createElement('style');
   style.textContent = `
-    #raizeyAssistantRoot{position:fixed;inset:auto 20px 20px auto;z-index:9998;font-family:inherit;direction:rtl}
-    #raizeyAssistantToggle{width:58px;height:58px;border:0;border-radius:50%;background:linear-gradient(135deg,#ff7a2f,#e5482e);color:#fff;box-shadow:0 12px 30px rgba(229,72,46,.32);cursor:pointer;font-size:24px;display:grid;place-items:center;transition:transform .2s,box-shadow .2s}
-    #raizeyAssistantToggle:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(229,72,46,.4)}
-    #raizeyAssistantPanel{position:absolute;right:0;bottom:72px;width:min(390px,calc(100vw - 32px));height:min(590px,calc(100vh - 112px));background:#fff;border:1px solid rgba(20,31,48,.11);border-radius:22px;box-shadow:0 24px 70px rgba(20,31,48,.2);display:none;overflow:hidden}
+    #raizeyAssistantRoot{position:fixed;right:18px;bottom:18px;z-index:9998;font-family:inherit;direction:rtl}
+    body.rz-has-bottom-nav #raizeyAssistantRoot{bottom:calc(${BOTTOM_NAV}px + env(safe-area-inset-bottom))}
+    #raizeyAssistantToggle{width:${FAB}px;height:${FAB}px;border:0;border-radius:50%;background:linear-gradient(135deg,#ff7a2f,#e5482e);color:#fff;box-shadow:0 10px 26px rgba(229,72,46,.34);cursor:grab;font-size:26px;display:grid;place-items:center;transition:transform .2s,box-shadow .2s;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+    #raizeyAssistantToggle:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(229,72,46,.42)}
+    #raizeyAssistantToggle.rz-dragging{cursor:grabbing;transition:none;transform:scale(1.06)}
+    #raizeyAssistantToggle svg{pointer-events:none;width:28px;height:28px}
+    #raizeyAssistantPanel{position:fixed;left:auto;right:auto;top:auto;bottom:auto;width:min(390px,calc(100vw - 24px));height:min(560px,calc(100vh - 24px));background:#fff;border:1px solid rgba(20,31,48,.11);border-radius:22px;box-shadow:0 24px 70px rgba(20,31,48,.2);display:none;overflow:hidden;z-index:9999}
     #raizeyAssistantPanel.is-open{display:flex;flex-direction:column;animation:raizeyAssistantIn .18s ease-out}
     @keyframes raizeyAssistantIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
     .raizey-assistant-head{display:flex;align-items:center;gap:11px;padding:16px 17px;background:linear-gradient(135deg,#fff7f1,#fff);border-bottom:1px solid #f1e6df}
@@ -29,17 +42,16 @@
     .raizey-assistant-send{width:40px;height:40px;border:0;border-radius:12px;background:#e9512a;color:#fff;cursor:pointer;font-size:15px;display:grid;place-items:center}
     .raizey-assistant-send:disabled{opacity:.55;cursor:wait}
     .raizey-assistant-typing{color:#7d8ca0;font-size:12px;padding:0 3px 9px}
-    @media(max-width:520px){#raizeyAssistantRoot{right:16px;bottom:16px}#raizeyAssistantPanel{right:-2px;bottom:70px;height:min(580px,calc(100vh - 100px))}}
   `;
   document.head.appendChild(style);
 
   const root = document.createElement('div');
   root.id = 'raizeyAssistantRoot';
   root.innerHTML = `
-    <section id="raizeyAssistantPanel" aria-label="مساعد Raizey" aria-hidden="true">
+    <section id="raizeyAssistantPanel" aria-label="مساعد Raizey الذكي" aria-hidden="true">
       <header class="raizey-assistant-head">
-        <div class="raizey-assistant-avatar"><svg class="rz-i" aria-hidden="true" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-sparkles"></use></svg></div>
-        <div class="raizey-assistant-title">مساعد Raizey<small>المنتجات والطلبات في مكان واحد</small></div>
+        <div class="raizey-assistant-avatar"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></div>
+        <div class="raizey-assistant-title">مساعد Raizey الذكي<small>المنتجات والطلبات في مكان واحد</small></div>
         <button class="raizey-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
       </header>
       <div class="raizey-assistant-messages" id="raizeyAssistantMessages"></div>
@@ -53,7 +65,7 @@
         <button class="raizey-assistant-send" id="raizeyAssistantSend" type="submit" aria-label="إرسال"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
       </form>
     </section>
-    <button id="raizeyAssistantToggle" type="button" aria-label="فتح مساعد Raizey" aria-expanded="false"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-sparkles"></use></svg></button>
+    <button id="raizeyAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></button>
   `;
   document.body.appendChild(root);
 
@@ -66,6 +78,114 @@
   const send = root.querySelector('#raizeyAssistantSend');
   const typing = root.querySelector('#raizeyAssistantTyping');
   const history = [];
+
+  /* ── Floating position (drag + persistence) ───────────────────────────── */
+  function navReserve() {
+    return document.body && document.body.classList.contains('rz-has-bottom-nav') ? BOTTOM_NAV : 0;
+  }
+  function clampPosition(x, y) {
+    const w = toggle.offsetWidth || FAB;
+    const h = toggle.offsetHeight || FAB;
+    const maxX = Math.max(EDGE, window.innerWidth - w - EDGE);
+    const maxY = Math.max(EDGE, window.innerHeight - h - EDGE - navReserve());
+    return { x: Math.min(Math.max(EDGE, x), maxX), y: Math.min(Math.max(EDGE, y), maxY) };
+  }
+  function place(x, y) {
+    const p = clampPosition(x, y);
+    root.style.left = p.x + 'px';
+    root.style.top = p.y + 'px';
+    root.style.right = 'auto';
+    root.style.bottom = 'auto';
+    return p;
+  }
+  function isFloating() { return root.style.left !== ''; }
+  function savePosition(p) { try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch (e) {} }
+  function loadPosition() {
+    try {
+      const raw = localStorage.getItem(POS_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      if (p && typeof p.x === 'number' && typeof p.y === 'number') return p;
+    } catch (e) {}
+    return null;
+  }
+  function restorePosition() {
+    const p = loadPosition();
+    if (p) place(p.x, p.y);
+  }
+  function reflowPosition() {
+    if (isFloating()) savePosition(place(root.offsetLeft, root.offsetTop));
+  }
+  window.addEventListener('resize', reflowPosition);
+  window.addEventListener('orientationchange', reflowPosition);
+
+  let dragging = null;
+  let suppressToggle = false;
+
+  // Listeners live on window (not the toggle) so the drag keeps working even
+  // when the button slides out from under the pointer — pointer capture is not
+  // reliable in every engine, so this is the robust path.
+  function onPointerMove(event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    if (!dragging.moved &&
+        Math.abs(event.clientX - dragging.startX) < 5 &&
+        Math.abs(event.clientY - dragging.startY) < 5) return;
+    dragging.moved = true;
+    place(event.clientX - dragging.offX, event.clientY - dragging.offY);
+  }
+  function onPointerUp(event) {
+    if (!dragging || event.pointerId !== dragging.id) return;
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+    toggle.classList.remove('rz-dragging');
+    if (dragging.moved) {
+      savePosition(place(root.offsetLeft, root.offsetTop));
+      suppressToggle = true;
+      setTimeout(() => { suppressToggle = false; }, 350);
+    }
+    dragging = null;
+  }
+  toggle.addEventListener('pointerdown', (event) => {
+    if (event.button && event.button !== 0) return;
+    const rect = root.getBoundingClientRect();
+    dragging = {
+      id: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offX: event.clientX - rect.left,
+      offY: event.clientY - rect.top,
+      moved: false
+    };
+    if (event.cancelable) event.preventDefault();
+    toggle.classList.add('rz-dragging');
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  });
+
+  /* ── Panel placement: keep it fully inside the viewport ───────────────── */
+  function positionPanel() {
+    const rect = toggle.getBoundingClientRect();
+    const gap = GAP;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pw = Math.min(panel.offsetWidth || 360, vw - 2 * EDGE);
+    const ph = Math.min(panel.offsetHeight || 520, vh - 2 * EDGE);
+
+    let left = (rect.left + rect.width / 2 < vw / 2) ? rect.left : rect.right - pw;
+    left = Math.min(Math.max(EDGE, left), Math.max(EDGE, vw - pw - EDGE));
+
+    const spaceAbove = rect.top;
+    const spaceBelow = vh - rect.bottom;
+    let top = (spaceAbove >= ph + gap || spaceAbove >= spaceBelow) ? rect.top - ph - gap : rect.bottom + gap;
+    top = Math.min(Math.max(EDGE, top), Math.max(EDGE, vh - ph - EDGE));
+
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  }
 
   function addMessage(role, text) {
     const element = document.createElement('div');
@@ -81,7 +201,8 @@
     panel.setAttribute('aria-hidden', 'false');
     toggle.setAttribute('aria-expanded', 'true');
     if (!messages.children.length) addMessage('assistant', 'مرحباً بك. أستطيع مساعدتك في البحث عن المنتجات ومعرفة حالة طلباتك. كيف يمكنني خدمتك؟');
-    setTimeout(() => input.focus(), 50);
+    positionPanel();
+    setTimeout(() => { positionPanel(); input.focus(); }, 60);
   }
   function closePanel() {
     panel.classList.remove('is-open');
@@ -124,7 +245,10 @@
     }
   }
 
-  toggle.addEventListener('click', () => panel.classList.contains('is-open') ? closePanel() : openPanel());
+  toggle.addEventListener('click', () => {
+    if (suppressToggle) return;
+    panel.classList.contains('is-open') ? closePanel() : openPanel();
+  });
   close.addEventListener('click', closePanel);
   root.querySelectorAll('[data-assistant-message]').forEach((button) => {
     button.addEventListener('click', () => sendMessage(button.getAttribute('data-assistant-message')));
@@ -143,4 +267,6 @@
       form.requestSubmit();
     }
   });
+
+  restorePosition();
 })();
