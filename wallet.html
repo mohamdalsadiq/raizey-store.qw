@@ -448,7 +448,7 @@ async function runWalletReceiptScan() {
   if (!Number.isFinite(amount) || amount <= 0) { errorBox.textContent = 'أدخل المبلغ قبل فحص الإيصال.'; return; }
   if (!manualRef || manualRef.length < 6) { errorBox.textContent = 'اكتب رقم العملية (6 خانات على الأقل) قبل فحص الإيصال.'; return; }
   status.textContent = 'جارِ بدء الفحص الذكي...';
-  // P2-SEC-001: بدون موافقة لا يُرسل أي شيء إلى Gemini — مراجعة يدوية
+  // P2-SEC-001: بدون موافقة لا يُرسل أي شيء إلى الذكاء الاصطناعي — مراجعة يدوية
   const consentW = document.getElementById('geminiConsentWallet');
   if (!consentW || !consentW.checked) {
     const manualAnalysis = {
@@ -752,7 +752,7 @@ async function submitTopup() {
   submitBtn.textContent = 'جارِ التحقق...';
 
   // البصمة ومعرّف الفحص يصدران من Edge Function فقط؛ لا نثق بقيمة من المتصفح.
-  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة Gemini) — بصمة محلية + scanId فارغ
+  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة الذكاء الاصطناعي) — بصمة محلية + scanId فارغ
   let receiptHash = receiptAnalysis && receiptAnalysis.receiptHash;
   const receiptScanId = receiptAnalysis && receiptAnalysis.scanId;
   const isManualW = receiptAnalysis && (receiptAnalysis.riskFlags || []).includes('consent_declined');

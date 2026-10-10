@@ -998,7 +998,7 @@ function attachCheckoutEvents(canUseWallet) {
 
     document.getElementById('formError').textContent = '';
 
-    // P2-SEC-001: بدون موافقة صريحة لا يُرسل أي شيء إلى Gemini —
+    // P2-SEC-001: بدون موافقة صريحة لا يُرسل أي شيء إلى الذكاء الاصطناعي —
     // مسار المراجعة اليدوية: بصمة محلية فقط، والقرار للإدارة
     const consentBox = document.getElementById('geminiConsent');
     if (!consentBox || !consentBox.checked) {
@@ -1154,7 +1154,7 @@ function attachCheckoutEvents(canUseWallet) {
     const needsAdmin = ok && analysis.decision === 'review_admin';
     if (needsAdmin && analysis.reviewReason) rows.push(`سبب التدقيق: ${analysis.reviewReason}`);
 
-    // ── فشل تقني بحت في محرك الفحص (Gemini واقع/مهلة/شبكة) — هذا عطل في
+    // ── فشل تقني بحت في محرك الفحص (الذكاء الاصطناعي واقع/مهلة/شبكة) — هذا عطل في
     // أداتنا نحن، وليس مشكلة في إيصال العميل. لا يجوز أن يوقفه تماماً ولا
     // أن نطرده لخدمة العملاء يدوياً في كل مرة. الطلب يُسجَّل كـ"قيد
     // المراجعة اليدوية" (بدون ✓ تلقائي)، ويبقى الحاجز الذري لمنع تكرار
@@ -1539,7 +1539,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   placeOrderBtn.textContent = 'جارِ التحقق من نتيجة الفحص الخادمي...';
   const receiptHash = scanResult && scanResult.receiptHash;
   const receiptScanId = scanResult && scanResult.scanId;
-  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة Gemini) يسمح بـ scanId فارغ —
+  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة الذكاء الاصطناعي) يسمح بـ scanId فارغ —
   // البصمة المحلية موجودة والقرار للإدارة
   const isManualReview = scanResult && (scanResult.riskFlags || []).includes('consent_declined');
   if (!receiptHash || (!receiptScanId && !isManualReview)) {
