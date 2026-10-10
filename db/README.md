@@ -17,6 +17,7 @@
 | `migrations/2026-10-08_dead_code_cleanup.sql` | إزالة الدوال القديمة المتعارضة (`create_bank_transfer_order` ...) |
 | `migrations/2026-10-08_user_cancel_order.sql` | RPC خادمي `cancel_my_order` بدل التحديث المباشر على `orders` |
 | `migrations/2026-10-09_admin_reject_order.sql` | توحيد `admin_reject_order` مع القاعدة الحية (يستدعي `admin_refund_wallet(p_order_id, …)`) |
+| `migrations/2026-10-09_payment_method_icons.sql` | عمود `payment_methods.icon_url` لأيقونة/شعار كل وسيلة دفع (صفحة الدفع) |
 
 ## اختبارات
 - `tests/security_invariants.sql` — 20 فحصاً ثابتاً (دفتر المحافظ، المنح، RLS، حراسة الأدمن، منع replay، منع الشحن بلا إيصال، سلامة التريجرات...).

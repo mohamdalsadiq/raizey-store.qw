@@ -114,6 +114,21 @@
     </div>
 
     <div class="field">
+      <label>أيقونة / شعار الوسيلة (اختياري)</label>
+      <div class="file-upload" id="iconUploadBox" role="button" tabindex="0">
+        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg>
+        <span id="iconUploadLabel">اضغط لرفع أيقونة (PNG / JPG / WEBP)</span>
+        <input type="file" id="iconFileInput" accept="image/jpeg,image/png,image/webp" aria-label="رفع أيقونة وسيلة الدفع" style="display:none;">
+      </div>
+      <input type="hidden" id="iconUrlInput">
+      <div id="iconPreviewWrap" style="display:none; align-items:center; gap:10px; margin-top:10px;">
+        <img id="iconPreview" alt="معاينة أيقونة وسيلة الدفع" width="48" height="48" style="width:48px; height:48px; object-fit:contain; border-radius:12px; background:var(--bg); border:1px solid var(--border); padding:6px;">
+        <button type="button" id="iconRemoveBtn" class="modal-cancel-btn" style="min-height:34px; padding:0 14px;">إزالة الأيقونة</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">تظهر داخل بطاقة وسيلة الدفع في صفحة الدفع. اتركها فارغة لاستخدام أيقونة بنك افتراضية.</div>
+    </div>
+
+    <div class="field">
       <label>ترتيب العرض</label>
       <input type="number" id="orderInput" placeholder="0">
     </div>
@@ -179,6 +194,39 @@ const instructionsInput = document.getElementById('instructionsInput');
 const orderInput = document.getElementById('orderInput');
 const activeInput = document.getElementById('activeInput');
 const formError = document.getElementById('formError');
+const iconUploadBox = document.getElementById('iconUploadBox');
+const iconFileInput = document.getElementById('iconFileInput');
+const iconUploadLabel = document.getElementById('iconUploadLabel');
+const iconUrlInput = document.getElementById('iconUrlInput');
+const iconPreviewWrap = document.getElementById('iconPreviewWrap');
+const iconPreview = document.getElementById('iconPreview');
+const iconRemoveBtn = document.getElementById('iconRemoveBtn');
+
+// ── أيقونة وسيلة الدفع: رفع إلى Supabase Storage + معاينة + إزالة ──────────
+function setIconLabel(text) { iconUploadLabel.textContent = text || 'اضغط لرفع أيقونة (PNG / JPG / WEBP)'; }
+function setIconPreview(url) {
+  const safe = typeof sanitizeUrl === 'function' ? sanitizeUrl(url) : '';
+  if (safe) {
+    iconUrlInput.value = safe;
+    iconPreview.src = safe;
+    iconPreviewWrap.style.display = 'flex';
+  } else {
+    iconUrlInput.value = '';
+    iconPreview.removeAttribute('src');
+    iconPreviewWrap.style.display = 'none';
+  }
+}
+async function uploadIconFile(file) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) throw new Error('invalid_image_type');
+  if (file.size > 5 * 1024 * 1024) throw new Error('image_too_large');
+  const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const path = `payment-methods/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabaseClient.storage.from('product-images').upload(path, file);
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from('product-images').getPublicUrl(path);
+  return data.publicUrl;
+}
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -208,6 +256,30 @@ async function init() {
   document.getElementById('formCancelBtn').addEventListener('click', closeForm);
   document.getElementById('formSaveBtn').addEventListener('click', saveMethod);
 
+  iconUploadBox.addEventListener('click', () => iconFileInput.click());
+  iconUploadBox.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); iconFileInput.click(); }
+  });
+  iconFileInput.addEventListener('change', async () => {
+    const file = iconFileInput.files && iconFileInput.files[0];
+    if (!file) return;
+    setIconLabel('جارِ الرفع...');
+    try {
+      const url = await uploadIconFile(file);
+      setIconPreview(url);
+      setIconLabel(file.name);
+    } catch (e) {
+      setIconPreview('');
+      iconFileInput.value = '';
+      setIconLabel('فشل الرفع — اختر صورة JPG/PNG/WEBP أقل من 5MB');
+    }
+  });
+  iconRemoveBtn.addEventListener('click', () => {
+    setIconPreview('');
+    iconFileInput.value = '';
+    setIconLabel('');
+  });
+
   await loadMethods();
 }
 
@@ -230,9 +302,15 @@ function render() {
   }
 
   // كل القيم تُمرّر عبر escapeHtml / safeDataAttr لمنع XSS المخزَّن
-  container.innerHTML = methods.map(m => `
+  container.innerHTML = methods.map(m => {
+    const iconUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
+    const iconHtml = iconUrl
+      ? `<img src="${escapeAttribute(iconUrl)}" alt="" loading="lazy" style="width:34px;height:34px;object-fit:contain;">`
+      : `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
+    return `
     <div class="manage-item">
       <div class="manage-item-info">
+        <div class="manage-item-thumb" aria-hidden="true" style="width:44px;height:44px;flex:0 0 auto;border-radius:13px;display:grid;place-items:center;margin-left:12px;background:var(--bg);border:1px solid var(--border);color:var(--rz-accent-text);">${iconHtml}</div>
         <div class="manage-item-name">
           ${escapeHtml(m.name || '')}
           ${!m.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}
@@ -244,7 +322,8 @@ function render() {
         <button class="icon-action-btn" data-action="delete" data-id="${safeDataAttr(m.id || '')}" aria-label="حذف" title="حذف"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   container.querySelectorAll('[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => openForm(btn.dataset.id));
@@ -276,6 +355,9 @@ function openForm(id) {
     instructionsInput.value = m.instructions || '';
     orderInput.value = m.display_order ?? 0;
     activeInput.value = String(m.is_active === true);
+    setIconPreview(m.icon_url || '');
+    setIconLabel(m.icon_url ? 'استبدل الأيقونة الحالية برفع صورة جديدة' : '');
+    iconFileInput.value = '';
   } else {
     document.getElementById('formModalTitle').textContent = 'وسيلة دفع جديدة';
     nameInput.value = '';
@@ -286,6 +368,9 @@ function openForm(id) {
     instructionsInput.value = '';
     orderInput.value = methods.length;
     activeInput.value = 'true';
+    setIconPreview('');
+    setIconLabel('');
+    iconFileInput.value = '';
   }
 
   formModal.classList.add('show');
@@ -323,6 +408,7 @@ async function saveMethod() {
     bin_prefixes: binInput.value.trim() || null,
     bank_key: bankKeyInput.value || null,
     instructions: instructionsInput.value.trim() || null,
+    icon_url: iconUrlInput.value.trim() || null,
     display_order: parseInt(orderInput.value) || 0,
     is_active: activeInput.value === 'true'
   };

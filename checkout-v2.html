@@ -182,9 +182,35 @@
   }
   .copy-account-btn.copied { color: var(--success, #10b981); border-color: var(--success, #10b981); }
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin: 16px 0 12px; }
-  .method-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .method-pill { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); transition: 0.15s ease; }
-  .method-pill.active { background: var(--primary); border-color: var(--rz-accent-text); color: var(--ink); }
+  .method-picker-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  /* بطاقة وسيلة الدفع: الأيقونة + الاسم جنب بعض */
+  .method-card {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 13px;
+    cursor: pointer;
+    text-align: right;
+    color: var(--ink);
+    font: inherit;
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .method-card:hover { border-color: rgba(255,101,0,.5); transform: translateY(-1px); }
+  .method-card.active { border-color: var(--rz-accent-text); background: rgba(255,101,0,.08); box-shadow: 0 0 0 3px rgba(255,101,0,.14); }
+  .method-card-icon {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 11px;
+    display: grid; place-items: center;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--rz-accent-text); overflow: hidden;
+    transition: transform .18s ease;
+  }
+  .method-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+  .method-card-icon svg { width: 22px; height: 22px; }
+  .method-card:hover .method-card-icon { transform: scale(1.06); }
+  .method-card-name { font-weight: 800; font-size: 14.5px; letter-spacing: .1px; line-height: 1.5; }
+  .selected-method-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
+  .selected-method-head .method-card-icon { width: 38px; height: 38px; }
   .selected-method-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
   #saveTxRefBtn {
@@ -583,17 +609,35 @@ function renderCheckout() {
   }
 
   const methodPickerGrid = document.getElementById('methodPickerGrid');
-  methodPickerGrid.innerHTML = paymentMethods.map(m => `<div class="method-pill" data-method-id="${escapeAttribute(m.id || '')}">${escapeHtml(m.name)}</div>`).join('');
-  methodPickerGrid.querySelectorAll('.method-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      methodPickerGrid.querySelectorAll('.method-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      selectedMethodId = pill.dataset.methodId;
+  methodPickerGrid.innerHTML = paymentMethods.map(m => {
+    const iconUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
+    const icon = iconUrl
+      ? `<img src="${escapeAttribute(iconUrl)}" alt="" loading="lazy">`
+      : `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
+    return `<button type="button" class="method-card" data-method-id="${escapeAttribute(m.id || '')}" aria-pressed="false">
+      <span class="method-card-icon" aria-hidden="true">${icon}</span>
+      <span class="method-card-name">${escapeHtml(m.name || '')}</span>
+    </button>`;
+  }).join('');
+  methodPickerGrid.querySelectorAll('.method-card').forEach(card => {
+    card.addEventListener('click', () => {
+      methodPickerGrid.querySelectorAll('.method-card').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
+      card.classList.add('active');
+      card.setAttribute('aria-pressed', 'true');
+      selectedMethodId = card.dataset.methodId;
       const m = paymentMethods.find(x => x.id === selectedMethodId);
       selectedMethodAccount = m ? (m.account_number || null) : null;
       const box = document.getElementById('selectedMethodDetails');
+      const selIconUrl = m && typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
+      const selIcon = selIconUrl
+        ? `<img src="${escapeAttribute(selIconUrl)}" alt="" loading="lazy">`
+        : `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
       box.innerHTML = `
         <div class="selected-method-box">
+          <div class="selected-method-head">
+            <span class="method-card-icon" aria-hidden="true">${selIcon}</span>
+            <span class="method-card-name">${escapeHtml(m.name || '')}</span>
+          </div>
           <div class="bank-account-row">
             <span>اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
             <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_name || '')}">نسخ</button>
