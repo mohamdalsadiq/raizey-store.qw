@@ -1,5 +1,5 @@
 /* =========================================================
-   RAIZEY STORE — منطق واجهات الحساب المشترك
+   MEEM STORE — منطق واجهات الحساب المشترك
    إظهار كلمة السر، التحقق اللحظي، قوة كلمة السر،
    خانات الكود، ومؤقت إعادة الإرسال
    ========================================================= */
@@ -37,7 +37,7 @@
       btn.addEventListener('click', function () {
         var show = input.type === 'password';
         input.type = show ? 'text' : 'password';
-        btn.innerHTML = show ? ICONS.eyeOff : ICONS.eye;
+        btn.innerHTML = show ? ICONS.eyeOff:  ICONS.eye;
         btn.setAttribute('aria-label', show ? 'إخفاء كلمة السر' : 'إظهار كلمة السر');
         input.focus();
       });
@@ -80,7 +80,7 @@
         rulesList.querySelectorAll('[data-rule]').forEach(function (li) {
           var ok = !!r[li.getAttribute('data-rule')];
           li.classList.toggle('ok', ok);
-          li.querySelector('[data-rule-icon]').innerHTML = ok ? ICONS.checkSm : ICONS.dotSm;
+          li.querySelector('[data-rule-icon]').innerHTML = ok ? ICONS.checkSm:  ICONS.dotSm;
         });
       }
       var score = ['length', 'letter', 'digit', 'symbol', 'long', 'mixed']
@@ -221,7 +221,7 @@
     dotSm: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/></svg>'
   };
 
-  global.RaizeyAuthUI = {
+  global.MeemAuthUI = {
     icons: ICONS,
     isValidEmail: isValidEmail,
     setFieldState: setState,

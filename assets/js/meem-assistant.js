@@ -1,7 +1,7 @@
 (() => {
   'use strict';
-  if (window.__RAIZEY_ASSISTANT_LOADED__) return;
-  window.__RAIZEY_ASSISTANT_LOADED__ = true;
+  if (window.__MEEM_ASSISTANT_LOADED__) return;
+  window.__MEEM_ASSISTANT_LOADED__ = true;
 
   // ── Draggable floating assistant ───────────────────────────────────────────
   // The toggle can be dragged anywhere on screen and its position is remembered
@@ -15,73 +15,73 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    #raizeyAssistantRoot{position:fixed;right:18px;bottom:18px;z-index:9998;font-family:inherit;direction:rtl}
-    body.rz-has-bottom-nav #raizeyAssistantRoot{bottom:calc(${BOTTOM_NAV}px + env(safe-area-inset-bottom))}
-    #raizeyAssistantToggle{width:${FAB}px;height:${FAB}px;border:0;border-radius:50%;background:linear-gradient(135deg,#ff7a2f,#e5482e);color:#fff;box-shadow:0 10px 26px rgba(229,72,46,.34);cursor:grab;font-size:26px;display:grid;place-items:center;transition:transform .2s,box-shadow .2s;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-    #raizeyAssistantToggle:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(229,72,46,.42)}
-    #raizeyAssistantToggle.rz-dragging{cursor:grabbing;transition:none;transform:scale(1.06)}
-    #raizeyAssistantToggle svg{pointer-events:none;width:28px;height:28px}
-    #raizeyAssistantPanel{position:fixed;left:auto;right:auto;top:auto;bottom:auto;width:min(390px,calc(100vw - 24px));height:min(560px,calc(100vh - 24px));background:#fff;border:1px solid rgba(20,31,48,.11);border-radius:22px;box-shadow:0 24px 70px rgba(20,31,48,.2);display:none;overflow:hidden;z-index:9999}
-    #raizeyAssistantPanel.is-open{display:flex;flex-direction:column;animation:raizeyAssistantIn .18s ease-out}
-    @keyframes raizeyAssistantIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-    .raizey-assistant-head{display:flex;align-items:center;gap:11px;padding:16px 17px;background:linear-gradient(135deg,#fff7f1,#fff);border-bottom:1px solid #f1e6df}
-    .raizey-assistant-avatar{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:#ffeadc;color:#e45125;font-size:19px}
-    .raizey-assistant-title{flex:1;color:#172033;font-size:15px;font-weight:900;line-height:1.35}
-    .raizey-assistant-title small{display:block;color:#708096;font-size:11px;font-weight:600;margin-top:2px}
-    .raizey-assistant-close{border:0;background:transparent;color:#8090a4;cursor:pointer;font-size:18px;padding:5px}
-    .raizey-assistant-messages{flex:1;overflow:auto;padding:16px 14px;background:#fbfcfe;scroll-behavior:smooth}
-    .raizey-assistant-msg{max-width:88%;padding:10px 12px;border-radius:15px;margin:0 0 10px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
-    .raizey-assistant-msg.assistant{margin-left:auto;background:#fff;border:1px solid #edf0f4;color:#263348;border-top-right-radius:5px}
-    .raizey-assistant-msg.user{margin-right:auto;background:#e9512a;color:#fff;border-top-left-radius:5px}
-    .raizey-assistant-msg a{color:#e45125;font-weight:800}
-    .raizey-assistant-quick{display:flex;gap:7px;overflow:auto;padding:0 14px 11px;background:#fbfcfe}
-    .raizey-assistant-quick button{flex:0 0 auto;border:1px solid #f0d3c3;background:#fff7f1;color:#b74728;border-radius:999px;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}
-    .raizey-assistant-form{display:flex;align-items:flex-end;gap:8px;padding:11px;border-top:1px solid #edf0f4;background:#fff}
-    .raizey-assistant-input{min-width:0;flex:1;resize:none;max-height:100px;border:1px solid #dce3eb;border-radius:13px;padding:10px 11px;color:#172033;background:#fff;font:inherit;font-size:13px;outline:0;line-height:1.5}
-    .raizey-assistant-input:focus{border-color:#ed754b;box-shadow:0 0 0 3px rgba(237,117,75,.12)}
-    .raizey-assistant-send{width:40px;height:40px;border:0;border-radius:12px;background:#e9512a;color:#fff;cursor:pointer;font-size:15px;display:grid;place-items:center}
-    .raizey-assistant-send:disabled{opacity:.55;cursor:wait}
-    .raizey-assistant-typing{color:#7d8ca0;font-size:12px;padding:0 3px 9px}
+    #meemAssistantRoot{position: fixed;right: 18px;bottom: 18px;z-index: 9998;font-family: inherit;direction: rtl}
+    body.mm-has-bottom-nav #meemAssistantRoot{bottom:calc(${BOTTOM_NAV}px + env(safe-area-inset-bottom))}
+    #meemAssistantToggle{width:${FAB}px;height:${FAB}px;border: 0;border-radius: 50%;background: linear-gradient(135deg,var(--mm-gold-400),#e5482e);color: var(--mm-silver);box-shadow: 0 10px 26px rgba(255, 212, 0,.34);cursor: grab;font-size: 26px;display: grid;place-items: center;transition: transform .2s,box-shadow .2s;touch-action: none;-webkit-user-select: none;user-select: none;-webkit-tap-highlight-color: transparent}
+    #meemAssistantToggle:hover{transform: translateY(-2px);box-shadow: 0 14px 32px rgba(255, 212, 0,.42)}
+    #meemAssistantToggle.mm-dragging{cursor: grabbing;transition: none;transform: scale(1.06)}
+    #meemAssistantToggle svg{pointer-events: none;width: 28px;height: 28px}
+    #meemAssistantPanel{position: fixed;left: auto;right: auto;top: auto;bottom: auto;width: min(390px,calc(100vw - 24px));height: min(560px,calc(100vh - 24px));background: var(--mm-surface);border: 1px solid rgba(0, 0, 0,.11);border-radius: 22px;box-shadow: 0 24px 70px rgba(0, 0, 0,.2);display: none;overflow: hidden;z-index: 9999}
+    #meemAssistantPanel.is-open{display: flex;flex-direction: column;animation: meemAssistantIn .18s ease-out}
+    @keyframes meemAssistantIn{from{opacity: 0;transform: translateY(10px) scale(.98)}to{opacity: 1;transform: none}}
+    .meem-assistant-head{display: flex;align-items: center;gap: 11px;padding: 16px 17px;background: linear-gradient(135deg,var(--mm-surface-3),var(--mm-surface));border-bottom: 1px solid #f1e6df}
+    .meem-assistant-avatar{width: 40px;height: 40px;border-radius: 13px;display: grid;place-items: center;background: #ffeadc;color: var(--mm-accent-text);font-size: 19px}
+    .meem-assistant-title{flex: 1;color: var(--mm-text);font-size: 15px;font-weight: 900;line-height: 1.35}
+    .meem-assistant-title small{display: block;color: var(--mm-text-muted);font-size: 11px;font-weight: 600;margin-top: 2px}
+    .meem-assistant-close{border: 0;background: transparent;color: var(--mm-text-muted);cursor: pointer;font-size: 18px;padding: 5px}
+    .meem-assistant-messages{flex: 1;overflow: auto;padding: 16px 14px;background: var(--mm-surface);scroll-behavior: smooth}
+    .meem-assistant-msg{max-width: 88%;padding: 10px 12px;border-radius: 15px;margin: 0 0 10px;font-size: 13px;line-height: 1.7;white-space: pre-wrap;word-break: break-word}
+    .meem-assistant-msg.assistant{margin-left: auto;background: var(--mm-surface);border: 1px solid #edf0f4;color: var(--mm-text);border-top-right-radius: 5px}
+    .meem-assistant-msg.user{margin-right: auto;background: #e9512a;color: var(--mm-silver);border-top-left-radius: 5px}
+    .meem-assistant-msg a{color: var(--mm-accent-text);font-weight: 800}
+    .meem-assistant-quick{display: flex;gap: 7px;overflow: auto;padding: 0 14px 11px;background: var(--mm-surface)}
+    .meem-assistant-quick button{flex: 0 0 auto;border: 1px solid #f0d3c3;background: var(--mm-surface-3);color: var(--mm-accent-text);border-radius: 999px;padding: 7px 10px;font: inherit;font-size: 11px;cursor: pointer}
+    .meem-assistant-form{display: flex;align-items: flex-end;gap: 8px;padding: 11px;border-top: 1px solid #edf0f4;background: var(--mm-surface)}
+    .meem-assistant-input{min-width: 0;flex: 1;resize: none;max-height: 100px;border: 1px solid #dce3eb;border-radius: 13px;padding: 10px 11px;color: var(--mm-text);background: var(--mm-surface);font: inherit;font-size: 13px;outline: 0;line-height: 1.5}
+    .meem-assistant-input:focus{border-color: #ed754b;box-shadow: 0 0 0 3px rgba(255, 212, 0,.12)}
+    .meem-assistant-send{width: 40px;height: 40px;border: 0;border-radius: 12px;background: #e9512a;color: var(--mm-silver);cursor: pointer;font-size: 15px;display: grid;place-items: center}
+    .meem-assistant-send:disabled{opacity: .55;cursor: wait}
+    .meem-assistant-typing{color: var(--mm-text-muted);font-size: 12px;padding: 0 3px 9px}
   `;
   document.head.appendChild(style);
 
   const root = document.createElement('div');
-  root.id = 'raizeyAssistantRoot';
+  root.id = 'meemAssistantRoot';
   root.innerHTML = `
-    <section id="raizeyAssistantPanel" aria-label="مساعد Raizey الذكي" aria-hidden="true">
-      <header class="raizey-assistant-head">
-        <div class="raizey-assistant-avatar"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></div>
-        <div class="raizey-assistant-title">مساعد Raizey الذكي<small>المنتجات والطلبات في مكان واحد</small></div>
-        <button class="raizey-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
+    <section id="meemAssistantPanel" aria-label="مساعد MEEM الذكي" aria-hidden="true">
+      <header class="meem-assistant-head">
+        <div class="meem-assistant-avatar"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></div>
+        <div class="meem-assistant-title">مساعد MEEM الذكي<small>المنتجات والطلبات في مكان واحد</small></div>
+        <button class="meem-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
       </header>
-      <div class="raizey-assistant-messages" id="raizeyAssistantMessages"></div>
-      <div class="raizey-assistant-quick">
+      <div class="meem-assistant-messages" id="meemAssistantMessages"></div>
+      <div class="meem-assistant-quick">
         <button type="button" data-assistant-message="ما هي حالة طلباتي؟">حالة طلباتي</button>
         <button type="button" data-assistant-message="أريد البحث عن منتج">البحث عن منتج</button>
       </div>
-      <div class="raizey-assistant-typing" id="raizeyAssistantTyping" hidden>المساعد يكتب الآن...</div>
-      <form class="raizey-assistant-form" id="raizeyAssistantForm">
-        <textarea class="raizey-assistant-input" id="raizeyAssistantInput" rows="1" maxlength="1200" placeholder="اكتب سؤالك هنا..." aria-label="رسالتك"></textarea>
-        <button class="raizey-assistant-send" id="raizeyAssistantSend" type="submit" aria-label="إرسال"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
+      <div class="meem-assistant-typing" id="meemAssistantTyping" hidden>المساعد يكتب الآن...</div>
+      <form class="meem-assistant-form" id="meemAssistantForm">
+        <textarea class="meem-assistant-input" id="meemAssistantInput" rows="1" maxlength="1200" placeholder="اكتب سؤالك هنا..." aria-label="رسالتك"></textarea>
+        <button class="meem-assistant-send" id="meemAssistantSend" type="submit" aria-label="إرسال"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
       </form>
     </section>
-    <button id="raizeyAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></button>
+    <button id="meemAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></button>
   `;
   document.body.appendChild(root);
 
-  const panel = root.querySelector('#raizeyAssistantPanel');
-  const toggle = root.querySelector('#raizeyAssistantToggle');
-  const close = root.querySelector('.raizey-assistant-close');
-  const messages = root.querySelector('#raizeyAssistantMessages');
-  const form = root.querySelector('#raizeyAssistantForm');
-  const input = root.querySelector('#raizeyAssistantInput');
-  const send = root.querySelector('#raizeyAssistantSend');
-  const typing = root.querySelector('#raizeyAssistantTyping');
+  const panel = root.querySelector('#meemAssistantPanel');
+  const toggle = root.querySelector('#meemAssistantToggle');
+  const close = root.querySelector('.meem-assistant-close');
+  const messages = root.querySelector('#meemAssistantMessages');
+  const form = root.querySelector('#meemAssistantForm');
+  const input = root.querySelector('#meemAssistantInput');
+  const send = root.querySelector('#meemAssistantSend');
+  const typing = root.querySelector('#meemAssistantTyping');
   const history = [];
 
   /* ── Floating position (drag + persistence) ───────────────────────────── */
   function navReserve() {
-    return document.body && document.body.classList.contains('rz-has-bottom-nav') ? BOTTOM_NAV : 0;
+    return document.body && document.body.classList.contains('mm-has-bottom-nav') ? BOTTOM_NAV:  0;
   }
   function clampPosition(x, y) {
     const w = toggle.offsetWidth || FAB;
@@ -138,7 +138,7 @@
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerUp);
-    toggle.classList.remove('rz-dragging');
+    toggle.classList.remove('mm-dragging');
     if (dragging.moved) {
       savePosition(place(root.offsetLeft, root.offsetTop));
       suppressToggle = true;
@@ -158,7 +158,7 @@
       moved: false
     };
     if (event.cancelable) event.preventDefault();
-    toggle.classList.add('rz-dragging');
+    toggle.classList.add('mm-dragging');
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
@@ -173,12 +173,12 @@
     const pw = Math.min(panel.offsetWidth || 360, vw - 2 * EDGE);
     const ph = Math.min(panel.offsetHeight || 520, vh - 2 * EDGE);
 
-    let left = (rect.left + rect.width / 2 < vw / 2) ? rect.left : rect.right - pw;
+    let left = (rect.left + rect.width / 2 < vw / 2) ? rect.left:  rect.right - pw;
     left = Math.min(Math.max(EDGE, left), Math.max(EDGE, vw - pw - EDGE));
 
     const spaceAbove = rect.top;
     const spaceBelow = vh - rect.bottom;
-    let top = (spaceAbove >= ph + gap || spaceAbove >= spaceBelow) ? rect.top - ph - gap : rect.bottom + gap;
+    let top = (spaceAbove >= ph + gap || spaceAbove >= spaceBelow) ? rect.top - ph - gap:  rect.bottom + gap;
     top = Math.min(Math.max(EDGE, top), Math.max(EDGE, vh - ph - EDGE));
 
     panel.style.left = left + 'px';
@@ -189,7 +189,7 @@
 
   function addMessage(role, text) {
     const element = document.createElement('div');
-    element.className = `raizey-assistant-msg ${role}`;
+    element.className = `meem-assistant-msg ${role}`;
     element.textContent = text;
     messages.appendChild(element);
     messages.scrollTop = messages.scrollHeight;

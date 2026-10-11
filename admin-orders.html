@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إدارة الطلبات — RAIZEY STORE</title>
+<title>إدارة الطلبات — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -34,14 +34,14 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="admin-page" id="adminPage" style="display:none;">
+<div class="admin-page" id="adminPage" style="display: none;">
   <div class="page-header">
     <h1>إدارة الطلبات</h1>
     <a href="index.html" class="back-link">→ المتجر</a>
@@ -62,12 +62,12 @@
 <a href="admin-giftcards.html">كروت الهدايا</a>
   </div>
 
-  <div style="padding:0 0 12px;">
+  <div style="padding: 0 0 12px;">
     <input type="text" id="orderSearchInput" placeholder="ابحث برقم الطلب، اسم العميل، أو رقم العملية..."
-      style="width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--bg-card); color:var(--ink); font-size:14px; font-family:inherit;">
+      style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--ink); font-size: 14px; font-family: inherit;">
   </div>
 
-  <div class="categories" style="padding:0 0 16px;" id="filterRow">
+  <div class="categories" style="padding: 0 0 16px;" id="filterRow">
     <button class="chip active" data-filter="all">الكل</button>
     <button class="chip" data-filter="pending_review">قيد المراجعة</button>
     <button class="chip" data-filter="needs_admin_check">يحتاج تدقيق</button>
@@ -77,7 +77,7 @@
     <button class="chip" data-filter="rejected">مرفوض</button>
   </div>
 
-  <div id="ordersList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+  <div id="ordersList"><div style="color: var(--text-muted); font-size: 13px;">جارِ التحميل...</div></div>
 </div>
 
 <div class="modal-overlay" id="rejectModal">
@@ -96,9 +96,9 @@
   </div>
 </div>
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
+<div id="accessDenied" style="display: none; text-align: center; padding: 80px 20px; color: var(--text-muted);">
+  <h3 style="color: var(--ink); margin-bottom: 8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color: var(--mm-accent-text); font-weight: 700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -291,7 +291,7 @@ function render() {
   }
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد طلبات مطابقة</div>`;
+    container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 30px 0;">لا توجد طلبات مطابقة</div>`;
     return;
   }
 
@@ -335,8 +335,8 @@ function renderOrderCard(o) {
     : '';
 
   const optionHtml = (o.selected_option && o.selected_option.label) ? `
-    <div style="display:flex; align-items:center; gap:6px; color: var(--rz-accent-text); font-weight:700;">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> الخيار المختار: ${escapeHtml(o.selected_option.label)}
+    <div style="display: flex; align-items: center; gap: 6px; color: var(--mm-accent-text); font-weight: 700;">
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> الخيار المختار: ${escapeHtml(o.selected_option.label)}
     </div>
   ` : '';
 
@@ -358,15 +358,15 @@ function renderOrderCard(o) {
   if (o.status === 'pending_review') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${safeOrderId}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-play"></use></svg> بدء التنفيذ</button>
-        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${safeOrderId}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg> رفض</button>
-        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-ban"></use></svg> إلغاء</button>
+        <button class="admin-btn btn-confirm" data-action="confirm" data-order-id="${safeOrderId}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-play"></use></svg> بدء التنفيذ</button>
+        <button class="admin-btn btn-reject" data-action="reject" data-order-id="${safeOrderId}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg> رفض</button>
+        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-ban"></use></svg> إلغاء</button>
       </div>`;
   } else if (o.status === 'in_progress') {
     actions = `
       <div class="admin-order-actions">
-        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${safeOrderId}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg> تم التنفيذ</button>
-        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-ban"></use></svg> إلغاء</button>
+        <button class="admin-btn btn-complete" data-action="complete" data-order-id="${safeOrderId}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg> تم التنفيذ</button>
+        <button class="admin-btn" data-action="cancel" data-order-id="${safeOrderId}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-ban"></use></svg> إلغاء</button>
       </div>`;
   }
 
@@ -402,26 +402,26 @@ function renderOrderCard(o) {
   };
   const criticalHits = flags.filter((f) => CRITICAL_FLAG_LABELS[f]);
   const criticalFlagsHtml = criticalHits.length
-    ? `<div style="margin:6px 0 2px;display:flex;flex-direction:column;gap:4px;">` +
+    ? `<div style="margin: 6px 0 2px;display: flex;flex-direction: column;gap: 4px;">` +
       criticalHits.map((f) =>
-        `<span style="background:rgba(179,38,30,.12);color:var(--danger);border:1px solid var(--danger);` +
-        `border-radius:8px;padding:4px 10px;font-weight:800;font-size:12.5px;">` +
-        `⚠ ${escapeHtml(CRITICAL_FLAG_LABELS[f])} <span style="font-weight:400;opacity:.75;">(${escapeHtml(f)})</span></span>`
+        `<span style="background: rgba(255, 107, 107,.12);color: var(--danger);border: 1px solid var(--danger);` +
+        `border-radius: 8px;padding: 4px 10px;font-weight: 800;font-size: 12.5px;">` +
+        `⚠ ${escapeHtml(CRITICAL_FLAG_LABELS[f])} <span style="font-weight: 400;opacity: .75;">(${escapeHtml(f)})</span></span>`
       ).join('') + `</div>`
     : '';
 
   const reviewHtml = needsAdmin ? `
-    <div style="margin-top:10px; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.7;
-                border:1px solid ${severity === 'high' ? 'var(--danger)' : '#A85B00'};
+    <div style="margin-top: 10px; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.7;
+                border:1px solid ${severity === 'high' ? 'var(--danger)' : 'var(--mm-warning)'};
                 background:${severity === 'high' ? 'rgba(179,38,30,.08)' : 'rgba(201,138,31,.10)'};">
-      <strong style="color:${severity === 'high' ? 'var(--danger)' : '#A85B00'};">
-        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-user"></use></svg> يحتاج تدقيق${severity === 'high' ? ' — تنبيه مشدّد' : ''}
+      <strong style="color:${severity === 'high' ? 'var(--danger)' : 'var(--mm-warning)'};">
+        <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-user"></use></svg> يحتاج تدقيق${severity === 'high' ? ' — تنبيه مشدّد' : ''}
       </strong>
-      ${reviewReason ? `<div style="margin-top:4px;">${escapeHtml(reviewReason)}</div>` : ''}
+      ${reviewReason ? `<div style="margin-top: 4px;">${escapeHtml(reviewReason)}</div>` : ''}
       ${criticalFlagsHtml}
-      ${scanRows.length ? `<div style="margin-top:6px; color:var(--text-muted);">${scanRows.map(escapeHtml).join('<br>')}</div>` : ''}
+      ${scanRows.length ? `<div style="margin-top: 6px; color: var(--text-muted);">${scanRows.map(escapeHtml).join('<br>')}</div>` : ''}
     </div>` : (scanRows.length || criticalFlagsHtml ? `
-    <div style="margin-top:10px; font-size:12px; color:var(--text-muted); line-height:1.7;">
+    <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.7;">
       ${criticalFlagsHtml}
       ${scanRows.map(escapeHtml).join('<br>')}
     </div>` : '');
@@ -431,7 +431,7 @@ function renderOrderCard(o) {
       <div class="order-top">
         <div>
           <div class="order-product">${escapeHtml(o.product_name_snapshot)}</div>
-          <div style="font-size:12px; color: var(--rz-accent-text); font-weight:700; margin-top:2px;">طلب #${escapeHtml(o.order_code || o.id.slice(0, 8))}</div>
+          <div style="font-size: 12px; color: var(--mm-accent-text); font-weight: 700; margin-top: 2px;">طلب #${escapeHtml(o.order_code || o.id.slice(0, 8))}</div>
           <div class="order-date">${date}</div>
         </div>
         <span class="status-badge status-${safeStatus}">${statusLabels[o.status] || safeStatus}</span>
@@ -448,7 +448,7 @@ function renderOrderCard(o) {
         ${optionHtml}
         ${fieldsHtml}
         ${refHtml}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">عرض الإيصال</a></div>` : ''}
       </div>
 
       ${reviewHtml}
@@ -475,7 +475,7 @@ async function handleAction(action, orderId) {
   if (!nextStatus) return;
 
   const button = document.querySelector(`[data-action="${CSS.escape(action)}"][data-order-id="${CSS.escape(orderId)}"]`);
-  if (button) { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = '<svg class="rz-i rz-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارٍ التنفيذ'; }
+  if (button) { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = '<svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارٍ التنفيذ'; }
 
   let overrideReason = null;
   let { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus });

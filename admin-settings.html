@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الإعدادات — RAIZEY STORE</title>
+<title>الإعدادات — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -34,14 +34,14 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="admin-page" id="adminPage" style="display:none;">
+<div class="admin-page" id="adminPage" style="display: none;">
   <div class="page-header">
     <h1>الإعدادات</h1>
     <a href="index.html" class="back-link">→ المتجر</a>
@@ -60,8 +60,8 @@
     <a href="admin-referral-milestones.html">مستويات الإحالة</a>
   </div>
 
-  <div class="admin-section-title" style="margin-top:0;">سعر الصرف</div>
-  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+  <div class="admin-section-title" style="margin-top: 0;">سعر الصرف</div>
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
     هذا السعر يُستخدم لحساب أسعار كل المنتجات بالجنيه السوداني تلقائياً، ولا يظهر للعملاء أبداً.
   </p>
 
@@ -71,7 +71,7 @@
   </div>
 
   <div class="admin-section-title">هامش الربح</div>
-  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
     نسبة تُضاف تلقائياً فوق سعر التكلفة لكل المنتجات (مثلاً 10 تعني إضافة 10% فوق السعر الأساسي).
   </p>
   <div class="field">
@@ -80,12 +80,21 @@
   </div>
 
   <div class="admin-section-title">نظام الإحالة</div>
-  <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
     نسبة العمولة تُحدد لكل تصنيف من صفحة "التصنيفات". مستويات المكافآت التصاعدية (10، 25، أي عدد) تُدار الآن من صفحة منفصلة.
   </p>
-  <a href="admin-referral-milestones.html" style="display:block; padding:12px; background:var(--bg-card); border:1px solid var(--primary); border-radius:10px; text-align:center; color: var(--rz-accent-text); font-weight:700; font-size:14px; margin-bottom:20px;">
+  <a href="admin-referral-milestones.html" style="display: block; padding: 12px; background: var(--bg-card); border: 1px solid var(--primary); border-radius: 10px; text-align: center; color: var(--mm-accent-text); font-weight: 700; font-size: 14px; margin-bottom: 20px;">
     إدارة مستويات مكافآت الإحالة ←
   </a>
+
+  <div class="admin-section-title">التواصل عبر واتساب</div>
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+    الرقم الذي يظهر لأزرار الدعم في المتجر. اكتبه بصيغة دولية بدون + وبدون مسافات (مثال: 249901815039).
+  </p>
+  <div class="field">
+    <label for="whatsappInput">رقم واتساب الدعم</label>
+    <input type="text" id="whatsappInput" inputmode="numeric" placeholder="مثلاً: 249901815039">
+  </div>
 
   <div class="form-error" id="formError"></div>
   <div class="form-success" id="formSuccess"></div>
@@ -93,9 +102,9 @@
   <button class="auth-btn" id="saveBtn">حفظ الإعدادات</button>
 </div>
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
+<div id="accessDenied" style="display: none; text-align: center; padding: 80px 20px; color: var(--text-muted);">
+  <h3 style="color: var(--ink); margin-bottom: 8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color: var(--mm-accent-text); font-weight: 700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -124,13 +133,14 @@ async function init() {
   const { data: settingsRows } = await supabaseClient
     .from('settings')
     .select('key, value')
-    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent']);
+    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'whatsapp_number']);
 
   const map = {};
   (settingsRows || []).forEach(r => { map[r.key] = r.value; });
 
   document.getElementById('rateInput').value = map.usd_to_sdg_rate || '';
   document.getElementById('marginInput').value = map.profit_margin_percent || '0';
+  document.getElementById('whatsappInput').value = map.whatsapp_number || '';
 
   document.getElementById('saveBtn').addEventListener('click', saveRate);
 }
@@ -153,6 +163,17 @@ async function saveRate() {
 
   await supabaseClient.from('settings').update({ value: String(rate), updated_at: new Date().toISOString() }).eq('key', 'usd_to_sdg_rate');
   await supabaseClient.from('settings').update({ value: String(margin), updated_at: new Date().toISOString() }).eq('key', 'profit_margin_percent');
+
+  const whatsapp = (document.getElementById('whatsappInput').value || '').replace(/[^0-9]/g, '');
+  if (whatsapp && whatsapp.length < 8) {
+    errorBox.textContent = 'رقم واتساب غير صحيح — اكتبه بصيغة دولية بدون +';
+    return;
+  }
+  if (whatsapp) {
+    await supabaseClient.from('settings')
+      .update({ value: whatsapp, updated_at: new Date().toISOString() })
+      .eq('key', 'whatsapp_number');
+  }
 
   await supabaseClient.from('audit_logs').insert({
     admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin }

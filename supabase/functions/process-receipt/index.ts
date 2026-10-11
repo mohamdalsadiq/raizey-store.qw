@@ -65,7 +65,11 @@ const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
-const PRODUCTION_ORIGIN = "https://raizey-store-qw.vercel.app";
+// Kept for backward compatibility: the deployed production origin is still the
+// vercel.app domain. Override it with the PRODUCTION_ORIGIN env var; the default
+// stays the current domain until a custom domain is live.
+const PRODUCTION_ORIGIN =
+  String(Deno.env.get("PRODUCTION_ORIGIN") || "").trim() || "https://raizey-store-qw.vercel.app";
 const ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/png",
@@ -173,6 +177,12 @@ function addGeminiUsage(diagnostics: GeminiDiagnostics, usage?: GeminiUsage | nu
 
 function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
+}
+
+// Reads the newer MEEM_PUBLIC_ORIGIN first, then falls back to the legacy
+// RAIZEY_PUBLIC_ORIGIN so an existing deployment keeps working unchanged.
+function publicOriginEnv(): string {
+  return env("MEEM_PUBLIC_ORIGIN") || env("RAIZEY_PUBLIC_ORIGIN");
 }
 
 function json(request: Request, data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
@@ -399,7 +409,7 @@ async function resolveGeminiModels(apiKey: string): Promise<{ models: string[]; 
       return { models: ordered.slice(0, GEMINI_MAX_MODELS), source: "discovery" };
     }
   } catch (error) {
-    console.error("[RAIZEY] Gemini model discovery failed:", String((error as any)?.message || error).slice(0, 160));
+    console.error("[MEEM] Gemini model discovery failed:", String((error as any)?.message || error).slice(0, 160));
   }
   return { models: FALLBACK_GEMINI_MODELS.slice(0, GEMINI_MAX_MODELS), source: "fallback" };
 }
@@ -435,7 +445,7 @@ async function withRetryableBackoff<T>(
       // يُسجَّل في تشخيصات الفحص حتى يرى الأدمن أن الازدحام أُعيدت محاولته
       // (مفيد لتفسير تأخّر فحص كان سينجح لولاً).
       if (onRetry) onRetry({ model, status, waitMs: wait, attempt });
-      console.warn(`[RAIZEY] Gemini ${model} HTTP ${status} — retrying in ${wait}ms`);
+      console.warn(`[MEEM] Gemini ${model} HTTP ${status} — retrying in ${wait}ms`);
       await sleep(wait);
     }
   }
@@ -580,7 +590,7 @@ async function extractTextWithGemini(
         throw error;
       }
       // timeout / 400 / 404 / 5xx → جرّب النموذج التالي
-      console.error(`[RAIZEY] Gemini model ${model} failed, trying next:`, message.slice(0, 160));
+      console.error(`[MEEM] Gemini model ${model} failed, trying next:`, message.slice(0, 160));
     }
   }
   if (!lastError) {
@@ -970,7 +980,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
     }
   } catch (error) {
     const safeError = String((error as any)?.message || "unknown").replace(/\s+/g, " ").slice(0, 240);
-    console.error("[RAIZEY] Gemini receipt OCR failed", safeError);
+    console.error("[MEEM] Gemini receipt OCR failed", safeError);
     if (Array.isArray((error as any)?.attempts)) diagnostics.attempts = (error as any).attempts;
     if ((error as any)?.code === "no_visible_text") {
       const rejected = ReceiptJudgeCore.blankResult() as ScanResult;
@@ -1110,7 +1120,7 @@ Deno.serve(async (request: Request) => {
     const result = await processScan(request, admin, userId, body);
     return json(request, { ok: true, ...result });
   } catch (error) {
-    console.error("[RAIZEY] process-receipt error", String((error as any)?.message || error));
+    console.error("[MEEM] process-receipt error", String((error as any)?.message || error));
     return json(request, {
       ok: false,
       error: "receipt_processing_failed",

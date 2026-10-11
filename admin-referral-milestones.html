@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مستويات الإحالة — RAIZEY STORE</title>
+<title>مستويات الإحالة — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -34,26 +34,26 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="admin-page" id="adminPage" style="display:none;">
+<div class="admin-page" id="adminPage" style="display: none;">
   <div class="page-header">
     <h1>مستويات مكافآت الإحالة</h1>
     <a href="admin.html" class="back-link">→ لوحة التحكم</a>
   </div>
 
-  <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
     أضف أي عدد من المستويات (مثلاً 30 إحالة، 50 إحالة، 100 إحالة...) وحدد قيمة المكافأة لكل مستوى.
   </p>
 
   <button class="add-new-btn" id="addNewBtn">+ إضافة مستوى جديد</button>
 
-  <div id="milestonesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+  <div id="milestonesList"><div style="color: var(--text-muted); font-size: 13px;">جارِ التحميل...</div></div>
 </div>
 
 <div class="modal-overlay" id="formModal">
@@ -87,14 +87,14 @@
 
     <div class="modal-actions">
       <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">حفظ</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background: var(--primary); color: var(--ink);">حفظ</button>
     </div>
   </div>
 </div>
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
+<div id="accessDenied" style="display: none; text-align: center; padding: 80px 20px; color: var(--text-muted);">
+  <h3 style="color: var(--ink); margin-bottom: 8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color: var(--mm-accent-text); font-weight: 700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -144,7 +144,7 @@ async function loadMilestones() {
 function render() {
   const container = document.getElementById('milestonesList');
   if (milestones.length === 0) {
-    container.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد مستويات بعد</div>`;
+    container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 30px 0;">لا توجد مستويات بعد</div>`;
     return;
   }
 
@@ -158,8 +158,8 @@ function render() {
         <div class="manage-item-sub">مكافأة: ${formatSDG(m.bonus)} ج.س</div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${m.id}"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
+        <button class="icon-action-btn" data-action="edit" data-id="${m.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
+        <button class="icon-action-btn" data-action="delete" data-id="${m.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
       </div>
     </div>
   `).join('');

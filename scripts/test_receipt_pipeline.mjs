@@ -1,5 +1,5 @@
 /*
- * RAIZEY STORE — اختبار receipt-pipeline (عقد الواجهة مع Edge Function)
+ * MEEM STORE — اختبار receipt-pipeline (عقد الواجهة مع Edge Function)
  * =====================================================================
  * يشغّل assets/js/receipt-pipeline.js في Node داخل vm مع بدائل للشبكة
  * والجلسة، ويتحقق من:
@@ -64,7 +64,7 @@ function loadPipeline({ fetchImpl, session = { access_token: JWT } } = {}) {
   context.globalThis = context;
   context.window = context;
   vm.runInNewContext(source, context, { filename: "receipt-pipeline.js" });
-  return { pipeline: context.RaizeyReceiptPipeline, requests };
+  return { pipeline: context.MeemReceiptPipeline, requests };
 }
 
 function jsonResponse(status, body) {

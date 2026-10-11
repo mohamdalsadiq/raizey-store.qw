@@ -1,22 +1,13 @@
 /* =========================================================
-   RAIZEY STORE — Design Tokens (Paper & Orange Edition)
+   MEEM STORE — layout & component styles
+   Colour tokens live ONLY in assets/css/meem.css (single source of truth).
+   This file owns layout/typography only; it consumes --mm-* variables.
    ========================================================= */
 :root {
-  --bg: #ffffff;              /* الورقي الصافي — خلفية الموقع الأساسية */
-  --bg-card: #F8EBDD;         /* الورقي الخافت — خلفية الصناديق والحقول */
-  --primary: #FF6500;         /* البرتقالي الحيوي — العنصر التفاعلي الأساسي */
-  --primary-dim: #C24E00;     /* درجة برتقالية أغمق للتأثيرات والهوفر */
-  --ink: #17100C;             /* الحبري الداكن — لون النصوص الأساسية */
-  --white: #ffffff;
-  --border: #E8D6C6;          /* حدود فاتحة متناسقة مع الهوية الورقية */
-  --text-muted: #70645C;      /* نصوص فرعية دافئة مريحة للعين */
-  --danger: #B3261E;
-  --warning: #f59e0b;
-  --success: #16794F;
-  --font-display: 'Cairo', 'Tajawal', sans-serif;
-  --font-heading: 'Cairo', 'Tajawal', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --radius: 14px;
+  --font-display: var(--mm-font);
+  --font-heading: var(--mm-font-display);
+  --font-mono: var(--mm-font-mono);
+  --radius: var(--mm-radius);
 }
 
 * { 
@@ -84,7 +75,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-size: 20px;
   letter-spacing: 0.5px;
 }
-.logo span { color: var(--rz-accent-text); }
+.logo span { color: var(--mm-accent-text); }
 
 .header-actions {
   display: flex;
@@ -111,15 +102,15 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--danger);
+  background: var(--mm-danger-fill);
   display: none;
 }
 
 .badge-dot.is-alert {
   width: 10px;
   height: 10px;
-  background: var(--danger);
-  box-shadow: 0 0 0 3px rgba(179,38,30,.14);
+  background: var(--mm-danger-fill);
+  box-shadow: 0 0 0 3px rgba(255, 107, 107,.14);
 }
 
 /* ---------- Hero Slider ---------- */
@@ -150,13 +141,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
   left: -60px;
   width: 260px;
   height: 260px;
-  background: radial-gradient(circle, rgba(255, 106, 26,0.2) 0%, rgba(255, 106, 26,0) 70%);
+  background: radial-gradient(circle, rgba(255, 212, 0,0.2) 0%, rgba(255, 212, 0,0) 70%);
 }
 
 .slide-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   letter-spacing: 1px;
   position: relative;
 }
@@ -178,9 +169,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   max-width: 85%;
 }
 
-.slide-1 { background: linear-gradient(135deg, #FFF4EA, #FFFFFF); }
-.slide-2 { background: linear-gradient(135deg, #FFEFE0, #FFFFFF); }
-.slide-3 { background: linear-gradient(135deg, #FFF8F2, #FFFFFF); }
+.slide-1 { background: linear-gradient(135deg, var(--mm-surface-3), var(--mm-surface)); }
+.slide-2 { background: linear-gradient(135deg, var(--mm-surface-3), var(--mm-surface)); }
+.slide-3 { background: linear-gradient(135deg, var(--mm-surface-3), var(--mm-surface)); }
 
 .slider-dots {
   display: flex;
@@ -217,7 +208,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
 }
 
 /* ---------- Category chips ---------- */
@@ -245,7 +236,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .chip.active {
   background: var(--primary);
   color: var(--ink);
-  border-color: var(--rz-accent-text);
+  border-color: var(--mm-accent-text);
 }
 
 /* ---------- Voucher Product Cards ---------- */
@@ -275,7 +266,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 .voucher-card:active { transform: scale(0.97); }
-.voucher-card:hover { border-color: var(--rz-accent-text); }
+.voucher-card:hover { border-color: var(--mm-accent-text); }
 
 .voucher-top {
   padding: 14px 14px 10px;
@@ -288,7 +279,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 100%;
   aspect-ratio: 1.4;
   border-radius: 10px;
-  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
+  background: linear-gradient(135deg, var(--mm-surface-2), var(--mm-border));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -339,7 +330,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .voucher-price {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   font-size: 14px;
 }
 .voucher-price small {
@@ -377,7 +368,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .category-header .see-all {
   font-size: 12px;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   font-weight: 700;
 }
 
@@ -432,7 +423,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(255, 106, 26,0.25);
+  box-shadow: 0 6px 20px rgba(255, 212, 0,0.25);
   z-index: 60;
 }
 
@@ -463,7 +454,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .product-hero-thumb {
   width: 100%;
   aspect-ratio: 1.8;
-  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
+  background: linear-gradient(135deg, var(--mm-surface-2), var(--mm-border));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -486,7 +477,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .product-hero-price {
   font-family: var(--font-mono);
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   font-weight: 700;
   font-size: 20px;
   margin-top: 8px;
@@ -521,8 +512,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .field input[type="text"]:focus {
-  border-color: var(--rz-accent-text);
-  box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
+  border-color: var(--mm-accent-text);
+  box-shadow: 0 0 10px rgba(255, 212, 0, 0.15);
   outline: none;
 }
 
@@ -543,9 +534,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 .variant-btn.active {
   background: var(--bg-card);
-  border-color: var(--rz-accent-text);
-  color: var(--rz-accent-text);
-  box-shadow: 0 0 10px rgba(255, 106, 26, 0.15);
+  border-color: var(--mm-accent-text);
+  color: var(--mm-accent-text);
+  box-shadow: 0 0 10px rgba(255, 212, 0, 0.15);
 }
 
 .payment-option {
@@ -560,8 +551,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
   transition: border-color 0.2s ease;
 }
 .payment-option.selected {
-  border-color: var(--rz-accent-text);
-  background: rgba(255, 106, 26,0.06);
+  border-color: var(--mm-accent-text);
+  background: rgba(255, 212, 0,0.06);
 }
 .payment-option.disabled {
   cursor: default;
@@ -575,13 +566,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .payment-option-title { font-weight: 700; font-size: 14px; }
 .payment-option-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .recharge-highlight-link {
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   font-weight: 700;
   text-decoration: underline;
   pointer-events: auto;
   cursor: pointer;
 }
-.recharge-highlight-link:hover { color: var(--rz-accent-text); }
+.recharge-highlight-link:hover { color: var(--mm-accent-text); }
 
 .bank-details {
   background: var(--bg);
@@ -605,7 +596,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   margin-top: 10px;
   cursor: pointer;
 }
-.file-upload.has-file { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
+.file-upload.has-file { border-color: var(--mm-accent-text); color: var(--mm-accent-text); }
 
 .summary-box {
   background: var(--bg-card);
@@ -620,7 +611,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .summary-box .total {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
 }
 
 /* ---------- My Orders ---------- */
@@ -664,7 +655,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   padding: 5px 10px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   cursor: pointer;
 }
 .copy-account-btn.copied { color: var(--success); border-color: var(--success); }
@@ -680,7 +671,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .status-in_progress { background: rgba(245, 158, 11,0.15); color: var(--warning); }
 .status-completed { background: rgba(22, 163, 74,0.15); color: var(--success); }
 .status-cancelled { background: rgba(122, 116, 104,0.15); color: var(--text-muted); }
-.status-rejected { background: rgba(179,38,30,0.15); color: var(--danger); }
+.status-rejected { background: rgba(255, 107, 107,0.15); color: var(--danger); }
 
 .order-details {
   font-size: 13px;
@@ -693,8 +684,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .order-details strong { color: var(--ink); }
 
 .order-rejection {
-  background: rgba(179,38,30,0.08);
-  border: 1px solid rgba(179,38,30,0.3);
+  background: rgba(255, 107, 107,0.08);
+  border: 1px solid rgba(255, 107, 107,0.3);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
@@ -712,7 +703,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 /* ---------- Wallet Page ---------- */
 .wallet-balance-card {
-  background: linear-gradient(135deg, #FFF3E8, var(--bg-card));
+  background: linear-gradient(135deg, var(--mm-surface-3), var(--bg-card));
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 24px;
@@ -727,7 +718,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-family: var(--font-mono);
   font-size: 32px;
   font-weight: 700;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   margin-top: 8px;
 }
 .wallet-balance-amount small {
@@ -757,14 +748,14 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .topup-form.show { display: block; }
 
 .status-pending { background: rgba(245, 158, 11,0.15); color: var(--warning); }
-.status-confirmed { background: rgba(255, 106, 26,0.15); color: var(--rz-accent-text); }
+.status-confirmed { background: rgba(255, 212, 0,0.15); color: var(--mm-accent-text); }
 
 /* ---------- Cyber-Hex Logo ---------- */
 .hex-logo {
   display: block;
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 6px 14px rgba(255, 106, 26, .45));
+  filter: drop-shadow(0 6px 14px rgba(255, 212, 0, .45));
 }
 
 /* ---------- Hamburger + Drawer ---------- */
@@ -828,7 +819,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 .drawer-wallet-box {
-  background: linear-gradient(135deg, #FFF3E8, var(--bg));
+  background: linear-gradient(135deg, var(--mm-surface-3), var(--bg));
   border: 1px solid var(--primary);
   border-radius: 14px;
   padding: 16px;
@@ -840,9 +831,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   margin-top: 4px;
-  text-shadow: 0 0 12px rgba(255, 106, 26,0.5);
+  text-shadow: 0 0 12px rgba(255, 212, 0,0.5);
 }
 
 .drawer-nav a {
@@ -905,7 +896,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   flex-shrink: 0;
 }
 .marquee-item svg {
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   flex-shrink: 0;
 }
 
@@ -935,7 +926,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #F8EBDD, #E8D6C6);
+  background: linear-gradient(135deg, var(--mm-surface-2), var(--mm-border));
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -986,7 +977,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 .option-card:hover {
-  border-color: rgba(255, 106, 26, 0.4);
+  border-color: rgba(255, 212, 0, 0.4);
 }
 
 .option-card .opt-title {
@@ -998,15 +989,15 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .option-card .opt-price {
   font-weight: 800;
-  color: var(--rz-accent-text);
+  color: var(--mm-accent-text);
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
 .option-card.selected {
-  border-color: var(--rz-accent-text);
-  background: rgba(255, 106, 26, 0.05);
-  box-shadow: 0 0 12px rgba(255, 106, 26, 0.1);
+  border-color: var(--mm-accent-text);
+  background: rgba(255, 212, 0, 0.05);
+  box-shadow: 0 0 12px rgba(255, 212, 0, 0.1);
 }
 
 /* =========================================================
@@ -1057,9 +1048,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 /* بانر تعذّر الاتصال بالخادم */
-.raizey-offline-banner {
+.meem-offline-banner {
   padding: 12px 20px;
-  background: var(--danger);
+  background: var(--mm-danger-fill);
   color: var(--white);
   font-weight: 700;
   font-size: 14px;
@@ -1095,21 +1086,13 @@ button { font-family: inherit; cursor: pointer; border: none; }
 /* حدود أوضح في وضع التباين العالي */
 @media (prefers-contrast: more) {
   :root {
-    --border: #b8ad9c;
-    --text-muted: #4A3B32;
+    --border: var(--mm-border-strong);
+    --text-muted: var(--mm-text-soft);
   }
 }
 
 
-/* ---------- RAIZEY UI/UX polish — Paper & Ember ---------- */
-:root {
-  --primary-soft: rgba(255, 106, 26, .10);
-  --primary-softer: rgba(255, 106, 26, .055);
-  --surface-elevated: #fffdfa;
-  --focus-ring: 0 0 0 4px rgba(255, 106, 26, .18);
-  --shadow-card: 0 12px 30px -22px rgba(23,16,12, .40);
-  --shadow-button: 0 10px 22px -15px rgba(232, 93, 0, .72);
-}
+/* ---------- UI/UX polish (tokens come from meem.css) ---------- */
 
 body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font-family: var(--font-display); }
@@ -1134,7 +1117,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .icon-btn, .hamburger-btn {
   transition: transform .18s ease, color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.icon-btn:hover, .hamburger-btn:hover { transform: translateY(-1px); color: var(--rz-accent-text); border-color: rgba(255,106,26,.40); box-shadow: var(--shadow-card); }
+.icon-btn:hover, .hamburger-btn:hover { transform: translateY(-1px); color: var(--mm-accent-text); border-color: rgba(255, 212, 0,.40); box-shadow: var(--shadow-card); }
 .back-link {
   min-height: 40px;
   padding: 9px 13px;
@@ -1145,7 +1128,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 800;
   transition: transform .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
 }
-.back-link:hover { transform: translateY(-1px); color: var(--rz-accent-text); border-color: rgba(255,106,26,.42); box-shadow: var(--shadow-card); }
+.back-link:hover { transform: translateY(-1px); color: var(--mm-accent-text); border-color: rgba(255, 212, 0,.42); box-shadow: var(--shadow-card); }
 .field input, .field select, input[type="text"], input[type="number"], input[type="email"], input[type="tel"], select, textarea {
   min-height: 44px;
   border-radius: 12px;
@@ -1153,7 +1136,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .field input:focus, .field select:focus, input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="tel"]:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--rz-accent-text);
+  border-color: var(--mm-accent-text);
   background: var(--surface-elevated);
   box-shadow: var(--focus-ring);
 }
@@ -1161,19 +1144,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: var(--shadow-card);
 }
 .payment-option { transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; }
-.payment-option:hover:not(.disabled) { transform: translateY(-1px); border-color: rgba(255,106,26,.48); box-shadow: var(--shadow-card), 0 0 0 3px var(--primary-softer); }
+.payment-option:hover:not(.disabled) { transform: translateY(-1px); border-color: rgba(255, 212, 0,.48); box-shadow: var(--shadow-card), 0 0 0 3px var(--primary-softer); }
 .payment-option.selected { box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow-card); }
 .file-upload { transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease; }
-.file-upload:hover { transform: translateY(-1px); border-color: rgba(255,106,26,.55); background: var(--primary-softer); color: var(--rz-accent-text); }
+.file-upload:hover { transform: translateY(-1px); border-color: rgba(255, 212, 0,.55); background: var(--primary-softer); color: var(--mm-accent-text); }
 .file-upload.has-file { background: var(--primary-softer); box-shadow: 0 0 0 3px var(--primary-soft); }
 .copy-account-btn { min-height: 34px; padding: 6px 12px; border-radius: 9px; transition: transform .18s ease, border-color .18s ease, color .18s ease, background .18s ease; }
-.copy-account-btn:hover { transform: translateY(-1px); border-color: rgba(255,106,26,.46); background: var(--primary-softer); }
+.copy-account-btn:hover { transform: translateY(-1px); border-color: rgba(255, 212, 0,.46); background: var(--primary-softer); }
 .status-badge { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; }
 .section-label { display: flex; align-items: center; gap: 8px; color: var(--ink); letter-spacing: -.1px; }
-.section-label::before { content: ''; width: 5px; height: 18px; border-radius: 99px; background: var(--primary); box-shadow: 0 4px 12px rgba(255,106,26,.28); }
-.topup-toggle-btn { background: linear-gradient(135deg, #ff7a2b, var(--primary) 62%, var(--primary-dim)); color: var(--ink); }
+.section-label::before { content: ''; width: 5px; height: 18px; border-radius: 99px; background: var(--primary); box-shadow: 0 4px 12px rgba(255, 212, 0,.28); }
+.topup-toggle-btn { background: linear-gradient(135deg, var(--mm-gold-400), var(--primary) 62%, var(--primary-dim)); color: var(--ink); }
 .wallet-balance-card { position: relative; overflow: hidden; }
-.wallet-balance-card::after { content: ''; position: absolute; width: 180px; height: 180px; left: -70px; bottom: -100px; border-radius: 50%; background: rgba(255,106,26,.10); pointer-events: none; }
+.wallet-balance-card::after { content: ''; position: absolute; width: 180px; height: 180px; left: -70px; bottom: -100px; border-radius: 50%; background: rgba(255, 212, 0,.10); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
@@ -1202,8 +1185,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .catalog-subcategory-card:hover,
 .catalog-subcategory-card:focus-visible {
   transform: translateY(-2px);
-  border-color: var(--rz-accent-text);
-  box-shadow: 0 12px 28px rgba(255, 106, 26, .14);
+  border-color: var(--mm-accent-text);
+  box-shadow: 0 12px 28px rgba(255, 212, 0, .14);
   outline: none;
 }
 
@@ -1215,8 +1198,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   place-items: center;
   overflow: hidden;
   border-radius: 15px;
-  background: linear-gradient(135deg, rgba(255, 106, 26, .16), rgba(255, 208, 143, .18));
-  color: var(--rz-accent-text);
+  background: linear-gradient(135deg, rgba(255, 212, 0, .16), rgba(255, 208, 143, .18));
+  color: var(--mm-accent-text);
   font-size: 25px;
 }
 
@@ -1247,7 +1230,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   line-height: 1.5;
 }
 
-.catalog-subcategory-info > i { color: var(--rz-accent-text); }
+.catalog-subcategory-info > i { color: var(--mm-accent-text); }
 
 @media (max-width: 520px) {
   .catalog-subcategories-grid { gap: 10px; }

@@ -9,10 +9,20 @@ const MAX_REQUEST_BYTES = 32 * 1024;
 const GEMINI_TIMEOUT_MS = 20_000;
 const RATE_LIMIT_REQUESTS = 12;
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
-const PRODUCTION_ORIGIN = "https://raizey-store-qw.vercel.app";
+// Kept for backward compatibility: the deployed production origin is still the
+// vercel.app domain. Override it with the PRODUCTION_ORIGIN env var; the default
+// stays the current domain until a custom domain is live.
+const PRODUCTION_ORIGIN =
+  String(Deno.env.get("PRODUCTION_ORIGIN") || "").trim() || "https://raizey-store-qw.vercel.app";
 
 function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
+}
+
+// Reads the newer MEEM_PUBLIC_ORIGIN first, then falls back to the legacy
+// RAIZEY_PUBLIC_ORIGIN so an existing deployment keeps working unchanged.
+function publicOriginEnv(): string {
+  return env("MEEM_PUBLIC_ORIGIN") || env("RAIZEY_PUBLIC_ORIGIN");
 }
 
 function allowedOrigin(request: Request): string {
@@ -240,7 +250,7 @@ Deno.serve(async (request) => {
   const orderRows = Array.isArray(ordersResult?.data) ? ordersResult.data : [];
   const orderContext = formatOrders(orderRows);
 
-  const prompt = `أنت مساعد خدمة العملاء الرسمي لمتجر Raizey الرقمي. أجب بالعربية الواضحة وباختصار مفيد.
+  const prompt = `أنت مساعد خدمة العملاء الرسمي لمتجر MEEM STORE الرقمي. أجب بالعربية الواضحة وباختصار مفيد.
 
 قواعد مهمة:
 1) استخدم بيانات المنتجات والطلبات الموجودة في السياق فقط. لا تخترع سعراً أو توفرًا أو حالة طلب.

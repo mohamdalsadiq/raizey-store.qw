@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -19,82 +19,82 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الباقات — RAIZEY STORE</title>
+<title>الباقات — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <style>
-  :root { --cat-bg:#fff; --cat-card:#F8EBDD; --cat-border:#E8D6C6; --cat-ink:#17100C; --cat-muted:#70645C; --cat-primary:#FF6500; --cat-danger:#B3261E; }
-  body { margin:0; background:var(--cat-bg)!important; color:var(--cat-ink)!important; font-family:var(--font-display); }
-  .catalog-page { width:min(100%,680px); margin:0 auto; padding:18px 16px 116px; box-sizing:border-box; }
-  .catalog-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
-  .catalog-back,.catalog-cart { display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:9px 13px; border:1px solid var(--cat-border); border-radius:999px; background:var(--cat-card); color:var(--cat-ink); font-size:13px; font-weight:900; text-decoration:none; }
-  .catalog-back:hover,.catalog-back:focus-visible,.catalog-cart:hover,.catalog-cart:focus-visible { border-color:var(--cat-primary); outline:3px solid rgba(255,106,26,.13); outline-offset:1px; }
-  .catalog-cart i { color:var(--cat-primary); }
-  .catalog-cart span { display:grid; place-items:center; min-width:22px; height:22px; border-radius:50%; background:var(--cat-primary); color:var(--cat-ink); font:800 11px var(--font-mono); }
-  .category-hero { display:grid; grid-template-columns:minmax(0,1fr) 126px; align-items:center; gap:16px; padding:17px; border:1px solid var(--cat-border); border-radius:22px; background:linear-gradient(135deg,#fff4ea 0%,var(--cat-card) 100%); box-shadow:0 10px 28px rgba(31,34,43,.05); }
-  .category-hero-copy { min-width:0; }
-  .category-eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--cat-primary); font-size:11px; font-weight:900; }
-  .category-hero h1 { margin:7px 0 5px; color:var(--cat-ink); font-size:clamp(23px,6vw,32px); line-height:1.3; font-weight:900; }
-  .category-hero p { color:var(--cat-muted); font-size:13px; line-height:1.7; }
-  .category-hero-art { width:126px; aspect-ratio:1; display:grid; place-items:center; overflow:hidden; border:1px solid rgba(255,106,26,.2); border-radius:18px; background:#fff; color:var(--cat-primary); font-size:38px; }
-  .category-hero-art img { width:100%; height:100%; object-fit:cover; }
-  .trust-row { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:8px; margin:13px 0 22px; }
-  .trust-pill { display:inline-flex; align-items:center; gap:7px; padding:8px 11px; border:1px solid var(--cat-border); border-radius:999px; background:var(--cat-card); color:var(--cat-ink); font-size:11px; font-weight:900; }
-  .trust-pill i { color:var(--cat-primary); }
-  .catalog-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin:0 0 10px; }
-  .catalog-heading h2 { color:var(--cat-ink); font-size:22px; font-weight:900; }
-  .catalog-heading p { color:var(--cat-muted); font-size:12px; }
-  .option-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-  .product-option { position:relative; min-height:70px; padding:11px 8px; border:2px solid var(--cat-border); border-radius:14px; background:var(--cat-card); color:var(--cat-ink); cursor:pointer; text-align:center; transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease; }
-  .product-option:hover,.product-option:focus-visible { border-color:rgba(255,106,26,.65); outline:3px solid rgba(255,106,26,.13); outline-offset:1px; }
-  .product-option:active { transform:scale(.98); }
-  .product-option.selected { border-color:var(--cat-primary); background:#fff7ef; box-shadow:0 8px 18px rgba(255,106,26,.14); }
-  .product-option .check { position:absolute; top:7px; left:8px; color:var(--cat-primary); font-size:12px; opacity:0; }
-  .product-option.selected .check { opacity:1; }
-  .product-option-name { display:block; font-size:clamp(11px,3.5vw,14px); line-height:1.35; font-weight:900; }
-  .product-option-price { display:block; margin-top:5px; color:var(--cat-primary); font:900 11px var(--font-mono); }
-  .selected-panel { margin-top:18px; padding:15px; border:1px solid var(--cat-border); border-radius:18px; background:var(--cat-card); }
-  .selected-product-head { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-  .selected-product-image { flex:0 0 72px; width:72px; height:72px; display:grid; place-items:center; overflow:hidden; border:1px solid var(--cat-border); border-radius:13px; background:#fff; color:var(--cat-primary); font-size:25px; }
-  .selected-product-image img { width:100%; height:100%; object-fit:cover; }
-  .selected-product-head h3 { margin:0 0 4px; color:var(--cat-ink); font-size:18px; font-weight:900; }
-  .selected-product-head p { color:var(--cat-muted); font-size:12px; line-height:1.5; }
-  .product-badge { display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:4px 8px; border:1px solid rgba(255,106,26,.24); border-radius:999px; background:#fff7ef; color:var(--cat-primary); font-size:10px; font-weight:900; }
-  .form-section-title { display:flex; align-items:center; gap:8px; margin:18px 0 10px; color:var(--cat-ink); font-size:14px; font-weight:900; }
-  .form-section-title i { color:var(--cat-primary); }
-  .field { margin-bottom:12px; }
-  .field label { display:block; margin-bottom:6px; color:var(--cat-ink); font-size:12px; font-weight:900; }
-  .field input { width:100%; box-sizing:border-box; padding:12px 13px; border:1px solid var(--cat-border); border-radius:12px; background:#fff; color:var(--cat-ink); font:600 13px var(--font-display); }
-  .field input:focus { border-color:var(--cat-primary); outline:3px solid rgba(255,106,26,.14); }
-  .form-error { min-height:20px; margin:5px 0 8px; color:var(--cat-danger); font-size:12px; font-weight:800; line-height:1.5; }
-  .action-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; box-sizing:border-box; padding:14px; border-radius:13px; font:900 14px var(--font-display); cursor:pointer; transition:transform .15s ease,opacity .15s ease; }
-  .action-btn:active { transform:scale(.985); }
-  .confirm-btn { border:0; background:var(--cat-primary); color:var(--cat-ink); }
-  .cart-btn { margin-top:9px; border:1.5px solid var(--cat-primary); background:transparent; color:var(--cat-primary); }
-  .product-instructions { margin-top:16px; padding:13px; border-right:4px solid var(--cat-primary); border-radius:11px; background:#fff; color:var(--cat-ink); font-size:12px; line-height:1.75; }
-  .product-instructions strong { display:block; margin-bottom:5px; color:var(--cat-primary); }
-  .fixed-price-bar { position:fixed; right:0; bottom:0; left:0; z-index:90; display:flex; align-items:center; justify-content:space-between; box-sizing:border-box; padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--cat-border); background:rgba(255,255,255,.96); box-shadow:0 -8px 24px rgba(31,34,43,.08); backdrop-filter:blur(10px); }
-  .fixed-price-label { color:var(--cat-muted); font-size:11px; font-weight:800; }
-  .fixed-price-value { color:var(--cat-primary); font:900 19px var(--font-mono); }
-  .catalog-state { padding:46px 20px; border:1px dashed var(--cat-border); border-radius:18px; background:var(--cat-card); text-align:center; }
-  .catalog-state i { margin-bottom:10px; color:var(--cat-primary); font-size:28px; }
-  .catalog-state h3 { margin-bottom:5px; color:var(--cat-ink); font-size:16px; }
-  .catalog-state p { color:var(--cat-muted); font-size:13px; }
-  @media (max-width:380px) { .option-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-  @media (max-width:560px) { .category-hero { grid-template-columns:minmax(0,1fr) 82px; padding:14px; gap:11px; } .category-hero-art { width:82px; border-radius:14px; font-size:27px; } .category-hero h1 { font-size:22px; } .trust-pill { font-size:10px; padding:7px 9px; } }
-  .qty-stepper { display:flex; align-items:center; gap:12px; margin:16px 0 4px; }
-  .qty-stepper-label { display:flex; align-items:center; gap:6px; color:var(--cat-ink); font-size:12px; font-weight:900; }
-  .qty-stepper-label i { color:var(--cat-primary); }
-  .qty-stepper-controls { display:flex; align-items:center; gap:10px; margin-right:auto; }
-  .qty-btn { width:40px; height:40px; display:grid; place-items:center; border-radius:10px; border:1.5px solid var(--cat-primary); background:#fff; color:var(--cat-primary); font-size:18px; font-weight:800; line-height:1; cursor:pointer; transition:transform .12s ease,opacity .12s ease; }
-  .qty-btn:hover,.qty-btn:focus-visible { outline:3px solid rgba(255,106,26,.13); outline-offset:1px; }
-  .qty-btn:active { transform:scale(.92); }
-  .qty-btn:disabled { opacity:.35; cursor:not-allowed; border-color:var(--cat-border); color:var(--cat-muted); }
-  .qty-value { min-width:30px; text-align:center; font:900 16px var(--font-mono); color:var(--cat-ink); }
-  .qty-price-summary { display:flex; flex-wrap:wrap; gap:12px; margin:2px 0 4px; font-size:11px; color:var(--cat-muted); font-weight:800; }
-  .qty-price-summary b { font-family:var(--font-mono); color:var(--cat-ink); }
-  .qty-price-summary .qty-total b { color:var(--cat-primary); }
+  :root { --cat-bg: var(--mm-surface); --cat-card: var(--mm-surface-2); --cat-border: var(--mm-border); --cat-ink: var(--mm-text); --cat-muted: var(--mm-text-muted); --cat-primary: var(--mm-gold); --cat-danger: var(--mm-danger-fill); }
+  body { margin: 0; background: var(--cat-bg)!important; color: var(--cat-ink)!important; font-family: var(--font-display); }
+  .catalog-page { width: min(100%,680px); margin: 0 auto; padding: 18px 16px 116px; box-sizing: border-box; }
+  .catalog-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .catalog-back,.catalog-cart { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 9px 13px; border: 1px solid var(--cat-border); border-radius: 999px; background: var(--cat-card); color: var(--cat-ink); font-size: 13px; font-weight: 900; text-decoration: none; }
+  .catalog-back:hover,.catalog-back:focus-visible,.catalog-cart:hover,.catalog-cart:focus-visible { border-color: var(--cat-primary); outline: 3px solid rgba(255, 212, 0,.13); outline-offset: 1px; }
+  .catalog-cart i { color: var(--cat-primary); }
+  .catalog-cart span { display: grid; place-items: center; min-width: 22px; height: 22px; border-radius: 50%; background: var(--cat-primary); color: var(--cat-ink); font: 800 11px var(--font-mono); }
+  .category-hero { display: grid; grid-template-columns: minmax(0,1fr) 126px; align-items: center; gap: 16px; padding: 17px; border: 1px solid var(--cat-border); border-radius: 22px; background: linear-gradient(135deg,var(--mm-surface-3) 0%,var(--cat-card) 100%); box-shadow: 0 10px 28px rgba(31,34,43,.05); }
+  .category-hero-copy { min-width: 0; }
+  .category-eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--cat-primary); font-size: 11px; font-weight: 900; }
+  .category-hero h1 { margin: 7px 0 5px; color: var(--cat-ink); font-size: clamp(23px,6vw,32px); line-height: 1.3; font-weight: 900; }
+  .category-hero p { color: var(--cat-muted); font-size: 13px; line-height: 1.7; }
+  .category-hero-art { width: 126px; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(255, 212, 0,.2); border-radius: 18px; background: var(--mm-surface); color: var(--cat-primary); font-size: 38px; }
+  .category-hero-art img { width: 100%; height: 100%; object-fit: cover; }
+  .trust-row { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin: 13px 0 22px; }
+  .trust-pill { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid var(--cat-border); border-radius: 999px; background: var(--cat-card); color: var(--cat-ink); font-size: 11px; font-weight: 900; }
+  .trust-pill i { color: var(--cat-primary); }
+  .catalog-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+  .catalog-heading h2 { color: var(--cat-ink); font-size: 22px; font-weight: 900; }
+  .catalog-heading p { color: var(--cat-muted); font-size: 12px; }
+  .option-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+  .product-option { position: relative; min-height: 70px; padding: 11px 8px; border: 2px solid var(--cat-border); border-radius: 14px; background: var(--cat-card); color: var(--cat-ink); cursor: pointer; text-align: center; transition: border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease; }
+  .product-option:hover,.product-option:focus-visible { border-color: rgba(255, 212, 0,.65); outline: 3px solid rgba(255, 212, 0,.13); outline-offset: 1px; }
+  .product-option:active { transform: scale(.98); }
+  .product-option.selected { border-color: var(--cat-primary); background: var(--mm-surface-3); box-shadow: 0 8px 18px rgba(255, 212, 0,.14); }
+  .product-option .check { position: absolute; top: 7px; left: 8px; color: var(--cat-primary); font-size: 12px; opacity: 0; }
+  .product-option.selected .check { opacity: 1; }
+  .product-option-name { display: block; font-size: clamp(11px,3.5vw,14px); line-height: 1.35; font-weight: 900; }
+  .product-option-price { display: block; margin-top: 5px; color: var(--cat-primary); font: 900 11px var(--font-mono); }
+  .selected-panel { margin-top: 18px; padding: 15px; border: 1px solid var(--cat-border); border-radius: 18px; background: var(--cat-card); }
+  .selected-product-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .selected-product-image { flex: 0 0 72px; width: 72px; height: 72px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--cat-border); border-radius: 13px; background: var(--mm-surface); color: var(--cat-primary); font-size: 25px; }
+  .selected-product-image img { width: 100%; height: 100%; object-fit: cover; }
+  .selected-product-head h3 { margin: 0 0 4px; color: var(--cat-ink); font-size: 18px; font-weight: 900; }
+  .selected-product-head p { color: var(--cat-muted); font-size: 12px; line-height: 1.5; }
+  .product-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 4px 8px; border: 1px solid rgba(255, 212, 0,.24); border-radius: 999px; background: var(--mm-surface-3); color: var(--cat-primary); font-size: 10px; font-weight: 900; }
+  .form-section-title { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; color: var(--cat-ink); font-size: 14px; font-weight: 900; }
+  .form-section-title i { color: var(--cat-primary); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; margin-bottom: 6px; color: var(--cat-ink); font-size: 12px; font-weight: 900; }
+  .field input { width: 100%; box-sizing: border-box; padding: 12px 13px; border: 1px solid var(--cat-border); border-radius: 12px; background: var(--mm-surface); color: var(--cat-ink); font: 600 13px var(--font-display); }
+  .field input:focus { border-color: var(--cat-primary); outline: 3px solid rgba(255, 212, 0,.14); }
+  .form-error { min-height: 20px; margin: 5px 0 8px; color: var(--cat-danger); font-size: 12px; font-weight: 800; line-height: 1.5; }
+  .action-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; padding: 14px; border-radius: 13px; font: 900 14px var(--font-display); cursor: pointer; transition: transform .15s ease,opacity .15s ease; }
+  .action-btn:active { transform: scale(.985); }
+  .confirm-btn { border: 0; background: var(--cat-primary); color: var(--cat-ink); }
+  .cart-btn { margin-top: 9px; border: 1.5px solid var(--cat-primary); background: transparent; color: var(--cat-primary); }
+  .product-instructions { margin-top: 16px; padding: 13px; border-right: 4px solid var(--cat-primary); border-radius: 11px; background: var(--mm-surface); color: var(--cat-ink); font-size: 12px; line-height: 1.75; }
+  .product-instructions strong { display: block; margin-bottom: 5px; color: var(--cat-primary); }
+  .fixed-price-bar { position: fixed; right: 0; bottom: 0; left: 0; z-index: 90; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; padding: 12px 18px calc(12px + env(safe-area-inset-bottom,0px)); border-top: 1px solid var(--cat-border); background: rgba(255,255,255,.96); box-shadow: 0 -8px 24px rgba(31,34,43,.08); backdrop-filter: blur(10px); }
+  .fixed-price-label { color: var(--cat-muted); font-size: 11px; font-weight: 800; }
+  .fixed-price-value { color: var(--cat-primary); font: 900 19px var(--font-mono); }
+  .catalog-state { padding: 46px 20px; border: 1px dashed var(--cat-border); border-radius: 18px; background: var(--cat-card); text-align: center; }
+  .catalog-state i { margin-bottom: 10px; color: var(--cat-primary); font-size: 28px; }
+  .catalog-state h3 { margin-bottom: 5px; color: var(--cat-ink); font-size: 16px; }
+  .catalog-state p { color: var(--cat-muted); font-size: 13px; }
+  @media (max-width:380px) { .option-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media (max-width:560px) { .category-hero { grid-template-columns: minmax(0,1fr) 82px; padding: 14px; gap: 11px; } .category-hero-art { width: 82px; border-radius: 14px; font-size: 27px; } .category-hero h1 { font-size: 22px; } .trust-pill { font-size: 10px; padding: 7px 9px; } }
+  .qty-stepper { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; }
+  .qty-stepper-label { display: flex; align-items: center; gap: 6px; color: var(--cat-ink); font-size: 12px; font-weight: 900; }
+  .qty-stepper-label i { color: var(--cat-primary); }
+  .qty-stepper-controls { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .qty-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--cat-primary); background: var(--mm-surface); color: var(--cat-primary); font-size: 18px; font-weight: 800; line-height: 1; cursor: pointer; transition: transform .12s ease,opacity .12s ease; }
+  .qty-btn:hover,.qty-btn:focus-visible { outline: 3px solid rgba(255, 212, 0,.13); outline-offset: 1px; }
+  .qty-btn:active { transform: scale(.92); }
+  .qty-btn:disabled { opacity: .35; cursor: not-allowed; border-color: var(--cat-border); color: var(--cat-muted); }
+  .qty-value { min-width: 30px; text-align: center; font: 900 16px var(--font-mono); color: var(--cat-ink); }
+  .qty-price-summary { display: flex; flex-wrap: wrap; gap: 12px; margin: 2px 0 4px; font-size: 11px; color: var(--cat-muted); font-weight: 800; }
+  .qty-price-summary b { font-family: var(--font-mono); color: var(--cat-ink); }
+  .qty-price-summary .qty-total b { color: var(--cat-primary); }
 </style>
 
 
@@ -105,38 +105,38 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
-<body class="rz-has-bottom-nav">
+<body class="mm-has-bottom-nav">
 <main class="catalog-page">
   <div class="catalog-topbar">
-    <a href="index.html" class="catalog-back"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للمتجر</a>
-    <a href="cart.html" class="catalog-cart" aria-label="فتح السلة"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> السلة <span id="globalCartCount">0</span></a>
+    <a href="index.html" class="catalog-back"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للمتجر</a>
+    <a href="cart.html" class="catalog-cart" aria-label="فتح السلة"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> السلة <span id="globalCartCount">0</span></a>
   </div>
-  <div id="loadingBox" class="catalog-state"><svg class="rz-i rz-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg><h3>جارِ تحميل الخيارات...</h3><p>لحظات ونجهز لك الباقات المتاحة.</p></div>
+  <div id="loadingBox" class="catalog-state"><svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg><h3>جارِ تحميل الخيارات...</h3><p>لحظات ونجهز لك الباقات المتاحة.</p></div>
   <div id="content" hidden>
     <section class="category-hero" aria-labelledby="categoryTitle">
       <div class="category-hero-copy">
-        <span class="category-eyebrow"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> RAIZEY STORE</span>
+        <span class="category-eyebrow"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> MEEM STORE</span>
         <h1 id="categoryTitle">الباقات</h1>
         <p id="categoryDescription">اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.</p>
       </div>
-      <div class="category-hero-art" id="categoryArt"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg></div>
+      <div class="category-hero-art" id="categoryArt"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg></div>
     </section>
     <div class="trust-row" aria-label="مزايا المتجر">
-      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> تسليم سريع</span>
-      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> دفع آمن</span>
-      <span class="trust-pill"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-headset"></use></svg> دعم مباشر</span>
+      <span class="trust-pill"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> تسليم سريع</span>
+      <span class="trust-pill"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shield-half"></use></svg> دفع آمن</span>
+      <span class="trust-pill"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-headset"></use></svg> دعم مباشر</span>
     </div>
     <div class="catalog-heading"><h2>اختر الخيار المطلوب</h2><p id="packageCount">0 خيار متاح</p></div>
     <section id="productOptions" class="option-grid" aria-label="خيارات الباقات"></section>
     <section id="selectedPanel" class="selected-panel" hidden></section>
   </div>
 </main>
-<div class="fixed-price-bar" id="fixedPriceBar" hidden><span class="fixed-price-label"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-tag"></use></svg> السعر الإجمالي</span><span class="fixed-price-value" id="fixedPriceAmount">اختر خيارًا</span></div>
-<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" rel="noopener" title="تواصل واتساب" aria-label="تواصل واتساب"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg></a>
+<div class="fixed-price-bar" id="fixedPriceBar" hidden><span class="fixed-price-label"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-tag"></use></svg> السعر الإجمالي</span><span class="fixed-price-value" id="fixedPriceAmount">اختر خيارًا</span></div>
+<a href="https://wa.me/249901815039" data-mm-whatsapp-base="https://wa.me/__NUMBER__" class="whatsapp-fab" target="_blank" rel="noopener" title="تواصل واتساب" aria-label="تواصل واتساب"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg></a>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script>
@@ -192,19 +192,19 @@ function renderSelectedProduct() {
   const panel = document.getElementById('selectedPanel'); panel.hidden = false; panel.replaceChildren();
   const head = document.createElement('div'); head.className = 'selected-product-head';
   const imageBox = document.createElement('div'); imageBox.className = 'selected-product-image'; const image = categoryImageUrl;
-  if (image) { const img = document.createElement('img'); img.src = image; img.alt = safeText(selectedProduct.name, 'المنتج'); img.onerror = () => imageBox.replaceChildren(window.rzIcon('package-open')); imageBox.appendChild(img); } else imageBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>';
+  if (image) { const img = document.createElement('img'); img.src = image; img.alt = safeText(selectedProduct.name, 'المنتج'); img.onerror = () => imageBox.replaceChildren(window.rzIcon('package-open')); imageBox.appendChild(img); } else imageBox.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>';
   const headCopy = document.createElement('div'); const title = document.createElement('h3'); title.textContent = safeText(selectedProduct.name, 'المنتج'); const desc = document.createElement('p'); desc.textContent = safeText(selectedProduct.description, 'أكمل بيانات الطلب المطلوبة للمتابعة.'); headCopy.append(title, desc);
-  if (safeText(selectedProduct.delivery_badge_text)) { const badge = document.createElement('span'); badge.className = 'product-badge'; badge.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> ' + escapeHtml(selectedProduct.delivery_badge_text); headCopy.appendChild(badge); }
+  if (safeText(selectedProduct.delivery_badge_text)) { const badge = document.createElement('span'); badge.className = 'product-badge'; badge.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-zap"></use></svg> ' + escapeHtml(selectedProduct.delivery_badge_text); headCopy.appendChild(badge); }
   head.append(imageBox, headCopy); panel.appendChild(head);
   const options = normalizedOptions(selectedProduct);
   if (options.length) {
-    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> اختر العرض'; panel.appendChild(titleBox);
+    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> اختر العرض'; panel.appendChild(titleBox);
     const optionGrid = document.createElement('div'); optionGrid.className = 'option-grid';
     options.forEach((option, index) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'product-option'; button.dataset.internalId = option.id; button.setAttribute('aria-pressed', (selectedInternalOption?.id || options[0].id) === option.id ? 'true' : 'false'); if ((selectedInternalOption?.id || options[0].id) === option.id) { button.classList.add('selected'); if (!selectedInternalOption) selectedInternalOption = options[0]; } button.innerHTML = `<span class="product-option-name">${escapeHtml(option.label)}</span><span class="product-option-price">${money(option.price_usd * exchangeRate)} ج.س</span>`; button.addEventListener('click', () => { selectedInternalOption = option; optionGrid.querySelectorAll('.product-option').forEach(btn => { const isSel = btn.dataset.internalId === option.id; btn.classList.toggle('selected', isSel); btn.setAttribute('aria-pressed', isSel ? 'true' : 'false'); }); updatePrice(); }); optionGrid.appendChild(button); });
     panel.appendChild(optionGrid);
   }
   const qtyBox = document.createElement('div'); qtyBox.className = 'qty-stepper';
-  const qtyLabel = document.createElement('span'); qtyLabel.className = 'qty-stepper-label'; qtyLabel.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> الكمية';
+  const qtyLabel = document.createElement('span'); qtyLabel.className = 'qty-stepper-label'; qtyLabel.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg> الكمية';
   const qtyControls = document.createElement('div'); qtyControls.className = 'qty-stepper-controls';
   const minusBtn = document.createElement('button'); minusBtn.type = 'button'; minusBtn.id = 'qtyMinusBtn'; minusBtn.className = 'qty-btn'; minusBtn.setAttribute('aria-label', 'إنقاص الكمية'); minusBtn.disabled = quantity <= 1; minusBtn.innerHTML = '&minus;'; minusBtn.addEventListener('click', () => changeQuantity(-1));
   const qtyValueEl = document.createElement('span'); qtyValueEl.id = 'qtyValue'; qtyValueEl.className = 'qty-value'; qtyValueEl.textContent = String(quantity);
@@ -213,14 +213,14 @@ function renderSelectedProduct() {
   const qtySummary = document.createElement('div'); qtySummary.id = 'qtyPriceSummary'; qtySummary.className = 'qty-price-summary'; qtySummary.hidden = true; panel.appendChild(qtySummary);
   const fields = readFields(selectedProduct);
   if (fields.length) {
-    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-square-pen"></use></svg> بيانات الطلب'; panel.appendChild(titleBox);
+    const titleBox = document.createElement('div'); titleBox.className = 'form-section-title'; titleBox.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-square-pen"></use></svg> بيانات الطلب'; panel.appendChild(titleBox);
     fields.forEach(field => { const wrap = document.createElement('div'); wrap.className = 'field'; const label = document.createElement('label'); label.textContent = safeText(field.label, 'بيانات العميل'); const input = document.createElement('input'); input.type = 'text'; input.maxLength = 500; input.dataset.fieldKey = safeText(field.key, 'field'); input.dataset.fieldLabel = safeText(field.label, 'بيانات العميل'); input.placeholder = safeText(field.placeholder, `اكتب ${safeText(field.label, 'البيانات')} هنا...`); wrap.append(label, input); panel.appendChild(wrap); });
   }
   const error = document.createElement('div'); error.className = 'form-error'; error.id = 'formError'; error.tabIndex = -1; panel.appendChild(error);
-  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'action-btn confirm-btn'; confirm.id = 'confirmOrderBtn'; confirm.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تأكيد الطلب'; confirm.addEventListener('click', confirmOrder);
-  const add = document.createElement('button'); add.type = 'button'; add.className = 'action-btn cart-btn'; add.id = 'addToCartBtn'; add.innerHTML = '<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> إضافة إلى السلة'; add.addEventListener('click', addToCart);
+  const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'action-btn confirm-btn'; confirm.id = 'confirmOrderBtn'; confirm.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تأكيد الطلب'; confirm.addEventListener('click', confirmOrder);
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'action-btn cart-btn'; add.id = 'addToCartBtn'; add.innerHTML = '<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> إضافة إلى السلة'; add.addEventListener('click', addToCart);
   panel.append(confirm, add);
-  if (safeText(selectedProduct.instructions)) { const notes = document.createElement('div'); notes.className = 'product-instructions'; notes.innerHTML = `<strong><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-info"></use></svg> التفاصيل وطريقة الاستلام</strong>${escapeHtml(selectedProduct.instructions).replace(/\n/g, '<br>')}`; panel.appendChild(notes); }
+  if (safeText(selectedProduct.instructions)) { const notes = document.createElement('div'); notes.className = 'product-instructions'; notes.innerHTML = `<strong><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-info"></use></svg> التفاصيل وطريقة الاستلام</strong>${escapeHtml(selectedProduct.instructions).replace(/\n/g, '<br>')}`; panel.appendChild(notes); }
   updatePrice();
 }
 function selectProduct(id) { selectedProduct = products.find(product => String(product.id) === String(id)) || products[0] || null; selectedInternalOption = null; renderOptions(); renderSelectedProduct(); document.getElementById('selectedPanel')?.scrollIntoView({ behavior:'smooth', block:'start' }); }
@@ -228,18 +228,18 @@ function collectFields() { const values = {}, labels = {}; for (const input of d
 function buildCartItem() { if (!selectedProduct) return null; const fields = collectFields(); if (!fields) return null; const priceUsd = selectedInternalOption ? usd(selectedInternalOption.price_usd ?? selectedInternalOption.price) : usd(selectedProduct.price_usd); return { cart_item_id:`${Date.now()}_${Math.random().toString(36).slice(2,8)}`, product_id:selectedProduct.id, name:selectedProduct.name, price_sdg:priceUsd * exchangeRate, quantity:(quantity > 0 ? quantity : 1), image_url:selectedProduct.image_url, selected_option:selectedInternalOption ? { id:selectedInternalOption.id, label:selectedInternalOption.label, price_usd:priceUsd, price_sdg:priceUsd * exchangeRate } : null, field_values:fields.values, field_labels:fields.labels }; }
 function setError(message, success = false) { const box = document.getElementById('formError'); if (!box) return; box.textContent = message; box.style.color = success ? 'var(--cat-primary)' : ''; box.focus?.(); }
 function addToCart() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } let cart = []; try { cart = JSON.parse(localStorage.getItem('raizey_store_cart') || '[]') || []; } catch { cart = []; } cart.push(item); localStorage.setItem('raizey_store_cart', JSON.stringify(cart)); updateCartBadge(); setError('تمت إضافة الخيار إلى السلة.', true); }
-async function confirmOrder() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } const { data:{ session } } = await supabaseClient.auth.getSession(); if (!session) { sessionStorage.setItem('redirect_after_login', window.location.href); window.location.href = 'login.html'; return; } sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at:Date.now(), items:[item] })); window.location.href = 'checkout-v2.html'; }
-function renderCategory(category) { document.title = `${safeText(category.name, 'الباقات')} — RAIZEY STORE`; document.getElementById('categoryTitle').textContent = safeText(category.name, 'الباقات'); document.getElementById('categoryDescription').textContent = safeText(category.description, 'اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.'); const image = safeUrl(category.image_url); categoryImageUrl = image; if (image) document.getElementById('categoryArt').replaceChildren(Object.assign(document.createElement('img'), { src:image, alt:safeText(category.name, 'القسم') })); document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false; if (products.length) selectProduct(products[0].id); else { document.getElementById('productOptions').innerHTML = '<div class="catalog-state"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg><h3>لا توجد خيارات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا التصنيف قريبًا.</p></div>'; } }
+async function confirmOrder() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } const { data:{ session } } = await supabaseClient.auth.getSession(); if (!session) { sessionStorage.setItem('redirect_after_login', window.location.href); window.location.href = 'login.html'; return; } sessionStorage.setItem('meem_direct_buy', JSON.stringify({ created_at:Date.now(), items:[item] })); window.location.href = 'checkout-v2.html'; }
+function renderCategory(category) { document.title = `${safeText(category.name, 'الباقات')} — MEEM STORE`; document.getElementById('categoryTitle').textContent = safeText(category.name, 'الباقات'); document.getElementById('categoryDescription').textContent = safeText(category.description, 'اختر الخيار المناسب لك وأكمل الطلب بخطوات بسيطة وآمنة.'); const image = safeUrl(category.image_url); categoryImageUrl = image; if (image) document.getElementById('categoryArt').replaceChildren(Object.assign(document.createElement('img'), { src:image, alt:safeText(category.name, 'القسم') })); document.getElementById('loadingBox').hidden = true; document.getElementById('content').hidden = false; if (products.length) selectProduct(products[0].id); else { document.getElementById('productOptions').innerHTML = '<div class="catalog-state"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg><h3>لا توجد خيارات متاحة حاليًا</h3><p>سيتم إضافة عروض جديدة لهذا التصنيف قريبًا.</p></div>'; } }
 async function init() { updateCartBadge(); if (!categoryId) { window.location.href = 'index.html'; return; } exchangeRate = Number(await getExchangeRate()) || 1; const [categoryResponse, productsResponse] = await Promise.all([supabaseClient.from('categories').select('id,name,description,image_url').eq('id', categoryId).eq('is_active', true).single(), supabaseClient.from('products').select('id,name,description,image_url,price_usd,has_options,options,delivery_badge_text,instructions,required_fields,display_order').eq('category_id', categoryId).eq('is_active', true).order('display_order')]); if (categoryResponse.error || !categoryResponse.data) { showState('القسم غير متاح', 'ربما تم إخفاؤه أو حُذف. ارجع للمتجر واختر قسمًا آخر.', 'circle-alert'); return; } if (productsResponse.error) { showState('تعذر تحميل الخيارات', 'حدّث الصفحة وحاول مرة أخرى.', 'rotate-cw'); return; } products = productsResponse.data || []; renderCategory(categoryResponse.data); }
-init().catch((error) => { devLog('[RAIZEY] category init error:', error); showState('تعذر تحميل الخيارات', 'تحقق من اتصالك ثم أعد المحاولة.', 'triangle-alert'); });
+init().catch((error) => { devLog('[MEEM] category init error:', error); showState('تعذر تحميل الخيارات', 'تحقق من اتصالك ثم أعد المحاولة.', 'triangle-alert'); });
 </script>
-<script src="assets/js/raizey-assistant.js"></script>
-<nav class="rz-bottom-nav" aria-label="التنقل السريع">
-  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
-  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
-  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
-  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
-  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+<script src="assets/js/meem-assistant.js"></script>
+<nav class="mm-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
 </nav>
 </body>
 </html>

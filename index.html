@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,8 +20,8 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>RAIZEY STORE — شحن ألعاب وبطاقات رقمية</title>
-<meta name="description" content="متجر RAIZEY لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
+<title>MEEM STORE — شحن ألعاب وبطاقات رقمية</title>
+<meta name="description" content="متجر MEEM STORE لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
 <!-- إضافة مكتبة الأيقونات الاحترافية لتطابق صفحة المنتج -->
@@ -29,56 +29,56 @@
 <link rel="stylesheet" href="assets/css/style.css">
 
 <style>
-  /* تفعيل لوحة الألوان الملكية الفخمة لـ RAIZEY STORE */
+  /* تفعيل لوحة الألوان الملكية الفخمة لـ MEEM STORE */
   :root {
-    --bg-main: #ffffff;         /* الورقي الصافي - خلفية الموقع */
-    --bg-card: #F8EBDD;         /* الورقي الخافت - خلفية البطاقات */
-    --accent-gold: #FF6500;     /* البرتقالي الحيوي - العنصر التفاعلي الأساسي */
-    --border-color: #E8D6C6;    /* لون الحدود المتناسق */
-    --text-light: #17100C;      /* الحبري الداكن - لون النصوص */
-    --text-muted: #4A3B32;      /* نصوص ثانوية عالية التباين */
-    --danger: #B3261E;
+    --bg-main: var(--mm-bg);         /* الورقي الصافي - خلفية الموقع */
+    --bg-card: var(--mm-surface-2);         /* الورقي الخافت - خلفية البطاقات */
+    --accent-gold: var(--mm-gold);     /* الذهبي - العنصر التفاعلي الأساسي */
+    --border-color: var(--mm-border);    /* لون الحدود المتناسق */
+    --text-light: var(--mm-text);      /* الحبري الداكن - لون النصوص */
+    --text-muted: var(--mm-text-soft);      /* نصوص ثانوية عالية التباين */
+    --danger: var(--mm-danger);
   }
 
   body {
     background-color: var(--bg-main) !important;
     color: var(--text-light) !important;
-    font-family: 'Tajawal', sans-serif;
+    font-family: var(--mm-font-display);
   }
 
-  .catalog-sections { display:flex; flex-direction:column; gap:26px; padding:8px 16px 24px; }
+  .catalog-sections { display: flex; flex-direction: column; gap: 26px; padding: 8px 16px 24px; }
 
   /* ── بطاقة القسم: أيقونة + عنوان أنيق + عدّاد عناصر، بظلال ناعمة ── */
   .store-section {
-    position:relative;
+    position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 18px 16px;
-    box-shadow: 0 1px 2px rgba(23,16,12,.04), 0 12px 34px -22px rgba(23,16,12,.30);
+    box-shadow: 0 1px 2px rgba(0, 0, 0,.04), 0 12px 34px -22px rgba(0, 0, 0,.30);
     transition: box-shadow .35s cubic-bezier(.2,.7,.3,1), border-color .35s ease, transform .35s ease;
   }
-  .store-section:hover { border-color: rgba(255,101,0,.24); box-shadow: 0 2px 5px rgba(23,16,12,.05), 0 26px 54px -28px rgba(23,16,12,.34); }
-  .store-section-heading { display:flex; align-items:center; gap:13px; text-align:right; margin:0 0 6px; }
+  .store-section:hover { border-color: rgba(255, 212, 0,.24); box-shadow: 0 2px 5px rgba(0, 0, 0,.05), 0 26px 54px -28px rgba(0, 0, 0,.34); }
+  .store-section-heading { display: flex; align-items: center; gap: 13px; text-align: right; margin: 0 0 6px; }
   .store-section-icon {
-    flex:0 0 auto; width:50px; height:50px; border-radius:16px;
-    display:grid; place-items:center;
-    background: linear-gradient(150deg, rgba(255,101,0,.16), rgba(255,101,0,.05));
-    color: var(--rz-accent-text);
-    box-shadow: inset 0 0 0 1px rgba(255,101,0,.2), 0 8px 20px -14px rgba(255,101,0,.6);
+    flex: 0 0 auto; width: 50px; height: 50px; border-radius: 16px;
+    display: grid; place-items: center;
+    background: linear-gradient(150deg, rgba(255, 212, 0,.16), rgba(255, 212, 0,.05));
+    color: var(--mm-accent-text);
+    box-shadow: inset 0 0 0 1px rgba(255, 212, 0,.2), 0 8px 20px -14px rgba(255, 212, 0,.6);
   }
-  .store-section-icon svg { width:24px; height:24px; }
-  .store-section-titles { display:flex; flex-direction:column; min-width:0; }
-  .store-section-kicker { color: var(--rz-accent-text); font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; opacity:.85; }
-  .store-section-title { margin:2px 0 0; color:var(--text-light); font-family:'Tajawal',sans-serif; font-size:21px; font-weight:900; letter-spacing:-.2px; line-height:1.3; }
+  .store-section-icon svg { width: 24px; height: 24px; }
+  .store-section-titles { display: flex; flex-direction: column; min-width: 0; }
+  .store-section-kicker { color: var(--mm-accent-text); font-size: 10.5px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; opacity: .85; }
+  .store-section-title { margin: 2px 0 0; color: var(--text-light); font-family: var(--mm-font-display); font-size: 21px; font-weight: 900; letter-spacing: -.2px; line-height: 1.3; }
   .store-section-count {
-    margin-inline-start:auto; align-self:flex-start; flex:0 0 auto;
-    background: rgba(255,101,0,.1); color: var(--rz-accent-text);
-    border: 1px solid rgba(255,101,0,.2);
-    border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:800; white-space:nowrap;
+    margin-inline-start: auto; align-self: flex-start; flex: 0 0 auto;
+    background: rgba(255, 212, 0,.1); color: var(--mm-accent-text);
+    border: 1px solid rgba(255, 212, 0,.2);
+    border-radius: 999px; padding: 5px 11px; font-size: 11.5px; font-weight: 800; white-space: nowrap;
   }
-  .store-section-description { margin:0 0 15px; color:var(--text-muted); font-size:12.5px; line-height:1.7; }
-  .store-section .categories-grid { padding:0 !important; }
+  .store-section-description { margin: 0 0 15px; color: var(--text-muted); font-size: 12.5px; line-height: 1.7; }
+  .store-section .categories-grid { padding: 0 !important; }
 
   /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
   .categories-grid {
@@ -96,7 +96,7 @@
     padding: 11px !important;
     display: flex !important;
     flex-direction: column !important;
-    box-shadow: 0 1px 2px rgba(23,16,12,.05), 0 10px 26px -20px rgba(23,16,12,.32) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0,.05), 0 10px 26px -20px rgba(0, 0, 0,.32) !important;
     transition: transform .32s cubic-bezier(.2,.7,.3,1), border-color .32s ease, box-shadow .32s ease, background-color .32s ease !important;
     text-decoration: none !important;
     position: relative !important;
@@ -107,8 +107,8 @@
   .game-card:hover,
   .game-card:focus-visible,
   .game-card:active {
-    border-color: rgba(255,101,0,.45) !important;
-    box-shadow: 0 3px 8px rgba(23,16,12,.06), 0 22px 46px -24px rgba(255,101,0,.5) !important;
+    border-color: rgba(255, 212, 0,.45) !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0,.06), 0 22px 46px -24px rgba(255, 212, 0,.5) !important;
     transform: translateY(-4px) !important;
   }
 
@@ -165,8 +165,8 @@
     align-items: center !important;
     gap: 5px !important;
     align-self: flex-start !important;
-    background: rgba(255, 106, 26, 0.08) !important;
-    border: 1px solid rgba(255, 106, 26, 0.25) !important;
+    background: rgba(255, 212, 0, 0.08) !important;
+    border: 1px solid rgba(255, 212, 0, 0.25) !important;
     border-radius: 20px !important;
     padding: 4px 9px !important;
     font-size: 10px !important;
@@ -175,15 +175,15 @@
     margin-bottom: 10px !important;
   }
   .card-trust i {
-    color: var(--rz-accent-text)!important;
+    color: var(--mm-accent-text)!important;
     font-size: 10px !important;
   }
 
   .game-btn {
     width: 100% !important;
-    background: rgba(255, 106, 26, 0.06) !important;
-    color: var(--rz-accent-text)!important;
-    border: 1px solid rgba(255, 106, 26, 0.3) !important;
+    background: rgba(255, 212, 0, 0.06) !important;
+    color: var(--mm-accent-text)!important;
+    border: 1px solid rgba(255, 212, 0, 0.3) !important;
     border-radius: 8px !important;
     text-align: center !important;
     padding: 8px 0 !important;
@@ -197,8 +197,8 @@
   }
   .game-card:hover .game-btn {
     background: var(--accent-gold) !important;
-    color: #17100C !important;
-    border-color: var(--rz-accent-text)!important;
+    color: var(--mm-text) !important;
+    border-color: var(--mm-accent-text)!important;
   }
 
   /* ستايل الهيدر اللامع واللوجو السداسي الذهبي */
@@ -231,14 +231,14 @@
     align-items: center !important;
     gap: 8px !important;
     color: var(--text-light) !important;
-    font-family: 'Tajawal', sans-serif !important;
+    font-family: var(--mm-font-display) !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
     direction: rtl !important;
   }
   .marquee-item svg {
-    color: var(--rz-accent-text)!important;
+    color: var(--mm-accent-text)!important;
     flex-shrink: 0 !important;
   }
 
@@ -258,21 +258,21 @@
     padding: 14px !important;
   }
   .drawer-wallet-amount {
-    color: var(--rz-accent-text)!important;
+    color: var(--mm-accent-text)!important;
     font-weight: 900 !important;
   }
   .drawer-nav a {
     color: var(--text-light) !important;
   }
   .drawer-nav a:hover {
-    color: var(--rz-accent-text)!important;
-    background: rgba(255, 106, 26, 0.04) !important;
+    color: var(--mm-accent-text)!important;
+    background: rgba(255, 212, 0, 0.04) !important;
   }
   .drawer-nav a svg {
     color: var(--text-muted) !important;
   }
   .drawer-nav a:hover svg {
-    color: var(--rz-accent-text)!important;
+    color: var(--mm-accent-text)!important;
   }
   .drawer-divider {
     border-top: 1px solid var(--border-color) !important;
@@ -281,14 +281,14 @@
   /* زر تسجيل الدخول داخل الدروار */
   .auth-btn {
     background: var(--accent-gold) !important;
-    color: #17100C !important;
+    color: var(--mm-text) !important;
     font-weight: 900 !important;
     padding: 12px;
     border-radius: 10px;
     text-decoration: none;
   }
 
-  /* زر العوامة الخاص بالواتساب — الحجم والظل يُداران من نظام Raizey الموحّد */
+  /* زر العوامة الخاص بالواتساب — الحجم والظل يُداران من نظام MEEM الموحّد */
   .whatsapp-fab {
     background: #25D366 !important; /* لون واتساب الرسمي الأصلي للاعتمادية */
   }
@@ -302,28 +302,28 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
-<body class="rz-has-bottom-nav">
+<body class="mm-has-bottom-nav">
 
 <header class="site-header">
   <div class="header-inner">
     <button class="hamburger-btn" id="openDrawerBtn" title="القائمة">
       <span></span><span></span><span></span>
     </button>
-    <div class="logo" style="display:flex; align-items:center; gap:8px;">
-      <!-- التحديث الذهبي للوجو السداسي الفخم لـ RAIZEY STORE -->
-      <img class="hex-logo" src="assets/img/raizey-logo-mark.svg" width="36" height="36" alt="شعار RAIZEY STORE">
-      <span dir="ltr" style="unicode-bidi:isolate; font-weight: 900; color:var(--text-light);">RAIZEY <span style="color: var(--rz-accent-text);">STORE</span></span>
+    <div class="logo" style="display: flex; align-items: center; gap: 8px;">
+<!-- MEEM mark: enable once assets/img/meem-mark.png exists (Phase 1a) -->
+      <!-- <img class="hex-logo" src="assets/img/meem-mark.png" width="36" height="36" alt="شعار MEEM STORE"> -->
+      <span dir="ltr" style="unicode-bidi: isolate; font-weight: 900; color: var(--text-light);">MEEM <span style="color: var(--mm-accent-text);">STORE</span></span>
     </div>
     <div class="header-actions">
       <a href="search.html" class="icon-btn" title="بحث" style="color: var(--text-light);">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
       </a>
       <a href="notifications.html" class="icon-btn" title="الإشعارات" style="color: var(--text-light);">
-        <span class="badge-dot" id="notifDot" style="background: var(--accent-gold); display:none;"></span>
+        <span class="badge-dot" id="notifDot" style="background: var(--accent-gold); display: none;"></span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       </a>
     </div>
@@ -333,20 +333,20 @@
 <div class="drawer-overlay" id="drawerOverlay">
   <div class="drawer-panel">
     <button class="drawer-close-btn" id="closeDrawerBtn" type="button" aria-label="إغلاق القائمة" style="color: var(--text-light);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-    <div id="drawerGuestBox" style="display:none; padding: 20px 10px;">
-      <p style="font-size:14px; color:var(--text-muted); margin-bottom:14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
-      <a href="login.html" class="auth-btn" style="display:block; text-align:center; margin-bottom:14px;">تسجيل الدخول</a>
-      <a href="register.html" style="display:block; text-align:center; font-size:13px; color: var(--rz-accent-text); font-weight:700; text-decoration:none;">إنشاء حساب جديد</a>
+    <div id="drawerGuestBox" style="display: none; padding: 20px 10px;">
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
+      <a href="login.html" class="auth-btn" style="display: block; text-align: center; margin-bottom: 14px;">تسجيل الدخول</a>
+      <a href="register.html" style="display: block; text-align: center; font-size: 13px; color: var(--mm-accent-text); font-weight: 700; text-decoration: none;">إنشاء حساب جديد</a>
     </div>
-    <div id="drawerUserBox" style="display:none;">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
-        <div id="drawerAvatar" style="display:grid; place-items:center; width:46px; height:46px; flex:0 0 auto; overflow:hidden; border-radius:14px; background:#211A16; color: var(--rz-accent-text);">
+    <div id="drawerUserBox" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+        <div id="drawerAvatar" style="display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 auto; overflow: hidden; border-radius: 14px; background: var(--mm-surface); color: var(--mm-accent-text);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <img id="drawerAvatarImg" alt="" hidden style="width:100%; height:100%; object-fit:contain; padding:5px;">
+          <img id="drawerAvatarImg" alt="" hidden style="width: 100%; height: 100%; object-fit: contain; padding: 5px;">
         </div>
-        <div style="min-width:0;">
-          <div class="drawer-greeting" id="drawerGreeting" style="font-weight:800; color:var(--text-light);">مرحباً بك يا لاعب</div>
-          <div class="drawer-email" id="drawerEmail" style="color:var(--text-muted); overflow-wrap:anywhere;"></div>
+        <div style="min-width: 0;">
+          <div class="drawer-greeting" id="drawerGreeting" style="font-weight: 800; color: var(--text-light);">مرحباً بك يا لاعب</div>
+          <div class="drawer-email" id="drawerEmail" style="color: var(--text-muted); overflow-wrap: anywhere;"></div>
         </div>
       </div>
 
@@ -365,31 +365,31 @@
         <a href="account.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> إعدادات الحساب</a>
       </nav>
 
-      <div class="drawer-divider" id="adminDividerBox" style="display:none;"></div>
-      <nav class="drawer-nav" id="adminLinkBox" style="display:none;">
+      <div class="drawer-divider" id="adminDividerBox" style="display: none;"></div>
+      <nav class="drawer-nav" id="adminLinkBox" style="display: none;">
         <a href="admin.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> لوحة الأدمن</a>
       </nav>
 
       <div class="drawer-divider"></div>
-      <button id="drawerLogoutBtn" style="width:100%; text-align:right; padding:13px 10px; border-radius:10px; font-size:14px; font-weight:600; color:var(--danger); background:none; display:flex; align-items:center; gap:12px; border:none; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> تسجيل الخروج</button>
+      <button id="drawerLogoutBtn" style="width: 100%; text-align: right; padding: 13px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; color: var(--danger); background: none; display: flex; align-items: center; gap: 12px; border: none; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> تسجيل الخروج</button>
     </div>
   </div>
 </div>
 
 <section class="hero-slider">
   <div class="slider-track" id="sliderTrack">
-    <div class="slide slide-1" style="background: linear-gradient(135deg, #FFF4EA 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">RAIZEY STORE</div>
+    <div class="slide slide-1" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">MEEM STORE</div>
       <h2 style="color: var(--text-light);">اشحن رصيدك فوراً بأفضل الأسعار</h2>
       <p style="color: var(--text-muted);">شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
     </div>
-    <div class="slide slide-2" style="background: linear-gradient(135deg, #FFEFE0 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">دفع مرن</div>
+    <div class="slide slide-2" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">دفع مرن</div>
       <h2 style="color: var(--text-light);">ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
       <p style="color: var(--text-muted);">محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
     </div>
-    <div class="slide slide-3" style="background: linear-gradient(135deg, #FFF8F2 0%, #FFFFFF 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--rz-accent-text); font-weight:800;">دعم فوري</div>
+    <div class="slide slide-3" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
+      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">دعم فوري</div>
       <h2 style="color: var(--text-light);">تواصل معانا مباشرة على واتساب</h2>
       <p style="color: var(--text-muted);">فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
     </div>
@@ -415,14 +415,14 @@
 </div>
 
 <div id="categoriesContainer" class="catalog-sections">
-  <div style="color:var(--text-muted); font-size:13px; padding:20px;">جاري تحميل الألعاب...</div>
+  <div style="color: var(--text-muted); font-size: 13px; padding: 20px;">جاري تحميل الألعاب...</div>
 </div>
 
 <footer class="site-footer" style="background: var(--bg-card); border-top: 1px solid var(--border-color); color: var(--text-muted); padding: 20px 10px;">
-  <p>© 2026 RAIZEY STORE — جميع الحقوق محفوظة</p>
+  <p>© 2026 MEEM STORE — جميع الحقوق محفوظة</p>
 </footer>
 
-<a href="https://wa.me/249901815039" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
+<a href="https://wa.me/249901815039" data-mm-whatsapp-base="https://wa.me/__NUMBER__" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
   <svg width="26" height="26" viewBox="0 0 24 24" fill="#17100C"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
 </a>
 
@@ -566,7 +566,7 @@ async function init() {
     if (sectionsError) throw sectionsError;
     if (categoriesError) throw categoriesError;
     // عدّاد المنتجات داخل كل قسم تحسين عرض فقط — لا نُفشل الصفحة إن تعذّر جلبه
-    if (productsError && typeof devWarn === 'function') devWarn('[RAIZEY] products count unavailable:', productsError.message);
+    if (productsError && typeof devWarn === 'function') devWarn('[MEEM] products count unavailable:', productsError.message);
     renderCatalog(sections || [], categories || [], products || []);
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
@@ -703,7 +703,7 @@ function renderCatalog(sections, categories, products) {
     titles.className = 'store-section-titles';
     const kicker = document.createElement('span');
     kicker.className = 'store-section-kicker';
-    kicker.textContent = 'RAIZEY COLLECTION';
+    kicker.textContent = 'MEEM COLLECTION';
     const title = document.createElement('h2');
     title.id = `section-title-${section.id}`;
     title.className = 'store-section-title';
@@ -734,13 +734,13 @@ function renderCatalog(sections, categories, products) {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
-<nav class="rz-bottom-nav" aria-label="التنقل السريع">
-  <a href="index.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
-  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
-  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
-  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
-  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+  <script src="assets/js/meem-assistant.js"></script>
+<nav class="mm-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html" class="is-active" aria-current="page"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
 </nav>
 </body>
   </html>

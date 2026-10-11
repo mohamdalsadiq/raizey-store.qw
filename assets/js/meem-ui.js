@@ -1,6 +1,6 @@
 /* =============================================================================
-   RAIZEY STORE — UI behaviour layer (vanilla, no dependencies)
-   Pairs with assets/css/raizey.css. Exposes a single global: window.RZUI.
+   MEEM STORE — UI behaviour layer (vanilla, no dependencies)
+   Pairs with assets/css/meem.css. Exposes a single global: window.RZUI.
    Loaded in <head> on every page so inline page scripts can use it immediately.
    ============================================================================= */
 (function () {
@@ -11,7 +11,7 @@
 
   /* ── Icons ─────────────────────────────────────────────────────────────── */
   function iconMarkup(name, className, style) {
-    return '<svg class="rz-i ' + (className || '') + '" aria-hidden="true"' + (style ? ' style="' + style + '"' : '') +
+    return '<svg class="mm-i ' + (className || '') + '" aria-hidden="true"' + (style ? ' style="' + style + '"' : '') +
       '><use href="' + SPRITE + '#i-' + name + '"></use></svg>';
   }
   function icon(name, className, style) {
@@ -151,7 +151,7 @@
     if (!host) {
       host = document.createElement('div');
       host.id = 'rzToasts';
-      host.className = 'rz-toasts';
+      host.className = 'mm-toasts';
       host.setAttribute('role', 'status');
       host.setAttribute('aria-live', 'polite');
       document.body.appendChild(host);
@@ -161,24 +161,24 @@
 
   function toast(options) {
     var opts = typeof options === 'string' ? { title: options } : (options || {});
-    var tone = TONES[opts.tone] ? opts.tone : (opts.type && TONES[opts.type] ? opts.type : 'info');
+    var tone = TONES[opts.tone] ? opts.tone:  (opts.type && TONES[opts.type] ? opts.type : 'info');
     var meta = TONES[tone];
     var el = document.createElement('div');
-    el.className = 'rz-toast rz-toast--' + tone;
+    el.className = 'mm-toast mm-toast--' + tone;
     el.innerHTML =
-      '<span class="rz-toast__icon">' + iconMarkup(opts.icon || meta.icon) + '</span>' +
-      '<div style="flex:1;min-width:0">' +
-        '<div class="rz-toast__title">' + esc(opts.title || meta.label) + '</div>' +
-        (opts.body ? '<div class="rz-toast__body">' + esc(opts.body) + '</div>' : '') +
+      '<span class="mm-toast__icon">' + iconMarkup(opts.icon || meta.icon) + '</span>' +
+      '<div style="flex: 1;min-width: 0">' +
+        '<div class="mm-toast__title">' + esc(opts.title || meta.label) + '</div>' +
+        (opts.body ? '<div class="mm-toast__body">' + esc(opts.body) + '</div>' : '') +
       '</div>' +
-      '<button type="button" class="rz-toast__close" aria-label="إغلاق">' + iconMarkup('x') + '</button>';
+      '<button type="button" class="mm-toast__close" aria-label="إغلاق">' + iconMarkup('x') + '</button>';
     var timer = null;
     function close() {
       if (!el.parentNode) return;
       el.classList.add('is-leaving');
       setTimeout(function () { el.remove(); }, reduced ? 0 : 180);
     }
-    el.querySelector('.rz-toast__close').addEventListener('click', close);
+    el.querySelector('.mm-toast__close').addEventListener('click', close);
     toastHost().appendChild(el);
     var duration = opts.duration === undefined ? (tone === 'danger' ? 7000 : 4200) : opts.duration;
     if (duration) timer = setTimeout(close, duration);
@@ -197,13 +197,13 @@
     el.hidden = false;
     el.classList.add('is-open');
     document.documentElement.style.overflow = 'hidden';
-    var focusTarget = el.querySelector('[data-rz-autofocus]') || el.querySelector('button, [href], input, select, textarea');
+    var focusTarget = el.querySelector('[data-mm-autofocus]') || el.querySelector('button, [href], input, select, textarea');
     if (focusTarget) focusTarget.focus({ preventScroll: true });
 
     function onKey(event) {
       if (event.key === 'Escape' && opts.dismissible !== false) { close(); return; }
       if (event.key !== 'Tab') return;
-      var nodes = el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      var nodes = el.querySelectorAll('a[href], button: not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!nodes.length) return;
       var first = nodes[0], last = nodes[nodes.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -221,7 +221,7 @@
     }
     document.addEventListener('keydown', onKey);
     el.addEventListener('mousedown', onBackdrop);
-    el.querySelectorAll('[data-rz-close]').forEach(function (btn) { btn.addEventListener('click', close); });
+    el.querySelectorAll('[data-mm-close]').forEach(function (btn) { btn.addEventListener('click', close); });
     return { close: close, el: el };
   }
 
@@ -230,16 +230,16 @@
     var opts = options || {};
     return new Promise(function (resolve) {
       var overlay = document.createElement('div');
-      overlay.className = 'rz-overlay';
+      overlay.className = 'mm-overlay';
       overlay.innerHTML =
-        '<div class="rz-modal rz-sheet-handle" role="alertdialog" aria-modal="true" aria-labelledby="rzConfirmTitle">' +
-          '<div class="rz-modal__head">' +
-            '<div><h2 class="rz-modal__title" id="rzConfirmTitle">' + esc(opts.title || 'تأكيد العملية') + '</h2>' +
-            (opts.body ? '<p class="rz-modal__desc">' + esc(opts.body) + '</p>' : '') + '</div>' +
+        '<div class="mm-modal mm-sheet-handle" role="alertdialog" aria-modal="true" aria-labelledby="rzConfirmTitle">' +
+          '<div class="mm-modal__head">' +
+            '<div><h2 class="mm-modal__title" id="rzConfirmTitle">' + esc(opts.title || 'تأكيد العملية') + '</h2>' +
+            (opts.body ? '<p class="mm-modal__desc">' + esc(opts.body) + '</p>' : '') + '</div>' +
           '</div>' +
-          '<div class="rz-modal__foot">' +
-            '<button type="button" class="rz-btn rz-btn--ghost" data-rz-close>' + esc(opts.cancelText || 'إلغاء') + '</button>' +
-            '<button type="button" class="rz-btn ' + (opts.danger ? 'rz-btn--danger' : 'rz-btn--primary') + '" data-rz-confirm>' +
+          '<div class="mm-modal__foot">' +
+            '<button type="button" class="mm-btn mm-btn--ghost" data-mm-close>' + esc(opts.cancelText || 'إلغاء') + '</button>' +
+            '<button type="button" class="mm-btn ' + (opts.danger ? 'mm-btn--danger' : 'mm-btn--primary') + '" data-mm-confirm>' +
               iconMarkup(opts.danger ? 'triangle-alert' : 'check') + esc(opts.confirmText || 'تأكيد') + '</button>' +
           '</div>' +
         '</div>';
@@ -248,7 +248,7 @@
       var modal = openModal(overlay, {
         onClose: function () { overlay.remove(); resolve(confirmed); }
       });
-      overlay.querySelector('[data-rz-confirm]').addEventListener('click', function () {
+      overlay.querySelector('[data-mm-confirm]').addEventListener('click', function () {
         confirmed = true;
         modal.close();
       });
@@ -257,7 +257,7 @@
 
   /* ── Reveal on scroll (progressive: without JS the content is visible) ─── */
   function initReveal(root) {
-    var nodes = (root || document).querySelectorAll('.rz-reveal:not(.is-visible)');
+    var nodes = (root || document).querySelectorAll('.mm-reveal: not(.is-visible)');
     if (!nodes.length) return;
     if (reduced || typeof IntersectionObserver !== 'function') {
       nodes.forEach(function (n) { n.classList.add('is-visible'); });
@@ -275,12 +275,12 @@
 
   /* ── Count-up for stat values ──────────────────────────────────────────── */
   function initCounters(root) {
-    var nodes = (root || document).querySelectorAll('[data-rz-count]:not([data-rz-done])');
+    var nodes = (root || document).querySelectorAll('[data-mm-count]:not([data-mm-done])');
     nodes.forEach(function (node) {
-      node.setAttribute('data-rz-done', '1');
-      var target = Number(node.getAttribute('data-rz-count'));
-      var digits = Number(node.getAttribute('data-rz-digits') || 0);
-      var suffix = node.getAttribute('data-rz-suffix') || '';
+      node.setAttribute('data-mm-done', '1');
+      var target = Number(node.getAttribute('data-mm-count'));
+      var digits = Number(node.getAttribute('data-mm-digits') || 0);
+      var suffix = node.getAttribute('data-mm-suffix') || '';
       if (!isFinite(target) || reduced) { node.textContent = num(target, digits) + suffix; return; }
       var start = performance.now();
       var from = 0;
@@ -295,10 +295,10 @@
 
   /* ── Tabs ──────────────────────────────────────────────────────────────── */
   function initTabs(root) {
-    (root || document).querySelectorAll('[data-rz-tabs]').forEach(function (group) {
+    (root || document).querySelectorAll('[data-mm-tabs]').forEach(function (group) {
       if (group.dataset.rzReady) return;
       group.dataset.rzReady = '1';
-      var tabs = Array.prototype.slice.call(group.querySelectorAll('[role="tab"], .rz-tab'));
+      var tabs = Array.prototype.slice.call(group.querySelectorAll('[role="tab"], .mm-tab'));
       function select(tab) {
         tabs.forEach(function (t) {
           var active = t === tab;
@@ -326,7 +326,7 @@
 
   /* ── Menus & dropdowns ─────────────────────────────────────────────────── */
   function initMenus(root) {
-    (root || document).querySelectorAll('[data-rz-menu-toggle]').forEach(function (btn) {
+    (root || document).querySelectorAll('[data-mm-menu-toggle]').forEach(function (btn) {
       if (btn.dataset.rzReady) return;
       btn.dataset.rzReady = '1';
       var menu = document.getElementById(btn.getAttribute('aria-controls'));
@@ -360,7 +360,7 @@
       var ta = document.createElement('textarea');
       ta.value = value;
       ta.setAttribute('readonly', '');
-      ta.style.cssText = 'position:fixed;inset-inline-start:-1000px;opacity:0';
+      ta.style.cssText = 'position: fixed;inset-inline-start: -1000px;opacity: 0';
       document.body.appendChild(ta);
       ta.select();
       try { document.execCommand('copy'); done(); }
@@ -370,13 +370,13 @@
   }
 
   function initCopyTargets(root) {
-    (root || document).querySelectorAll('[data-rz-copy]').forEach(function (el) {
+    (root || document).querySelectorAll('[data-mm-copy]').forEach(function (el) {
       if (el.dataset.rzReady) return;
       el.dataset.rzReady = '1';
       el.addEventListener('click', function () {
-        var selector = el.getAttribute('data-rz-copy');
+        var selector = el.getAttribute('data-mm-copy');
         var source = selector ? document.querySelector(selector) : null;
-        copyText(source ? (source.value || source.textContent) : el.textContent, el.getAttribute('data-rz-copy-label'));
+        copyText(source ? (source.value || source.textContent) : el.textContent, el.getAttribute('data-mm-copy-label'));
       });
     });
   }
@@ -388,7 +388,7 @@
       button.dataset.rzLabel = button.dataset.rzLabel || button.innerHTML;
       button.setAttribute('aria-busy', 'true');
       button.disabled = true;
-      button.innerHTML = '<span class="rz-spinner rz-spinner--sm" aria-hidden="true"></span>' + esc(busyLabel || 'جارٍ التنفيذ...');
+      button.innerHTML = '<span class="mm-spinner mm-spinner--sm" aria-hidden="true"></span>' + esc(busyLabel || 'جارٍ التنفيذ...');
     } else {
       button.removeAttribute('aria-busy');
       button.disabled = false;
@@ -398,7 +398,7 @@
 
   /* ── Drop zones ────────────────────────────────────────────────────────── */
   function initDropZones(root) {
-    (root || document).querySelectorAll('[data-rz-drop]').forEach(function (zone) {
+    (root || document).querySelectorAll('[data-mm-drop]').forEach(function (zone) {
       if (zone.dataset.rzReady) return;
       zone.dataset.rzReady = '1';
       ['dragenter', 'dragover'].forEach(function (type) {
@@ -413,17 +413,17 @@
   /* ── Ripple feedback on primary actions ────────────────────────────────── */
   function initRipple(root) {
     if (reduced) return;
-    (root || document).querySelectorAll('.rz-btn--primary, .btn-primary, .buy-btn').forEach(function (btn) {
+    (root || document).querySelectorAll('.mm-btn--primary, .btn-primary, .buy-btn').forEach(function (btn) {
       if (btn.dataset.rzRipple) return;
       btn.dataset.rzRipple = '1';
       btn.addEventListener('pointerdown', function (event) {
         var rect = btn.getBoundingClientRect();
         var dot = document.createElement('span');
         var size = Math.max(rect.width, rect.height);
-        dot.style.cssText = 'position:absolute;border-radius:50%;pointer-events:none;background:rgba(255,248,240,.35);' +
-          'width:' + size + 'px;height:' + size + 'px;transform:translate(-50%,-50%) scale(0);opacity:.9;' +
-          'transition:transform .45s cubic-bezier(.16,1,.3,1),opacity .45s;' +
-          'inset-inline-start:' + ((event.clientX || rect.left + rect.width / 2) - rect.left) + 'px;top:' + ((event.clientY || rect.top + rect.height / 2) - rect.top) + 'px;';
+        dot.style.cssText = 'position: absolute;border-radius: 50%;pointer-events: none;background: rgba(242, 245, 255,.35);' +
+          'width: ' + size + 'px;height: ' + size + 'px;transform: translate(-50%,-50%) scale(0);opacity: .9;' +
+          'transition: transform .45s cubic-bezier(.16,1,.3,1),opacity .45s;' +
+          'inset-inline-start: ' + ((event.clientX || rect.left + rect.width / 2) - rect.left) + 'px;top: ' + ((event.clientY || rect.top + rect.height / 2) - rect.top) + 'px;';
         btn.appendChild(dot);
         requestAnimationFrame(function () { dot.style.transform = 'translate(-50%,-50%) scale(1)'; dot.style.opacity = '0'; });
         setTimeout(function () { dot.remove(); }, 500);
@@ -438,7 +438,7 @@
     if (value === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', value);
     document.documentElement.setAttribute('data-theme-mode', value);
-    document.querySelectorAll('[data-rz-theme-toggle]').forEach(function (btn) {
+    document.querySelectorAll('[data-mm-theme-toggle]').forEach(function (btn) {
       var next = value === 'dark' ? 'light' : 'dark';
       btn.setAttribute('aria-label', next === 'dark' ? 'تفعيل الوضع الليلي' : 'تفعيل الوضع النهاري');
       btn.title = btn.getAttribute('aria-label');
@@ -450,7 +450,7 @@
   }
   function initTheme() {
     applyTheme(localStorage.getItem(THEME_KEY) || 'auto');
-    document.querySelectorAll('[data-rz-theme-toggle]').forEach(function (btn) {
+    document.querySelectorAll('[data-mm-theme-toggle]').forEach(function (btn) {
       if (btn.dataset.rzReady) return;
       btn.dataset.rzReady = '1';
       btn.addEventListener('click', function () {

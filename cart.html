@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>سلة المشتريات — RAIZEY STORE</title>
+<title>سلة المشتريات — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -57,12 +57,12 @@
     gap: 8px;
     transition: color 0.2s;
   }
-  .back-link:hover { color: var(--rz-accent-text); }
+  .back-link:hover { color: var(--mm-accent-text); }
 
   .clear-cart-btn {
     background: transparent;
     border: none;
-    color: var(--danger, #B3261E);
+    color: var(--danger, var(--mm-danger));
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
@@ -73,7 +73,7 @@
     border-radius: 8px;
     transition: background 0.2s;
   }
-  .clear-cart-btn:hover { background: rgba(179,38,30, 0.1); }
+  .clear-cart-btn:hover { background: rgba(255, 107, 107, 0.1); }
 
   .cart-title {
     font-size: 20px;
@@ -84,7 +84,7 @@
     align-items: center;
     gap: 10px;
   }
-  .cart-title i { color: var(--rz-accent-text); }
+  .cart-title i { color: var(--mm-accent-text); }
 
   .cart-item-row {
     background: var(--bg-card);
@@ -98,7 +98,7 @@
     position: relative;
     transition: border-color 0.2s;
   }
-  .cart-item-row:hover { border-color: rgba(255, 106, 26, 0.3); }
+  .cart-item-row:hover { border-color: rgba(255, 212, 0, 0.3); }
 
   .cart-item-thumb {
     width: 65px;
@@ -137,7 +137,7 @@
     word-break: break-word;
   }
   .cart-item-meta span {
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
   }
@@ -145,7 +145,7 @@
   .cart-item-price {
     font-size: 13px;
     font-weight: 700;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     margin-top: 6px;
     font-family: 'JetBrains Mono', monospace;
   }
@@ -162,7 +162,7 @@
     border-radius: 8px;
     border: 1.5px solid var(--primary);
     background: transparent;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;
@@ -186,7 +186,7 @@
   .remove-item-btn {
     background: transparent;
     border: none;
-    color: var(--danger, #B3261E);
+    color: var(--danger, var(--mm-danger));
     font-size: 16px;
     cursor: pointer;
     padding: 8px;
@@ -194,7 +194,7 @@
     transition: 0.15s ease;
     align-self: flex-start;
   }
-  .remove-item-btn:hover { background: rgba(179,38,30, 0.1); }
+  .remove-item-btn:hover { background: rgba(255, 107, 107, 0.1); }
 
   .summary-box {
     background: var(--bg-card);
@@ -210,7 +210,7 @@
   .summary-box .total { 
     font-weight: 900; 
     font-size: 20px; 
-    color: var(--rz-accent-text); 
+    color: var(--mm-accent-text); 
     font-family: 'JetBrains Mono', monospace;
   }
 
@@ -259,29 +259,29 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
-<body class="rz-has-bottom-nav">
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<body class="mm-has-bottom-nav">
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="cart-container" id="mainContent" tabindex="-1">
   <div class="cart-header">
-    <a href="index.html" class="back-link"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> العودة للمتجر</a>
-    <button class="clear-cart-btn" id="clearCartBtn" style="display:none;" onclick="clearAllItems()">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg> تفريغ السلة
+    <a href="index.html" class="back-link"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> العودة للمتجر</a>
+    <button class="clear-cart-btn" id="clearCartBtn" style="display: none;" onclick="clearAllItems()">
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg> تفريغ السلة
     </button>
   </div>
   
-  <h1 class="cart-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> سلة المشتريات</h1>
+  <h1 class="cart-title"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> سلة المشتريات</h1>
 
-  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">
-    <svg class="rz-i style= rz-spin" font-size:24px; color: var(--rz-accent-text); margin-bottom:10px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
+  <div id="loadingBox" style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+    <svg class="mm-i style= mm-spin" font-size:24px; color: var(--mm-accent-text); margin-bottom:10px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
     <div>جارِ تحميل السلة...</div>
   </div>
   
-  <div id="cartContent" style="display:none;">
+  <div id="cartContent" style="display: none;">
     <div id="cartItemsList"></div>
 
     <div class="summary-box">
@@ -291,16 +291,16 @@
 
     <button class="btn-proceed-checkout" id="proceedToCheckoutBtn">
       <span>المتابعة لإتمام الدفع</span>
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-left"></use></svg>
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-left"></use></svg>
     </button>
   </div>
 
-  <div id="emptyCartBox" class="empty-cart-box" style="display:none;">
-    <div class="empty-cart-icon"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-basket"></use></svg></div>
-    <h3 style="font-size:18px; font-weight:800; margin-bottom:8px; color:var(--ink);">سلة المشتريات فارغة</h3>
-    <p style="font-size:13px; margin-bottom:20px; color:var(--text-muted);">قم بإضافة الباقات والمنتجات التي ترغب بها من المتجر أولاً</p>
-    <a href="index.html" class="btn-proceed-checkout" style="display:inline-flex; width:auto; padding: 12px 28px; font-size:14px;">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> تصفح المنتجات
+  <div id="emptyCartBox" class="empty-cart-box" style="display: none;">
+    <div class="empty-cart-icon"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-basket"></use></svg></div>
+    <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 8px; color: var(--ink);">سلة المشتريات فارغة</h3>
+    <p style="font-size: 13px; margin-bottom: 20px; color: var(--text-muted);">قم بإضافة الباقات والمنتجات التي ترغب بها من المتجر أولاً</p>
+    <a href="index.html" class="btn-proceed-checkout" style="display: inline-flex; width: auto; padding: 12px 28px; font-size: 14px;">
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> تصفح المنتجات
     </a>
   </div>
 </div>
@@ -338,7 +338,7 @@ async function init() {
     }
     currentUser = session.user;
   } catch (e) {
-    console.error('[RAIZEY] Session check error:', e);
+    console.error('[MEEM] Session check error:', e);
   }
 
   loadCartData();
@@ -388,7 +388,7 @@ function renderCart() {
     return `
       <div class="cart-item-row">
         <div class="cart-item-thumb">
-          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<svg class="rz-i" style="font-size:20px; color:var(--text-muted);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>'}
+          ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">` : '<svg class="mm-i" style="font-size: 20px; color: var(--text-muted);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg>'}
         </div>
         <div class="cart-item-details">
           <div class="cart-item-name">${escapeHtml(item.name)}</div>
@@ -401,7 +401,7 @@ function renderCart() {
           </div>
         </div>
         <button class="remove-item-btn" onclick="removeItem(${index})" title="حذف العنصر">
-          <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg>
+          <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg>
         </button>
       </div>
     `;
@@ -411,7 +411,7 @@ function renderCart() {
 
   document.getElementById('proceedToCheckoutBtn').onclick = () => {
     // الدفع من السلة: نلغي أي شراء مباشر معلّق حتى لا يختلط الطلبان
-    try { sessionStorage.removeItem('raizey_direct_buy'); } catch (e) {}
+    try { sessionStorage.removeItem('meem_direct_buy'); } catch (e) {}
     window.location.href = 'checkout-v2.html';
   };
 }
@@ -449,13 +449,13 @@ function changeQty(index, delta) {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
-<nav class="rz-bottom-nav" aria-label="التنقل السريع">
-  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
-  <a href="cart.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
-  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
-  <a href="wallet.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
-  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+  <script src="assets/js/meem-assistant.js"></script>
+<nav class="mm-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html" class="is-active" aria-current="page"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
 </nav>
 </body>
 </html>

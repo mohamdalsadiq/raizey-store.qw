@@ -1,5 +1,5 @@
 /* =========================================================
-   RAIZEY STORE — بيانات الدول ومنطق منتقي رمز الدولة
+   MEEM STORE — بيانات الدول ومنطق منتقي رمز الدولة
    الافتراضي: السودان (+249)
    ========================================================= */
 (function (global) {
@@ -176,7 +176,7 @@
     };
   }
 
-  global.RaizeyCountries = {
+  global.MeemCountries = {
     list: COUNTRIES,
     isValidNumber: isValidNumber,
     createCountryPicker: createCountryPicker

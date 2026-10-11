@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * RAIZEY STORE — apply the unified UI system to every page.
+ * MEEM STORE — apply the unified UI system to every page.
  *
  * Idempotent pass that, for each *.html:
  *   1. migrates the legacy brand hexes to the Paper & Ember palette,
- *   2. normalises the font stack (Tajawal + JetBrains Mono — Arabic-first),
+ *   2. normalises the font stack (Cairo + JetBrains Mono — Arabic-first),
  *   3. removes leftover Font Awesome links,
- *   4. injects the theme bootstrap, assets/css/raizey.css and assets/js/raizey-ui.js,
+ *   4. injects the theme bootstrap, assets/css/meem.css and assets/js/meem-ui.js,
  *   5. adds <meta name="theme-color">, a skip link and (storefront only) the mobile bottom nav.
  *
  * Run:  node scripts/apply_ui_system.mjs
@@ -15,13 +15,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "./lib_icons.mjs";
 
-const FONT_URL = "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap";
+const FONT_URL = "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap";
 const SPRITE = "assets/icons/lucide-sprite.svg";
 
 // Brand palette migration — long-form hexes only, so nothing else is touched.
 const HEX = [
-  [/#ff6a1a/gi, "#FF6500"],
-  [/#ff6f1f/gi, "#FF6500"],
+  [/#ff6a1a/gi, "#FFD400"],
+  [/#ff6f1f/gi, "#FFD400"],
   [/#e85d00/gi, "#C24E00"],
   [/#f5f1ea/gi, "#F8EBDD"],
   [/#ede6d9/gi, "#E8D6C6"],
@@ -39,9 +39,9 @@ const HEX = [
   [/#22c55e/gi, "#16794F"],
   [/#20222d/gi, "#211A16"],
   // off-brand cool tones are removed: the identity is paper + orange only
-  [/#3b82f6/gi, "#FF6500"],
-  [/#2563eb/gi, "#FF6500"],
-  [/#6366f1/gi, "#FF6500"],
+  [/#3b82f6/gi, "#FFD400"],
+  [/#2563eb/gi, "#FFD400"],
+  [/#6366f1/gi, "#FFD400"],
   [/#8b5cf6/gi, "#A94000"],
   [/#7c3aed/gi, "#A94000"]
 ];
@@ -70,22 +70,22 @@ const NAV_ITEMS = [
 ];
 
 const THEME_BOOT =
-  '<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */' +
+  '<script>/* MEEM theme bootstrap: applies the saved theme before first paint */' +
   "try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>";
 
 function bottomNav(activeFile) {
   const items = NAV_ITEMS.map((item) => {
     const active = item.href === activeFile;
     return `  <a href="${item.href}"${active ? ' class="is-active" aria-current="page"' : ""}>` +
-      `<svg class="rz-i" aria-hidden="true"><use href="${SPRITE}#i-${item.icon}"></use></svg><span>${item.label}</span></a>`;
+      `<svg class="mm-i" aria-hidden="true"><use href="${SPRITE}#i-${item.icon}"></use></svg><span>${item.label}</span></a>`;
   }).join("\n");
-  return `<nav class="rz-bottom-nav" aria-label="التنقل السريع">\n${items}\n</nav>`;
+  return `<nav class="mm-bottom-nav" aria-label="التنقل السريع">\n${items}\n</nav>`;
 }
 
 let changed = 0;
 const report = [];
 
-const cssFiles = fs.readdirSync(path.join(ROOT, "assets/css")).filter((f) => f.endsWith(".css") && f !== "raizey.css").map((f) => "assets/css/" + f);
+const cssFiles = fs.readdirSync(path.join(ROOT, "assets/css")).filter((f) => f.endsWith(".css") && f !== "meem.css").map((f) => "assets/css/" + f);
 for (const file of [...fs.readdirSync(ROOT).filter((f) => f.endsWith(".html")).sort(), ...cssFiles]) {
   const full = path.join(ROOT, file);
   let html = fs.readFileSync(full, "utf8");
@@ -113,12 +113,12 @@ for (const file of [...fs.readdirSync(ROOT).filter((f) => f.endsWith(".html")).s
   // 4. Head wiring — always rebuilt, so the pass stays idempotent.
   //    Order matters: legacy sheets and inline <style> first, then the system sheet,
   //    then the behaviour layer; the theme bootstrap runs before first paint.
-  html = html.replace(/^.*<!-- RAIZEY UI system.*$/gim, "");
-  html = html.replace(/^.*<link[^>]*assets\/css\/raizey\.css[^>]*>.*$/gim, "");
-  html = html.replace(/^.*<script[^>]*assets\/js\/raizey-ui\.js[^>]*><\/script>.*$/gim, "");
+  html = html.replace(/^.*<!-- MEEM UI system.*$/gim, "");
+  html = html.replace(/^.*<link[^>]*assets\/css\/meem\.css[^>]*>.*$/gim, "");
+  html = html.replace(/^.*<script[^>]*assets\/js\/meem-ui\.js[^>]*><\/script>.*$/gim, "");
   html = html.replace(/^.*<link[^>]*fonts\.googleapis\.com[^>]*>.*$/gim, "");
   html = html.replace(/^.*<link[^>]*fonts\.gstatic\.com[^>]*>.*$/gim, "");
-  html = html.replace(/^.*RAZIEY theme bootstrap[^\n]*$/gim, "");
+  html = html.replace(/^.*MEEM theme bootstrap[^\n]*$/gim, "");
 
   const headBlock =
     `${THEME_BOOT}\n` +
@@ -126,9 +126,9 @@ for (const file of [...fs.readdirSync(ROOT).filter((f) => f.endsWith(".html")).s
     `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n` +
     `<link href="${FONT_URL}" rel="stylesheet">\n`;
   const systemBlock =
-    `<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->\n` +
-    `<link rel="stylesheet" href="assets/css/raizey.css">\n` +
-    `<script src="assets/js/raizey-ui.js"></script>\n`;
+    `<!-- MEEM UI system (tokens + components + icons + behaviour) -->\n` +
+    `<link rel="stylesheet" href="assets/css/meem.css">\n` +
+    `<script src="assets/js/meem-ui.js"></script>\n`;
   html = html.replace(/<head([^>]*)>/i, (m, attrs) => `${m}\n${headBlock}`);
   html = html.replace(/<\/head>/i, `${systemBlock}</head>`);
   notes.push("head-wiring");
@@ -140,25 +140,25 @@ for (const file of [...fs.readdirSync(ROOT).filter((f) => f.endsWith(".html")).s
   }
 
   // 5b. skip link + focus target for keyboard users
-  if (!html.includes("rz-skip-link")) {
+  if (!html.includes("mm-skip-link")) {
     const target = html.match(/<(main|section|div)\b[^>]*class="[^"]*(?:container|admin-page|page-wrap|orders-page)[^"]*"[^>]*>/i);
     if (target) {
       let tag = target[0];
       if (!/\bid="/.test(tag)) tag = tag.replace(/>$/, ' id="mainContent" tabindex="-1">');
       html = html.replace(target[0], tag);
-      html = html.replace(/<body([^>]*)>/i, (m) => `${m}\n<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>`);
+      html = html.replace(/<body([^>]*)>/i, (m) => `${m}\n<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>`);
       notes.push("skip-link");
     }
   }
 
   // 5c. mobile bottom navigation for storefront pages
   if (BOTTOM_NAV_PAGES.has(file)) {
-    html = html.replace(/<nav class="rz-bottom-nav"[\s\S]*?<\/nav>\s*/g, "");
+    html = html.replace(/<nav class="mm-bottom-nav"[\s\S]*?<\/nav>\s*/g, "");
     html = html.replace(/<\/body>/i, `${bottomNav(file)}\n</body>`);
-    if (!/<body[^>]*class="[^"]*rz-has-bottom-nav/.test(html)) {
+    if (!/<body[^>]*class="[^"]*mm-has-bottom-nav/.test(html)) {
       html = html.replace(/<body([^>]*)>/i, (m, attrs) => attrs.includes("class=")
-        ? m.replace(/class="([^"]*)"/, (mm, cls) => `class="${cls} rz-has-bottom-nav"`)
-        : `<body class="rz-has-bottom-nav"${attrs}>`);
+        ? m.replace(/class="([^"]*)"/, (mm, cls) => `class="${cls} mm-has-bottom-nav"`)
+        : `<body class="mm-has-bottom-nav"${attrs}>`);
     }
     notes.push("bottom-nav");
   }

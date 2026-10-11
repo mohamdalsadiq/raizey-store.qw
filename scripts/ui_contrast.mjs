@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RAIZEY STORE — automated WCAG 2.1 colour-contrast audit.
+ * MEEM STORE — automated WCAG 2.1 colour-contrast audit.
  *
  * Walks every visible text node in the rendered page, resolves the effective
  * background (nearest ancestor with a non-transparent colour) and reports pairs
@@ -68,7 +68,7 @@ for (const file of FILES) {
       if (!text.length) return;
       const cs = getComputedStyle(el);
       if (cs.visibility === "hidden" || cs.display === "none" || Number(cs.opacity) < 0.5) return;
-      if (el.closest(".rz-reveal:not(.is-visible)")) return;
+      if (el.closest(".mm-reveal:not(.is-visible)")) return;
       const rect = el.getBoundingClientRect();
       if (rect.width < 4 || rect.height < 4) return;
       const fg = parse(cs.color).slice(0, 3);

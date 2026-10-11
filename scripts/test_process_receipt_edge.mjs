@@ -1,5 +1,5 @@
 /*
- * RAIZEY STORE — اختبار دالة process-receipt (Edge Function) بلا شبكة
+ * MEEM STORE — اختبار دالة process-receipt (Edge Function) بلا شبكة
  * =====================================================================
  * يحمّل supabase/functions/process-receipt/index.ts بعد استبدال الاعتمادات
  * الخارجية (Supabase + Gemini) ببدائل مراقِبة، ثم يختبر:
@@ -54,7 +54,7 @@ function buildModule() {
     .replace(/^import\s+"jsr:[^"]+";\s*$/m, "")
     .replace(
       /^import\s+\{\s*createClient\s*\}\s+from\s+"npm:@supabase\/supabase-js@2";\s*$/m,
-      "const createClient = (...args) => globalThis.__raizeyCreateClient(...args);",
+      "const createClient = (...args) => globalThis.__meemCreateClient(...args);",
     )
     .replace(
       /^import\s+\{\s*ReceiptJudgeCore\s*\}\s+from\s+"\.\/receipt-judge-core\.ts";\s*$/m,
@@ -136,7 +136,7 @@ function makeRequest(body, token) {
 }
 
 // PNG/TIFF magic bytes ناقصة لكن كافية لاجتياز التحقق (base64 لمحتوى ثنائي)
-const IMAGE_BASE64 = Buffer.from("raizey-receipt-image-bytes").toString("base64");
+const IMAGE_BASE64 = Buffer.from("meem-receipt-image-bytes").toString("base64");
 
 function validBankakText() {
   const now = new Date();
@@ -192,7 +192,7 @@ const MODEL_LIST_BODY = {
 /** ينفّذ فحصاً واحداً ببديل Supabase/Gemini مخصّص ويعيد النتيجة والحالة. */
 async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = null, reusableScan = null, fetchHandler, expectStatus }) {
   const state = { inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
-  globalThis.__raizeyCreateClient = () => createAdminMock(state);
+  globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
     GEMINI_API_KEY: API_KEY,
     GEMINI_MODEL_ORDER: "",

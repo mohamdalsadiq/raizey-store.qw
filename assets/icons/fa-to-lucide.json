@@ -1,5 +1,5 @@
 {
-  "$comment": "RAIZEY STORE — single icon system. Maps legacy Font Awesome class names to Lucide (https://lucide.dev) icon names used by assets/icons/lucide-sprite.svg. Brand glyphs (whatsapp...) come from Simple Icons (CC0) because Lucide ships no brand marks.",
+  "$comment": "MEEM STORE — single icon system. Maps legacy Font Awesome class names to Lucide (https://lucide.dev) icon names used by assets/icons/lucide-sprite.svg. Brand glyphs (whatsapp...) come from Simple Icons (CC0) because Lucide ships no brand marks.",
   "icons": {
     "fa-trash-can": "trash-2",
     "fa-trash-arrow-up": "trash-2",

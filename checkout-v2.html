@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>إتمام الشراء — RAIZEY STORE</title>
+<title>إتمام الشراء — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -73,7 +73,7 @@
   }
   .checkout-item-price {
     font-size: 13px;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-weight: 700;
   }
   .checkout-item-fields {
@@ -92,7 +92,7 @@
   .remove-item-btn {
     background: none;
     border: none;
-    color: var(--danger, #B3261E);
+    color: var(--danger, var(--mm-danger));
     font-size: 15px;
     cursor: pointer;
     position: absolute;
@@ -124,7 +124,7 @@
     gap: 8px;
   }
   .page-title-box i {
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-size: 20px;
   }
   #couponInput {
@@ -137,7 +137,7 @@
     font-size: 14px;
     font-weight: 600;
   }
-  #couponInput:focus { border-color: var(--rz-accent-text); outline: none; }
+  #couponInput:focus { border-color: var(--mm-accent-text); outline: none; }
   #applyCouponBtn {
     padding: 0 20px;
     border-radius: 12px;
@@ -149,7 +149,7 @@
     cursor: pointer;
     transition: 0.2s ease;
   }
-  #applyCouponBtn:hover { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
+  #applyCouponBtn:hover { border-color: var(--mm-accent-text); color: var(--mm-accent-text); }
   /* زر التحقق من رمز الدفع — نفس هوية زر "تطبيق" */
   #paymentCodeInput { flex: 1; min-width: 0; }
   #verifyCodeBtn {
@@ -166,7 +166,7 @@
     cursor: pointer;
     transition: 0.2s ease;
   }
-  #verifyCodeBtn:hover:not(:disabled) { border-color: var(--rz-accent-text); color: var(--rz-accent-text); }
+  #verifyCodeBtn:hover:not(:disabled) { border-color: var(--mm-accent-text); color: var(--mm-accent-text); }
   #verifyCodeBtn:disabled { opacity: 0.55; cursor: not-allowed; }
   .copy-account-btn {
     flex-shrink: 0;
@@ -176,11 +176,11 @@
     padding: 5px 10px;
     font-size: 11px;
     font-weight: 700;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     cursor: pointer;
     margin-right: 8px;
   }
-  .copy-account-btn.copied { color: var(--success, #10b981); border-color: var(--success, #10b981); }
+  .copy-account-btn.copied { color: var(--mm-success, var(--mm-success)); border-color: var(--mm-success, var(--mm-success)); }
   .section-label { font-size: 14px; font-weight: 800; color: var(--text-muted); margin: 16px 0 12px; }
   .method-picker-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 16px; }
   /* بطاقة وسيلة الدفع: الأيقونة + الاسم جنب بعض */
@@ -196,13 +196,13 @@
     font: inherit;
     transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
   }
-  .method-card:hover { border-color: rgba(255,101,0,.5); transform: translateY(-1px); }
-  .method-card.active { border-color: var(--rz-accent-text); background: rgba(255,101,0,.08); box-shadow: 0 0 0 3px rgba(255,101,0,.14); }
+  .method-card:hover { border-color: rgba(255, 212, 0,.5); transform: translateY(-1px); }
+  .method-card.active { border-color: var(--mm-accent-text); background: rgba(255, 212, 0,.08); box-shadow: 0 0 0 3px rgba(255, 212, 0,.14); }
   .method-card-icon {
     flex: 0 0 auto; width: 42px; height: 42px; border-radius: 11px;
     display: grid; place-items: center;
     background: var(--bg); border: 1px solid var(--border);
-    color: var(--rz-accent-text); overflow: hidden;
+    color: var(--mm-accent-text); overflow: hidden;
     transition: transform .18s ease;
   }
   .method-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
@@ -248,144 +248,144 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
 
 <div class="checkout-page">
-  <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div class="page-title-box">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-bag"></use></svg>
-      <h1 style="font-size:20px; font-weight:800; margin:0;">مراجعة وإتمام الطلب</h1>
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-bag"></use></svg>
+      <h1 style="font-size: 20px; font-weight: 800; margin: 0;">مراجعة وإتمام الطلب</h1>
     </div>
-    <a href="cart.html" class="back-link" style="margin-bottom:0;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للسلة</a>
+    <a href="cart.html" class="back-link" style="margin-bottom: 0;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للسلة</a>
   </div>
 
-  <div id="loadingBox" style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ تجهيز البيانات...</div>
+  <div id="loadingBox" style="text-align: center; padding: 40px 0; color: var(--text-muted);">جارِ تجهيز البيانات...</div>
   
-  <div id="checkoutContent" style="display:none;">
+  <div id="checkoutContent" style="display: none;">
     <div class="section-label">المنتجات المطلوبة</div>
     <div id="checkoutItemsList"></div>
 
     <div style="border-top: 1px dashed var(--border); margin: 25px 0;"></div>
 
     <div class="section-label">هل لديك كود خصم؟</div>
-    <div style="display:flex; gap:8px; margin-bottom:6px;">
+    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
       <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
       <button id="applyCouponBtn" type="button">تطبيق</button>
     </div>
-    <div id="couponMessage" style="font-size:12px; margin-bottom:16px; font-weight:600;"></div>
+    <div id="couponMessage" style="font-size: 12px; margin-bottom: 16px; font-weight: 600;"></div>
 
     <div class="section-label">اختر طريقة الدفع للمجموعة كاملة</div>
 
     <div class="payment-option" id="walletOption">
       <div class="payment-option-info">
-        <div class="payment-option-title"><svg class="rz-i" style="margin-left:6px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> الدفع من المحفظة</div>
+        <div class="payment-option-title"><svg class="mm-i" style="margin-left: 6px; color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> الدفع من المحفظة</div>
         <div class="payment-option-sub" id="walletBalanceText">جارِ حساب الرصيد...</div>
       </div>
     </div>
 
     <div class="payment-option" id="bankOption">
       <div class="payment-option-info">
-        <div class="payment-option-title"><svg class="rz-i" style="margin-left:6px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg> تحويل بنكك ورفع الإيصال</div>
+        <div class="payment-option-title"><svg class="mm-i" style="margin-left: 6px; color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg> تحويل بنكك ورفع الإيصال</div>
         <div class="payment-option-sub">حول إجمالي المبلغ وارفع صورة إيصال واحدة لكل المنتجات</div>
       </div>
     </div>
 
     <div class="payment-option" id="codeOption">
       <div class="payment-option-info">
-        <div class="payment-option-title"><svg class="rz-i" style="margin-left:6px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-key-round"></use></svg> الدفع برمز من الإدارة</div>
+        <div class="payment-option-title"><svg class="mm-i" style="margin-left: 6px; color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-key-round"></use></svg> الدفع برمز من الإدارة</div>
         <div class="payment-option-sub">إذا أعطتك الإدارة رمز دفع (مثال RZY-XXXX-XXXX) استخدمه هنا</div>
       </div>
     </div>
 
     <div class="bank-details" id="codeDetails">
-      <div class="field" style="margin-top:0;">
+      <div class="field" style="margin-top: 0;">
         <label>رمز الدفع *</label>
-        <div style="display:flex; gap:8px; align-items:stretch;">
+        <div style="display: flex; gap: 8px; align-items: stretch;">
           <input type="text" id="paymentCodeInput" placeholder="RZY-8F3K-92QD" inputmode="latin" autocomplete="off">
           <button type="button" id="verifyCodeBtn">تحقق</button>
         </div>
         <div class="field-hint">الرمز يُستخدم مرة واحدة فقط، ويجب أن يغطي إجمالي الطلب.</div>
-        <div id="paymentCodeMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
+        <div id="paymentCodeMessage" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
       </div>
     </div>
 
     <div class="bank-details" id="bankDetails">
-      <div class="section-label" style="margin-top:0;">اختر وسيلة التحويل التي استخدمتها</div>
+      <div class="section-label" style="margin-top: 0;">اختر وسيلة التحويل التي استخدمتها</div>
       <div class="method-picker-grid" id="methodPickerGrid"></div>
       <div id="selectedMethodDetails"></div>
 
       <!-- الخطوة 1: إدخال رقم العملية وحفظه -->
-      <div class="field" style="margin-top:12px;">
+      <div class="field" style="margin-top: 12px;">
         <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
-        <div style="display:flex; gap:8px;">
+        <div style="display: flex; gap: 8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
           <button type="button" id="saveTxRefBtn">تحقق</button>
         </div>
         <div class="field-hint">اكتب رقم العملية كما ورد في إشعار التحويل، ثم اضغط "تحقق" — لن تظهر خطوة رفع الصورة إلا بعد نجاح التحقق.</div>
-        <div id="txRefMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
+        <div id="txRefMessage" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
       </div>
 
       <!-- الخطوة 2: رفع صورة الإشعار (تظهر بعد حفظ رقم العملية) -->
-      <div id="receiptStep" style="display:none; margin-top:14px;">
-        <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">
+      <div id="receiptStep" style="display: none; margin-top: 14px;">
+        <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
           الخطوة 2 — صورة إشعار التحويل *
         </label>
         <div class="file-upload" id="fileUploadBox">
-          <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل
-          <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+          <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل
+          <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
         </div>
-        <div class="field-hint" style="margin-top:6px;">
+        <div class="field-hint" style="margin-top: 6px;">
           الفحص الذكي يدعم صور JPG / PNG / WEBP بحد أقصى 5MB، ويقرأ الإشعارات بالعربية والإنجليزية (بنكك / أوكاش / فوري / كاشي).
           الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
         </div>
         <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
-        <label style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin:10px 0; cursor:pointer; line-height:1.7;">
-          <input type="checkbox" id="geminiConsent" style="margin-top:4px; flex-shrink:0;">
-          <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. بدون الموافقة سيُراجع إيصالك يدوياً من الإدارة. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">سياسة الخصوصية</a></span>
+        <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
+          <input type="checkbox" id="geminiConsent" style="margin-top: 4px; flex-shrink: 0;">
+          <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. بدون الموافقة سيُراجع إيصالك يدوياً من الإدارة. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
         </label>
-        <div id="extraReceiptWrap" style="display:none; margin-top:10px;">
-          <label style="display:block; font-size:12.5px; font-weight:700; margin-bottom:6px;">
+        <div id="extraReceiptWrap" style="display: none; margin-top: 10px;">
+          <label style="display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 6px;">
             صورة إضافية للإشعار (اختياري — لإكمال البيانات الناقصة)
           </label>
           <div class="file-upload" id="fileUploadBox2">
-            <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)
-            <input type="file" id="receiptInput2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+            <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)
+            <input type="file" id="receiptInput2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
           </div>
         </div>
-        <div id="shortfallBox" style="display:none; margin-top:12px; border:1px solid var(--danger); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.8;"></div>
+        <div id="shortfallBox" style="display: none; margin-top: 12px; border: 1px solid var(--danger); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.8;"></div>
 
-        <div id="remainderStep" style="display:none; margin-top:12px; border:1px dashed var(--border); border-radius:12px; padding:12px;">
-          <label style="display:block; font-size:13px; font-weight:800; margin-bottom:6px;">إشعار المبلغ المتبقي</label>
-          <div style="display:flex; gap:8px;">
+        <div id="remainderStep" style="display: none; margin-top: 12px; border: 1px dashed var(--border); border-radius: 12px; padding: 12px;">
+          <label style="display: block; font-size: 13px; font-weight: 800; margin-bottom: 6px;">إشعار المبلغ المتبقي</label>
+          <div style="display: flex; gap: 8px;">
             <input type="text" id="remainderRefInput" placeholder="رقم عملية التحويل الثاني" inputmode="latin" autocomplete="off">
             <button type="button" id="remainderRefBtn">تحقق</button>
           </div>
-          <div id="remainderRefMsg" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
-          <div class="file-upload" id="fileUploadBox3" style="display:none; margin-top:10px;">
-            <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> ارفع صورة إشعار المبلغ المتبقي
-            <input type="file" id="receiptInput3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+          <div id="remainderRefMsg" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
+          <div class="file-upload" id="fileUploadBox3" style="display: none; margin-top: 10px;">
+            <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> ارفع صورة إشعار المبلغ المتبقي
+            <input type="file" id="receiptInput3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
           </div>
-          <div id="remainderStatus" style="font-size:12px; margin-top:8px; font-weight:600;"></div>
+          <div id="remainderStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600;"></div>
         </div>
 
-        <div id="scanStatus" style="font-size:12px; margin-top:8px; font-weight:600; color:var(--text-muted);"></div>
-        <div id="scanReport" style="display:none; margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12.5px; line-height:1.7;"></div>
+        <div id="scanStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600; color: var(--text-muted);"></div>
+        <div id="scanReport" style="display: none; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.7;"></div>
       </div>
     </div>
 
-    <div class="summary-box" style="margin-top:25px;">
+    <div class="summary-box" style="margin-top: 25px;">
       <span>الإجمالي الكلي للمشتريات</span>
       <span class="total" id="checkoutTotal">0 ج.س</span>
     </div>
 
-    <div class="form-error" id="formError" style="margin-top:15px; color:var(--danger);"></div>
-    <div id="supportBox" style="display:none; margin-top:10px;"></div>
+    <div class="form-error" id="formError" style="margin-top: 15px; color: var(--danger);"></div>
+    <div id="supportBox" style="display: none; margin-top: 10px;"></div>
 
-    <button class="auth-btn" id="placeOrderBtn" style="margin-top:15px;">تأكيد الدفع وإرسال الطلبات</button>
+    <button class="auth-btn" id="placeOrderBtn" style="margin-top: 15px;">تأكيد الدفع وإرسال الطلبات</button>
   </div>
 </div>
 
@@ -475,7 +475,7 @@ const DB_UPDATE_HINT = 'يحتاج تحديث قاعدة البيانات (شغ�
 async function init() {
   // ── وضع الشراء المباشر: منفصل تماماً عن سلة المشتريات ولا يُدمج معها ──
   try {
-    const raw = sessionStorage.getItem('raizey_direct_buy');
+    const raw = sessionStorage.getItem('meem_direct_buy');
     if (raw) {
       const d = JSON.parse(raw);
       const fresh = d && d.created_at && (Date.now() - d.created_at) < 30 * 60 * 1000;
@@ -483,10 +483,10 @@ async function init() {
         cart = d.items;
         isDirectBuy = true;
       } else {
-        sessionStorage.removeItem('raizey_direct_buy');
+        sessionStorage.removeItem('meem_direct_buy');
       }
     }
-  } catch (e) { sessionStorage.removeItem('raizey_direct_buy'); }
+  } catch (e) { sessionStorage.removeItem('meem_direct_buy'); }
 
   if (!isDirectBuy) {
     try {
@@ -498,9 +498,9 @@ async function init() {
 
   if (cart.length === 0) {
     document.getElementById('loadingBox').innerHTML = `
-      <div style="text-align:center; padding:40px 0;">
-        <p style="color:var(--text-muted); margin-bottom:15px;">سلة المشتريات فارغة حالياً</p>
-        <a href="index.html" class="auth-btn" style="text-decoration:none; display:inline-block; padding:10px 20px;">تصفح المنتجات</a>
+      <div style="text-align: center; padding: 40px 0;">
+        <p style="color: var(--text-muted); margin-bottom: 15px;">سلة المشتريات فارغة حالياً</p>
+        <a href="index.html" class="auth-btn" style="text-decoration: none; display: inline-block; padding: 10px 20px;">تصفح المنتجات</a>
       </div>
     `;
     return;
@@ -524,12 +524,12 @@ async function init() {
       supabaseClient.from('wallets').select('balance').eq('user_id', currentUser.id).single(),
       supabaseClient.from('payment_methods').select('*').eq('is_active', true)
     ]);
-    if (walletErr) console.warn('[RAIZEY] Wallet fetch error:', walletErr.message);
-    if (methodsErr) console.warn('[RAIZEY] Methods fetch error:', methodsErr.message);
+    if (walletErr) console.warn('[MEEM] Wallet fetch error:', walletErr.message);
+    if (methodsErr) console.warn('[MEEM] Methods fetch error:', methodsErr.message);
     walletBalance = wallet ? wallet.balance : 0;
     paymentMethods = methods || [];
   } catch (e) {
-    console.error('[RAIZEY] init data fetch error:', e);
+    console.error('[MEEM] init data fetch error:', e);
   }
 
   renderCheckout();
@@ -562,7 +562,7 @@ function renderCheckout() {
 
     let optionHtml = '';
     if (item.selected_option && item.selected_option.label) {
-      optionHtml = `<div class="checkout-item-fields"><svg class="rz-i" style="color:var(--accent-gold, #FF6500);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> <strong>الخيار المختار:</strong> ${escapeHtml(item.selected_option.label)}</div>`;
+      optionHtml = `<div class="checkout-item-fields"><svg class="mm-i" style="color: var(--accent-gold, var(--mm-accent-text));" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-list-checks"></use></svg> <strong>الخيار المختار:</strong> ${escapeHtml(item.selected_option.label)}</div>`;
     }
 
     let fieldsHtml = '';
@@ -581,10 +581,10 @@ function renderCheckout() {
     return `
       <div class="checkout-item" id="item_${escapeHtml(itemKey)}">
         <button class="remove-item-btn" onclick="removeItemFromCheckout('${escapeHtml(itemKey)}')">
-          <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg>
+          <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg>
         </button>
         <div class="checkout-item-thumb">
-          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<svg class="rz-i" style="font-size: 22px; color: var(--text-muted);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg>'}
+          ${item.image_url ? `<img src="${escapeAttribute(sanitizeUrl(item.image_url))}" alt="${escapeAttribute(item.name)}">` : '<svg class="mm-i" style="font-size: 22px; color: var(--text-muted);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg>'}
         </div>
         <div class="checkout-item-info">
           <div class="checkout-item-name">${escapeHtml(item.name)}</div>
@@ -613,7 +613,7 @@ function renderCheckout() {
     const iconUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
     const icon = iconUrl
       ? `<img src="${escapeAttribute(iconUrl)}" alt="" loading="lazy">`
-      : `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
+      : `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
     return `<button type="button" class="method-card" data-method-id="${escapeAttribute(m.id || '')}" aria-pressed="false">
       <span class="method-card-icon" aria-hidden="true">${icon}</span>
       <span class="method-card-name">${escapeHtml(m.name || '')}</span>
@@ -631,7 +631,7 @@ function renderCheckout() {
       const selIconUrl = m && typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
       const selIcon = selIconUrl
         ? `<img src="${escapeAttribute(selIconUrl)}" alt="" loading="lazy">`
-        : `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
+        : `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
       box.innerHTML = `
         <div class="selected-method-box">
           <div class="selected-method-head">
@@ -642,11 +642,11 @@ function renderCheckout() {
             <span>اسم الحساب: ${escapeHtml(m.account_name || '')}</span>
             <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_name || '')}">نسخ</button>
           </div>
-          <div class="bank-account-row" style="margin-bottom:0;">
+          <div class="bank-account-row" style="margin-bottom: 0;">
             <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
             <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_number || '')}">نسخ</button>
           </div>
-          ${m.instructions ? `<div style="color:var(--text-muted); font-size:12px; margin-top:8px;">${escapeHtml(m.instructions)}</div>` : ''}
+          ${m.instructions ? `<div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">${escapeHtml(m.instructions)}</div>` : ''}
         </div>
       `;
       box.querySelectorAll('.copy-account-btn').forEach(btn => {
@@ -790,7 +790,7 @@ function attachCheckoutEvents(canUseWallet) {
       codeMsg.style.color = 'var(--primary)';
       codeMsg.textContent = `الرمز صالح ✓ — قيمته ${safeFormatSDG(row.amount)} ج.س. اضغط "تأكيد الدفع" لإتمام الطلب.`;
     } catch (e) {
-      devWarn('[RAIZEY] validate_payment_code failed:', errRaw(e));
+      devWarn('[MEEM] validate_payment_code failed:', errRaw(e));
       codeMsg.style.color = 'var(--danger)';
       if (e && e.isTimeout) {
         codeMsg.textContent = 'انتهت مهلة الاتصال أثناء التحقق من الرمز. تحقق من الشبكة وحاول مجدداً.';
@@ -807,18 +807,21 @@ function attachCheckoutEvents(canUseWallet) {
     }
   };
 
-  // ── دعم العملاء عبر واتساب — استبدل الرقم بصيغة دولية بدون + (مثال: 249912345678) ──
-  const ADMIN_WHATSAPP = '249901815039';
+  // ── دعم العملاء عبر واتساب — الرقم يُقرأ من settings (whatsapp_number) ──
+  let ADMIN_WHATSAPP = '249901815039'; // قيمة احتياطية حتى يصل الرقم من القاعدة
+  if (window.MeemStore && typeof window.MeemStore.getWhatsapp === 'function') {
+    window.MeemStore.getWhatsapp().then(function (n) { if (n) ADMIN_WHATSAPP = n; });
+  }
 
   const supportBox = document.getElementById('supportBox');
   function showSupportButton(reasonLabel) {
     if (!ADMIN_WHATSAPP || ADMIN_WHATSAPP.indexOf('YOUR_') === 0) { supportBox.style.display = 'none'; return; }
     const ref = (typeof savedTxRef !== 'undefined' && savedTxRef) ? savedTxRef : '—';
     const amount = (typeof currentTotal === 'function') ? currentTotal() : '';
-    const msg = `مرحباً، واجهت مشكلة في الدفع بمتجر Raizey.\nالسبب: ${reasonLabel}\nرقم العملية المُدخل: ${ref}\nالمبلغ: ${amount} ج.س`;
+    const msg = `مرحباً، واجهت مشكلة في الدفع بمتجر MEEM STORE.\nالسبب: ${reasonLabel}\nرقم العملية المُدخل: ${ref}\nالمبلغ: ${amount} ج.س`;
     supportBox.innerHTML = `<a href="https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"
-      style="display:inline-flex; align-items:center; gap:8px; background:#25D366; color:#fff; padding:10px 18px; border-radius:12px; font-weight:800; font-size:14px; text-decoration:none;">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg> تواصل مع خدمة العملاء
+      style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: var(--mm-silver); padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 14px; text-decoration: none;">
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg> تواصل مع خدمة العملاء
     </a>`;
     supportBox.style.display = 'block';
   }
@@ -843,9 +846,9 @@ function attachCheckoutEvents(canUseWallet) {
   // showSupportButton / logFraudAttempt وهما محليتان هنا ⇒ ReferenceError
   // داخل بلوك catch يقطع التنفيذ قبل السطرين اللذين يُرجعان الزر لحالته،
   // فيبقى الزر عالقاً على "جارِ تسجيل الإيصال..." للأبد. نُصدّرهما الآن.
-  window.__raizeyShowSupport = showSupportButton;
-  window.__raizeyHideSupport = hideSupportButton;
-  window.__raizeyLogFraud    = logFraudAttempt;
+  window.__meemShowSupport = showSupportButton;
+  window.__meemHideSupport = hideSupportButton;
+  window.__meemLogFraud    = logFraudAttempt;
 
 
   const refInput   = document.getElementById('transactionRefInput');
@@ -863,9 +866,9 @@ function attachCheckoutEvents(canUseWallet) {
       const _b2 = document.getElementById('fileUploadBox2');
       if (_i2) _i2.value = '';
       if (_w) _w.style.display = 'none';
-      if (_b2) _b2.innerHTML = `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)`;
+      if (_b2) _b2.innerHTML = `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)`;
     } catch (e) {}
-    fileBox.innerHTML = `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل`;
+    fileBox.innerHTML = `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل`;
     fileBox.classList.remove('has-file');
     splitPayment = null;
     try { hideShortfall(); } catch (e) {}
@@ -895,8 +898,8 @@ function attachCheckoutEvents(canUseWallet) {
     }
 
     const raw  = refInput.value.trim();
-    const norm = window.RaizeyReceiptPipeline
-      ? RaizeyReceiptPipeline.normalizeRef(raw)
+    const norm = window.MeemReceiptPipeline
+      ? MeemReceiptPipeline.normalizeRef(raw)
       : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
     if (norm.length < 6) {
@@ -936,7 +939,7 @@ function attachCheckoutEvents(canUseWallet) {
         return;
       }
     } catch (e) {
-      devWarn('[RAIZEY] check_tx_ref_available failed:', (e && e.message) || e);
+      devWarn('[MEEM] check_tx_ref_available failed:', (e && e.message) || e);
       saveRefBtn.disabled = false;
       saveRefBtn.textContent = prevBtnText;
       refMsg.style.color = 'var(--danger)';
@@ -962,8 +965,8 @@ function attachCheckoutEvents(canUseWallet) {
   // ── الخطوة 2: رفع الصورة + الفحص الذكي ──
   // مسار الفحص الموحد المشترك مع wallet.html.
   async function serverVerify(file, opts, extraFile) {
-    if (!window.RaizeyReceiptPipeline) throw new Error('receipt_pipeline_missing');
-    return window.RaizeyReceiptPipeline.serverVerify(file, opts, extraFile);
+    if (!window.MeemReceiptPipeline) throw new Error('receipt_pipeline_missing');
+    return window.MeemReceiptPipeline.serverVerify(file, opts, extraFile);
   }
 
   let extraFile = null;
@@ -975,7 +978,7 @@ function attachCheckoutEvents(canUseWallet) {
   fileInput2.onchange = () => {
     if (!fileInput2.files.length) return;
     extraFile = fileInput2.files[0];
-    fileBox2.innerHTML = `<svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> صورة إضافية: ${escapeHtml(extraFile.name)}`;
+    fileBox2.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> صورة إضافية: ${escapeHtml(extraFile.name)}`;
     runScan(fileInput.files[0], extraFile);
   };
 
@@ -1018,10 +1021,10 @@ function attachCheckoutEvents(canUseWallet) {
       reportEl.style.display = 'block';
       reportEl.style.borderColor = 'var(--border)';
       reportEl.innerHTML =
-        `<strong style="color:var(--ink);"><svg class="rz-i" style="color:#A85B00;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> مراجعة يدوية</strong><br>` +
+        `<strong style="color: var(--ink);"><svg class="mm-i" style="color: var(--mm-warning);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> مراجعة يدوية</strong><br>` +
         `اخترت عدم الفحص الآلي — لن تُرسل صورتك إلى أي خدمة خارجية. سيُراجع إيصالك يدوياً من الإدارة قبل تنفيذ الطلب. يمكنك إكمال الطلب الآن.`;
       if (fileBoxEl) {
-        fileBoxEl.innerHTML = `<svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم اختيار: ${escapeHtml(file.name)}`;
+        fileBoxEl.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم اختيار: ${escapeHtml(file.name)}`;
         fileBoxEl.classList.add('has-file');
       }
       statusEl.textContent = '';
@@ -1039,7 +1042,7 @@ function attachCheckoutEvents(canUseWallet) {
     reportEl.innerHTML = '';
     splitPayment = null;
     hideShortfall();
-    fileBox.innerHTML = `<svg class="rz-i rz-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارِ فحص الصورة...`;
+    fileBox.innerHTML = `<svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
 
     // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
@@ -1076,7 +1079,7 @@ function attachCheckoutEvents(canUseWallet) {
         try {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
-          console.warn('[RAIZEY] secure receipt verification failed:', serverErr && serverErr.message);
+          console.warn('[MEEM] secure receipt verification failed:', serverErr && serverErr.message);
           const errMsg = String(serverErr && serverErr.message || '');
           // انتهاء الجلسة سبب شائع للفشل الفوري — وجّه المستخدم لتسجيل الدخول بدل رسالة مبهمة
           if (errMsg === 'auth_required' || errMsg === 'supabase_client_missing') {
@@ -1092,7 +1095,7 @@ function attachCheckoutEvents(canUseWallet) {
       if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
     } catch (err) {
       // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
-      console.warn('[RAIZEY] receipt scan error:', err);
+      console.warn('[MEEM] receipt scan error:', err);
       analysis = softReview('scan_error');
     } finally {
       if (uiWatchdog) clearTimeout(uiWatchdog);
@@ -1117,9 +1120,9 @@ function attachCheckoutEvents(canUseWallet) {
       reportEl.style.display = 'block';
       reportEl.style.borderColor = 'var(--danger)';
       reportEl.innerHTML =
-        `<strong style="color:var(--danger);"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-x"></use></svg> تم رفض الصورة</strong><br>` +
+        `<strong style="color: var(--danger);"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-x"></use></svg> تم رفض الصورة</strong><br>` +
         `${escapeHtml(analysis.message)}` +
-        `<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">` +
+        `<div style="margin-top: 8px; color: var(--text-muted); font-size: 12px;">` +
         `المبلغ المطلوب تحويله: <strong>${safeFormatSDG(currentTotal())} ج.س</strong> — ` +
         `ارفع لقطة شاشة لإشعار التحويل كما هي من التطبيق (بالعربية أو الإنجليزية، كلاهما مدعوم).` +
         `</div>`;
@@ -1134,7 +1137,7 @@ function attachCheckoutEvents(canUseWallet) {
 
     receiptFile = file;
     scanResult  = analysis;
-    fileBox.innerHTML = `<svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم اختيار: ${escapeHtml(file.name)}`;
+    fileBox.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم اختيار: ${escapeHtml(file.name)}`;
     fileBox.classList.add('has-file');
 
     const rows = [];
@@ -1181,9 +1184,9 @@ function attachCheckoutEvents(canUseWallet) {
       reportEl.style.display = 'block';
       reportEl.style.borderColor = 'var(--border)';
       reportEl.innerHTML =
-        `<strong style="color:var(--ink);"><svg class="rz-i" style="color:#A85B00;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> تعذّر إكمال الفحص الآلي مؤقتاً</strong><br>` +
+        `<strong style="color: var(--ink);"><svg class="mm-i" style="color: var(--mm-warning);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> تعذّر إكمال الفحص الآلي مؤقتاً</strong><br>` +
         `تم استلام إيصالك بنجاح وسيُراجع يدوياً من الإدارة قبل تنفيذ الطلب (عادة خلال دقائق). يمكنك إتمام الطلب الآن بدون انتظار.` +
-        `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>`;
+        `<div style="margin-top: 8px; color: var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>`;
       showSupportButton('تعذّر إكمال الفحص الآلي — الطلب قيد المراجعة اليدوية');
       logFraudAttempt('technical_review', { risk_flags: analysis.riskFlags });
       return;
@@ -1192,12 +1195,12 @@ function attachCheckoutEvents(canUseWallet) {
     hideSupportButton();
 
     reportEl.style.display = 'block';
-    reportEl.style.borderColor = needsAdmin ? '#A85B00' : (ok ? 'var(--primary)' : 'var(--border)');
+    reportEl.style.borderColor = needsAdmin ? 'var(--mm-warning)' : (ok ? 'var(--primary)' : 'var(--border)');
     reportEl.innerHTML =
-      `<strong style="color:${needsAdmin ? '#A85B00' : (ok ? 'var(--primary)' : 'var(--ink)')};">` +
+      `<strong style="color:${needsAdmin ? 'var(--mm-warning)' : (ok ? 'var(--primary)' : 'var(--ink)')};">` +
       `${window.rzIconMarkup(needsAdmin ? 'shield-user' : (ok ? 'circle-check' : 'info'))} ${escapeHtml(analysis.message)}</strong>` +
-      `<div style="margin-top:8px; color:var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
-      (ok ? '' : `<div style="margin-top:8px; color:var(--danger); font-size:12px; font-weight:600;">${escapeHtml(blockHint(analysis))}</div>`);
+      `<div style="margin-top: 8px; color: var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
+      (ok ? '' : `<div style="margin-top: 8px; color: var(--danger); font-size: 12px; font-weight: 600;">${escapeHtml(blockHint(analysis))}</div>`);
 
     // ── صارم: لا يُسمح بإنشاء الطلب إلا بمطابقة رقم العملية والمبلغ معاً،
     // أو بمسار المراجعة التقنية السلسة أعلاه فقط ──
@@ -1260,13 +1263,13 @@ function attachCheckoutEvents(canUseWallet) {
     };
     receiptFile = null;
     scanResult  = null;
-    fileBox.innerHTML = `<svg class="rz-i" style="color:var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-triangle-alert"></use></svg> المبلغ في الإشعار ناقص`;
+    fileBox.innerHTML = `<svg class="mm-i" style="color: var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-triangle-alert"></use></svg> المبلغ في الإشعار ناقص`;
     fileBox.classList.remove('has-file');
     document.getElementById('scanReport').style.display = 'none';
 
     const productNames = cart.map(i => i.product_name || i.name || '').filter(Boolean).join(' + ');
     const waMsg =
-      `مرحباً، حوّلت مبلغاً ناقصاً في متجر Raizey وأحتاج إكمال الطلب.\n` +
+      `مرحباً، حوّلت مبلغاً ناقصاً في متجر MEEM STORE وأحتاج إكمال الطلب.\n` +
       `رقم العملية: ${savedTxRef}\n` +
       `المبلغ المحوَّل: ${analysis.shortfall.paid} ج.س\n` +
       `المتبقي: ${analysis.shortfall.remaining} ج.س\n` +
@@ -1276,17 +1279,17 @@ function attachCheckoutEvents(canUseWallet) {
 
     shortfallBox.style.display = 'block';
     shortfallBox.innerHTML =
-      `<strong style="color:var(--danger);"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-alert"></use></svg> المبلغ المحوَّل أقل من المطلوب</strong><br>` +
+      `<strong style="color: var(--danger);"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-alert"></use></svg> المبلغ المحوَّل أقل من المطلوب</strong><br>` +
       `وصل <strong>${safeFormatSDG(analysis.shortfall.paid)} ج.س</strong>، ` +
       `والمتبقي <strong>${safeFormatSDG(analysis.shortfall.remaining)} ج.س</strong> ` +
       `من إجمالي ${safeFormatSDG(analysis.shortfall.target)} ج.س.` +
-      `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">` +
+      `<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">` +
         (ADMIN_WHATSAPP && ADMIN_WHATSAPP.indexOf('YOUR_') !== 0
           ? `<a href="https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(waMsg)}" target="_blank" rel="noopener"
-               style="display:inline-flex; align-items:center; gap:8px; background:#25D366; color:#fff; padding:10px 16px; border-radius:12px; font-weight:800; text-decoration:none;">
-               <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg> تواصل مع الدعم</a>` : '') +
+               style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: var(--mm-silver); padding: 10px 16px; border-radius: 12px; font-weight: 800; text-decoration: none;">
+               <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg> تواصل مع الدعم</a>` : '') +
         `<button type="button" id="paidRestBtn"
-           style="background:var(--primary); color:#fff; border:none; padding:10px 16px; border-radius:12px; font-weight:800; cursor:pointer;">
+           style="background: var(--primary); color: var(--mm-silver); border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; cursor: pointer;">
            حوّلت الباقي</button>` +
       `</div>`;
 
@@ -1306,8 +1309,8 @@ function attachCheckoutEvents(canUseWallet) {
 
   remainderBtn.onclick = async () => {
     const raw = remainderInput.value.trim();
-    const norm = window.RaizeyReceiptPipeline
-      ? RaizeyReceiptPipeline.normalizeRef(raw)
+    const norm = window.MeemReceiptPipeline
+      ? MeemReceiptPipeline.normalizeRef(raw)
       : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     fileBox3.style.display = 'none';
     if (!splitPayment) return;
@@ -1316,7 +1319,7 @@ function attachCheckoutEvents(canUseWallet) {
       remainderMsg.textContent = 'رقم العملية قصير جداً. انسخه كما هو من الإشعار الثاني.';
       return;
     }
-    if (norm === (window.RaizeyReceiptPipeline ? RaizeyReceiptPipeline.normalizeRef(savedTxRef) : savedTxRef)) {
+    if (norm === (window.MeemReceiptPipeline ? MeemReceiptPipeline.normalizeRef(savedTxRef) : savedTxRef)) {
       remainderMsg.style.color = 'var(--danger)';
       remainderMsg.textContent = 'رقم العملية الثاني لا يصح أن يطابق الأول.';
       return;
@@ -1394,7 +1397,7 @@ function attachCheckoutEvents(canUseWallet) {
     statusEl.style.color = 'var(--primary)';
     statusEl.textContent = 'تم تأكيد الإشعار الثاني ✓ — اضغط "تأكيد الدفع وإرسال الطلبات".';
     shortfallBox.style.borderColor = 'var(--primary)';
-    fileBox.innerHTML = `<svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم قبول الإشعارين (دفع مجزّأ)`;
+    fileBox.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم قبول الإشعارين (دفع مجزّأ)`;
     fileBox.classList.add('has-file');
   };
 
@@ -1404,7 +1407,7 @@ function attachCheckoutEvents(canUseWallet) {
 
 function clearActiveBasket() {
   if (isDirectBuy) {
-    sessionStorage.removeItem('raizey_direct_buy');
+    sessionStorage.removeItem('meem_direct_buy');
   } else {
     localStorage.removeItem('raizey_store_cart');
   }
@@ -1413,7 +1416,7 @@ function clearActiveBasket() {
 window.removeItemFromCheckout = function(cartItemId) {
   cart = cart.filter(item => (item.cart_item_id || item.product_id) !== cartItemId);
   if (isDirectBuy) {
-    sessionStorage.setItem('raizey_direct_buy', JSON.stringify({ created_at: Date.now(), items: cart }));
+    sessionStorage.setItem('meem_direct_buy', JSON.stringify({ created_at: Date.now(), items: cart }));
   } else {
     localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
   }
@@ -1483,7 +1486,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
         : 'my-orders.html';
     } catch (err) {
       const msg = err.message || err.hint || err.details || String(err);
-      devWarn('[RAIZEY] wallet order error:', msg);
+      devWarn('[MEEM] wallet order error:', msg);
       errorBox.textContent = getFriendlyError(msg);
       placeOrderBtn.disabled = false;
       placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
@@ -1518,7 +1521,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       window.location.href = lastId ? `receipt.html?order_id=${lastId}` : 'my-orders.html';
     } catch (err) {
       const msg = (err && (err.message || err.hint || err.details)) || String(err);
-      devWarn('[RAIZEY] payment code order error:', msg);
+      devWarn('[MEEM] payment code order error:', msg);
       errorBox.textContent =
         /already_used/.test(msg)   ? 'هذا الرمز مستخدم من قبل.' :
         /expired/.test(msg)        ? 'انتهت صلاحية الرمز. اطلب رمزاً جديداً من الإدارة.' :
@@ -1558,11 +1561,11 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     const o = opts || {};
     errorBox.style.color = 'var(--danger)';
     errorBox.textContent = message;
-    if (o.support && window.__raizeyShowSupport) {
-      try { window.__raizeyShowSupport(o.support); } catch (e) {}
+    if (o.support && window.__meemShowSupport) {
+      try { window.__meemShowSupport(o.support); } catch (e) {}
     }
-    if (o.fraud && window.__raizeyLogFraud) {
-      try { window.__raizeyLogFraud(o.fraud, o.fraudExtra || {}); } catch (e) {}
+    if (o.fraud && window.__meemLogFraud) {
+      try { window.__meemLogFraud(o.fraud, o.fraudExtra || {}); } catch (e) {}
     }
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
@@ -1571,7 +1574,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   // ترجمة أخطاء القاعدة إلى رسائل واضحة للعميل
   const failFromError = (err) => {
     const msg = (err && (err.message || err.hint || err.details)) || String(err);
-    devWarn('[RAIZEY] bank order error:', msg);
+    devWarn('[MEEM] bank order error:', msg);
 
     if (err && err.isTimeout) {
       failOrder('تعذّر إكمال الطلب — الاتصال بطيء أو متوقف. لم يُسجّل أي طلب ورقم عمليتك ما زال متاحاً؛ تحقق من الشبكة ثم أعد المحاولة.',
@@ -1634,7 +1637,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     );
     if (uploadError) throw uploadError;
   } catch (err) {
-    devWarn('[RAIZEY] Storage upload error:', (err && err.message) || err);
+    devWarn('[MEEM] Storage upload error:', (err && err.message) || err);
     failOrder(err && err.isTimeout
       ? 'تعذّر رفع صورة الإيصال — الاتصال بطيء أو متوقف. تحقق من الشبكة ثم اضغط "تأكيد الدفع" مجدداً (رقم عمليتك ما زال متاحاً).'
       : 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.');
@@ -1650,7 +1653,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     );
     receiptUrl = signed ? signed.signedUrl : null;
   } catch (e) {
-    devWarn('[RAIZEY] signed url skipped:', (e && e.message) || e);
+    devWarn('[MEEM] signed url skipped:', (e && e.message) || e);
   }
 
   // ── (3) الطلب كامل في معاملة واحدة ذرّية ──
@@ -1753,7 +1756,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
           }
         });
       } catch (e) {
-        devWarn('[RAIZEY] secondary receipt attach failed:', (e && e.message) || e);
+        devWarn('[MEEM] secondary receipt attach failed:', (e && e.message) || e);
       }
     }
 
@@ -1782,7 +1785,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     //   2) الدالة منشورة لكنها معطوبة بتعارض متغيّرات (42702 ambiguous)
     //      ← هذا هو ما كان يُفشل كل طلب بنكي. المعاملة تُرجَع بالكامل عند
     //      هذا الخطأ فلا يُحجز أي إيصال، لذا إعادة المحاولة آمنة تماماً.
-    devWarn('[RAIZEY] create_bank_orders_bulk failed:', msg);
+    devWarn('[MEEM] create_bank_orders_bulk failed:', msg);
     failFromError(err);
     return;
   }
@@ -1798,6 +1801,6 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
+  <script src="assets/js/meem-assistant.js"></script>
 </body>
 </html>

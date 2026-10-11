@@ -1,4 +1,4 @@
-// Shared icon utilities for RAIZEY STORE.
+// Shared icon utilities for MEEM STORE.
 // One icon library only: Lucide (stroke SVG sprite) + Simple Icons for brand marks.
 import fs from "node:fs";
 import path from "node:path";
@@ -74,9 +74,9 @@ export function spriteSymbolIds() {
   return new Set([...text.matchAll(/<symbol id="i-([a-z0-9-]+)"/g)].map((m) => m[1]));
 }
 
-// Icons referenced by name from raizey-ui.js (theme toggle, toast tones, confirm dialog).
+// Icons referenced by name from meem-ui.js (theme toggle, toast tones, confirm dialog).
 // Icons referenced by name (not via markup) — theme toggle / toast tones /
-// confirm dialog in raizey-ui.js, plus the admin-staff.html permission rows.
+// confirm dialog in meem-ui.js, plus the admin-staff.html permission rows.
 export const SYSTEM_ICONS = [
   "sun", "moon", "circle-help", "check", "x",
   "circle-check", "circle-x", "triangle-alert", "info",

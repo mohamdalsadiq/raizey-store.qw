@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -19,29 +19,29 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إدارة الأقسام — RAIZEY STORE</title>
+  <title>إدارة الأقسام — MEEM STORE</title>
 
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/auth.css">
   <link rel="stylesheet" href="assets/css/admin.css">
   <style>
     .section-hero {
-      display:flex; align-items:center; justify-content:space-between; gap:18px;
-      margin:0 0 18px; padding:22px 24px; border:1px solid var(--border);
-      border-radius:18px; background:linear-gradient(135deg, rgba(255,106,26,.12), var(--bg-card));
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      margin: 0 0 18px; padding: 22px 24px; border: 1px solid var(--border);
+      border-radius: 18px; background: linear-gradient(135deg, rgba(255, 212, 0,.12), var(--bg-card));
     }
-    .section-hero h2 { margin:0 0 6px; color:var(--ink); font-size:22px; }
-    .section-hero p { margin:0; color:var(--text-muted); line-height:1.7; font-size:13px; }
-    .section-hero-icon { width:56px; height:56px; display:grid; place-items:center; border-radius:16px; background:var(--primary); color:var(--ink); font-size:24px; box-shadow:0 10px 24px rgba(255,106,26,.2); }
-    .section-count { color: var(--rz-accent-text); font-weight:900; }
-    .admin-inline-notice { margin:12px 0 16px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--bg-card); color:var(--ink); font-size:13px; line-height:1.7; }
-    .admin-inline-notice.error { border-color:rgba(179,38,30,.35); background:rgba(179,38,30,.08); color:#B3261E; }
-    .admin-inline-notice.success { border-color:rgba(22,163,74,.3); background:rgba(22,163,74,.08); color:#176b36; }
-    .section-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; color:var(--text-muted); font-size:12px; }
-    .section-meta span { padding:3px 8px; border-radius:999px; background:rgba(127,127,127,.08); }
-    .empty-state { padding:42px 20px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:16px; background:var(--bg-card); }
-    .empty-state i { display:block; margin-bottom:10px; color: var(--rz-accent-text); font-size:26px; }
-    @media (max-width:640px) { .section-hero { align-items:flex-start; } .section-hero-icon { flex-shrink:0; } }
+    .section-hero h2 { margin: 0 0 6px; color: var(--ink); font-size: 22px; }
+    .section-hero p { margin: 0; color: var(--text-muted); line-height: 1.7; font-size: 13px; }
+    .section-hero-icon { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; background: var(--primary); color: var(--ink); font-size: 24px; box-shadow: 0 10px 24px rgba(255, 212, 0,.2); }
+    .section-count { color: var(--mm-accent-text); font-weight: 900; }
+    .admin-inline-notice { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-card); color: var(--ink); font-size: 13px; line-height: 1.7; }
+    .admin-inline-notice.error { border-color: rgba(255, 107, 107,.35); background: rgba(255, 107, 107,.08); color: var(--mm-danger); }
+    .admin-inline-notice.success { border-color: rgba(22,163,74,.3); background: rgba(22,163,74,.08); color: var(--mm-success); }
+    .section-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; color: var(--text-muted); font-size: 12px; }
+    .section-meta span { padding: 3px 8px; border-radius: 999px; background: rgba(127,127,127,.08); }
+    .empty-state { padding: 42px 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 16px; background: var(--bg-card); }
+    .empty-state i { display: block; margin-bottom: 10px; color: var(--mm-accent-text); font-size: 26px; }
+    @media (max-width:640px) { .section-hero { align-items: flex-start; } .section-hero-icon { flex-shrink: 0; } }
   </style>
 
 
@@ -52,16 +52,16 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
-  <div class="admin-page" id="adminPage" style="display:none;">
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+  <div class="admin-page" id="adminPage" style="display: none;">
     <div class="page-header">
       <h1>إدارة الأقسام</h1>
-      <a href="index.html" class="back-link"><svg class="rz-i" style="margin-left:4px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> المتجر</a>
+      <a href="index.html" class="back-link"><svg class="mm-i" style="margin-left: 4px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> المتجر</a>
     </div>
 
     <div class="admin-nav"></div>
@@ -71,12 +71,12 @@
         <h2>الأقسام الرئيسية</h2>
         <p>اكتب اسم القسم فقط، مثل «الاشتراكات» أو «شحن الألعاب». ستظهر الأقسام كعناوين مستقلة في واجهة المتجر.</p>
       </div>
-      <div class="section-hero-icon" aria-hidden="true"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
+      <div class="section-hero-icon" aria-hidden="true"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
     </div>
 
     <button class="add-new-btn" id="addNewBtn">+ إضافة قسم جديد</button>
     <div id="sectionsNotice" class="admin-inline-notice" role="status" aria-live="polite" hidden></div>
-    <div id="sectionsList"><div style="color:var(--text-muted);font-size:13px;">جارِ التحميل...</div></div>
+    <div id="sectionsList"><div style="color: var(--text-muted);font-size: 13px;">جارِ التحميل...</div></div>
   </div>
 
   <div class="modal-overlay" id="formModal">
@@ -100,14 +100,14 @@
       <div class="form-error" id="formError"></div>
       <div class="modal-actions">
         <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-        <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary);color:var(--ink);">حفظ القسم</button>
+        <button class="modal-confirm-btn" id="formSaveBtn" style="background: var(--primary);color: var(--ink);">حفظ القسم</button>
       </div>
     </div>
   </div>
 
-  <div id="accessDenied" style="display:none;text-align:center;padding:80px 20px;color:var(--text-muted);">
-    <h3 style="color:var(--ink);margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-    <a href="index.html" style="color: var(--rz-accent-text);font-weight:700;">← رجوع للمتجر</a>
+  <div id="accessDenied" style="display: none;text-align: center;padding: 80px 20px;color: var(--text-muted);">
+    <h3 style="color: var(--ink);margin-bottom: 8px;">غير مصرح لك بالدخول</h3>
+    <a href="index.html" style="color: var(--mm-accent-text);font-weight: 700;">← رجوع للمتجر</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -162,20 +162,20 @@
     }
     async function renderSections() {
       const container = document.getElementById('sectionsList');
-      if (!sections.length) { container.innerHTML = '<div class="empty-state"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg>لا توجد أقسام بعد. أضف أول قسم ليظهر في الصفحة الرئيسية.</div>'; return; }
+      if (!sections.length) { container.innerHTML = '<div class="empty-state"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg>لا توجد أقسام بعد. أضف أول قسم ليظهر في الصفحة الرئيسية.</div>'; return; }
       const counts = await Promise.all(sections.map(s => categoryCount(s.id)));
       container.innerHTML = sections.map((section, index) => `
         <div class="manage-item">
           <div class="manage-item-info">
-            <div class="section-hero-icon" style="width:44px;height:44px;border-radius:13px;font-size:18px;margin-left:12px;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
+            <div class="section-hero-icon" style="width: 44px;height: 44px;border-radius: 13px;font-size: 18px;margin-left: 12px;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
             <div class="category-meta-text">
               <div class="manage-item-name">${escapeHtml(section.name)} ${!section.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}</div>
               <div class="section-meta"><span>ترتيب: ${Number(section.display_order) || 0}</span><span>${counts[index]} تصنيف</span><span class="section-count">${section.is_active ? 'ظاهر في المتجر' : 'مؤرشف'}</span></div>
             </div>
           </div>
           <div class="manage-item-actions">
-            <button class="admin-action-btn" data-action="edit" data-id="${section.id}" title="تعديل"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
-            <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><svg class="rz-i" style="color:var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
+            <button class="admin-action-btn" data-action="edit" data-id="${section.id}" title="تعديل"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
+            <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><svg class="mm-i" style="color: var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
           </div>
         </div>`).join('');
       container.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openForm(btn.dataset.id)));

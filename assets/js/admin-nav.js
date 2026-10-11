@@ -1,4 +1,4 @@
-// RAIZEY STORE — canonical admin navigation and alert counts
+// MEEM STORE — canonical admin navigation and alert counts
 (function () {
   'use strict';
 

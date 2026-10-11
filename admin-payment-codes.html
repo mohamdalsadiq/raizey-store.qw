@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,20 +20,20 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>رموز الدفع — RAIZEY STORE</title>
+<title>رموز الدفع — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 <link rel="stylesheet" href="assets/css/admin.css">
 <style>
-  .code-card { background: var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
-  .code-value { font-family:'JetBrains Mono', monospace; font-size:16px; font-weight:700; color: var(--rz-accent-text); letter-spacing:1px; }
-  .code-meta { font-size:12.5px; color:var(--text-muted); line-height:1.9; margin-top:6px; }
-  .code-state { font-size:11.5px; font-weight:800; padding:3px 10px; border-radius:999px; }
-  .state-active { background:rgba(34,197,94,.14); color:#16794F; }
-  .state-used { background:rgba(148,163,184,.18); color:#64748b; }
-  .state-expired { background:rgba(179,38,30,.12); color:#B3261E; }
-  .state-cancelled { background:rgba(179,38,30,.12); color:#B3261E; }
+  .code-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .code-value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--mm-accent-text); letter-spacing: 1px; }
+  .code-meta { font-size: 12.5px; color: var(--text-muted); line-height: 1.9; margin-top: 6px; }
+  .code-state { font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+  .state-active { background: rgba(34,197,94,.14); color: var(--mm-success); }
+  .state-used { background: rgba(148,163,184,.18); color: var(--mm-text-muted); }
+  .state-expired { background: rgba(255, 107, 107,.12); color: var(--mm-danger); }
+  .state-cancelled { background: rgba(255, 107, 107,.12); color: var(--mm-danger); }
 </style>
 
 
@@ -44,26 +44,26 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
-<div class="admin-page" id="adminPage" style="display:none;">
+<div class="admin-page" id="adminPage" style="display: none;">
   <div class="page-header">
     <h1>رموز الدفع</h1>
     <a href="admin.html" class="back-link">→ لوحة التحكم</a>
   </div>
 
-  <p style="font-size:12.5px; color:var(--text-muted); line-height:1.8; margin-top:0;">
+  <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.8; margin-top: 0;">
     رمز الدفع وسيلة تسوية يدوية آمنة: تُعطيه للعميل فيُتِم طلبه بدون إيصال. كل رمز يُستخدم مرة واحدة فقط.
   </p>
 
   <button class="add-new-btn" id="addNewBtn">+ توليد رمز جديد</button>
 
-  <div class="filter-chips" style="margin:10px 0;">
+  <div class="filter-chips" style="margin: 10px 0;">
     <button class="chip active" data-filter="all">الكل</button>
     <button class="chip" data-filter="active">نشط</button>
     <button class="chip" data-filter="used">مستخدم</button>
@@ -71,7 +71,7 @@
     <button class="chip" data-filter="cancelled">ملغى</button>
   </div>
 
-  <div id="codesList"><div style="color:var(--text-muted); font-size:13px;">جارِ التحميل...</div></div>
+  <div id="codesList"><div style="color: var(--text-muted); font-size: 13px;">جارِ التحميل...</div></div>
 </div>
 
 <div class="modal-overlay" id="formModal">
@@ -91,7 +91,7 @@
     <div class="field">
       <label>تخصيص لعميل (اختياري — اكتب رقم واتساب العميل)</label>
       <input type="text" id="customerInput" placeholder="مثلاً: 0912345678">
-      <div id="customerHint" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
+      <div id="customerHint" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;"></div>
     </div>
 
     <div class="field">
@@ -103,14 +103,14 @@
 
     <div class="modal-actions">
       <button class="modal-cancel-btn" id="formCancelBtn">إلغاء</button>
-      <button class="modal-confirm-btn" id="formSaveBtn" style="background:var(--primary); color:var(--ink);">توليد الرمز</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" style="background: var(--primary); color: var(--ink);">توليد الرمز</button>
     </div>
   </div>
 </div>
 
-<div id="accessDenied" style="display:none; text-align:center; padding:80px 20px; color:var(--text-muted);">
-  <h3 style="color:var(--ink); margin-bottom:8px;">غير مصرح لك بالدخول</h3>
-  <a href="index.html" style="color: var(--rz-accent-text); font-weight:700;">← رجوع للمتجر</a>
+<div id="accessDenied" style="display: none; text-align: center; padding: 80px 20px; color: var(--text-muted);">
+  <h3 style="color: var(--ink); margin-bottom: 8px;">غير مصرح لك بالدخول</h3>
+  <a href="index.html" style="color: var(--mm-accent-text); font-weight: 700;">← رجوع للمتجر</a>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -200,7 +200,7 @@ function render() {
   const filtered = currentFilter === 'all' ? codes : codes.filter(c => effectiveState(c) === currentFilter);
 
   if (!filtered.length) {
-    list.innerHTML = `<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0;">لا توجد رموز مطابقة</div>`;
+    list.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 30px 0;">لا توجد رموز مطابقة</div>`;
     return;
   }
 
@@ -214,7 +214,7 @@ function render() {
     const user = c.used_profile;
     return `
       <div class="code-card">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
           <span class="code-value">${escapeHtml(c.code)}</span>
           <span class="code-state state-${stKey}">${stKnown ? stateLabels[st] : escapeHtml(st)}</span>
         </div>
@@ -227,7 +227,7 @@ function render() {
           ${usedAt ? `استُخدم: ${usedAt}${user ? ` — ${escapeHtml(user.full_name || '')} (${escapeHtml(user.whatsapp_number || '')})` : ''}<br>` : ''}
           ${c.order_id ? `الطلب: ${escapeHtml(String(c.order_id).slice(0, 8))}<br>` : ''}
         </div>
-        <div class="admin-order-actions" style="margin-top:10px;">
+        <div class="admin-order-actions" style="margin-top: 10px;">
           <button class="admin-btn" data-copy="${safeDataAttr(c.code)}">نسخ الرمز</button>
           ${st === 'active' ? `<button class="admin-btn btn-reject" data-cancel="${safeDataAttr(c.id)}">إلغاء</button>` : ''}
         </div>

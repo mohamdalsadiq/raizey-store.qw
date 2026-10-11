@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,8 +20,8 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>إنشاء حساب — RAIZEY STORE</title>
-<meta name="description" content="أنشئ حسابك في RAIZEY STORE خلال أقل من دقيقة وابدأ التسوق بأمان.">
+<title>إنشاء حساب — MEEM STORE</title>
+<meta name="description" content="أنشئ حسابك في MEEM STORE خلال أقل من دقيقة وابدأ التسوق بأمان.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
 
@@ -37,17 +37,17 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
 
 <div class="auth-page">
   <div class="auth-card wide">
     <div class="auth-logo">
-      <span class="brand-mark"><img src="assets/img/raizey-logo-mark.svg" alt="شعار RAIZEY STORE"></span>
-      <span class="brand-text">RAIZEY <em>STORE</em></span>
+      <!-- MEEM mark: enable once assets/img/meem-mark.png exists (Phase 1a) --><span class="brand-mark" hidden aria-hidden="true"></span>
+      <span class="brand-text">MEEM <em>STORE</em></span>
     </div>
 
     <h1 class="auth-title">إنشاء حساب جديد</h1>
@@ -59,7 +59,7 @@
         <span>التسجيل باستخدام جوجل</span>
       </button>
     </div>
-    <div class="form-error" id="socialError" style="margin-top:12px;"></div>
+    <div class="form-error" id="socialError" style="margin-top: 12px;"></div>
 
     <div class="auth-divider">أو بالبريد الإلكتروني</div>
 
@@ -108,11 +108,11 @@
       </div>
 
       <div class="field">
-        <label for="referralCode">كود الإحالة <span style="color:var(--text-muted); font-weight:500;">(اختياري)</span></label>
+        <label for="referralCode">كود الإحالة <span style="color: var(--text-muted); font-weight: 500;">(اختياري)</span></label>
         <div class="input-wrap">
-          <span class="lead-icon"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user-plus"></use></svg></span>
+          <span class="lead-icon"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user-plus"></use></svg></span>
           <input type="text" id="referralCode" autocomplete="off" maxlength="32" placeholder="مثال: RZY482" aria-describedby="referralCodeHint">
-          <span class="trail"><span class="valid-mark"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg></span></span>
+          <span class="trail"><span class="valid-mark"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-check"></use></svg></span></span>
         </div>
         <div class="field-hint" id="referralCodeHint">يمكنك كتابة الكود القصير أو استخدام رابط الإحالة.</div>
       </div>
@@ -165,7 +165,7 @@
 <script src="assets/js/auth-ui.js"></script>
 <script src="assets/js/country-codes.js"></script>
 <script>
-const UI = window.RaizeyAuthUI;
+const UI = window.MeemAuthUI;
 const form = document.getElementById('registerForm');
 const errorBox = document.getElementById('formError');
 const submitBtn = document.getElementById('submitBtn');
@@ -197,7 +197,7 @@ fullNameInput.addEventListener('input', () => {
     : UI.setFieldState(fullNameInput, 'invalid', 'الاسم قصير جداً');
 });
 
-const picker = window.RaizeyCountries.createCountryPicker({
+const picker = window.MeemCountries.createCountryPicker({
   root: document.getElementById('countrySelect'),
   button: document.getElementById('countryBtn'),
   popup: document.getElementById('countryPop'),

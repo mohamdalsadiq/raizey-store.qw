@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>إيصال الطلب — RAIZEY STORE</title>
+<title>إيصال الطلب — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -47,18 +47,18 @@
   }
   .receipt-success-icon .icon-circle i {
     font-size: 32px;
-    color: #16794F;
+    color: var(--mm-success);
   }
   .receipt-success-icon.rejected .icon-circle {
-    background: rgba(179,38,30, 0.12);
-    border-color: rgba(179,38,30, 0.3);
+    background: rgba(255, 107, 107, 0.12);
+    border-color: rgba(255, 107, 107, 0.3);
   }
-  .receipt-success-icon.rejected .icon-circle i { color: var(--danger, #B3261E); }
+  .receipt-success-icon.rejected .icon-circle i { color: var(--danger, var(--mm-danger)); }
   .receipt-success-icon.pending .icon-circle {
-    background: rgba(255, 106, 26, 0.12);
-    border-color: rgba(255, 106, 26, 0.3);
+    background: rgba(255, 212, 0, 0.12);
+    border-color: rgba(255, 212, 0, 0.3);
   }
-  .receipt-success-icon.pending .icon-circle i { color: var(--primary, #FF6500); }
+  .receipt-success-icon.pending .icon-circle i { color: var(--primary, var(--mm-accent-text)); }
 
   .receipt-title {
     font-size: 20px;
@@ -106,7 +106,7 @@
   }
   .receipt-row .value.price {
     font-size: 16px;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-family: 'JetBrains Mono', monospace;
   }
   .receipt-id {
@@ -124,11 +124,11 @@
     font-size: 12px;
     font-weight: 700;
   }
-  .receipt-status-badge.pending_review { background: rgba(255,106,26,0.12); color: var(--rz-accent-text); }
-  .receipt-status-badge.in_progress    { background: rgba(255,101,0,0.12);  color: var(--rz-accent-text); }
-  .receipt-status-badge.completed      { background: rgba(34,197,94,0.12);   color: #16794F; }
-  .receipt-status-badge.rejected       { background: rgba(179,38,30,0.12);   color: #B3261E; }
-  .receipt-status-badge.cancelled      { background: rgba(120,120,120,0.12); color: #888;    }
+  .receipt-status-badge.pending_review { background: rgba(255, 212, 0,0.12); color: var(--mm-accent-text); }
+  .receipt-status-badge.in_progress    { background: rgba(255, 212, 0,0.12);  color: var(--mm-accent-text); }
+  .receipt-status-badge.completed      { background: rgba(34,197,94,0.12);   color: var(--mm-success); }
+  .receipt-status-badge.rejected       { background: rgba(255, 107, 107,0.12);   color: var(--mm-danger); }
+  .receipt-status-badge.cancelled      { background: rgba(120,120,120,0.12); color: var(--mm-text-muted);    }
 
   .receipt-actions {
     display: flex;
@@ -186,7 +186,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--rz-accent-text);
+    color: var(--mm-accent-text);
     font-size: 13px;
     font-weight: 700;
     text-decoration: none;
@@ -214,35 +214,35 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
 
 <div class="receipt-page">
-  <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-    <div style="display:flex; align-items:center; gap:8px;">
-      <svg class="rz-i" style="color: var(--rz-accent-text); font-size:18px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg>
-      <h1 style="font-size:18px; margin:0;">إيصال الطلب</h1>
+  <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg class="mm-i" style="color: var(--mm-accent-text); font-size: 18px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg>
+      <h1 style="font-size: 18px; margin: 0;">إيصال الطلب</h1>
     </div>
-    <a href="index.html" class="back-link" style="margin-bottom:0;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg></a>
+    <a href="index.html" class="back-link" style="margin-bottom: 0;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg></a>
   </div>
 
   <div id="loadingBox">
-    <svg class="rz-i rz-spin" style="font-size:28px; margin-bottom:12px; color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
+    <svg class="mm-i mm-spin" style="font-size: 28px; margin-bottom: 12px; color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader-circle"></use></svg>
     <div>جارِ تحميل بيانات الطلب...</div>
   </div>
 
-  <div id="errorBox" style="display:none;">
+  <div id="errorBox" style="display: none;">
     <h3>تعذّر تحميل الطلب</h3>
     <p>تأكد من الرابط أو ادخل إلى صفحة طلباتي</p>
-    <a href="my-orders.html" class="receipt-btn-primary" style="display:inline-block; margin-top:14px; width:auto; padding:12px 24px;">
-      <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> طلباتي
+    <a href="my-orders.html" class="receipt-btn-primary" style="display: inline-block; margin-top: 14px; width: auto; padding: 12px 24px;">
+      <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> طلباتي
     </a>
   </div>
 
-  <div id="receiptContent" style="display:none;"></div>
+  <div id="receiptContent" style="display: none;"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -312,7 +312,7 @@ function renderReceipt(o) {
   if (o.status === 'completed') {
     iconClass = ''; iconName = 'circle-check';
     titleText = 'تم تنفيذ طلبك!';
-    subText = 'طلبك اكتمل بنجاح. شكراً لثقتك بـ RAIZEY STORE.';
+    subText = 'طلبك اكتمل بنجاح. شكراً لثقتك بـ MEEM STORE.';
   } else if (o.status === 'in_progress') {
     iconClass = ''; iconName = 'circle-check';
     titleText = 'جارِ تنفيذ طلبك';
@@ -348,7 +348,7 @@ function renderReceipt(o) {
     optionHtml = `
       <div class="receipt-row">
         <span class="label">الخيار المختار</span>
-        <span class="value" style="color: var(--rz-accent-text); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
+        <span class="value" style="color: var(--mm-accent-text); font-weight: 700;">${escapeHtml(o.selected_option.label)}</span>
       </div>
     `;
   }
@@ -357,7 +357,7 @@ function renderReceipt(o) {
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
       <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
-        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض الإيصال
+        <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض الإيصال
       </a>
     </div>
   ` : '';
@@ -370,7 +370,7 @@ function renderReceipt(o) {
   ` : '';
 
   const rejectionHtml = (o.status === 'rejected' && o.rejection_reason) ? `
-    <div style="background:rgba(179,38,30,0.08); border:1px solid rgba(179,38,30,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:13px; color:#B3261E;">
+    <div style="background: rgba(255, 107, 107,0.08); border: 1px solid rgba(255, 107, 107,0.2); border-radius: 10px; padding: 12px; margin-top: 14px; font-size: 13px; color: var(--mm-danger);">
       <strong>سبب الرفض:</strong> ${escapeHtml(o.rejection_reason)}
     </div>
   ` : '';
@@ -383,7 +383,7 @@ function renderReceipt(o) {
     </div>
 
     <div class="receipt-card">
-      <div class="receipt-card-title"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg> تفاصيل المنتج</div>
+      <div class="receipt-card-title"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg> تفاصيل المنتج</div>
 
       <div class="receipt-row">
         <span class="label">المنتج</span>
@@ -413,14 +413,14 @@ function renderReceipt(o) {
       ${transactionHtml}
       ${receiptLinkHtml}
 
-      <div class="receipt-row" style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border);">
+      <div class="receipt-row" style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border);">
         <span class="label">رقم الطلب</span>
         <span class="receipt-id">${escapeHtml(o.order_code || o.id)}</span>
       </div>
 
       <div class="receipt-row">
         <span class="label">التاريخ</span>
-        <span class="value" style="font-size:12px;">${date}</span>
+        <span class="value" style="font-size: 12px;">${date}</span>
       </div>
     </div>
 
@@ -428,10 +428,10 @@ function renderReceipt(o) {
 
     <div class="receipt-actions">
       <a href="my-orders.html" class="receipt-btn-primary">
-        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> عرض جميع طلباتي
+        <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package-open"></use></svg> عرض جميع طلباتي
       </a>
       <a href="index.html" class="receipt-btn-secondary">
-        <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> متابعة التسوق
+        <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-store"></use></svg> متابعة التسوق
       </a>
     </div>
   `;
@@ -441,6 +441,6 @@ function renderReceipt(o) {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
+  <script src="assets/js/meem-assistant.js"></script>
 </body>
 </html>

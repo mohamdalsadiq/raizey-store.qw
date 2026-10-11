@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RAIZEY STORE — مولّد صور إيصالات اختبارية لاختبار خط أنابيب الفحص الحقيقي.
+MEEM STORE — مولّد صور إيصالات اختبارية لاختبار خط أنابيب الفحص الحقيقي.
 
 يُنشئ لقطات شاشة (PNG) تحاكي إشعارات تحويل:
   bankak.png  — بنكك (بنك الخرطوم)
@@ -17,7 +17,7 @@ RAIZEY STORE — مولّد صور إيصالات اختبارية لاختبا�
     python3 scripts/live_receipt_fixtures.py <output_dir>
 
 المتطلبات: pillow, arabic-reshaper, python-bidi + خط عربي TTF (يُمرَّر
-بالوسيط الثاني أو متغير البيئة RAIZEY_FIXTURE_FONT).
+بالوسيط الثاني أو متغير البيئة MEEM_FIXTURE_FONT).
 """
 import datetime
 import os
@@ -33,7 +33,7 @@ from bidi.algorithm import get_display
 # الأشكال و Pillow بدون libraqm لا يطبق تشكيل GSUB. خط ناقص التغطية يرسم
 # مربعات فارغة فتقرأ Gemini نصاً مشوّهاً (مثل "فايز الصا") ويفشل مطابقة
 # اسم المستفيد. المقاس الفعلي: NotoNaskh = 141/141، Amiri = 140، Cairo = 89.
-FONT_PATH = os.environ.get("RAIZEY_FIXTURE_FONT", "/tmp/livecheck/NotoNaskh.ttf")
+FONT_PATH = os.environ.get("MEEM_FIXTURE_FONT", "/tmp/livecheck/NotoNaskh.ttf")
 
 # حساب الاستقبال الحقيقي لمتجر رايزي في وسيلة الدفع "بنكك"
 # (payment_methods.account_name / bin_prefixes) — يجعل الإيصال الاختباري
@@ -238,14 +238,14 @@ def main():
     out = sys.argv[1] if len(sys.argv) > 1 else "/tmp/livecheck/fixtures"
     os.makedirs(out, exist_ok=True)
     if not os.path.exists(FONT_PATH):
-        sys.exit(f"Arabic TTF not found: {FONT_PATH} (set RAIZEY_FIXTURE_FONT)")
+        sys.exit(f"Arabic TTF not found: {FONT_PATH} (set MEEM_FIXTURE_FONT)")
     bankak(os.path.join(out, "bankak.png"))
     ocash(os.path.join(out, "ocash.png"))
     fawry(os.path.join(out, "fawry.png"))
     # نسخة ثانية من إيصال أوكاش بنفس الحقول (نفس رقم الحركة والمبلغ) لكن ببصمة
     # صورة مختلفة: الطبقات التي تمنع إعادة الاستخدام (receipt_hash) تمنع إعادة
     # فحص نفس الصورة، فنحتاج بصمة جديدة للتحقق الحقيقي من مسار الفحص الكامل.
-    if os.environ.get("RAIZEY_FIXTURE_OCASH_VARIANT"):
+    if os.environ.get("MEEM_FIXTURE_OCASH_VARIANT"):
         ocash(os.path.join(out, "ocash_variant.png"), accent=(96, 44, 152),
               extra_footer="نسخة اختبار")
         ocash_split(os.path.join(out, "ocash_split.png"))

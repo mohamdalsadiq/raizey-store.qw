@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,7 +20,7 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الإشعارات — RAIZEY STORE</title>
+<title>الإشعارات — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -28,27 +28,27 @@
 /* بطاقات الإشعارات — تصميم منظم (المهمة 36) */
 .notif-card {
   display: flex; gap: 14px; align-items: flex-start;
-  background: var(--card, #fffdf8);
-  border: 1px solid var(--border, #eee3d0);
+  background: var(--card, var(--mm-surface));
+  border: 1px solid var(--mm-border, #1B3AA0);
   border-radius: 18px; padding: 16px; margin-bottom: 12px;
   box-shadow: 0 2px 10px rgba(120, 80, 20, .05);
 }
-.notif-card.unread { border-color: var(--rz-accent-text); box-shadow: 0 0 0 1px var(--primary), 0 4px 14px rgba(200, 120, 30, .12); }
+.notif-card.unread { border-color: var(--mm-accent-text); box-shadow: 0 0 0 1px var(--primary), 0 4px 14px rgba(200, 120, 30, .12); }
 .notif-icon {
   flex: 0 0 46px; width: 46px; height: 46px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.notif-icon.success { background: rgba(22, 163, 74, .12); color: #16794F; }
-.notif-icon.failed  { background: rgba(220, 38, 38, .10); color: #dc2626; }
-.notif-icon.pending { background: rgba(217, 119, 6, .12); color: #d97706; }
-.notif-icon.info    { background: rgba(255,101,0, .10); color: var(--rz-accent-text); }
+.notif-icon.success { background: rgba(22, 163, 74, .12); color: var(--mm-success); }
+.notif-icon.failed  { background: rgba(220, 38, 38, .10); color: var(--mm-danger); }
+.notif-icon.pending { background: rgba(217, 119, 6, .12); color: var(--mm-warning); }
+.notif-icon.info    { background: rgba(255, 212, 0, .10); color: var(--mm-accent-text); }
 .notif-body { flex: 1; min-width: 0; }
 .notif-title { font-weight: 800; font-size: 15.5px; color: var(--ink); margin-bottom: 6px; }
 .notif-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .notif-order {
   font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
   direction: ltr; unicode-bidi: embed;
-  background: rgba(200, 120, 30, .10); color: var(--rz-accent-text);
+  background: rgba(200, 120, 30, .10); color: var(--mm-accent-text);
   border: 1px solid rgba(200, 120, 30, .25);
   padding: 2px 10px; border-radius: 8px;
 }
@@ -64,19 +64,19 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
 <body>
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header">
     <h1>الإشعارات</h1>
     <a href="index.html" class="back-link">→ المتجر</a>
   </div>
-  <div id="notifList"><div style="text-align:center; padding:40px 0; color:var(--text-muted);">جارِ التحميل...</div></div>
+  <div id="notifList"><div style="text-align: center; padding: 40px 0; color: var(--text-muted);">جارِ التحميل...</div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -119,7 +119,7 @@ function notifStatus(n) {
 function render(notifications) {
   const container = document.getElementById('notifList');
   if (notifications.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--text-muted);"><h3 style="color:var(--ink); margin-bottom:8px;">لا توجد إشعارات بعد</h3></div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 40px 20px; color: var(--text-muted);"><h3 style="color: var(--ink); margin-bottom: 8px;">لا توجد إشعارات بعد</h3></div>`;
     return;
   }
 
@@ -149,6 +149,6 @@ function render(notifications) {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
+  <script src="assets/js/meem-assistant.js"></script>
 </body>
 </html>

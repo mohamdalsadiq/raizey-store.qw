@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * RAIZEY STORE — one-shot Font Awesome → Lucide sprite migration.
+ * MEEM STORE — one-shot Font Awesome → Lucide sprite migration.
  *
  * Rewrites `<i class="fas fa-x" ...></i>` into
- *   `<svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-lucide-name"></use></svg>`
+ *   `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-lucide-name"></use></svg>`
  * across every page and JS module, drops the Font Awesome CDN <link>, and keeps
  * layout-affecting attributes (style, id, extra classes) intact.
  *
@@ -35,7 +35,7 @@ function convertTag(tag) {
   const resolved = lucideName(iconTokens[0]);
   const rest = classes.filter((c) => !iconTokens.includes(c) && !SKIP.has(c));
   const spinning = classes.some((c) => SKIP.has(c));
-  const outClasses = ["rz-i", ...rest, ...(spinning ? ["rz-spin"] : [])].join(" ");
+  const outClasses = ["mm-i", ...rest, ...(spinning ? ["mm-spin"] : [])].join(" ");
 
   const restAttrs = attrs
     .replace(/\bclass="[^"]*"/, "")
@@ -51,9 +51,9 @@ function convertTag(tag) {
 const MODIFIERS = ["fas", "far", "fab", "fal", "fad", "fa-solid", "fa-regular", "fa-brands"];
 
 function cleanup(text) {
-  let out = text.replace(/(<svg[^>]*class="rz-i[^"]*"[^>]*>[\s\S]*?<\/svg>)\s*<\/i>/g, "$1");
+  let out = text.replace(/(<svg[^>]*class="mm-i[^"]*"[^>]*>[\s\S]*?<\/svg>)\s*<\/i>/g, "$1");
   out = out.replace(/class="([^"]*)"/g, (match, classes) => {
-    if (!/\brz-i\b/.test(classes)) return match;
+    if (!/\bmm-i\b/.test(classes)) return match;
     const cleaned = classes.split(/\s+/).filter((c) => c && !MODIFIERS.includes(c));
     return `class="${cleaned.join(" ")}"`;
   });

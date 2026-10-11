@@ -1,5 +1,5 @@
 // =========================================================
-// RAIZEY STORE — Supabase Client
+// MEEM STORE — Supabase Client
 // =========================================================
 
 // =========================================================
@@ -100,7 +100,7 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      storageKey: 'raizey-auth'
+      storageKey: 'raizey-auth' // legacy key kept on purpose: changing it signs every customer out
     },
     global: {
       headers: { 'x-client-info': 'raizey-store' }
@@ -122,11 +122,11 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
     });
   } catch (_) { /* لا نكسر تحميل الصفحة */ }
 } else {
-  devWarn('[RAIZEY] Supabase SDK not loaded');
+  devWarn('[MEEM] Supabase SDK not loaded');
   document.addEventListener('DOMContentLoaded', () => {
-    if (document.querySelector('.raizey-offline-banner')) return;
+    if (document.querySelector('.meem-offline-banner')) return;
     const banner = document.createElement('div');
-    banner.className = 'raizey-offline-banner';
+    banner.className = 'meem-offline-banner';
     banner.setAttribute('role', 'alert');
     banner.textContent = 'تعذّر الاتصال بالخادم. تحقّق من الإنترنت ثم أعد تحميل الصفحة.';
     document.body.prepend(banner);
@@ -156,7 +156,7 @@ if (window.Sentry && typeof window.Sentry.onLoad === 'function') {
 }
 if (supabaseClient) {
   supabaseClient.auth.getSession().then(({ data }) => {
-    const uid = data && data.session && data.session.user ? data.session.user.id : null;
+    const uid = data && data.session && data.session.user ? data.session.user.id:  null;
     if (hasSentryUserApi() && uid) window.Sentry.setUser({ id: uid });
   }).catch(() => {});
   supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -182,7 +182,7 @@ async function getCachedData(key, fetchFn, ttlSeconds = 300) {
       sessionStorage.removeItem(cacheKey);
     }
   } catch (e) {
-    devWarn('[RAIZEY] cache read error');
+    devWarn('[MEEM] cache read error');
   }
 
   const data = await fetchFn();
@@ -193,7 +193,7 @@ async function getCachedData(key, fetchFn, ttlSeconds = 300) {
       expires: Date.now() + ttlSeconds * 1000
     }));
   } catch (e) {
-    devWarn('[RAIZEY] cache write error');
+    devWarn('[MEEM] cache write error');
   }
 
   return data;
@@ -217,7 +217,7 @@ async function getExchangeRate() {
 
     return rate * (1 + margin / 100);
   } catch (e) {
-    devWarn('[RAIZEY] getExchangeRate error:', e);
+    devWarn('[MEEM] getExchangeRate error: ', e);
     return 0;
   }
 }
@@ -245,7 +245,7 @@ async function checkDuplicateReceipt(table, hashOrRef) {
 
     if (dataHash) return true;
   } catch (e) {
-    devWarn('[RAIZEY] checkDuplicateReceipt (hash) error:', e);
+    devWarn('[MEEM] checkDuplicateReceipt (hash) error: ', e);
   }
 
   // 2. فحص بعمود transaction_reference احتياطياً إن وجد
@@ -311,7 +311,7 @@ function sanitizeUrl(value) {
   if (!value) return '';
   try {
     const url = new URL(String(value), window.location.origin);
-    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    if (!['http: ', 'https:'].includes(url.protocol)) return '';
     return url.href;
   } catch (error) {
     return '';
@@ -439,17 +439,17 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
   const NEEDS_REVIEW = { passed: false, ocr_status: 'needs_review', amount_verified: false };
   const canDelegate =
     typeof window !== 'undefined' &&
-    window.RaizeyReceiptPipeline &&
-    typeof window.RaizeyReceiptPipeline.analyze === 'function' &&
+    window.MeemReceiptPipeline &&
+    typeof window.MeemReceiptPipeline.analyze === 'function' &&
     (typeof File !== 'undefined' && fileOrUrl instanceof Blob);
 
   if (!canDelegate) {
-    devWarn('[RAIZEY receipt] verifyReceiptContent: Edge Function غير متاحة — مراجعة يدوية (fail-closed)');
+    devWarn('[MEEM receipt] verifyReceiptContent: Edge Function غير متاحة — مراجعة يدوية (fail-closed)');
     return NEEDS_REVIEW;
   }
   try {
     if (statusCallback) statusCallback('جارِ فحص صورة الإيصال على الخادم...');
-    const analysis = await window.RaizeyReceiptPipeline.analyze(fileOrUrl, {
+    const analysis = await window.MeemReceiptPipeline.analyze(fileOrUrl, {
       manualRef: transactionRef || '',
       expectedAmount: Number(expectedAmountSDG) || 0,
       onStatus: statusCallback || undefined
@@ -466,7 +466,55 @@ async function verifyReceiptContent(fileOrUrl, statusCallback, transactionRef, e
       message:         analysis.message || ''
     };
   } catch (e) {
-    devWarn('[RAIZEY receipt] Edge Function delegate error — مراجعة يدوية:', e && e.message);
+    devWarn('[MEEM receipt] Edge Function delegate error — مراجعة يدوية:', e && e.message);
     return NEEDS_REVIEW;
+  }
+}
+
+
+// =========================================================
+// بيانات التواصل العامة — رقم واتساب الدعم
+// المصدر: جدول settings (المفتاح whatsapp_number) مع قيمة احتياطية
+// مطابقة للرقم الذي كان مكتوباً يدوياً سابقاً.
+// =========================================================
+const DEFAULT_WHATSAPP = '249901815039';
+let _storeWhatsappCache = null;
+
+async function getStoreWhatsapp() {
+  if (_storeWhatsappCache) return _storeWhatsappCache;
+  try {
+    const { data, error } = await requireClient()
+      .from('settings')
+      .select('value')
+      .eq('key', 'whatsapp_number')
+      .maybeSingle();
+    const value = (!error && data && data.value) ? String(data.value).replace(/[^0-9]/g, '') : '';
+    _storeWhatsappCache = value || DEFAULT_WHATSAPP;
+  } catch (e) {
+    devWarn('[MEEM] getStoreWhatsapp error: ', e);
+    _storeWhatsappCache = DEFAULT_WHATSAPP;
+  }
+  return _storeWhatsappCache;
+}
+
+// كل عنصر يحمل data-mm-whatsapp-base="https://wa.me/__NUMBER__" يُحدَّث تلقائياً.
+function applyStoreWhatsapp(root) {
+  const scope = root || document;
+  const nodes = scope.querySelectorAll('[data-mm-whatsapp-base]');
+  if (!nodes.length) return;
+  getStoreWhatsapp().then((number) => {
+    nodes.forEach((el) => {
+      const tpl = el.getAttribute('data-mm-whatsapp-base') || '';
+      el.setAttribute('href', tpl.replace('__NUMBER__', number));
+    });
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.MeemStore = Object.assign(window.MeemStore || {}, { getWhatsapp: getStoreWhatsapp });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { applyStoreWhatsapp(); });
+  } else {
+    applyStoreWhatsapp();
   }
 }

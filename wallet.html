@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* RAZIEY theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
 
 
 
-<meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17100C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
 
 
@@ -20,30 +20,30 @@
 <meta charset="UTF-8">
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>محفظتي — RAIZEY STORE</title>
+<title>محفظتي — MEEM STORE</title>
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 
 <style>
-  .receipt-scan-status { margin-top:8px; color:var(--text-muted); font-size:12px; line-height:1.7; }
-  .receipt-scan-report { display:none; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; color:var(--text-muted); font-size:12px; line-height:1.8; background:var(--bg-card); }
-  .receipt-scan-report.is-success { border-color: var(--rz-accent-text); }
-  .receipt-scan-report.is-review { border-color:#A85B00; }
-  .receipt-scan-report.is-error { border-color:var(--danger); color:var(--danger); }
-  .receipt-file-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tx-ref-row { display:flex; gap:8px; align-items:stretch; }
-  .tx-ref-row input { flex:1; }
+  .receipt-scan-status { margin-top: 8px; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+  .receipt-scan-report { display: none; margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; color: var(--text-muted); font-size: 12px; line-height: 1.8; background: var(--bg-card); }
+  .receipt-scan-report.is-success { border-color: var(--mm-accent-text); }
+  .receipt-scan-report.is-review { border-color: var(--mm-warning); }
+  .receipt-scan-report.is-error { border-color: var(--danger); color: var(--danger); }
+  .receipt-file-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-ref-row { display: flex; gap: 8px; align-items: stretch; }
+  .tx-ref-row input { flex: 1; }
   #saveTxRefBtn {
-    flex-shrink:0; min-width:84px; padding:0 20px; border-radius:10px; border:none;
-    background:var(--primary); color:var(--ink); font-weight:800; font-size:14px;
-    cursor:pointer; transition:opacity .2s ease;
+    flex-shrink: 0; min-width: 84px; padding: 0 20px; border-radius: 10px; border: none;
+    background: var(--primary); color: var(--ink); font-weight: 800; font-size: 14px;
+    cursor: pointer; transition: opacity .2s ease;
   }
-  #saveTxRefBtn:hover { opacity:.9; }
-  #saveTxRefBtn:active { opacity:.8; }
-  #saveTxRefBtn:disabled { opacity:.6; cursor:not-allowed; }
-  #transactionRefInput:disabled { opacity:.65; cursor:not-allowed; }
-  .field-hint { font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.6; }
+  #saveTxRefBtn:hover { opacity: .9; }
+  #saveTxRefBtn:active { opacity: .8; }
+  #saveTxRefBtn:disabled { opacity: .6; cursor: not-allowed; }
+  #transactionRefInput:disabled { opacity: .65; cursor: not-allowed; }
+  .field-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
 </style>
 
 
@@ -54,12 +54,12 @@
 
 
 
-<!-- RAIZEY UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/raizey.css">
-<script src="assets/js/raizey-ui.js"></script>
+<!-- MEEM UI system (tokens + components + icons + behaviour) -->
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
 </head>
-<body class="rz-has-bottom-nav">
-<a class="rz-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+<body class="mm-has-bottom-nav">
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
 
 <div class="orders-page" id="mainContent" tabindex="-1">
   <div class="page-header">
@@ -72,15 +72,15 @@
     <div class="wallet-balance-amount" id="balanceAmount">...</div>
   </div>
 
-  <button class="topup-toggle-btn" id="toggleFormBtn"><svg class="rz-i" style="margin-left:7px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> اطلب شحن رصيد</button>
+  <button class="topup-toggle-btn" id="toggleFormBtn"><svg class="mm-i" style="margin-left: 7px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg> اطلب شحن رصيد</button>
 
-  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px;">
-    <div class="section-label" style="margin-top:0;"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gift"></use></svg> عندك كود هدية؟</div>
-    <div style="display:flex; gap:8px;">
-      <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--ink); font-family:var(--font-mono); font-size:13px;">
-      <button id="redeemGiftBtn" style="padding:0 18px; border-radius:10px; background:var(--primary); color:var(--ink); font-weight:800; font-size:13px;">استبدال</button>
+  <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 20px;">
+    <div class="section-label" style="margin-top: 0;"><svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gift"></use></svg> عندك كود هدية؟</div>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="giftCodeInput" placeholder="اكتب الكود هنا" style="flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: var(--font-mono); font-size: 13px;">
+      <button id="redeemGiftBtn" style="padding: 0 18px; border-radius: 10px; background: var(--primary); color: var(--ink); font-weight: 800; font-size: 13px;">استبدال</button>
     </div>
-    <div id="giftMessage" style="font-size:12px; margin-top:8px;"></div>
+    <div id="giftMessage" style="font-size: 12px; margin-top: 8px;"></div>
   </div>
 
   <div class="topup-form" id="topupForm">
@@ -96,7 +96,7 @@
       </select>
     </div>
 
-    <div id="methodDetails" style="font-size:13px; color:var(--text-muted); margin-bottom:14px;"></div>
+    <div id="methodDetails" style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;"></div>
 
     <!-- الخطوة 1: رقم العملية + تحقق مبكر قبل رفع الإيصال -->
     <div class="field">
@@ -106,41 +106,41 @@
         <button type="button" id="saveTxRefBtn">تحقق</button>
       </div>
       <div class="field-hint">اكتب رقم العملية كما ورد في رسالة التحويل ثم اضغط "تحقق" — لن تظهر خطوة رفع الإيصال إلا بعد نجاح التحقق ومنع التكرار.</div>
-      <div id="txRefMessage" style="font-size:12px; margin-top:6px; font-weight:600;"></div>
+      <div id="txRefMessage" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
     </div>
 
     <!-- الخطوة 2: رفع صورة الإيصال (تظهر بعد نجاح التحقق من رقم العملية) -->
-    <div id="receiptStep" style="display:none; margin-top:14px;">
-      <label style="display:block; font-size:13px; font-weight:700; margin-bottom:6px;">الخطوة 2 — صورة إشعار التحويل *</label>
+    <div id="receiptStep" style="display: none; margin-top: 14px;">
+      <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">الخطوة 2 — صورة إشعار التحويل *</label>
       <!-- قبول صور الإيصال فقط (JPG/PNG/WEBP) -->
       <div class="file-upload" id="fileUploadBox">
-        <span class="receipt-file-label" id="receiptFileLabel"><svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)</span>
-        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;">
+        <span class="receipt-file-label" id="receiptFileLabel"><svg class="mm-i" style="margin-left: 6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)</span>
+        <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
       </div>
-      <div class="field-hint" style="margin-top:6px;">الفحص الذكي يقبل JPG / PNG / WEBP فقط، وبحد أقصى 5MB.</div>
+      <div class="field-hint" style="margin-top: 6px;">الفحص الذكي يقبل JPG / PNG / WEBP فقط، وبحد أقصى 5MB.</div>
       <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
-      <label style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin:10px 0; cursor:pointer; line-height:1.7;">
-        <input type="checkbox" id="geminiConsentWallet" style="margin-top:4px; flex-shrink:0;">
-        <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي. بدون الموافقة سيُراجع إيصالك يدوياً. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">سياسة الخصوصية</a></span>
+      <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
+        <input type="checkbox" id="geminiConsentWallet" style="margin-top: 4px; flex-shrink: 0;">
+        <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي. بدون الموافقة سيُراجع إيصالك يدوياً. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
       </label>
-      <div id="fileError" style="font-size:12px; color:var(--danger); margin-top:6px;"></div>
+      <div id="fileError" style="font-size: 12px; color: var(--danger); margin-top: 6px;"></div>
       <div id="receiptScanStatus" class="receipt-scan-status"></div>
       <div id="receiptScanReport" class="receipt-scan-report"></div>
     </div>
 
-    <div class="form-error" id="formError" style="margin-top:10px;"></div>
+    <div class="form-error" id="formError" style="margin-top: 10px;"></div>
 
-    <button class="auth-btn" id="submitTopupBtn" style="margin-top:10px;">إرسال طلب الشحن</button>
+    <button class="auth-btn" id="submitTopupBtn" style="margin-top: 10px;">إرسال طلب الشحن</button>
   </div>
 
-  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg> سجل الشحن</div>
+  <div class="section-label"><svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg> سجل الشحن</div>
   <div id="topupsList">
-    <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
+    <div style="text-align: center; padding: 30px 0; color: var(--text-muted);">جارِ التحميل...</div>
   </div>
 
-  <div class="section-label"><svg class="rz-i" style="color: var(--rz-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right-left"></use></svg> حركات الرصيد</div>
+  <div class="section-label"><svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right-left"></use></svg> حركات الرصيد</div>
   <div id="transactionsList">
-    <div style="text-align:center; padding:30px 0; color:var(--text-muted);">جارِ التحميل...</div>
+    <div style="text-align: center; padding: 30px 0; color: var(--text-muted);">جارِ التحميل...</div>
   </div>
 </div>
 
@@ -198,15 +198,15 @@ async function init() {
     const box = document.getElementById('methodDetails');
     if (!method) { box.innerHTML = ''; return; }
     box.innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
         <span>اسم الحساب: ${escapeHtml(method.account_name || '')}</span>
         <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_name || '')}">نسخ</button>
       </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
         <span>رقم الحساب: ${escapeHtml(method.account_number || '')}</span>
         <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_number || '')}">نسخ</button>
       </div>
-      ${method.instructions ? `<div style="margin-top:6px;">${escapeHtml(method.instructions)}</div>` : ''}
+      ${method.instructions ? `<div style="margin-top: 6px;">${escapeHtml(method.instructions)}</div>` : ''}
     `;
     box.querySelectorAll('.copy-account-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -249,7 +249,7 @@ async function init() {
     if (!validation.valid) {
       fileInput.value = '';
       receiptFile = null;
-      document.getElementById('receiptFileLabel').innerHTML = '<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
+      document.getElementById('receiptFileLabel').innerHTML = '<svg class="mm-i" style="margin-left: 6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
       fileBox.classList.remove('has-file');
       fileError.textContent = validation.message;
       return;
@@ -303,7 +303,7 @@ function resetWalletTxRef(message) {
   if (fileBox) {
     fileBox.classList.remove('has-file');
     const lbl = document.getElementById('receiptFileLabel');
-    if (lbl) lbl.innerHTML = '<svg class="rz-i" style="margin-left:6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
+    if (lbl) lbl.innerHTML = '<svg class="mm-i" style="margin-left: 6px;" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-cloud-upload"></use></svg> اضغط لرفع صورة الإيصال (JPG / PNG / WEBP — حتى 5MB)';
   }
   resetReceiptScan('');
   if (refMsg) { refMsg.style.color = 'var(--text-muted)'; refMsg.textContent = message || ''; }
@@ -325,8 +325,8 @@ async function verifyWalletTxRef() {
   }
 
   const raw = refInput.value.trim();
-  const norm = window.RaizeyReceiptPipeline
-    ? RaizeyReceiptPipeline.normalizeRef(raw)
+  const norm = window.MeemReceiptPipeline
+    ? MeemReceiptPipeline.normalizeRef(raw)
     : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
   if (norm.length < 6) {
@@ -374,7 +374,7 @@ async function verifyWalletTxRef() {
     refMsg.textContent = walletTxRefCheckError(e);
     savedWalletTxRef = null;
     receiptStep.style.display = 'none';
-    console.warn('[RAIZEY] wallet check_tx_ref_available failed:', e?.message || e);
+    console.warn('[MEEM] wallet check_tx_ref_available failed:', e?.message || e);
     return;
   }
 
@@ -434,7 +434,7 @@ function renderWalletScanReport(analysis, amount, manualRef) {
   report.className = 'receipt-scan-report ' + (technicalReview ? 'is-review' : receiptAnalysisAllowed(analysis) ? 'is-success' : 'is-error');
   report.style.display = 'block';
   report.hidden = false;
-  report.innerHTML = `<strong>${window.rzIconMarkup(technicalReview ? 'clock' : receiptAnalysisAllowed(analysis) ? 'circle-check' : 'circle-x')} ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top:7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
+  report.innerHTML = `<strong>${window.rzIconMarkup(technicalReview ? 'clock' : receiptAnalysisAllowed(analysis) ? 'circle-check' : 'circle-x')} ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top: 7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
 }
 
 async function runWalletReceiptScan() {
@@ -465,7 +465,7 @@ async function runWalletReceiptScan() {
     return;
   }
   try {
-    const analysis = await RaizeyReceiptPipeline.analyze(receiptFile, {
+    const analysis = await MeemReceiptPipeline.analyze(receiptFile, {
       expectedAmount: amount,
       manualRef,
       expectedAccount: method ? method.account_number : null,
@@ -474,7 +474,7 @@ async function runWalletReceiptScan() {
       // البيانات هناك لا من المتصفح.
       expectedMethodId: method ? method.id : null,
       onStatus: (text) => { status.textContent = text; },
-      onServerError: (error) => { status.textContent = 'تعذّر الفحص الخادمي؛ لم يُنشأ أي طلب. أعد المحاولة.'; console.warn('[RAIZEY] wallet edge scan failed:', error?.message || error); }
+      onServerError: (error) => { status.textContent = 'تعذّر الفحص الخادمي؛ لم يُنشأ أي طلب. أعد المحاولة.'; console.warn('[MEEM] wallet edge scan failed:', error?.message || error); }
     });
     receiptAnalysis = analysis;
     receiptScanContext = { amount, manualRef };
@@ -491,7 +491,7 @@ async function runWalletReceiptScan() {
     receiptAnalysis = null;
     status.textContent = 'تعذر تشغيل الفحص الذكي؛ أعد اختيار الصورة.';
     errorBox.textContent = 'تعذر فحص الإيصال الآن. لم يُرسل أي طلب؛ حاول مرة أخرى.';
-    console.warn('[RAIZEY] wallet receipt pipeline error:', error?.message || error);
+    console.warn('[MEEM] wallet receipt pipeline error:', error?.message || error);
   }
 }
 
@@ -601,7 +601,7 @@ async function loadTransactions() {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد حركات على رصيدك بعد</div>`;
+      container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">لا توجد حركات على رصيدك بعد</div>`;
       return;
     }
 
@@ -623,13 +623,13 @@ async function loadTransactions() {
               <div class="order-date">${escapeHtml(date)}</div>
               ${balanceAfter}
             </div>
-            <span style="font-family:var(--font-mono); font-weight:700; color:${color};">${sign}${formatSDG(Math.abs(Number(tx.amount) || 0))}</span>
+            <span style="font-family: var(--font-mono); font-weight: 700; color:${color};">${sign}${formatSDG(Math.abs(Number(tx.amount) || 0))}</span>
           </div>
         </div>
       `;
     }).join('');
   } catch (e) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">تعذّر تحميل حركات الرصيد.</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">تعذّر تحميل حركات الرصيد.</div>`;
   }
 }
 
@@ -649,7 +649,7 @@ async function loadPaymentMethods() {
       select.appendChild(opt);
     });
   } catch (e) {
-    console.error('[RAIZEY] loadPaymentMethods error:', e);
+    console.error('[MEEM] loadPaymentMethods error:', e);
   }
 }
 
@@ -664,7 +664,7 @@ async function loadTopups() {
     const container = document.getElementById('topupsList');
 
     if (error || !topups || topups.length === 0) {
-      container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">لا يوجد طلبات شحن بعد</div>`;
+      container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">لا يوجد طلبات شحن بعد</div>`;
       return;
     }
 
@@ -688,7 +688,7 @@ async function loadTopups() {
       `;
     }).join('');
   } catch (e) {
-    document.getElementById('topupsList').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">تعذّر تحميل سجل الشحن.</div>`;
+    document.getElementById('topupsList').innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">تعذّر تحميل سجل الشحن.</div>`;
   }
 }
 
@@ -865,7 +865,7 @@ async function submitTopup() {
   } catch (e) {
     try { await supabaseClient.storage.from('receipts').remove([filePath]); } catch (_) {}
     const errMsg = e.message || String(e);
-    devWarn('[RAIZEY] create_wallet_topup_from_receipt error:', errMsg);
+    devWarn('[MEEM] create_wallet_topup_from_receipt error:', errMsg);
     errorBox.textContent = walletReceiptErrorMessage(e);
     submitBtn.disabled = false;
     submitBtn.textContent = 'إرسال طلب الشحن';
@@ -891,13 +891,13 @@ async function submitTopup() {
 
 init();
 </script>
-  <script src="assets/js/raizey-assistant.js"></script>
-<nav class="rz-bottom-nav" aria-label="التنقل السريع">
-  <a href="index.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
-  <a href="cart.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
-  <a href="my-orders.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
-  <a href="wallet.html" class="is-active" aria-current="page"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
-  <a href="account.html"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+  <script src="assets/js/meem-assistant.js"></script>
+<nav class="mm-bottom-nav" aria-label="التنقل السريع">
+  <a href="index.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="cart.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="wallet.html" class="is-active" aria-current="page"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-wallet"></use></svg><span>المحفظة</span></a>
+  <a href="account.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
 </nav>
 </body>
 </html>

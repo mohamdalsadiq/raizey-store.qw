@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RAIZEY STORE — browser smoke test for the UI system.
+ * MEEM STORE — browser smoke test for the UI system.
  *
  * Renders every page in a real (headless) browser at mobile and desktop widths and
  * asserts the things a static check cannot prove:
@@ -110,7 +110,7 @@ async function auditPage(browser, viewport, file) {
       out.height = document.documentElement.scrollHeight;
       out.bg = getComputedStyle(document.body).backgroundColor;
       const allowed = new Set(ids);
-      document.querySelectorAll("svg.rz-i").forEach((svg) => {
+      document.querySelectorAll("svg.mm-i").forEach((svg) => {
         // icons inside closed menus/sheets are legitimately unrendered
         if (typeof svg.checkVisibility === "function" && !svg.checkVisibility()) return;
         const use = svg.querySelector("use");
@@ -123,7 +123,7 @@ async function auditPage(browser, viewport, file) {
       document.querySelectorAll("a, button, [role=button]").forEach((el) => {
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) return;
-        if (el.closest(".rz-bottom-nav") || el.closest(".rz-toasts")) return;
+        if (el.closest(".mm-bottom-nav") || el.closest(".mm-toasts")) return;
         // WCAG 2.5.8 exception: links inline inside a sentence are sized by the text
         if (getComputedStyle(el).display === "inline") return;
         if (r.height < minTap && r.width > 24) out.smallTargets.push((el.textContent || el.className || el.tagName).trim().slice(0, 26) + " h=" + Math.round(r.height));

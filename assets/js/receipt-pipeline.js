@@ -1,5 +1,5 @@
 /*
- * RAIZEY STORE — Server-only receipt verification pipeline.
+ * MEEM STORE — Server-only receipt verification pipeline.
  * OCR, hashing and financial decisions stay inside the authenticated
  * Supabase Edge Function. The browser only prepares the image and displays
  * the returned result.
@@ -202,7 +202,7 @@
     }
   }
 
-  root.RaizeyReceiptPipeline = {
+  root.MeemReceiptPipeline = {
     fileToBase64,
     validateImageFile,
     compressForServer,
