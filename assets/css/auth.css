@@ -828,3 +828,11 @@ img.flag {
   .country-btn { min-width: 132px; padding-inline: 9px; font-size: 12.5px; }
   .country-pop { width: min(300px, calc(100vw - 36px)); }
 }
+
+.auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
+
+.auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
+/* light theme uses the re-inked lockup (navy wordmark, deeper gold) */
+.brand-lockup--light { display: none; }
+[data-theme="light"] .brand-lockup--dark { display: none; }
+[data-theme="light"] .brand-lockup--light { display: block; }

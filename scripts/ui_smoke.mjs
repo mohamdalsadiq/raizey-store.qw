@@ -7,7 +7,7 @@
  *   · the page boots with no console error / no failed asset request
  *   · layout never overflows horizontally (mobile-first regression guard)
  *   · every sprite icon resolves to a real symbol in the sprite
- *   · the Paper & Ember palette is actually applied (background token)
+ *   · the MEEM palette is actually applied (background token: dark #061A5C / light #F2F5FF)
  *   · interactive targets stay >= 40px on mobile
  *   · prefers-reduced-motion is honoured
  *
@@ -136,7 +136,7 @@ async function auditPage(browser, viewport, file) {
     if (audit.badIcons.length) problems.push(`unresolved icons: ${[...new Set(audit.badIcons)].slice(0, 5).join(", ")}`);
     if (audit.smallTargets.length) problems.push(`small tap targets: ${audit.smallTargets.slice(0, 3).join(" | ")}`);
     if (audit.missingAlt) problems.push(`${audit.missingAlt} <img> without alt`);
-    if (!/rgb\(255, 248, 240\)|rgb\(23, 16, 12\)|rgba\(0, 0, 0, 0\)/.test(audit.bg)) problems.push(`unexpected body background ${audit.bg}`);
+    if (!/rgb\(242, 245, 255\)|rgb\(6, 26, 92\)|rgba\(0, 0, 0, 0\)/.test(audit.bg)) problems.push(`unexpected body background ${audit.bg}`);
     if (consoleErrors.length) problems.push(`console: ${[...new Set(consoleErrors)].slice(0, 2).join(" / ")}`);
     const assetFailures = [...new Set(failed.filter((u) => u.startsWith("/assets") || u.startsWith("assets")))];
     if (assetFailures.length) problems.push(`failed assets: ${assetFailures.slice(0, 3).join(", ")}`);

@@ -1048,3 +1048,15 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 :root[data-theme="light"] .section-label,
 :root[data-theme="light"] .hero-rate { color: var(--mm-accent-text); }
 .mm-toast__body, .mm-hint, .mm-counter { color: var(--mm-text-muted); }
+
+/* Brand lockups (assets/img/meem-*) — see scripts/build_brand_assets.py */
+.logo .brand-lockup { display: block; width: auto; height: 40px; }
+.logo:hover .brand-lockup { filter: brightness(1.06); }
+
+/* Brand lockups (assets/img/meem-*) — see scripts/build_brand_assets.py */
+.logo .brand-lockup { display: block; width: auto; height: 40px; }
+.logo:hover .brand-lockup--dark { filter: brightness(1.06); }
+/* light theme uses the re-inked lockup (navy wordmark, deeper gold) */
+.brand-lockup--light { display: none; }
+[data-theme="light"] .brand-lockup--dark { display: none; }
+[data-theme="light"] .brand-lockup--light { display: block; }

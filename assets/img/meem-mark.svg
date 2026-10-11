@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="MEEM STORE">
+  <defs>
+    <linearGradient id="mk-steel" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#F4F8FF"/><stop offset="0.42" stop-color="#C3D2EC"/>
+      <stop offset="0.72" stop-color="#93A8CE"/><stop offset="1" stop-color="#5A6E96"/>
+    </linearGradient>
+    <linearGradient id="mk-steel2" x1="0.9" y1="0" x2="0.1" y2="1">
+      <stop offset="0" stop-color="#F4F8FF"/><stop offset="0.5" stop-color="#93A8CE"/>
+      <stop offset="1" stop-color="#5A6E96"/>
+    </linearGradient>
+    <linearGradient id="mk-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF3B0"/><stop offset="0.5" stop-color="#FFD400"/>
+      <stop offset="1" stop-color="#E6A200"/>
+    </linearGradient>
+    <linearGradient id="mk-ring" x1="0" y1="0.2" x2="1" y2="0.8">
+      <stop offset="0" stop-color="#F4F8FF"/><stop offset="0.35" stop-color="#087BFF"/>
+      <stop offset="0.68" stop-color="#FFD400"/><stop offset="1" stop-color="#E6A200"/>
+    </linearGradient>
+    <linearGradient id="mk-word" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#E7EEFC"/>
+      <stop offset="1" stop-color="#A9BCDD"/>
+    </linearGradient>
+    <linearGradient id="mk-pad" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#17264A"/><stop offset="1" stop-color="#0A1128"/>
+    </linearGradient>
+    <radialGradient id="mk-blueglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#087BFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#087BFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="mk-glow" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="13"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="mk-glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g id="mk-emblem">
+    <ellipse cx="500" cy="556" rx="470" ry="198" transform="rotate(-19 500 556)" fill="none" stroke="#087BFF" stroke-width="54" opacity="0.26" filter="url(#mk-glow)"/>
+    <ellipse cx="500" cy="556" rx="470" ry="198" transform="rotate(-19 500 556)" fill="none" stroke="url(#mk-ring)" stroke-width="28"/>
+    <path d="M396,420 L396,330 L430,236 L436,334 L500,170 L564,334 L570,236 L604,330 L604,420Z M500,238 L528,266 L500,294 L472,266 Z" fill="url(#mk-gold)" fill-rule="evenodd" filter="url(#mk-glow-soft)"/>
+    <g filter="url(#mk-glow-soft)">
+      <path d="M150,842 L170,468 L300,318 L482,842 L518,842 L700,318 L830,468 L850,842Z" fill="url(#mk-steel)"/>
+      <path d="M726,348 L548,816" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="9" fill="none"/>
+      <path d="M178,822 L196,498 L280,348" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </g>
+    <path d="M198.06,486.36 L206.37,480.66 L214.85,475 L223.52,469.39 L232.35,463.84 L241.35,458.34 L250.5,452.9 L259.81,447.52 L269.26,442.22 L278.86,436.98 L288.58,431.81 L298.44,426.72 L308.43,421.71 L318.53,416.78 L328.74,411.93 L339.05,407.17 L349.46,402.51 L359.97,397.94 L370.56,393.46 L381.23,389.09 L391.97,384.81 L402.78,380.64 L413.65,376.58 L424.57,372.63 L435.54,368.79 L446.54,365.06 L457.58,361.45 L468.65,357.96 L479.73,354.59 L490.83,351.35 L501.93,348.23 L513.03,345.23 L524.13,342.37 L535.2,339.63 L546.26,337.03 L557.29,334.56 L568.28,332.23 L579.23,330.03 L590.14,327.98 L600.99,326.06 L611.77,324.28 L622.49,322.64 L633.13,321.15 L643.7,319.8 L654.17,318.59 L664.55,317.53 L674.83,316.62 L685,315.85 L695.06,315.23" fill="none" stroke="url(#mk-ring)" stroke-width="28" stroke-linecap="round"/>
+    <g id="mk-pad" filter="url(#mk-glow-soft)">
+      <path d="M322,696 C322,652 364,626 408,626 L592,626 C636,626 678,652 678,696 C678,742 664,778 638,784 C612,790 592,764 566,750 C540,736 460,736 434,750 C408,764 388,790 362,784 C336,778 322,742 322,696 Z" fill="url(#mk-pad)" stroke="#087BFF" stroke-width="5"/>
+      <path d="M382,640 C442,620 558,620 618,640" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <g fill="#087BFF">
+        <rect x="388" y="685" width="60" height="19" rx="6"/>
+        <rect x="409" y="664" width="19" height="60" rx="6"/>
+      </g>
+      <g stroke="none">
+        <circle cx="586" cy="688" r="11" fill="#FFD400"/>
+        <circle cx="622" cy="708" r="11" fill="#087BFF"/>
+        <circle cx="550" cy="708" r="11" fill="#E6A200"/>
+        <circle cx="586" cy="726" r="11" fill="#3FC1FF"/>
+      </g>
+    </g>
+  </g>
+</svg>
