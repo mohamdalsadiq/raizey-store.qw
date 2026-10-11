@@ -203,7 +203,7 @@
     function onKey(event) {
       if (event.key === 'Escape' && opts.dismissible !== false) { close(); return; }
       if (event.key !== 'Tab') return;
-      var nodes = el.querySelectorAll('a[href], button: not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      var nodes = el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!nodes.length) return;
       var first = nodes[0], last = nodes[nodes.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -257,7 +257,7 @@
 
   /* ── Reveal on scroll (progressive: without JS the content is visible) ─── */
   function initReveal(root) {
-    var nodes = (root || document).querySelectorAll('.mm-reveal: not(.is-visible)');
+    var nodes = (root || document).querySelectorAll('.mm-reveal:not(.is-visible)');
     if (!nodes.length) return;
     if (reduced || typeof IntersectionObserver !== 'function') {
       nodes.forEach(function (n) { n.classList.add('is-visible'); });

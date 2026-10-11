@@ -963,8 +963,8 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
 
 /* alerts & inline messages */
 .err, .error, .form-error, .auth-modal-error, .order-rejection, .alert { border-radius: var(--mm-radius) !important; }
-.form-error, .auth-modal-error, .alert.danger { background: rgba(255, 107, 107, .09) !important; color: var(--mm-danger) !important; border: 1px solid rgba(255, 107, 107, .24) !important; padding: 10px var(--mm-s4) !important; font-size: var(--mm-fs-sm); }
-.form-success, .alert.success { background: rgba(34, 197, 94, .09) !important; color: var(--mm-success) !important; border: 1px solid rgba(34, 197, 94, .24) !important; padding: 10px var(--mm-s4) !important; font-size: var(--mm-fs-sm); }
+.form-error:not(:empty), .auth-modal-error, .alert.danger { background: rgba(255, 107, 107, .09) !important; color: var(--mm-danger) !important; border: 1px solid rgba(255, 107, 107, .24) !important; padding: 10px var(--mm-s4) !important; font-size: var(--mm-fs-sm); }
+.form-success:not(:empty), .alert.success { background: rgba(34, 197, 94, .09) !important; color: var(--mm-success) !important; border: 1px solid rgba(34, 197, 94, .24) !important; padding: 10px var(--mm-s4) !important; font-size: var(--mm-fs-sm); }
 .order-rejection { background: rgba(255, 107, 107, .07) !important; color: var(--mm-danger) !important; border-inline-start: 3px solid var(--mm-danger) !important; padding: 10px var(--mm-s4) !important; }
 
 /* admin shell */

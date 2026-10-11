@@ -17,29 +17,29 @@
   style.textContent = `
     #meemAssistantRoot{position: fixed;right: 18px;bottom: 18px;z-index: 9998;font-family: inherit;direction: rtl}
     body.mm-has-bottom-nav #meemAssistantRoot{bottom:calc(${BOTTOM_NAV}px + env(safe-area-inset-bottom))}
-    #meemAssistantToggle{width:${FAB}px;height:${FAB}px;border: 0;border-radius: 50%;background: linear-gradient(135deg,var(--mm-gold-400),#e5482e);color: var(--mm-silver);box-shadow: 0 10px 26px rgba(255, 212, 0,.34);cursor: grab;font-size: 26px;display: grid;place-items: center;transition: transform .2s,box-shadow .2s;touch-action: none;-webkit-user-select: none;user-select: none;-webkit-tap-highlight-color: transparent}
-    #meemAssistantToggle:hover{transform: translateY(-2px);box-shadow: 0 14px 32px rgba(255, 212, 0,.42)}
+    #meemAssistantToggle{width:${FAB}px;height:${FAB}px;border: 0;border-radius: 50%;background: linear-gradient(135deg,var(--mm-gold-400),var(--mm-gold-600));color: var(--mm-royal-950);box-shadow: 0 10px 26px rgba(255, 212, 0,.34);cursor: grab;font-size: 26px;display: grid;place-items: center;transition: transform .2s,box-shadow .2s;touch-action: none;-webkit-user-select: none;user-select: none;-webkit-tap-highlight-color: transparent}
+    #meemAssistantToggle:hover{transform: translateY(-2px);box-shadow: 0 14px 32px rgba(8, 123, 255,.45)}
     #meemAssistantToggle.mm-dragging{cursor: grabbing;transition: none;transform: scale(1.06)}
     #meemAssistantToggle svg{pointer-events: none;width: 28px;height: 28px}
-    #meemAssistantPanel{position: fixed;left: auto;right: auto;top: auto;bottom: auto;width: min(390px,calc(100vw - 24px));height: min(560px,calc(100vh - 24px));background: var(--mm-surface);border: 1px solid rgba(0, 0, 0,.11);border-radius: 22px;box-shadow: 0 24px 70px rgba(0, 0, 0,.2);display: none;overflow: hidden;z-index: 9999}
+    #meemAssistantPanel{position: fixed;left: auto;right: auto;top: auto;bottom: auto;width: min(390px,calc(100vw - 24px));height: min(560px,calc(100vh - 24px));background: var(--mm-surface);border: 1px solid var(--mm-border);border-radius: 22px;box-shadow: var(--mm-shadow-lg);display: none;overflow: hidden;z-index: 9999}
     #meemAssistantPanel.is-open{display: flex;flex-direction: column;animation: meemAssistantIn .18s ease-out}
     @keyframes meemAssistantIn{from{opacity: 0;transform: translateY(10px) scale(.98)}to{opacity: 1;transform: none}}
-    .meem-assistant-head{display: flex;align-items: center;gap: 11px;padding: 16px 17px;background: linear-gradient(135deg,var(--mm-surface-3),var(--mm-surface));border-bottom: 1px solid #f1e6df}
-    .meem-assistant-avatar{width: 40px;height: 40px;border-radius: 13px;display: grid;place-items: center;background: #ffeadc;color: var(--mm-accent-text);font-size: 19px}
-    .meem-assistant-title{flex: 1;color: var(--mm-text);font-size: 15px;font-weight: 900;line-height: 1.35}
-    .meem-assistant-title small{display: block;color: var(--mm-text-muted);font-size: 11px;font-weight: 600;margin-top: 2px}
-    .meem-assistant-close{border: 0;background: transparent;color: var(--mm-text-muted);cursor: pointer;font-size: 18px;padding: 5px}
-    .meem-assistant-messages{flex: 1;overflow: auto;padding: 16px 14px;background: var(--mm-surface);scroll-behavior: smooth}
+    .meem-assistant-head{display: flex;align-items: center;gap: 11px;padding: 16px 17px;background: linear-gradient(135deg,var(--mm-royal),var(--mm-royal-700));border-bottom: 1px solid var(--mm-border);color: var(--mm-silver)}
+    .meem-assistant-avatar{width: 40px;height: 40px;border-radius: 13px;display: grid;place-items: center;background: var(--mm-gold-tint-2);color: var(--mm-gold);font-size: 19px}
+    .meem-assistant-title{flex: 1;color: var(--mm-silver);font-size: 15px;font-weight: 900;line-height: 1.35}
+    .meem-assistant-title small{display: block;color: var(--mm-ice-soft);font-size: 11px;font-weight: 600;margin-top: 2px}
+    .meem-assistant-close{border: 0;background: transparent;color: var(--mm-ice-soft);cursor: pointer;font-size: 18px;padding: 5px}
+    .meem-assistant-messages{flex: 1;overflow: auto;padding: 16px 14px;background: var(--mm-bg);scroll-behavior: smooth}
     .meem-assistant-msg{max-width: 88%;padding: 10px 12px;border-radius: 15px;margin: 0 0 10px;font-size: 13px;line-height: 1.7;white-space: pre-wrap;word-break: break-word}
-    .meem-assistant-msg.assistant{margin-left: auto;background: var(--mm-surface);border: 1px solid #edf0f4;color: var(--mm-text);border-top-right-radius: 5px}
-    .meem-assistant-msg.user{margin-right: auto;background: #e9512a;color: var(--mm-silver);border-top-left-radius: 5px}
-    .meem-assistant-msg a{color: var(--mm-accent-text);font-weight: 800}
+    .meem-assistant-msg.assistant{margin-left: auto;background: var(--mm-surface-2);border: 1px solid var(--mm-border);color: var(--mm-text);border-top-right-radius: 5px}
+    .meem-assistant-msg.user{margin-right: auto;background: var(--mm-royal-500);color: var(--mm-silver);border-top-left-radius: 5px}
+    .meem-assistant-msg a{color: var(--mm-gold);font-weight: 800}
     .meem-assistant-quick{display: flex;gap: 7px;overflow: auto;padding: 0 14px 11px;background: var(--mm-surface)}
-    .meem-assistant-quick button{flex: 0 0 auto;border: 1px solid #f0d3c3;background: var(--mm-surface-3);color: var(--mm-accent-text);border-radius: 999px;padding: 7px 10px;font: inherit;font-size: 11px;cursor: pointer}
-    .meem-assistant-form{display: flex;align-items: flex-end;gap: 8px;padding: 11px;border-top: 1px solid #edf0f4;background: var(--mm-surface)}
-    .meem-assistant-input{min-width: 0;flex: 1;resize: none;max-height: 100px;border: 1px solid #dce3eb;border-radius: 13px;padding: 10px 11px;color: var(--mm-text);background: var(--mm-surface);font: inherit;font-size: 13px;outline: 0;line-height: 1.5}
-    .meem-assistant-input:focus{border-color: #ed754b;box-shadow: 0 0 0 3px rgba(255, 212, 0,.12)}
-    .meem-assistant-send{width: 40px;height: 40px;border: 0;border-radius: 12px;background: #e9512a;color: var(--mm-silver);cursor: pointer;font-size: 15px;display: grid;place-items: center}
+    .meem-assistant-quick button{flex: 0 0 auto;border: 1px solid var(--mm-border);background: var(--mm-surface-2);color: var(--mm-gold);border-radius: 999px;padding: 7px 10px;font: inherit;font-size: 11px;cursor: pointer}
+    .meem-assistant-form{display: flex;align-items: flex-end;gap: 8px;padding: 11px;border-top: 1px solid var(--mm-border);background: var(--mm-surface)}
+    .meem-assistant-input{min-width: 0;flex: 1;resize: none;max-height: 100px;border: 1px solid var(--mm-border);border-radius: 13px;padding: 10px 11px;color: var(--mm-text);background: var(--mm-surface-2);font: inherit;font-size: 13px;outline: 0;line-height: 1.5}
+    .meem-assistant-input:focus{border-color: var(--mm-electric);box-shadow: 0 0 0 3px var(--mm-electric-tint)}
+    .meem-assistant-send{width: 40px;height: 40px;border: 0;border-radius: 12px;background: var(--mm-gold);color: var(--mm-royal-950);cursor: pointer;font-size: 15px;display: grid;place-items: center}
     .meem-assistant-send:disabled{opacity: .55;cursor: wait}
     .meem-assistant-typing{color: var(--mm-text-muted);font-size: 12px;padding: 0 3px 9px}
   `;
