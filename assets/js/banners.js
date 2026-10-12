@@ -9,6 +9,27 @@
   var MOBILE_MAX = 767;
   var REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+  // Mobile slide ratio is a store setting (public.settings.banner_mobile_aspect).
+  // Desktop stays 8:3 always. Every slide shares one ratio so the height never
+  // jumps between slides during autoplay.
+  var MOBILE_RATIOS = { '3:4': '3 / 4', '4:5': '4 / 5', '1:1': '1 / 1', '4:3': '4 / 3' };
+  var DEFAULT_MOBILE_RATIO = '3 / 4';
+
+  function applyAspect(value) {
+    var root = document.getElementById('mmHeroSwiper');
+    if (!root) return;
+    var css = MOBILE_RATIOS[String(value == null ? '' : value).trim()];
+    root.style.setProperty('--mm-hero-ar-mobile', css || DEFAULT_MOBILE_RATIO);
+  }
+
+  function loadAspect() {
+    var client = window.supabaseClient;
+    if (!client || typeof client.from !== 'function') return Promise.resolve();
+    return client.from('settings').select('value').eq('key', 'banner_mobile_aspect').maybeSingle()
+      .then(function (res) { if (res && !res.error && res.data && res.data.value) applyAspect(res.data.value); })
+      ['catch'](function () {});
+  }
+
   // keep in sync with public.banners_validate()'s page whitelist
   var ALLOWED_PAGES = {
     'index.html': 1, 'offers.html': 1, 'wallet.html': 1, 'cart.html': 1,
@@ -143,6 +164,12 @@
     img.setAttribute('decoding', 'async');
     img.setAttribute('loading', eager ? 'eager' : 'lazy');
     if (eager) img.setAttribute('fetchpriority', 'high');
+    // Never show a broken-image icon or alt text: if an artwork fails to load
+    // the slide drops to the branded backdrop and keeps its live heading/CTA.
+    img.addEventListener('error', function () {
+      box.classList.add('mm-slide-fallback');
+      if (pic.parentNode) pic.parentNode.removeChild(pic);
+    });
     pic.appendChild(img);
     box.appendChild(pic);
     return true;
@@ -185,22 +212,10 @@
   }
 
   function defaultSlide() {
-    var slide = el('div', 'swiper-slide mm-slide mm-slide-default');
+    // No <img> here on purpose: the backdrop is the MEEM gradient + mark drawn
+    // by CSS, so a missing file can never render a broken-image placeholder.
+    var slide = el('div', 'swiper-slide mm-slide mm-slide-default mm-slide-fallback');
     slide.setAttribute('data-style', 'image_only');
-    var pic = el('picture', 'mm-slide-media');
-    var s = document.createElement('source');
-    s.setAttribute('type', 'image/webp');
-    s.setAttribute('srcset', 'assets/img/meem-og.webp');
-    pic.appendChild(s);
-    var img = el('img');
-    img.setAttribute('src', 'assets/img/meem-og.png');
-    img.setAttribute('alt', 'MEEM STORE');
-    img.setAttribute('width', '1200');
-    img.setAttribute('height', '630');
-    img.setAttribute('loading', 'eager');
-    img.setAttribute('decoding', 'async');
-    pic.appendChild(img);
-    slide.appendChild(pic);
     return slide;
   }
 
@@ -298,6 +313,8 @@
     var client = window.supabaseClient;
     if (!client) { render([]); return; }
 
+    loadAspect();
+
     client.rpc('get_banners_public').then(function (res) {
       var data = res && res.data;
       if (res && res.error) {
@@ -320,6 +337,7 @@
     buildSlide: buildSlide,
     defaultSlide: defaultSlide,
     buildLink: buildLink,
+    applyAspect: applyAspect,
     track: function (fn) { tracker = fn; }
   };
 

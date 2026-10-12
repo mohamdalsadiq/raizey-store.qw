@@ -19,6 +19,9 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMG = os.path.join(ROOT, "assets", "img")
+# Canonical storefront location (what the DB rows point at) + the legacy
+# assets/img copy kept so live rows that still reference it never 404.
+BANNERS = os.path.join(ROOT, "assets", "banners")
 LIMIT_BYTES = 300 * 1024
 
 DESKTOP_BOX = (1920, 720)
@@ -69,10 +72,14 @@ def main() -> None:
         ("banner-3-mobile.png", "banner-3-mobile.webp", MOBILE_BOX),
     ]
     for src, dst, box in plan:
-        s = os.path.join(IMG, src)
+        s = os.path.join(BANNERS, src)
+        if not os.path.exists(s):
+            s = os.path.join(IMG, src)
         if not os.path.exists(s):
             raise SystemExit(f"missing source: {s}")
-        print(f"{src} -> {dst}")
+        print(f"{src} -> assets/banners/{dst}")
+        to_webp(s, os.path.join(BANNERS, dst), box)
+        print(f"{src} -> assets/img/{dst}  [legacy alias]")
         to_webp(s, os.path.join(IMG, dst), box)
 
 

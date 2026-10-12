@@ -97,6 +97,22 @@
       <button class="add-new-btn" id="addNewBtn" type="button">+ إضافة بنر جديد</button>
     </div>
 
+    <div class="bn-card" style="display:block; margin-top:12px;">
+      <div class="field" style="max-width:340px; margin:0;">
+        <label for="mobileRatioSelect">نسبة بنر الموبايل (إعداد عام لكل الشرائح)</label>
+        <select id="mobileRatioSelect">
+          <option value="3:4">3:4 — عمودي (الافتراضي لكل صورك الحالية)</option>
+          <option value="4:5">4:5 — عمودي أقصر</option>
+          <option value="1:1">1:1 — مربّع</option>
+          <option value="4:3">4:3 — أفقي</option>
+        </select>
+      </div>
+      <p class="slot-note" style="margin:8px 0 0;" id="mobileRatioNote">
+        الديسكتوب ثابت على 8:3. كل الشرائح تتبع هذه النسبة كي لا يقفز ارتفاع البنر بين الشريحة والأخرى.
+        إذا رفعت صورة بنسبة مختلفة، اختر «اقتصاص مع نقطة تركيز» أو «الصورة كاملة + خلفية ضبابية».
+      </p>
+    </div>
+
     <div class="bn-grid" id="bannersList" style="margin-top: 14px;">
       <div style="color: var(--mm-text-muted); font-size: 13px;">جارِ التحميل...</div>
     </div>
@@ -328,6 +344,7 @@ function blank(node) { while (node.firstChild) node.removeChild(node.firstChild)
 
 const state = {
   banners: [], editing: null, products: [], categories: [], pvView: 'desktop',
+  mobileRatio: '3:4',
   slots: { desktop: null, mobile: null }
 };
 function newSlot() { return { file: null, img: null, mode: 'cover', fx: .5, fy: .5, url: '', blob: null }; }
@@ -489,6 +506,38 @@ function linkLabel(b) {
     target = ' — ' + b.link_target;
   }
   return (map[b.link_type] || b.link_type) + target;
+}
+
+/* نسبة الموبايل إعداد عام في public.settings (مفتاح banner_mobile_aspect). */
+async function loadRatioSetting() {
+  const sel = $('mobileRatioSelect');
+  if (sel) {
+    sel.addEventListener('change', async () => {
+      state.mobileRatio = sel.value;
+      renderPreview();
+      try {
+        const { error } = await supabaseClient.from('settings')
+          .upsert({ key: 'banner_mobile_aspect', value: sel.value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        if (error) throw error;
+        setRatioNote('تم حفظ نسبة الموبايل: ' + sel.value, false);
+      } catch (err) {
+        setRatioNote('تعذر حفظ النسبة: ' + (err && err.message ? err.message : err), true);
+      }
+    });
+  }
+  try {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'banner_mobile_aspect').maybeSingle();
+    const v = data && data.value ? String(data.value) : '3:4';
+    state.mobileRatio = ['3:4', '4:5', '1:1', '4:3'].indexOf(v) >= 0 ? v : '3:4';
+    if (sel) sel.value = state.mobileRatio;
+  } catch (e) { /* keep the default */ }
+}
+
+function setRatioNote(text, isError) {
+  const n = $('mobileRatioNote');
+  if (!n) return;
+  n.textContent = text;
+  n.style.color = isError ? 'var(--danger)' : 'var(--mm-text-muted)';
 }
 
 async function loadBanners() {
@@ -701,7 +750,8 @@ function renderPreview() {
     frame.appendChild(el('div', 'slot-note', 'اختر صورة لعرض المعاينة.'));
     return;
   }
-  frame.style.aspectRatio = isMobile ? '3 / 4' : '8 / 3';
+  var ratioMap = { '3:4': '3 / 4', '4:5': '4 / 5', '1:1': '1 / 1', '4:3': '4 / 3' };
+  frame.style.aspectRatio = isMobile ? (ratioMap[state.mobileRatio] || '3 / 4') : '8 / 3';
   $('pvStage').classList.toggle('is-mobile', isMobile);
   const slide = window.MeemBanners.buildSlide(payload, 0);
   if (!slide) { frame.appendChild(el('div', 'slot-note', 'تعذر بناء المعاينة.')); return; }
@@ -814,6 +864,8 @@ async function init() {
     [...$('pvToggle').querySelectorAll('button')].forEach((b) => b.classList.toggle('active', b === btn));
     renderPreview();
   });
+
+  await loadRatioSetting();
 
   await loadRefData();
   await loadBanners();

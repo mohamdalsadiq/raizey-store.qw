@@ -162,3 +162,41 @@
   النهائي من الصفر) في هذه الجولة؛ ما ذُكر في القسم 3 هو ما تحقّقت منه فعليًا.
 - المعاينة الحيّة على المنفذ 3000 تعمل من بيئة العمل، وليست نشرًا.
 - بيانات الزبائن لم تُلمَس: 30 طلبًا و3 قيود محفظة كما هي.
+
+---
+
+# جولة 2026-10-12 (مسائية) — إضافات وحالة البنود المفتوحة
+
+## أ) ما نُفّذ وتحقّق منه في هذه الجولة
+
+| البند | الحالة | الدليل |
+|---|---|---|
+| أيقونة بوت المساعد | ✅ رجعت أيقونة Lucide `#i-bot` (حرف M أُلغي للزر العائم) والتلوين ذهبي/أزرق داكن فقط | `assets/js/meem-assistant.js`؛ `ui-shots/round/hero-desktop-1440.png` |
+| مكوّن `.field` الموحّد | ✅ `padding-inline: 46px !important` و`inset-inline-start/end` منطقية — لا تداخل أيقونة/نص | `assets/css/meem.css`؛ `scripts/round_checks.mjs` (320/360/390/768) |
+| مثال كود الإحالة | ✅ `MEEM7K2P9QMZ` + migration لبادئة المولّد MEEM + rollback | `register.html`؛ `db/migrations/2026-10-12_referral_prefix_meem.sql` |
+| بنرات WebP في المكان المعتمد | ✅ `assets/banners/banner-N-{desktop,mobile}.webp` (72–131KB) + `@2x` | `scripts/build_banner_assets.py` |
+| إعادة توجيه صفوف البنرات + alt_text | 🟡 migration جاهزة، **لم تُطبَّق** (لا وصول للقاعدة) | `db/migrations/2026-10-12_banners_repoint_assets.sql` |
+| fallback البنر | ✅ تدرّج أزرق + الشعار CSS مع نصوص حيّة؛ لا أيقونة مكسورة ولا نص بديل | `assets/js/banners.js`؛ `ui-shots/round/fallback-1440.png` |
+| نسبة بنر الموبايل كإعداد | ✅ `settings.banner_mobile_aspect` (3:4 افتراضي، خيارات 4:5/1:1/4:3) + معاينة حيّة في `admin-banners.html` | `admin-banners.html`؛ `db/migrations/2026-10-12_banner_mobile_aspect.sql` |
+
+## ب) حالة بنود المرحلة 1 التي طُلبت صراحةً
+
+| البند | الحالة في المستودع | ما ينقص |
+|---|---|---|
+| `chat-assistant` (JWT) | الدالة موجودة في `supabase/functions/chat-assistant/index.ts`؛ التحقق من الهوية **داخل الدالة** | لم يُتحقّق من النسخة المنشورة فعليًا ولا من CORS/الأسرار — يحتاج `SUPABASE_ACCESS_TOKEN` |
+| `receipt_url` | يُنتج في مسار الإيصالات؛ مطابقة الكود المنشور غير مؤكدة | نفس السبب |
+| كشف تزوير الصور و`auto_accept_max_sdg` | منطق الحكم في `supabase/functions/process-receipt/*` و`assets/js/receipt-judge-core.js` مع اختبارات (`npm test` = 54/0)؛ قيمة `auto_accept_max_sdg` في `settings` | مراجعة القيمة معك؛ لم تُختَبر على القاعدة الحية |
+| سياسات `profiles` | مطبَّقة في migrations سابقة (تقييد القراءة/الكتابة) | لم يُعد فحصها على القاعدة الحية في هذه الجولة |
+| حد المعدل الموحّد | **لم يُنفَّذ** | يحتاج قرارًا + migration على القاعدة |
+| طول كود الكوبون (10 خانات) | **لم يُنفَّذ** | migration + عدم كسر الأكواد الحالية |
+| CSP بدون `unsafe-inline` | **لم يُنفَّذ** (أُزيل Sentry فقط) | كل الصفحات فيها `<script>`/`<style>` مضمّنة؛ يحتاج nonce/hash وإعادة اختبار كاملة — لا أغيّره دون تحقّق كامل |
+| CAPTCHA | **لم يُنفَّذ** | يحتاج مفتاحًا منك |
+
+## ج) إعادة اختبار تدفقات المال على القاعدة الحية
+
+**لم تُنفَّذ — متوقّفة على الوصول.** لا يوجد ملف توكن في هذه الـ VM
+(`~/.raizey-audit/live_ro` مفقود بعد إعادة التهيئة). المطلوب `SUPABASE_ACCESS_TOKEN`.
+بمجرد توفّره: كل مسار (محفظة، بنكي بإيصال، شحن، تأكيد/تجاوز، إلغاء/refund، كرت هدية،
+نقاط ولاء، عمولة إحالة، كوبون، تكرار إيصال، replay، سباق متوازٍ) يُنفَّذ داخل
+`BEGIN … ROLLBACK` بمستخدم عادي ومستخدم آخر وأدمن، مع التحقق أن كل تغيير رصيد له قيد
+`wallet_transactions` وإلا يرفضه `assert_wallet_ledger_entry()`.

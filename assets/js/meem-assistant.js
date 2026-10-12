@@ -20,9 +20,8 @@
     #meemAssistantToggle{width:${FAB}px;height:${FAB}px;border: 0;border-radius: 50%;background: linear-gradient(135deg,var(--mm-gold-400),var(--mm-gold-600));color: var(--mm-royal-950);box-shadow: 0 10px 26px rgba(255, 212, 0,.34);cursor: grab;font-size: 26px;display: grid;place-items: center;transition: transform .2s,box-shadow .2s;touch-action: none;-webkit-user-select: none;user-select: none;-webkit-tap-highlight-color: transparent}
     #meemAssistantToggle:hover{transform: translateY(-2px);box-shadow: 0 14px 32px rgba(8, 123, 255,.45)}
     #meemAssistantToggle.mm-dragging{cursor: grabbing;transition: none;transform: scale(1.06)}
-    #meemAssistantToggle svg{pointer-events: none;width: 28px;height: 28px}
-    #meemAssistantToggle img,#meemAssistantToggle .meem-fab-mark{pointer-events: none;width: 28px;height: 28px;display: block}
-    .meem-assistant-avatar img{width: 26px;height: 26px;display: block}
+    #meemAssistantToggle svg{pointer-events: none;width: 28px;height: 28px;display: block}
+    .meem-assistant-avatar svg{width: 24px;height: 24px;display: block}
     #meemAssistantPanel{position: fixed;left: auto;right: auto;top: auto;bottom: auto;width: min(390px,calc(100vw - 24px));height: min(560px,calc(100vh - 24px));background: var(--mm-surface);border: 1px solid var(--mm-border);border-radius: 22px;box-shadow: var(--mm-shadow-lg);display: none;overflow: hidden;z-index: 9999}
     #meemAssistantPanel.is-open{display: flex;flex-direction: column;animation: meemAssistantIn .18s ease-out}
     @keyframes meemAssistantIn{from{opacity: 0;transform: translateY(10px) scale(.98)}to{opacity: 1;transform: none}}
@@ -52,7 +51,7 @@
   root.innerHTML = `
     <section id="meemAssistantPanel" aria-label="مساعد MEEM الذكي" aria-hidden="true">
       <header class="meem-assistant-head">
-        <div class="meem-assistant-avatar"><img src="assets/img/meem-mark-48.png" alt="" aria-hidden="true" width="26" height="26" decoding="async"></div>
+        <div class="meem-assistant-avatar"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></div>
         <div class="meem-assistant-title">مساعد MEEM الذكي<small>المنتجات والطلبات في مكان واحد</small></div>
         <button class="meem-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
       </header>
@@ -67,7 +66,7 @@
         <button class="meem-assistant-send" id="meemAssistantSend" type="submit" aria-label="إرسال"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
       </form>
     </section>
-    <button id="meemAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><img class="meem-fab-mark" src="assets/img/meem-mark-48.png" alt="" aria-hidden="true" width="28" height="28" decoding="async"></button>
+    <button id="meemAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></button>
   `;
   document.body.appendChild(root);
 

@@ -851,6 +851,26 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
   transition: border-color var(--mm-t) var(--mm-ease), box-shadow var(--mm-t) var(--mm-ease) !important;
 }
 .field input, .field select, .field textarea, .topup-form input, .country-search { min-height: var(--mm-tap); padding: 11px var(--mm-s4) !important; }
+
+/* ── unified icon field (.field + .input-wrap) ──────────────────────────────
+   The generic .field padding above centres the text evenly, which lets the
+   leading icon sit on top of the placeholder in RTL. Icon-bearing inputs get
+   logical padding-inline instead, so the icon never covers the text whatever
+   the direction of the content (an LTR email inside an RTL page included).
+   18px icon + 13px offset + 10px clearance = 41px minimum; 46px is used to
+   leave the same breathing room as the original auth design. */
+.field .input-wrap, .input-wrap { position: relative; display: flex; align-items: center; }
+.field .input-wrap input, .field .input-wrap textarea, .input-wrap input {
+  padding-block: 11px !important;
+  padding-inline: 46px !important;
+}
+/* a trailing action (eye toggle, tick, spinner) mirrors the leading inset */
+.input-wrap .trail { position: absolute; inset-inline-end: 12px; display: flex; align-items: center; gap: 6px; }
+.input-wrap .lead-icon { position: absolute; inset-inline-start: 13px; display: grid; place-items: center; pointer-events: none; color: var(--mm-text-muted); transition: color .2s; }
+.input-wrap input:focus ~ .lead-icon { color: var(--mm-accent-text); }
+/* phone row keeps the country button outside the field, so only the trailing
+   side needs the reserve (no leading icon inside that input). */
+.phone-row .input-wrap input { padding-inline: 16px 46px !important; }
 .field input:focus, .field select:focus, .field textarea:focus, .topup-form input:focus, .country-search:focus, .otp-digit:focus, .reason-option:focus-visible {
   outline: none !important; border-color: var(--mm-primary) !important; box-shadow: 0 0 0 4px var(--mm-ring) !important;
 }
@@ -1116,8 +1136,31 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 }
 @media (min-width: 768px) { .mm-hero-swiper { border-radius: 20px; } }
 
-.mm-slide { position: relative; aspect-ratio: 3 / 4; }
+/* Every slide shares one ratio (no height jump while autoplaying).
+   Mobile ratio comes from public.settings.banner_mobile_aspect (default 3:4);
+   desktop is fixed at 8:3. */
+.mm-slide { position: relative; aspect-ratio: var(--mm-hero-ar-mobile, 3 / 4); }
 @media (min-width: 768px) { .mm-slide { aspect-ratio: 8 / 3; } }
+
+/* Branded backdrop — no rows yet, or an artwork failed to load. Purely CSS:
+   a blue gradient plus the mark, so there is never a broken-image icon. */
+.mm-slide-fallback {
+  background:
+    radial-gradient(120% 130% at 82% 12%, rgba(8, 123, 255, .38), transparent 62%),
+    linear-gradient(150deg, var(--mm-royal-950, #04123F), var(--mm-royal, #0A2A6B), var(--mm-royal-700, #103E96));
+}
+.mm-slide-fallback::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: url("../img/meem-mark-192.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(34%, 200px) auto;
+  opacity: .55;
+}
+@media (min-width: 768px) {
+  .mm-slide-fallback::after { background-position: 88% center; background-size: min(22%, 240px) auto; }
+}
 
 .mm-slide-media { position: absolute; inset: 0; display: block; }
 .mm-slide-media img {
