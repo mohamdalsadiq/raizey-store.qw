@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -360,7 +360,7 @@ async function init() {
 
 function loadCartData() {
   try {
-    cart = JSON.parse(localStorage.getItem('raizey_store_cart')) || [];
+    cart = JSON.parse(localStorage.getItem('meem_store_cart')) || [];
   } catch (e) {
     cart = [];
   }
@@ -432,7 +432,7 @@ function renderCart() {
 
 function removeItem(index) {
   cart.splice(index, 1);
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  localStorage.setItem('meem_store_cart', JSON.stringify(cart));
   
   if (cart.length === 0) {
     showEmptyCartState();
@@ -444,7 +444,7 @@ function removeItem(index) {
 function clearAllItems() {
   if (confirm('هل أنت تأكد من رغبتك في تفريغ سلة المشتريات بالكامل؟')) {
     cart = [];
-    localStorage.removeItem('raizey_store_cart');
+    localStorage.removeItem('meem_store_cart');
     showEmptyCartState();
   }
 }
@@ -457,7 +457,7 @@ function changeQty(index, delta) {
   if (qty < 1) qty = 1;
   if (qty > 99) qty = 99;
   item.quantity = qty;
-  localStorage.setItem('raizey_store_cart', JSON.stringify(cart));
+  localStorage.setItem('meem_store_cart', JSON.stringify(cart));
   renderCart();
 }
 

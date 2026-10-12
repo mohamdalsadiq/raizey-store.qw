@@ -173,7 +173,7 @@ if (supabaseClient) {
 // Cache بسيط في sessionStorage لتفادي الاستعلامات المتكررة
 // =========================================================
 async function getCachedData(key, fetchFn, ttlSeconds = 300) {
-  const cacheKey = `raizey_cache_${key}`;
+  const cacheKey = `meem_cache_${key}`;
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {

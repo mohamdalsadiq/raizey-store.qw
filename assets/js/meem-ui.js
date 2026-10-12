@@ -432,7 +432,27 @@
   }
 
   /* ── Theme (light · dark · auto) ───────────────────────────────────────── */
-  var THEME_KEY = 'raizey-theme';
+  // ── One-time migration of the pre-rebrand localStorage keys ──────────────
+  // The old keys are only read; every write goes to the new MEEM key so an
+  // existing cart / theme / currency survives the rename untouched.
+  var LEGACY_KEYS = [
+    ['raizey-theme', 'meem-theme'],
+    ['raizey_store_cart', 'meem_store_cart'],
+    ['raizey_preferred_currency', 'meem_preferred_currency']
+  ];
+  (function migrateLegacyStorage() {
+    try {
+      LEGACY_KEYS.forEach(function (pair) {
+        var legacy = localStorage.getItem(pair[0]);
+        if (legacy !== null && localStorage.getItem(pair[1]) === null) {
+          localStorage.setItem(pair[1], legacy);
+        }
+      });
+    } catch (e) { /* private mode / storage disabled — nothing to migrate */ }
+  })();
+
+  var THEME_KEY = 'meem-theme';
+  var LEGACY_THEME_KEY = 'raizey-theme';
   function applyTheme(mode) {
     var value = mode || localStorage.getItem(THEME_KEY) || 'auto';
     if (value === 'auto') document.documentElement.removeAttribute('data-theme');
@@ -456,6 +476,7 @@
       btn.addEventListener('click', function () {
         var next = btn.getAttribute('data-next') || 'dark';
         localStorage.setItem(THEME_KEY, next);
+        try { localStorage.setItem(LEGACY_THEME_KEY, next); } catch (e) { /* keep the old key in sync */ }
         applyTheme(next);
       });
     });
