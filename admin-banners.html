@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>البنرات — MEEM STORE</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
+<link rel="icon" sizes="any" href="assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/img/favicon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon-180.png">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+<link rel="stylesheet" href="assets/css/meem.css">
+<link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
+<script src="assets/js/meem-ui.js"></script>
+<style>
+  .bn-grid { display: grid; gap: 14px; }
+  .bn-card { display: flex; gap: 14px; align-items: flex-start; background: var(--mm-surface); border: 1px solid var(--mm-border); border-radius: 16px; padding: 12px; }
+  .bn-card.is-off { opacity: .55; }
+  .bn-thumb { width: 160px; height: 60px; border-radius: 10px; object-fit: cover; background: var(--mm-royal-900); flex: none; }
+  .bn-card-body { flex: 1; min-width: 0; }
+  .bn-card-title { font-weight: 800; color: var(--mm-text); margin: 0 0 4px; font-size: 15px; }
+  .bn-meta { font-size: 12px; color: var(--mm-text-muted); display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  .bn-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--mm-gold-tint); color: var(--mm-gold); font-size: 11px; font-weight: 700; }
+  .bn-pill.off { background: rgba(255,107,107,.14); color: var(--mm-danger-fill); }
+  .bn-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .bn-actions button { min-height: 34px; padding: 0 12px; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid var(--mm-border); background: var(--mm-surface-2); color: var(--mm-text); }
+  .bn-actions button:hover { border-color: var(--mm-border-strong); box-shadow: var(--mm-shadow-glow); }
+  .bn-actions .danger { color: var(--mm-danger-fill); }
+  .counter { font-size: 11px; color: var(--mm-text-muted); text-align: left; }
+  .counter.over { color: var(--mm-danger-fill); font-weight: 700; }
+  .slot { border: 1px dashed var(--mm-border-strong); border-radius: 12px; padding: 10px; margin-top: 8px; }
+  .slot-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .crop-wrap { position: relative; margin-top: 10px; border-radius: 12px; overflow: hidden; background: var(--mm-royal-950); cursor: crosshair; touch-action: none; }
+  .crop-wrap canvas { display: block; width: 100%; height: auto; }
+  .crop-focus { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 2px solid var(--mm-gold); background: rgba(4,18,63,.45); box-shadow: 0 0 0 2px rgba(255,212,0,.35); pointer-events: none; }
+  .slot-note { font-size: 12px; color: var(--mm-text-muted); line-height: 1.7; }
+  .pv-toggle { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pv-toggle button { min-height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--mm-border); background: var(--mm-surface-2); color: var(--mm-text); font-weight: 700; font-size: 12px; cursor: pointer; }
+  .pv-toggle button.active { background: var(--mm-gold); color: var(--mm-royal-950); border-color: var(--mm-gold); }
+  .pv-stage { margin-top: 10px; max-width: 100%; }
+  .pv-stage.is-mobile { max-width: 340px; margin-inline: auto; }
+  .pv-frame { position: relative; border-radius: 16px; overflow: hidden; background: var(--mm-royal-900); }
+  .pv-frame .mm-slide { position: relative; }
+  .link-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 720px) { .link-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
+
+<div class="admin-page" id="adminPage" style="display: none;">
+  <div class="page-header">
+    <div class="admin-brand">
+      <img class="admin-brand-mark" src="assets/img/meem-mark-48.png"
+           srcset="assets/img/meem-mark-48.png 1x, assets/img/meem-mark-96.png 2x"
+           alt="MEEM STORE" width="36" height="36" decoding="async">
+      <img class="admin-brand-name" src="assets/img/meem-wordmark-28.png"
+           srcset="assets/img/meem-wordmark-28.png 1x, assets/img/meem-wordmark-56.png 2x"
+           alt="MEEM STORE" width="90" height="24" decoding="async">
+    </div>
+    <h1>بنرات الصفحة الرئيسية</h1>
+    <a href="index.html" class="back-link">→ المتجر</a>
+  </div>
+
+  <div class="admin-nav">
+    <a href="admin.html">الرئيسية</a>
+    <a href="admin-orders.html">الطلبات</a>
+    <a href="admin-topups.html">شحن المحافظ</a>
+    <a href="admin-products.html">المنتجات</a>
+    <a href="admin-categories.html">التصنيفات</a>
+    <a href="admin-banners.html" class="active">البنرات</a>
+    <a href="admin-customers.html">العملاء</a>
+    <a href="admin-payment-methods.html">وسائل الدفع</a>
+    <a href="admin-staff.html">المشرفون</a>
+    <a href="admin-settings.html">الإعدادات</a>
+    <a href="admin-audit-log.html">سجل النشاطات</a>
+    <a href="admin-coupons.html">الكوبونات</a>
+    <a href="admin-giftcards.html">كروت الهدايا</a>
+  </div>
+
+  <div id="mainContent">
+    <div class="bn-card" style="display:block;">
+      <p class="slot-note" style="margin:0 0 8px;">
+        المقاسات المعتمدة: <strong>ديسكتوب 1920×720</strong> (نسبة 8:3) و<strong>موبايل 1086×1448</strong> (نسبة 3:4).
+        خلي العنصر المهم في وسط الصورة، ومنطقة النصوص الهادئة على اليمين في الديسكتوب وعلى الأعلى في الموبايل.
+        أي صورة تُصدَّر WebP بالمقاس الصحيح وبأقل من 300KB في المتصفح قبل الرفع.
+      </p>
+      <button class="add-new-btn" id="addNewBtn" type="button">+ إضافة بنر جديد</button>
+    </div>
+
+    <div class="bn-grid" id="bannersList" style="margin-top: 14px;">
+      <div style="color: var(--mm-text-muted); font-size: 13px;">جارِ التحميل...</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="formModal">
+  <div class="modal-box" style="max-width: 760px; width: calc(100% - 24px); max-height: 92vh; overflow-y: auto;">
+    <div class="modal-title" id="formModalTitle">بنر جديد</div>
+
+    <div class="field">
+      <label for="styleInput">نمط البنر</label>
+      <select id="styleInput">
+        <option value="image_text">صورة + نص (عنوان وفرعي وزر)</option>
+        <option value="image_only">صورة فقط (النص مصمَّم داخل الصورة)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="desktopFileInput">صورة الديسكتوب (1920×720) — إلزامية</label>
+      <div class="slot" data-slot="desktop">
+        <div class="slot-head">
+          <span class="slot-note" id="desktopSlotState">لم تُختر صورة بعد</span>
+          <button type="button" id="desktopPickBtn">اختر صورة</button>
+        </div>
+        <input type="file" id="desktopFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+        <div class="slot-head" style="margin-top:10px;">
+          <div class="pv-toggle" id="desktopModeToggle">
+            <button type="button" data-mode="cover" class="active">اقتصاص مع نقطة تركيز</button>
+            <button type="button" data-mode="contain">الصورة كاملة + خلفية ضبابية</button>
+          </div>
+          <span class="counter" id="desktopSizeNote"></span>
+        </div>
+        <div class="crop-wrap" id="desktopCropWrap" hidden>
+          <canvas id="desktopCanvas" width="960" height="360"></canvas>
+          <span class="crop-focus" id="desktopFocus" style="left:50%; top:50%;"></span>
+        </div>
+        <p class="slot-note" id="desktopCropHint" hidden>اسحب داخل المعاينة لتحديد نقطة التركيز — تُقص الصورة الأصلية حولها.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="mobileFileInput">صورة الموبايل (1086×1448) — اختيارية</label>
+      <div class="slot" data-slot="mobile">
+        <div class="slot-head">
+          <span class="slot-note" id="mobileSlotState">لم تُختر صورة — ستُولَّد من صورة الديسكتوب</span>
+          <button type="button" id="mobilePickBtn">اختر صورة</button>
+        </div>
+        <input type="file" id="mobileFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+        <div class="slot-head" style="margin-top:10px;">
+          <div class="pv-toggle" id="mobileModeToggle">
+            <button type="button" data-mode="cover" class="active">اقتصاص مع نقطة تركيز</button>
+            <button type="button" data-mode="contain">الصورة كاملة + خلفية ضبابية</button>
+          </div>
+          <span class="counter" id="mobileSizeNote"></span>
+        </div>
+        <div class="crop-wrap" id="mobileCropWrap" hidden>
+          <canvas id="mobileCanvas" width="420" height="560"></canvas>
+          <span class="crop-focus" id="mobileFocus" style="left:50%; top:50%;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="altInput">النص البديل للصورة (alt)</label>
+      <input type="text" id="altInput" maxlength="160" placeholder="وصف مختصر للصورة">
+    </div>
+
+    <div id="textFields">
+      <div class="field">
+        <label for="titleInput">العنوان</label>
+        <input type="text" id="titleInput" maxlength="45" placeholder="مثلاً: اشحن رصيدك فوراً">
+        <div class="counter" id="titleCounter">0 / 45</div>
+      </div>
+      <div class="field">
+        <label for="subtitleInput">النص الفرعي</label>
+        <input type="text" id="subtitleInput" maxlength="90" placeholder="سطر توضيحي قصير">
+        <div class="counter" id="subtitleCounter">0 / 90</div>
+      </div>
+      <div class="field">
+        <label for="ctaInput">نص الزر</label>
+        <input type="text" id="ctaInput" maxlength="20" placeholder="اشحن الآن">
+        <div class="counter" id="ctaCounter">0 / 20</div>
+      </div>
+      <div class="link-grid" id="overlayRow">
+        <div class="field">
+          <label for="ovdInput">موضع النص — ديسكتوب</label>
+          <select id="ovdInput">
+            <option value="right">يمين (المنطقة الهادئة في الصور الحالية)</option>
+            <option value="left">يسار</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ovmInput">موضع النص — موبايل</label>
+          <select id="ovmInput">
+            <option value="top">أعلى الصورة</option>
+            <option value="bottom">أسفل الصورة</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="linkTypeInput">نوع الرابط</label>
+      <select id="linkTypeInput">
+        <option value="none">بدون رابط</option>
+        <option value="page">صفحة داخلية</option>
+        <option value="product">منتج</option>
+        <option value="category">قسم</option>
+        <option value="offers">صفحة العروض</option>
+        <option value="whatsapp">واتساب</option>
+        <option value="url">رابط خارجي (https فقط)</option>
+      </select>
+    </div>
+
+    <div class="field" id="pageField" hidden>
+      <label for="pageSelect">الصفحة الداخلية</label>
+      <select id="pageSelect"></select>
+    </div>
+    <div class="field" id="productField" hidden>
+      <label for="productSelect">المنتج</label>
+      <select id="productSelect"><option value="">جارِ التحميل...</option></select>
+    </div>
+    <div class="field" id="categoryField" hidden>
+      <label for="categorySelect">القسم</label>
+      <select id="categorySelect"><option value="">جارِ التحميل...</option></select>
+    </div>
+    <div class="field" id="urlField" hidden>
+      <label for="urlInput">الرابط الخارجي</label>
+      <input type="url" id="urlInput" dir="ltr" placeholder="https://example.com" style="text-align:left;">
+    </div>
+    <div class="field" id="whatsappField" hidden>
+      <label for="waMessageInput">الرسالة الجاهزة (اختياري)</label>
+      <input type="text" id="waMessageInput" maxlength="400" placeholder="مرحباً MEEM STORE، عندي استفسار">
+      <div class="counter">الرقم يأتي من إعدادات المتجر (whatsapp_number) — لا تكتبه هنا.</div>
+    </div>
+
+    <div class="link-grid">
+      <div class="field">
+        <label for="startInput">بداية العرض (اختياري)</label>
+        <input type="datetime-local" id="startInput">
+      </div>
+      <div class="field">
+        <label for="endInput">نهاية العرض (اختياري)</label>
+        <input type="datetime-local" id="endInput">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="activeInput">الحالة</label>
+      <select id="activeInput">
+        <option value="true">مفعّل</option>
+        <option value="false">معطّل</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="hideDisabledInput">لو الهدف (منتج/قسم) معطّل</label>
+      <select id="hideDisabledInput">
+        <option value="true">أخفِ الشريحة</option>
+        <option value="false">أظهرها كما هي</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>معاينة مطابقة للموقع</label>
+      <div class="pv-toggle" id="pvToggle">
+        <button type="button" data-view="desktop" class="active">ديسكتوب</button>
+        <button type="button" data-view="mobile">موبايل</button>
+      </div>
+      <div class="pv-stage" id="pvStage">
+        <div class="pv-frame" id="pvFrame"></div>
+      </div>
+    </div>
+
+    <div class="form-error" id="formError"></div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel-btn" id="formCancelBtn" type="button">إلغاء</button>
+      <button class="modal-confirm-btn" id="formSaveBtn" type="button" style="background: var(--mm-primary); color: var(--mm-on-primary);">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="accessDenied">
+  <div class="modal-box" style="text-align:center;">
+    <div class="modal-title">غير مسموح</div>
+    <p style="color: var(--text-muted); font-size: 14px;">هذه الصفحة للمشرفين الذين لديهم صلاحية إدارة الإعدادات.</p>
+    <div class="modal-actions">
+      <a class="modal-confirm-btn" href="admin.html" style="text-decoration:none;">رجوع للوحة الأدمن</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/banners.js"></script>
+<script>
+/* =========================================================
+   MEEM STORE — إدارة البنرات
+   الكتابة كلها عبر RPCs محمية (is_admin + has_admin_permission + audit log).
+   كل إخراج بيانات يمر عبر textContent / DOM — لا innerHTML.
+   ========================================================= */
+const DESKTOP_BOX = { w: 1920, h: 720 };
+const MOBILE_BOX  = { w: 1086, h: 1448 };
+const MAX_BYTES = 300 * 1024;
+const ALLOWED_PAGES = [
+  ['index.html', 'الصفحة الرئيسية'],
+  ['index.html#products', 'الصفحة الرئيسية — قسم المنتجات'],
+  ['offers.html', 'صفحة العروض'],
+  ['wallet.html', 'المحفظة وشحن الرصيد'],
+  ['cart.html', 'السلة'],
+  ['my-orders.html', 'سجل الطلبات'],
+  ['search.html', 'البحث'],
+  ['account.html', 'إعدادات الحساب'],
+  ['referrals.html', 'الإحالات'],
+  ['notifications.html', 'الإشعارات'],
+  ['privacy.html', 'الخصوصية']
+];
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+function show(node, on) { if (node) node.hidden = !on; }
+function blank(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+const state = {
+  banners: [], editing: null, products: [], categories: [], pvView: 'desktop',
+  slots: { desktop: null, mobile: null }
+};
+function newSlot() { return { file: null, img: null, mode: 'cover', fx: .5, fy: .5, url: '', blob: null }; }
+
+/* ---------- الصور: اقتصاص / خلفية ضبابية / تصدير WebP < 300KB ---------- */
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('تعذر قراءة ملف الصورة'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function drawSlot(canvas, img, box, mode, fx, fy) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!img) { ctx.fillStyle = '#04123F'; ctx.fillRect(0, 0, W, H); return; }
+  const targetRatio = box.w / box.h;
+
+  if (mode === 'contain') {
+    const cs = Math.max(W / img.width, H / img.height);
+    ctx.save();
+    ctx.filter = 'blur(22px) brightness(.55)';
+    ctx.drawImage(img, (W - img.width * cs) / 2, (H - img.height * cs) / 2, img.width * cs, img.height * cs);
+    ctx.restore();
+    const fs = Math.min(W / img.width, H / img.height);
+    const fw = img.width * fs, fh = img.height * fs;
+    ctx.drawImage(img, (W - fw) / 2, (H - fh) / 2, fw, fh);
+    return;
+  }
+
+  let sw, sh;
+  if (img.width / img.height > targetRatio) { sh = img.height; sw = sh * targetRatio; }
+  else { sw = img.width; sh = sw / targetRatio; }
+  const sx = Math.min(Math.max(fx * img.width - sw / 2, 0), Math.max(img.width - sw, 0));
+  const sy = Math.min(Math.max(fy * img.height - sh / 2, 0), Math.max(img.height - sh, 0));
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+}
+
+function canvasToWebp(canvas) {
+  return new Promise((resolve, reject) => {
+    const attempt = (q) => {
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('تعذر تصدير الصورة')); return; }
+        if (blob.size <= MAX_BYTES || q <= 0.5) { resolve(blob); return; }
+        attempt(Math.round((q - 0.06) * 100) / 100);
+      }, 'image/webp', q);
+    };
+    attempt(0.86);
+  });
+}
+
+function slotBox(name) { return name === 'desktop' ? DESKTOP_BOX : MOBILE_BOX; }
+
+function refreshSlot(name) {
+  const slot = state.slots[name];
+  const canvas = $(name + 'Canvas');
+  drawSlot(canvas, slot.img, slotBox(name), slot.mode, slot.fx, slot.fy);
+  $(name + 'SizeNote').textContent = slot.img
+    ? 'سيُصدَّر ' + slotBox(name).w + '×' + slotBox(name).h + ' WebP'
+    : '';
+}
+
+async function exportSlot(name) {
+  const slot = state.slots[name];
+  const canvas = $(name + 'Canvas');
+  drawSlot(canvas, slot.img, slotBox(name), slot.mode, slot.fx, slot.fy);
+  const blob = await canvasToWebp(canvas);
+  if (blob.size > MAX_BYTES) throw new Error('الصورة أكبر من 300KB بعد الضغط');
+  slot.blob = blob;
+  $(name + 'SizeNote').textContent = Math.round(blob.size / 1024) + ' KB / 300 KB';
+  return blob;
+}
+
+function bindCrop(name) {
+  const wrap = $(name + 'CropWrap');
+  const focus = $(name + 'Focus');
+  const slot = state.slots[name];
+  let dragging = false;
+  const setFrom = (event) => {
+    const r = wrap.getBoundingClientRect();
+    slot.fx = Math.min(Math.max((event.clientX - r.left) / r.width, 0), 1);
+    slot.fy = Math.min(Math.max((event.clientY - r.top) / r.height, 0), 1);
+    focus.style.left = (slot.fx * 100) + '%';
+    focus.style.top = (slot.fy * 100) + '%';
+    refreshSlot(name);
+  };
+  wrap.addEventListener('pointerdown', (e) => { dragging = true; try { wrap.setPointerCapture(e.pointerId); } catch (_) {} setFrom(e); });
+  wrap.addEventListener('pointermove', (e) => { if (dragging) setFrom(e); });
+  wrap.addEventListener('pointerup', () => { dragging = false; });
+  wrap.addEventListener('pointercancel', () => { dragging = false; });
+
+  $(name + 'ModeToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    slot.mode = btn.dataset.mode;
+    [...$('desktopModeToggle').querySelectorAll('button'), ...$('mobileModeToggle').querySelectorAll('button')]
+      .forEach((b) => { if (b.dataset.mode === slot.mode) b.classList.add('active'); });
+    [...$(name + 'ModeToggle').querySelectorAll('button')]
+      .forEach((b) => b.classList.toggle('active', b === btn));
+    refreshSlot(name);
+  });
+}
+
+async function pickFile(name, file) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (allowed.indexOf(file.type) === -1) throw new Error('صيغة غير مدعومة (JPG / PNG / WEBP فقط)');
+  if (file.size > 12 * 1024 * 1024) throw new Error('ملف المصدر كبير جداً (الحد 12MB)');
+  const img = await loadImageFromFile(file);
+  const slot = state.slots[name];
+  slot.file = file; slot.img = img; slot.fx = .5; slot.fy = .5;
+  $(name + 'CropWrap').hidden = false;
+  $(name + 'Focus').style.left = '50%';
+  $(name + 'Focus').style.top = '50%';
+  $(name + 'SlotState').textContent = file.name + ' — ' + img.width + '×' + img.height;
+  if (name === 'desktop') $('desktopCropHint').hidden = false;
+  refreshSlot(name);
+}
+
+/* ---------- القوائم المرجعية ---------- */
+async function loadRefData() {
+  blank(pageSelect);
+  ALLOWED_PAGES.forEach(([value, label]) => {
+    const o = el('option', null, label); o.value = value; pageSelect.appendChild(o);
+  });
+  const { data: products } = await supabaseClient.from('products')
+    .select('id, name, is_active').order('name').limit(500);
+  state.products = products || [];
+  blank(productSelect);
+  productSelect.appendChild(el('option', null, '— اختر منتجاً —'));
+  state.products.forEach((p) => {
+    const o = el('option', null, p.name + (p.is_active ? '' : ' (معطّل)'));
+    o.value = p.id; productSelect.appendChild(o);
+  });
+  const { data: cats } = await supabaseClient.from('categories')
+    .select('id, name, is_active').order('display_order').limit(300);
+  state.categories = cats || [];
+  blank(categorySelect);
+  categorySelect.appendChild(el('option', null, '— اختر قسماً —'));
+  state.categories.forEach((c) => {
+    const o = el('option', null, c.name + (c.is_active ? '' : ' (معطّل)'));
+    o.value = c.id; categorySelect.appendChild(o);
+  });
+}
+
+/* ---------- قائمة البنرات ---------- */
+function linkLabel(b) {
+  const map = { none: 'بدون رابط', page: 'صفحة داخلية', product: 'منتج', category: 'قسم', offers: 'صفحة العروض', whatsapp: 'واتساب', url: 'رابط خارجي' };
+  let target = '';
+  if (b.link_type === 'product') {
+    const p = state.products.filter((x) => x.id === b.link_target)[0];
+    target = p ? ' — ' + p.name : '';
+  } else if (b.link_type === 'category') {
+    const c = state.categories.filter((x) => x.id === b.link_target)[0];
+    target = c ? ' — ' + c.name : '';
+  } else if (b.link_target) {
+    target = ' — ' + b.link_target;
+  }
+  return (map[b.link_type] || b.link_type) + target;
+}
+
+async function loadBanners() {
+  const { data, error } = await supabaseClient.from('banners').select('*')
+    .order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+  if (error) {
+    blank(bannersList);
+    bannersList.appendChild(el('div', null, 'تعذر تحميل البنرات: ' + error.message));
+    return;
+  }
+  state.banners = data || [];
+  renderList();
+}
+
+function renderList() {
+  blank(bannersList);
+  if (!state.banners.length) {
+    bannersList.appendChild(el('div', null, 'لا توجد بنرات بعد — أضف أول بنر.'));
+    return;
+  }
+  state.banners.forEach((b) => {
+    const card = el('div', 'bn-card' + (b.is_active ? '' : ' is-off'));
+    const img = el('img', 'bn-thumb');
+    img.src = b.image_desktop_url;
+    img.alt = b.alt_text || 'معاينة البنر';
+    img.width = 160; img.height = 60; img.loading = 'lazy'; img.decoding = 'async';
+    card.appendChild(img);
+
+    const body = el('div', 'bn-card-body');
+    body.appendChild(el('p', 'bn-card-title',
+      b.title || (b.banner_style === 'image_only' ? '(صورة فقط بدون نص)' : '(بدون عنوان)')));
+    const meta = el('div', 'bn-meta');
+    meta.appendChild(el('span', 'bn-pill' + (b.is_active ? '' : ' off'), b.is_active ? 'مفعّل' : 'معطّل'));
+    meta.appendChild(el('span', null, b.banner_style === 'image_text' ? 'صورة + نص' : 'صورة فقط'));
+    meta.appendChild(el('span', null, 'الترتيب: ' + b.sort_order));
+    meta.appendChild(el('span', null, linkLabel(b)));
+    if (b.starts_at || b.ends_at) {
+      const f = (v) => v ? new Date(v).toLocaleString('ar-EG') : '—';
+      meta.appendChild(el('span', null, 'من ' + f(b.starts_at) + ' إلى ' + f(b.ends_at)));
+    }
+    body.appendChild(meta);
+
+    const actions = el('div', 'bn-actions');
+    const mk = (label, fn, cls) => {
+      const btn = el('button', cls || null, label);
+      btn.type = 'button';
+      btn.addEventListener('click', fn);
+      return btn;
+    };
+    actions.appendChild(mk('تعديل', () => openForm(b)));
+    actions.appendChild(mk('أعلى', () => reorder(b.id, 'up')));
+    actions.appendChild(mk('أسفل', () => reorder(b.id, 'down')));
+    actions.appendChild(mk(b.is_active ? 'تعطيل' : 'تفعيل', () => toggleActive(b)));
+    actions.appendChild(mk('حذف', () => removeBanner(b), 'danger'));
+    body.appendChild(actions);
+    card.appendChild(body);
+    bannersList.appendChild(card);
+  });
+}
+
+async function reorder(id, direction) {
+  const { error } = await supabaseClient.rpc('admin_reorder_banner', { p_id: id, p_direction: direction });
+  if (error) { alert('تعذر تغيير الترتيب: ' + error.message); return; }
+  await loadBanners();
+}
+async function toggleActive(b) {
+  const { error } = await supabaseClient.rpc('admin_set_banner_active', { p_id: b.id, p_active: !b.is_active });
+  if (error) { alert('تعذر التغيير: ' + error.message); return; }
+  await loadBanners();
+}
+async function removeBanner(b) {
+  if (!confirm('حذف هذا البنر نهائياً؟')) return;
+  const { error } = await supabaseClient.rpc('admin_delete_banner', { p_id: b.id });
+  if (error) { alert('تعذر الحذف: ' + error.message); return; }
+  await loadBanners();
+}
+
+/* ---------- النموذج ---------- */
+function resetForm() {
+  styleInput.value = 'image_text';
+  [titleInput, subtitleInput, ctaInput, altInput, urlInput, waMessageInput, startInput, endInput]
+    .forEach((i) => { i.value = ''; });
+  linkTypeInput.value = 'none';
+  pageSelect.value = 'index.html';
+  productSelect.value = ''; categorySelect.value = '';
+  activeInput.value = 'true'; hideDisabledInput.value = 'true';
+  $('ovdInput').value = 'right'; $('ovmInput').value = 'top';
+  $('desktopSlotState').textContent = 'لم تُختر صورة بعد';
+  $('mobileSlotState').textContent = 'لم تُختر صورة — ستُولَّد من صورة الديسكتوب';
+  $('desktopCropWrap').hidden = true; $('mobileCropWrap').hidden = true;
+  $('desktopCropHint').hidden = true;
+  $('desktopSizeNote').textContent = ''; $('mobileSizeNote').textContent = '';
+  $('desktopFileInput').value = ''; $('mobileFileInput').value = '';
+  state.slots.desktop = newSlot();
+  state.slots.mobile = newSlot();
+  document.querySelectorAll('.pv-toggle button[data-mode]').forEach((b) => b.classList.toggle('active', b.dataset.mode === 'cover'));
+  formError.textContent = '';
+  updateCounters();
+  syncStyleFields();
+  syncLinkFields();
+}
+
+function openForm(banner) {
+  state.editing = banner || null;
+  resetForm();
+  $('formModalTitle').textContent = banner ? 'تعديل البنر' : 'بنر جديد';
+  if (banner) {
+    styleInput.value = banner.banner_style;
+    titleInput.value = banner.title || '';
+    subtitleInput.value = banner.subtitle || '';
+    ctaInput.value = banner.cta_text || '';
+    altInput.value = banner.alt_text || '';
+    linkTypeInput.value = banner.link_type;
+    if (banner.link_type === 'page') pageSelect.value = banner.link_target || 'index.html';
+    if (banner.link_type === 'product') productSelect.value = banner.link_target || '';
+    if (banner.link_type === 'category') categorySelect.value = banner.link_target || '';
+    if (banner.link_type === 'url') urlInput.value = banner.link_target || '';
+    waMessageInput.value = banner.whatsapp_message || '';
+    $('ovdInput').value = banner.overlay_position_desktop || 'right';
+    $('ovmInput').value = banner.overlay_position_mobile || 'top';
+    activeInput.value = String(banner.is_active);
+    hideDisabledInput.value = String(banner.hide_when_target_disabled);
+    const toLocal = (v) => v ? new Date(new Date(v).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    startInput.value = toLocal(banner.starts_at);
+    endInput.value = toLocal(banner.ends_at);
+    state.slots.desktop.url = banner.image_desktop_url;
+    state.slots.mobile.url = banner.image_mobile_url || '';
+    $('desktopSlotState').textContent = 'الحالية: ' + banner.image_desktop_url;
+    if (banner.image_mobile_url) $('mobileSlotState').textContent = 'الحالية: ' + banner.image_mobile_url;
+  }
+  updateCounters();
+  syncStyleFields();
+  syncLinkFields();
+  formModal.classList.add('show');
+}
+function closeForm() { formModal.classList.remove('show'); state.editing = null; }
+
+function updateCounters() {
+  [[titleInput, 'titleCounter', 45], [subtitleInput, 'subtitleCounter', 90], [ctaInput, 'ctaCounter', 20]]
+    .forEach(([input, id, max]) => {
+      const c = $(id);
+      c.textContent = input.value.length + ' / ' + max;
+      c.classList.toggle('over', input.value.length > max);
+    });
+}
+
+function syncStyleFields() {
+  const hasText = styleInput.value === 'image_text';
+  document.querySelectorAll('#textFields > .field').forEach((f) => { f.hidden = !hasText; });
+  $('overlayRow').hidden = !hasText;
+}
+
+function syncLinkFields() {
+  const t = linkTypeInput.value;
+  show($('pageField'), t === 'page');
+  show($('productField'), t === 'product');
+  show($('categoryField'), t === 'category');
+  show($('urlField'), t === 'url');
+  show($('whatsappField'), t === 'whatsapp');
+  renderPreview();
+}
+
+function currentPayload() {
+  const t = linkTypeInput.value;
+  let target = null;
+  if (t === 'page') target = pageSelect.value;
+  else if (t === 'product') target = productSelect.value || null;
+  else if (t === 'category') target = categorySelect.value || null;
+  else if (t === 'url') target = urlInput.value.trim();
+  const toIso = (v) => v ? new Date(v).toISOString() : null;
+  return {
+    banner_style: styleInput.value,
+    title: titleInput.value.trim() || null,
+    subtitle: subtitleInput.value.trim() || null,
+    cta_text: ctaInput.value.trim() || null,
+    alt_text: altInput.value.trim(),
+    image_desktop_url: state.slots.desktop.url || '',
+    image_mobile_url: state.slots.mobile.url || null,
+    link_type: t,
+    link_target: target,
+    whatsapp_message: waMessageInput.value.trim() || null,
+    overlay_position_desktop: $('ovdInput').value,
+    overlay_position_mobile: $('ovmInput').value,
+    hide_when_target_disabled: hideDisabledInput.value === 'true',
+    is_active: activeInput.value === 'true',
+    starts_at: toIso(startInput.value),
+    ends_at: toIso(endInput.value),
+    sort_order: state.editing ? state.editing.sort_order : (state.banners.length + 1)
+  };
+}
+
+/* المعاينة تستخدم نفس باني الشرائح الذي يستخدمه الموقع */
+function renderPreview() {
+  const frame = $('pvFrame');
+  blank(frame);
+  const payload = currentPayload();
+  if (!payload.image_desktop_url && state.slots.desktop.blob) {
+    payload.image_desktop_url = URL.createObjectURL(state.slots.desktop.blob);
+  }
+  const isMobile = state.pvView === 'mobile';
+  if (isMobile) {
+    if (!payload.image_mobile_url && state.slots.mobile.blob) {
+      payload.image_mobile_url = URL.createObjectURL(state.slots.mobile.blob);
+    }
+    if (!payload.image_mobile_url) {
+      payload.image_mobile_url = payload.image_desktop_url;
+    }
+  }
+  if (!payload.image_desktop_url) {
+    frame.appendChild(el('div', 'slot-note', 'اختر صورة لعرض المعاينة.'));
+    return;
+  }
+  frame.style.aspectRatio = isMobile ? '3 / 4' : '8 / 3';
+  $('pvStage').classList.toggle('is-mobile', isMobile);
+  const slide = window.MeemBanners.buildSlide(payload, 0);
+  if (!slide) { frame.appendChild(el('div', 'slot-note', 'تعذر بناء المعاينة.')); return; }
+  frame.appendChild(slide);
+}
+
+/* ---------- الحفظ ---------- */
+async function uploadBlob(blob, kind) {
+  const path = 'banners/' + kind + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.webp';
+  const { error } = await supabaseClient.storage.from('banners').upload(path, blob, { contentType: 'image/webp' });
+  if (error) throw new Error('فشل رفع الصورة: ' + error.message);
+  const { data } = supabaseClient.storage.from('banners').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function save() {
+  formError.textContent = '';
+  const btn = $('formSaveBtn');
+  btn.disabled = true;
+  try {
+    const d = state.slots.desktop, m = state.slots.mobile;
+    if (d.img) { d.url = await uploadBlob(await exportSlot('desktop'), 'desktop'); }
+    else if (!d.url) throw new Error('اختر صورة الديسكتوب أولاً');
+
+    if (m.img) {
+      m.url = await uploadBlob(await exportSlot('mobile'), 'mobile');
+    } else if (!m.url) {
+      if (!d.img) throw new Error('لا يمكن توليد صورة الموبايل بدون صورة ديسكتوب جديدة');
+      const canvas = $('mobileCanvas');
+      drawSlot(canvas, d.img, MOBILE_BOX, d.mode, d.fx, d.fy);
+      const blob = await canvasToWebp(canvas);
+      if (blob.size > MAX_BYTES) throw new Error('صورة الموبايل المولَّدة أكبر من 300KB');
+      m.url = await uploadBlob(blob, 'mobile');
+    }
+
+    const payload = currentPayload();
+    const { error } = await supabaseClient.rpc('admin_save_banner', {
+      p_id: state.editing ? state.editing.id : null,
+      p_payload: payload
+    });
+    if (error) throw new Error(error.message);
+    closeForm();
+    await loadBanners();
+  } catch (e) {
+    const map = {
+      TITLE_REQUIRED: 'العنوان مطلوب لنمط "صورة + نص".',
+      TITLE_TOO_LONG: 'العنوان أطول من 45 حرفاً.',
+      SUBTITLE_TOO_LONG: 'النص الفرعي أطول من 90 حرفاً.',
+      CTA_TOO_LONG: 'نص الزر أطول من 20 حرفاً.',
+      INVALID_URL: 'الرابط الخارجي يجب أن يبدأ بـ https:// ويكون صالحاً.',
+      INVALID_IMAGE_DESKTOP_URL: 'رابط صورة الديسكتوب غير مقبول.',
+      PAGE_NOT_ALLOWED: 'الصفحة المختارة غير مسموحة.',
+      PRODUCT_NOT_FOUND: 'المنتج غير موجود.',
+      CATEGORY_NOT_FOUND: 'القسم غير موجود.',
+      PERMISSION_REQUIRED: 'لا تملك صلاحية إدارة الإعدادات.',
+      ADMIN_REQUIRED: 'صلاحيتك كمشرف لم تعد فعّالة — أعد تحميل الصفحة.'
+    };
+    formError.textContent = map[(e.message || '').trim()] || e.message || 'تعذر الحفظ';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------- التهيئة ---------- */
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles').select('role, is_banned').eq('id', session.user.id).maybeSingle();
+  if (profileError || !profile || profile.role !== 'admin' || profile.is_banned === true) {
+    $('accessDenied').classList.add('show');
+    return;
+  }
+  const { data: canManage, error: permError } = await supabaseClient
+    .rpc('has_admin_permission', { permission_key: 'manage_settings' });
+  if (permError || canManage !== true) { $('accessDenied').classList.add('show'); return; }
+
+  $('adminPage').style.display = 'block';
+
+  $('addNewBtn').addEventListener('click', () => openForm(null));
+  $('formCancelBtn').addEventListener('click', closeForm);
+  $('formSaveBtn').addEventListener('click', save);
+  $('desktopPickBtn').addEventListener('click', () => $('desktopFileInput').click());
+  $('mobilePickBtn').addEventListener('click', () => $('mobileFileInput').click());
+  $('desktopFileInput').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try { await pickFile('desktop', f); await exportSlot('desktop'); renderPreview(); }
+    catch (err) { formError.textContent = err.message; }
+  });
+  $('mobileFileInput').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try { await pickFile('mobile', f); await exportSlot('mobile'); renderPreview(); }
+    catch (err) { formError.textContent = err.message; }
+  });
+  bindCrop('desktop');
+  bindCrop('mobile');
+  [titleInput, subtitleInput, ctaInput].forEach((i) => i.addEventListener('input', () => { updateCounters(); renderPreview(); }));
+  [altInput, urlInput, waMessageInput, $('ovdInput'), $('ovmInput')].forEach((i) => {
+    i.addEventListener('input', renderPreview);
+    i.addEventListener('change', renderPreview);
+  });
+  [styleInput, linkTypeInput].forEach((i) => i.addEventListener('change', () => { syncStyleFields(); syncLinkFields(); }));
+  [pageSelect, productSelect, categorySelect].forEach((i) => i.addEventListener('change', syncLinkFields));
+  $('pvToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    state.pvView = btn.dataset.view;
+    [...$('pvToggle').querySelectorAll('button')].forEach((b) => b.classList.toggle('active', b === btn));
+    renderPreview();
+  });
+
+  await loadRefData();
+  await loadBanners();
+}
+init();
+</script>
+</body>
+</html>

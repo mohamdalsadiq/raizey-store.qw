@@ -140,34 +140,10 @@ function requireClient() {
 }
 
 // =========================================================
-// Sentry: سياق الصفحة والمستخدم (بدون بيانات حساسة زي الإيميل)
-// الحماية: قد يُحمَّل الـ loader جزئياً (حاجب إعلانات أو حجب شبكة)، فنتحقق من الدالة نفسها
-// بدلاً من وجود الكائن فقط لتجنّب أخطاء TypeError في الصفحة.
+// المراقبة (Sentry) أُزيلت: كان الـ loader لا يُحمَّل أصلاً لأن أصل
+// js.sentry-cdn.com غير مسموح في سياسة CSP، وكان يثقل كل صفحة دون فائدة.
+// المصدر الوحيد للأخطاء الآن هو window.onerror المحلي في meem-ui.js.
 // =========================================================
-function hasSentryUserApi() {
-  return !!(window.Sentry && typeof window.Sentry.setUser === 'function');
-}
-if (window.Sentry && typeof window.Sentry.onLoad === 'function') {
-  window.Sentry.onLoad(function () {
-    try {
-      window.Sentry.setTag('page', (location.pathname.split('/').pop() || 'index.html'));
-    } catch (_) {}
-  });
-}
-if (supabaseClient) {
-  supabaseClient.auth.getSession().then(({ data }) => {
-    const uid = data && data.session && data.session.user ? data.session.user.id:  null;
-    if (hasSentryUserApi() && uid) window.Sentry.setUser({ id: uid });
-  }).catch(() => {});
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
-    if (!hasSentryUserApi()) return;
-    if (session && session.user) {
-      window.Sentry.setUser({ id: session.user.id });
-    } else {
-      window.Sentry.setUser(null);
-    }
-  });
-}
 
 // =========================================================
 // Cache بسيط في sessionStorage لتفادي الاستعلامات المتكررة
