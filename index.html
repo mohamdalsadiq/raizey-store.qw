@@ -18,7 +18,6 @@
 
 
 <meta charset="UTF-8">
-<script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MEEM STORE — شحن ألعاب وبطاقات رقمية</title>
 <meta name="description" content="متجر MEEM STORE لشحن شدات ببجي، جواهر فري فاير، بطاقات جوجل بلاي، والاشتراكات الرقمية بأسعار محدثة لحظياً.">
@@ -317,6 +316,7 @@
 
 <!-- MEEM UI system (tokens + components + icons + behaviour) -->
 <link rel="stylesheet" href="assets/css/meem.css">
+<link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
 <script src="assets/js/meem-ui.js"></script>
 </head>
 <body class="mm-has-bottom-nav">
@@ -397,25 +397,17 @@
   </div>
 </div>
 
-<section class="hero-slider">
-  <div class="slider-track" id="sliderTrack">
-    <div class="slide slide-1" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">MEEM STORE</div>
-      <h2 style="color: var(--text-light);">اشحن رصيدك فوراً بأفضل الأسعار</h2>
-      <p style="color: var(--text-muted);">شدات ببجي وجواهر فري فاير وبطاقات جوجل بلاي — تسليم سريع وموثوق</p>
-    </div>
-    <div class="slide slide-2" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">دفع مرن</div>
-      <h2 style="color: var(--text-light);">ادفع من محفظتك أو بتحويل بنكك مباشرة</h2>
-      <p style="color: var(--text-muted);">محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون تعقيد</p>
-    </div>
-    <div class="slide slide-3" style="background: linear-gradient(135deg, var(--mm-surface-3) 0%, var(--mm-surface) 100%); border: 1px solid var(--border-color); border-radius: 16px; margin: 0 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 30px;">
-      <div class="slide-eyebrow" style="color: var(--mm-accent-text); font-weight: 800;">دعم فوري</div>
-      <h2 style="color: var(--text-light);">تواصل معانا مباشرة على واتساب</h2>
-      <p style="color: var(--text-muted);">فريقنا جاهز يرد على استفساراتك ويتابع طلبك أول بأول</p>
+<section class="mm-hero" aria-label="عروض MEEM STORE">
+  <div class="mm-hero-shell">
+    <div class="swiper mm-hero-swiper" id="mmHeroSwiper" aria-roledescription="carousel">
+      <div class="swiper-wrapper" id="mmHeroWrapper">
+        <div class="swiper-slide mm-slide mm-slide-skeleton" aria-hidden="true"></div>
+      </div>
+      <button type="button" class="mm-hero-arrow mm-hero-arrow-next" id="mmHeroNext" aria-label="الشريحة التالية" hidden></button>
+      <button type="button" class="mm-hero-arrow mm-hero-arrow-prev" id="mmHeroPrev" aria-label="الشريحة السابقة" hidden></button>
+      <div class="swiper-pagination mm-hero-dots" id="mmHeroDots" hidden></div>
     </div>
   </div>
-  <div class="slider-dots" id="sliderDots"></div>
 </section>
 
 <div class="marquee-strip">
@@ -435,6 +427,7 @@
   </div>
 </div>
 
+<div id="products" class="products-anchor"></div>
 <div id="categoriesContainer" class="catalog-sections">
   <div style="color: var(--text-muted); font-size: 13px; padding: 20px; text-align: center;">
     <img class="mm-mark-pulse" src="assets/img/meem-mark-96.png"
@@ -460,29 +453,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
+<script src="assets/js/banners.js"></script>
 <script>
-// ---------- Slider ----------
-let currentSlide = 0;
-const track = document.getElementById('sliderTrack');
-const dotsBox = document.getElementById('sliderDots');
-const slideCount = track.children.length;
-
-for (let i = 0; i < slideCount; i++) {
-  const d = document.createElement('div');
-  d.className = 'dot' + (i === 0 ? ' active' : '');
-  dotsBox.appendChild(d);
-}
-
-function goToSlide(i) {
-  currentSlide = i;
-  track.style.transform = `translateX(${currentSlide * 100}%)`;
-  [...dotsBox.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
-}
-
-setInterval(() => {
-  goToSlide((currentSlide + 1) % slideCount);
-}, 4500);
-
 // ---------- Drawer ----------
 const drawerOverlay = document.getElementById('drawerOverlay');
 document.getElementById('openDrawerBtn').addEventListener('click', () => {

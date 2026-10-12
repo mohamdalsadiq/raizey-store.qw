@@ -1,0 +1,25 @@
+-- MEEM STORE — banner security invariants (Phase 3a).
+--
+-- These checks must never write production data. Because a role switch and a
+-- result table cannot live in the same statement, each probe runs in its own
+-- explicit transaction that ends in ROLLBACK, driven by
+--   db/tests/run_banners_security.sh
+-- (the runner needs a Supabase access token; it never prints the token).
+--
+--   1  anon sees only active, in-window banner rows                        EXPECT 3
+--   2  anon gets the storefront payload from get_banners_public()          EXPECT 3
+--   3  anon cannot INSERT into public.banners                               EXPECT ERROR
+--   4  anon cannot call admin_save_banner()                                 EXPECT ERROR
+--   5  anon cannot call admin_delete_banner()                               EXPECT ERROR
+--   6  anon cannot call banners_validate()                                  EXPECT ERROR
+--   7  authenticated non-admin sees only public rows                       EXPECT 3
+--   8  authenticated non-admin cannot toggle a banner                       EXPECT ERROR
+--   9  javascript: image url is rejected                                    EXPECT ERROR
+--  10  protocol-relative image url is rejected                              EXPECT ERROR
+--  11  a page outside the whitelist is rejected                             EXPECT ERROR
+--  12  an http:// link is rejected (https only)                             EXPECT ERROR
+--  13  image_text without a title is rejected                               EXPECT ERROR
+--  14  a title longer than 45 characters is rejected                        EXPECT ERROR
+--  15  the banners bucket is public with a 2MB cap                          EXPECT true
+--  16  the banners bucket accepts only jpeg/png/webp                         EXPECT true
+--  17  no anon write policy exists on storage.objects for this bucket        EXPECT 0

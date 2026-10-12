@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
+<meta name="description" content="العروض والتخفيضات في MEEM STORE — شحن ألعاب وبطاقات رقمية بأسعار مخفّضة وتسليم فوري.">
+<title>العروض — MEEM STORE</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
+<link rel="icon" sizes="any" href="assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/img/favicon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon-180.png">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/meem.css">
+<script src="assets/js/meem-ui.js"></script>
+<style>
+  .offers-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 4px 16px 28px; }
+  @media (min-width: 720px) { .offers-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+  @media (min-width: 1080px) { .offers-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  .offer-card { position: relative; display: flex; flex-direction: column; gap: 8px; }
+  .offer-badge {
+    position: absolute; inset-inline-start: 10px; inset-block-start: 10px; z-index: 2;
+    background: var(--mm-gold); color: var(--mm-royal-950);
+    font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    box-shadow: var(--mm-shadow-sm);
+  }
+  .offer-prices { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .offer-new { color: var(--mm-gold); font-weight: 800; font-size: 15px; }
+  .offer-old { color: var(--mm-text-muted); text-decoration: line-through; font-size: 13px; }
+</style>
+</head>
+<body class="mm-has-bottom-nav">
+<main class="catalog-page">
+  <div class="catalog-topbar">
+    <a href="index.html" class="catalog-back"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-arrow-right"></use></svg> رجوع للمتجر</a>
+    <a href="cart.html" class="catalog-cart" aria-label="فتح السلة"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg> السلة <span id="globalCartCount">0</span></a>
+  </div>
+
+  <div id="stateBox" class="catalog-state">
+    <svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg>
+    <h3>جارِ تحميل العروض...</h3>
+    <p>لحظات ونجمع لك أفضل التخفيضات.</p>
+  </div>
+
+  <div id="content" hidden>
+    <section class="category-hero" aria-labelledby="offersTitle">
+      <div class="category-hero-copy">
+        <span class="category-eyebrow"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-tag"></use></svg> MEEM STORE</span>
+        <h1 id="offersTitle">العروض</h1>
+        <p>منتجات بأسعار مخفّضة — نفس التسليم الفوري ونفس الضمان.</p>
+      </div>
+    </section>
+    <div class="offers-grid" id="offersGrid"></div>
+  </div>
+</main>
+
+<a href="https://wa.me/249901815039" data-mm-whatsapp-base="https://wa.me/__NUMBER__" class="whatsapp-fab" target="_blank" rel="noopener" title="تواصل واتساب" aria-label="تواصل واتساب"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg></a>
+
+<nav class="bottom-nav">
+  <a href="index.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>
+  <a href="offers.html" class="is-active" aria-current="page"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-tag"></use></svg><span>العروض</span></a>
+  <a href="cart.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-shopping-cart"></use></svg><span>السلة</span></a>
+  <a href="my-orders.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-receipt-text"></use></svg><span>طلباتي</span></a>
+  <a href="account.html"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-user"></use></svg><span>حسابي</span></a>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+'use strict';
+let exchangeRate = 1;
+
+function esc(value) { return typeof escapeHtml === 'function' ? escapeHtml(value) : String(value == null ? '' : value); }
+function money(value) { return typeof formatSDG === 'function' ? formatSDG(Math.max(0, Number(value) || 0)) : Math.round(Number(value) || 0).toLocaleString('ar-EG'); }
+function safeUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try { const u = new URL(value, window.location.href); return ['http:', 'https:'].includes(u.protocol) ? u.href : ''; } catch (e) { return ''; }
+}
+function iconMarkup(name) { return typeof window.rzIconMarkup === 'function' ? window.rzIconMarkup(name) : ''; }
+
+function updateCartBadge() {
+  const node = document.getElementById('globalCartCount');
+  if (!node) return;
+  try { node.textContent = String((JSON.parse(localStorage.getItem('meem_store_cart') || '[]') || []).length); }
+  catch (e) { node.textContent = '0'; }
+}
+
+function showState(title, description, icon) {
+  const box = document.getElementById('stateBox');
+  while (box.firstChild) box.removeChild(box.firstChild);
+  box.insertAdjacentHTML('beforeend', iconMarkup(icon || 'package-open'));
+  const h = document.createElement('h3'); h.textContent = title;
+  const p = document.createElement('p'); p.textContent = description;
+  box.append(h, p);
+  box.hidden = false;
+  document.getElementById('content').hidden = true;
+}
+
+function buildCard(product) {
+  const name = typeof product.name === 'string' && product.name.trim() ? product.name.trim() : 'منتج';
+  const price = Number(product.price_usd) || 0;
+  const compare = Number(product.compare_at_price_usd) || 0;
+  const discount = compare > 0 ? Math.round((1 - price / compare) * 100) : 0;
+
+  const card = document.createElement('a');
+  card.className = 'game-card offer-card';
+  card.href = 'product.html?id=' + encodeURIComponent(String(product.id));
+  card.setAttribute('aria-label', 'فتح ' + name + (discount > 0 ? ' — خصم ' + discount + '%' : ''));
+
+  if (discount > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'offer-badge';
+    badge.textContent = 'خصم ' + discount + '%';
+    card.appendChild(badge);
+  }
+
+  const thumb = document.createElement('div');
+  thumb.className = 'game-thumb';
+  const imageUrl = safeUrl(product.image_url);
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = name;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.addEventListener('error', () => { thumb.replaceChildren(); thumb.style.cssText = 'color:var(--mm-haze); font-size:32px;'; thumb.insertAdjacentHTML('beforeend', iconMarkup('gamepad-2')); }, { once: true });
+    thumb.appendChild(img);
+  } else {
+    thumb.style.cssText = 'color:var(--mm-haze); font-size:32px;';
+    thumb.insertAdjacentHTML('beforeend', iconMarkup('gamepad-2'));
+  }
+
+  const info = document.createElement('div');
+  info.className = 'game-info';
+  const nameEl = document.createElement('div');
+  nameEl.className = 'game-name';
+  nameEl.textContent = name;
+  const prices = document.createElement('div');
+  prices.className = 'offer-prices';
+  const newPrice = document.createElement('span');
+  newPrice.className = 'offer-new';
+  newPrice.textContent = money(price * exchangeRate) + ' ج.س';
+  prices.appendChild(newPrice);
+  if (compare > price) {
+    const oldPrice = document.createElement('span');
+    oldPrice.className = 'offer-old';
+    oldPrice.textContent = money(compare * exchangeRate) + ' ج.س';
+    prices.appendChild(oldPrice);
+  }
+  info.append(nameEl, prices);
+  card.append(thumb, info);
+  return card;
+}
+
+async function init() {
+  updateCartBadge();
+  try { exchangeRate = Number(await getExchangeRate()) || 1; } catch (e) { exchangeRate = 1; }
+
+  const { data, error } = await supabaseClient
+    .from('products')
+    .select('id,name,image_url,price_usd,compare_at_price_usd,category_id,delivery_badge_text')
+    .eq('is_active', true)
+    .not('compare_at_price_usd', 'is', null)
+    .order('display_order', { ascending: true })
+    .limit(200);
+
+  if (error) {
+    showState('تعذر تحميل العروض', 'حدّث الصفحة وحاول مرة أخرى.', 'rotate-cw');
+    return;
+  }
+
+  const offers = (data || [])
+    .filter((p) => Number(p.compare_at_price_usd) > Number(p.price_usd) && Number(p.price_usd) >= 0)
+    .sort((a, b) => {
+      const da = 1 - Number(a.price_usd) / Number(a.compare_at_price_usd);
+      const db = 1 - Number(b.price_usd) / Number(b.compare_at_price_usd);
+      return db - da;
+    });
+
+  if (!offers.length) {
+    showState('لا توجد عروض حالياً', 'تابعنا قريباً — نضيف تخفيضات جديدة باستمرار.', 'tag');
+    return;
+  }
+
+  const grid = document.getElementById('offersGrid');
+  while (grid.firstChild) grid.removeChild(grid.firstChild);
+  const frag = document.createDocumentFragment();
+  offers.forEach((p) => frag.appendChild(buildCard(p)));
+  grid.appendChild(frag);
+  document.getElementById('stateBox').hidden = true;
+  document.getElementById('content').hidden = false;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1094,3 +1094,164 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 .receipt-brand { display: flex; justify-content: center; margin-bottom: 14px; }
 .receipt-brand .brand-lockup { display: block; width: 168px; height: auto; }
 @media print { .receipt-brand .brand-lockup { width: 140px; } }
+
+
+/* ── 25. Storefront banner carousel (data: public.get_banners_public) ──────
+   Desktop box 1920x720 (8:3), mobile box 1086x1448 (3:4 - the ratio of the
+   supplied mobile artwork, so nothing is ever cropped). The container owns the
+   aspect ratio: there is no fixed height and no max-height that could clip. */
+.mm-hero { padding: 14px 12px 0; }
+@media (min-width: 768px) { .mm-hero { padding: 18px 20px 0; } }
+
+.mm-hero-shell { max-width: 1440px; margin: 0 auto; }
+
+.mm-hero-swiper {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--mm-royal-900);
+  box-shadow: var(--mm-shadow-md);
+  border: 1px solid var(--mm-border);
+}
+@media (min-width: 768px) { .mm-hero-swiper { border-radius: 20px; } }
+
+.mm-slide { position: relative; aspect-ratio: 3 / 4; }
+@media (min-width: 768px) { .mm-slide { aspect-ratio: 8 / 3; } }
+
+.mm-slide-media { position: absolute; inset: 0; display: block; }
+.mm-slide-media img {
+  width: 100%; height: 100%; object-fit: cover; object-position: center;
+  display: block; background: var(--mm-royal-900);
+}
+
+/* skeleton while the rows are being fetched */
+.mm-slide-skeleton {
+  background: linear-gradient(100deg, var(--mm-royal-800) 30%, var(--mm-royal-700) 50%, var(--mm-royal-800) 70%);
+  background-size: 220% 100%;
+  animation: mm-hero-shimmer 1.4s linear infinite;
+}
+@keyframes mm-hero-shimmer { from { background-position: 120% 0; } to { background-position: -80% 0; } }
+
+/* Text overlay: a scrim only under the text so the artwork keeps the frame.
+   The calm area of all three desktop artworks is on the RIGHT (270deg starts
+   at the right edge), the calm area of the mobile artworks is on TOP. */
+.mm-slide-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(270deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 68%);
+}
+.mm-slide[data-style="image_text"][data-ovd="left"] .mm-slide-scrim {
+  background: linear-gradient(90deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 68%);
+}
+
+.mm-slide-body {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  padding: 20px; max-width: 100%;
+  container-type: inline-size;
+}
+/* RTL: the cross-axis "flex-start" edge is the RIGHT edge, so a "right"
+   overlay aligns to flex-start and a "left" overlay to flex-end. */
+.mm-slide[data-ovd="right"] .mm-slide-body { align-items: flex-start; text-align: right; }
+.mm-slide[data-ovd="left"]  .mm-slide-body { align-items: flex-end; text-align: left; }
+
+.mm-slide-title {
+  color: #fff; font-weight: 800; margin: 0; line-height: 1.25;
+  font-size: clamp(18px, 2.6cqw + 8px, 44px);
+  text-shadow: 0 2px 14px rgba(4,18,63,.75);
+}
+.mm-slide-sub {
+  color: var(--mm-ice-soft); margin: 0; line-height: 1.6;
+  font-size: clamp(12px, 1.3cqw + 6px, 20px);
+  text-shadow: 0 2px 10px rgba(4,18,63,.7);
+}
+
+.mm-slide-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 20px;
+  background: var(--mm-gold); color: var(--mm-royal-950);
+  font-weight: 800; font-size: clamp(13px, 0.8cqw + 8px, 17px);
+  border-radius: 12px; text-decoration: none; border: none;
+  transition: box-shadow .18s ease, transform .18s ease, background-color .18s ease;
+}
+.mm-slide-cta:hover, .mm-slide-cta:focus-visible {
+  background: var(--mm-gold-500);
+  box-shadow: var(--mm-shadow-glow);
+  outline: none; transform: translateY(-1px);
+}
+.mm-slide-cta-icon { width: 18px; height: 18px; }
+
+/* the CTA (image_text) or the whole slide (image_only) is the single link */
+.mm-stretched { position: relative; z-index: 3; }
+.mm-stretched::after { content: ''; position: absolute; inset: -100vh -100vw; z-index: 2; }
+.mm-slide-hit { position: absolute; inset: 0; z-index: 3; }
+
+/* arrows + dots sit above the artwork with real contrast */
+.mm-hero-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  background: rgba(4,18,63,.62); border: 1px solid rgba(255,255,255,.35);
+  color: #fff; display: none;
+}
+.mm-hero-swiper:hover .mm-hero-arrow,
+.mm-hero-arrow:focus-visible { display: block; }
+@media (hover: none) { .mm-hero-swiper:hover .mm-hero-arrow { display: none; } }
+.mm-hero-arrow::before {
+  content: ''; display: block; width: 10px; height: 10px; margin: 0 auto;
+  border-top: 2px solid currentColor; border-left: 2px solid currentColor;
+}
+/* RTL: "next" runs to the left */
+.mm-hero-arrow-next { left: 12px; }
+.mm-hero-arrow-next::before { transform: rotate(-45deg); margin-left: 4px; }
+.mm-hero-arrow-prev { right: 12px; }
+.mm-hero-arrow-prev::before { transform: rotate(135deg); margin-right: 4px; }
+
+.mm-hero-dots {
+  position: absolute; bottom: 12px; left: 0; right: 0; z-index: 5;
+  display: flex; justify-content: center; gap: 8px;
+}
+.mm-hero-dots .swiper-pagination-bullet {
+  width: 8px; height: 8px; border-radius: 999px; padding: 0;
+  background: rgba(255,255,255,.45); border: none; opacity: 1; cursor: pointer;
+  transition: width .2s ease, background-color .2s ease;
+}
+.mm-hero-dots .swiper-pagination-bullet-active { width: 22px; background: var(--mm-gold); }
+
+/* calm area on the desktop slides is on the right, the calm area on the mobile
+   slides is on top: keep the readable side free of controls */
+@media (min-width: 768px) { .mm-hero-dots { bottom: 14px; } }
+
+/* mobile: text may be pinned to the top or the bottom of the frame */
+@media (max-width: 767px) {
+  .mm-slide-body { padding: 16px; max-width: 100%; justify-content: flex-start; padding-top: 22px; }
+  .mm-slide[data-ovm="bottom"] .mm-slide-body { justify-content: flex-end; padding-top: 16px; padding-bottom: 26px; }
+  .mm-slide[data-ovm="top"] .mm-slide-scrim {
+    background: linear-gradient(180deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 58%);
+  }
+  .mm-slide[data-ovm="bottom"] .mm-slide-scrim {
+    background: linear-gradient(0deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 58%);
+  }
+  /* controls are for desktop; mobile uses swipe + the dots stay out of the art */
+  .mm-hero-dots { display: none; }
+  .mm-slide-title { max-width: 92%; }
+  .mm-slide-sub { max-width: 92%; }
+  .mm-slide-body { align-items: center; text-align: center; }
+}
+
+/* entrance motion, and the reduced-motion escape hatch */
+.mm-slide-body > * { animation: mm-hero-in .5s ease both; }
+.mm-slide-body > *:nth-child(2) { animation-delay: .05s; }
+.mm-slide-body > *:nth-child(3) { animation-delay: .1s; }
+@keyframes mm-hero-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .mm-slide-body > * { animation: none; }
+  .mm-slide-skeleton { animation: none; }
+  .mm-slide-cta:hover { transform: none; }
+}
+
+/* if Swiper could not load, show the first slide only instead of a broken strip */
+.mm-hero-noswiper .swiper-wrapper { display: block; }
+.mm-hero-noswiper .mm-slide + .mm-slide { display: none; }
+
+.products-anchor { scroll-margin-top: 72px; }
+@media (min-width: 768px) { .products-anchor { scroll-margin-top: 96px; } }
