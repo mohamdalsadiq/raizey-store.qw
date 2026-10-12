@@ -71,7 +71,6 @@
   gap: 10px;
   margin-bottom: 18px;
 }
-.auth-logo .brand-mark {
   width: 46px;
   height: 46px;
   display: grid;
@@ -82,8 +81,6 @@
   box-shadow: var(--auth-glow);
   flex: 0 0 auto;
 }
-.auth-logo .brand-mark img,
-.brand-mark img { width: 30px; height: 30px; object-fit: contain; }
 .auth-logo .brand-text {
   direction: ltr;
   unicode-bidi: isolate;
@@ -698,7 +695,6 @@ img.flag {
   direction: ltr;
 }
 
-
 /* ---------- الدخول عبر OTP وإعادة المصادقة ---------- */
 .otp-mode-btn,
 .link-button {
@@ -810,7 +806,6 @@ img.flag {
   .auth-modal-cancel { flex: 1; min-height: 44px; }
 }
 
-
 /* ---------- Text-only country picker ---------- */
 .country-btn {
   min-width: 142px;
@@ -829,10 +824,17 @@ img.flag {
   .country-pop { width: min(300px, calc(100vw - 36px)); }
 }
 
-.auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
 
-.auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
-/* light theme uses the re-inked lockup (navy wordmark, deeper gold) */
-.brand-lockup--light { display: none; }
-[data-theme="light"] .brand-lockup--dark { display: none; }
-[data-theme="light"] .brand-lockup--light { display: block; }
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
+
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
+
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
+
+/* Full master logo (assets/img/meem-logo.png) on the auth cards */
+.auth-logo .brand-lockup { display: block; width: 172px; height: 172px; margin: 0 auto;
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
+
+.auth-logo .brand-lockup { display: block; width: 172px; height: 172px; margin: 0 auto;
+  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }

@@ -21,10 +21,10 @@
 <script src="https://js.sentry-cdn.com/b654a99332aedb9fbaf8e802ca53e55b.min.js" crossorigin="anonymous"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>إيصال الطلب — MEEM STORE</title>
-<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
 <link rel="icon" sizes="any" href="assets/img/favicon.ico">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/img/meem-icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon-180.png">
 
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
@@ -36,9 +36,6 @@
   }
   .receipt-brand img { width: 158px; height: auto; }
   /* light theme uses the re-inked lockup (navy wordmark, deeper gold) */
-  .brand-lockup--light { display: none; }
-  [data-theme="light"] .brand-lockup--dark { display: none; }
-  [data-theme="light"] .brand-lockup--light { display: block; }
 
   .receipt-page {
     max-width: 520px;
@@ -237,8 +234,7 @@
 
 <div class="receipt-page">
   <div class="receipt-brand">
-    <img class="brand-lockup brand-lockup--dark" src="assets/img/meem-logo-horizontal.svg" alt="MEEM STORE" width="158" height="67">
-    <img class="brand-lockup brand-lockup--light" src="assets/img/meem-logo-horizontal-light.svg" alt="MEEM STORE" aria-hidden="true" width="158" height="67">
+    <img class="brand-lockup" src="assets/img/meem-logo.png" alt="MEEM STORE" width="150" height="150">
   </div>
   <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
     <div style="display: flex; align-items: center; gap: 8px;">
