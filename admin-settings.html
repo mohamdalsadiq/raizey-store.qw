@@ -87,6 +87,25 @@
     إدارة مستويات مكافآت الإحالة ←
   </a>
 
+  <div class="admin-section-title">التواصل عبر واتساب</div>
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+    الرقم الذي يظهر لأزرار الدعم في المتجر. اكتبه بصيغة دولية بدون + وبدون مسافات (مثال: 249901815039).
+  </p>
+  <div class="field">
+    <label for="whatsappInput">رقم واتساب الدعم</label>
+    <input type="text" id="whatsappInput" inputmode="numeric" placeholder="مثلاً: 249901815039">
+  </div>
+
+  <div class="admin-section-title">تدقيق الإيصالات</div>
+  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+    المبلغ الأقصى (بالجنيه السوداني) الذي يُقبل تلقائياً من الإيصال. أي إيصال فوقه يتحوّل إلى تدقيق إداري.
+    اكتب 0 لإطفاء الحد (لا تحويل تلقائي بسبب المبلغ).
+  </p>
+  <div class="field">
+    <label for="autoAcceptInput">الحد الأقصى للقبول التلقائي (ج.س)</label>
+    <input type="number" id="autoAcceptInput" step="1" min="0" placeholder="0">
+  </div>
+
   <div class="form-error" id="formError"></div>
   <div class="form-success" id="formSuccess"></div>
 
@@ -124,13 +143,15 @@ async function init() {
   const { data: settingsRows } = await supabaseClient
     .from('settings')
     .select('key, value')
-    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent']);
+    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'whatsapp_number', 'auto_accept_max_sdg']);
 
   const map = {};
   (settingsRows || []).forEach(r => { map[r.key] = r.value; });
 
   document.getElementById('rateInput').value = map.usd_to_sdg_rate || '';
   document.getElementById('marginInput').value = map.profit_margin_percent || '0';
+  document.getElementById('whatsappInput').value = map.whatsapp_number || '';
+  document.getElementById('autoAcceptInput').value = map.auto_accept_max_sdg || '0';
 
   document.getElementById('saveBtn').addEventListener('click', saveRate);
 }
@@ -154,8 +175,26 @@ async function saveRate() {
   await supabaseClient.from('settings').update({ value: String(rate), updated_at: new Date().toISOString() }).eq('key', 'usd_to_sdg_rate');
   await supabaseClient.from('settings').update({ value: String(margin), updated_at: new Date().toISOString() }).eq('key', 'profit_margin_percent');
 
+  const autoAccept = parseFloat(document.getElementById('autoAcceptInput').value);
+  const autoAcceptValue = Number.isFinite(autoAccept) && autoAccept > 0 ? autoAccept : 0;
+  await supabaseClient.from('settings')
+    .update({ value: String(autoAcceptValue), updated_at: new Date().toISOString() })
+    .eq('key', 'auto_accept_max_sdg');
+
+  const whatsapp = (document.getElementById('whatsappInput').value || '').replace(/[^0-9]/g, '');
+  if (whatsapp && whatsapp.length < 8) {
+    errorBox.textContent = 'رقم واتساب غير صحيح — اكتبه بصيغة دولية بدون +';
+    return;
+  }
+  if (whatsapp) {
+    await supabaseClient.from('settings')
+      .update({ value: whatsapp, updated_at: new Date().toISOString() })
+      .eq('key', 'whatsapp_number');
+  }
+
   await supabaseClient.from('audit_logs').insert({
-    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin }
+    source: 'admin_page',
+    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin, whatsapp, auto_accept_max_sdg: autoAcceptValue }
   });
 
   successBox.textContent = 'تم حفظ الإعدادات بنجاح';

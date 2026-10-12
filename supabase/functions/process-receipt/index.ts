@@ -188,19 +188,56 @@ function json(request: Request, data: unknown, status = 200, extraHeaders: Recor
   });
 }
 
+// ── Origin allowlist (نمط دقيق: دومين الإنتاج + معاينات هذا المشروع فقط) ──
+// الافتراضي يقبل:
+//   • https://raizey-store-qw.vercel.app                (دومين الإنتاج الحالي)
+//   • https://raizey-store-qw-<...>.vercel.app          (معاينات المشروع: فرع/فريق)
+// لتضييقه على اسم الفريق تحديداً اضبط PREVIEW_ORIGIN_REGEX في أسرار الدالة، مثال:
+//   ^https://raizey-store-qw-git-[a-z0-9-]+-<TEAM-SLUG>\.vercel\.app$
+const PROJECT_SLUG = "raizey-store-qw";
+const DEFAULT_PREVIEW_ORIGIN_REGEX = `^https://${PROJECT_SLUG}(-[a-z0-9-]+)?\.vercel\.app$`;
+
+function configuredOrigins(): string[] {
+  const raw = publicOriginEnv() || env("PUBLIC_ORIGINS");
+  if (!raw || raw === "*") return [PRODUCTION_ORIGIN];
+  return [PRODUCTION_ORIGIN, ...raw.split(",").map((value) => value.trim()).filter(Boolean)];
+}
+
+function previewOriginRegex(): RegExp {
+  const raw = env("PREVIEW_ORIGIN_REGEX") || DEFAULT_PREVIEW_ORIGIN_REGEX;
+  try {
+    return new RegExp(raw, "i");
+  } catch (_) {
+    return new RegExp(DEFAULT_PREVIEW_ORIGIN_REGEX, "i");
+  }
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (configuredOrigins().includes(origin)) return true;
+  return previewOriginRegex().test(origin);
+}
+
+function allowedOrigin(request: Request): string {
+  const origin = request.headers.get("Origin") || "";
+  if (isAllowedOrigin(origin)) return origin;
+  return configuredOrigins()[0];
+}
+
 function corsHeaders(request: Request): Record<string, string> {
-  const configured = env("RAIZEY_PUBLIC_ORIGIN");
-  const origins = configured && configured !== "*"
-    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
-    : [PRODUCTION_ORIGIN];
-  const requestOrigin = request.headers.get("Origin") || "";
-  const origin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
   return {
-    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Origin": allowedOrigin(request),
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
+}
+
+// أصل غير مسموح يرفض صراحةً (403) بدل معالجة الطلب بترويسات CORS خاطئة.
+function originForbidden(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  if (!origin) return false;
+  return !isAllowedOrigin(origin);
 }
 
 /**
@@ -762,6 +799,23 @@ function txRefForStorage(result: ScanResult, manualRef: string): string | null {
   return candidates.find((candidate) => normalizeRefForStorage(candidate) === manual) || extractedRef;
 }
 
+// حد القبول التلقائي بالمبلغ: يُقرأ من settings (0 أو غياب = مطفأ).
+// فوقه يتحول الإيصال تلقائياً إلى تدقيق إداري بدل القبول.
+async function loadAutoAcceptMaxSdg(admin: any): Promise<number> {
+  try {
+    const { data, error } = await admin
+      .from("settings")
+      .select("value")
+      .eq("key", "auto_accept_max_sdg")
+      .maybeSingle();
+    if (error || !data) return 0;
+    const value = Number(String(data.value ?? "").replace(/[^0-9.]/g, ""));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
 async function saveScan(
   admin: any,
   userId: string,
@@ -1083,6 +1137,47 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   // undefined) فيبقى مقتطف OCR في الطلب فارغاً دائماً. نفس النص المحفوظ
   // خادمياً في ocr_data.raw_text_excerpt، وبنفس حد الواجهة (300 حرف).
   result.rawExcerpt = rawText.trim() ? rawText.slice(0, 300) : null;
+
+  // ── فحص سلامة ملف الصورة (بصمات محررات + EXIF/PNG Software) — قبل أي حفظ ──
+  // راية editor_signature كانت معروضة في لوحة الأدمن بلا مصدر ينتجها؛ هنا تُفعَّل فعلياً.
+  try {
+    const probeBlob = new Blob([bytes], { type: mimeType || "image/jpeg" });
+    const integrity = await ReceiptJudgeCore.probeImageIntegrity(probeBlob);
+    if (integrity.flags && integrity.flags.length) {
+      result.riskFlags = (result.riskFlags || []).concat(integrity.flags);
+      result.integrity = {
+        software: integrity.software,
+        editor: integrity.editor,
+      };
+      if (result.decision === "accept") {
+        result.decision = "review_admin";
+        result.ocrStatus = "needs_admin_check";
+        result.reviewSeverity = "high";
+        result.message = "إيصالك قيد التدقيق الإداري للتأكد من أصالة الصورة — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.";
+        result.reviewReason =
+          "بصمة تعديل/إعادة حفظ في ملف الإيصال" +
+          (integrity.software ? " (Software: " + String(integrity.software).slice(0, 60) + ")" : "") +
+          " — رقم العملية والمبلغ مطابقان";
+      }
+    }
+  } catch (_) { /* الفحص الإضافي لا يُفشل الطلب */ }
+
+  // ── حد القبول التلقائي بالمبلغ (settings.auto_accept_max_sdg؛ 0 = مطفأ) ──
+  try {
+    if (result.decision === "accept") {
+      const autoAcceptMax = await loadAutoAcceptMaxSdg(admin);
+      const detectedAmount = Number((result.extracted || {}).amount ?? 0);
+      if (autoAcceptMax > 0 && Number.isFinite(detectedAmount) && detectedAmount > autoAcceptMax) {
+        result.decision = "review_admin";
+        result.ocrStatus = "needs_admin_check";
+        result.reviewSeverity = "high";
+        result.message = "إيصالك قيد التدقيق الإداري — سيتم تنفيذ طلبك بعد التأكد خلال دقائق.";
+        result.reviewReason =
+          "المبلغ المكتشف (" + detectedAmount + ") يتجاوز حد القبول التلقائي (" + autoAcceptMax + " ج.س) — تدقيق إداري إلزامي";
+      }
+    }
+  } catch (_) { /* الإعداد غائب ⇒ لا حد */ }
+
   const scan = await saveScan(admin, userId, hash, bytes, options, result, diagnostics, rawText, expectedMethod);
   return { ...result, scanId: scan.id, receiptHash: hash, expiresAt: scan.expires_at };
 }
@@ -1090,6 +1185,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, { ok: false, error: "method_not_allowed" }, 405);
+  if (originForbidden(request)) return json(request, { ok: false, error: "origin_not_allowed" }, 403);
 
   const token = authToken(request);
   if (!token) return json(request, { ok: false, error: "auth_required" }, 401);

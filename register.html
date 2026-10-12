@@ -233,17 +233,23 @@ async function validateReferralCode(showMessage = true) {
     UI.setFieldState(referralCodeInput, 'invalid', 'اكتب كود الإحالة كما استلمته، من 5 خانات فأكثر.');
     return false;
   }
+  // التحقق المسبق للزوار أُوقف خادمياً (كان أوراكل تعداد للزوار).
+  // القبول هنا شكلي فقط، والتحقق الفعلي + احتساب الإحالة يتم خادمياً عند إنشاء الحساب
+  // (handle_new_user + apply_referral_signup_metadata). كود غير صالح = لا إحالة، بلا خطأ.
   const { data, error } = await supabaseClient.rpc('validate_referral_short_code', { p_code: code });
   const row = Array.isArray(data) ? data[0] : data;
-  if (error || !row || row.valid !== true) {
-    const reason = row?.reason;
-    const message = reason === 'self_referral'
-      ? 'لا يمكنك استخدام كود الإحالة الخاص بك.'
-      : 'كود الإحالة غير موجود أو غير صالح.';
-    UI.setFieldState(referralCodeInput, 'invalid', showMessage ? message : 'الكود غير صالح');
-    return false;
+  if (!error && row) {
+    if (row.valid === true) {
+      UI.setFieldState(referralCodeInput, 'valid', 'كود إحالة صالح وسيُحتسب عند إنشاء الحساب.');
+      return true;
+    }
+    if (row.reason === 'not_found') {
+      UI.setFieldState(referralCodeInput, 'invalid', showMessage ? 'كود الإحالة غير موجود أو غير صالح.' : 'الكود غير صالح');
+      return false;
+    }
   }
-  UI.setFieldState(referralCodeInput, 'valid', 'كود إحالة صالح وسيُحتسب عند إنشاء الحساب.');
+  // تعذّر التحقق المسبق (صلاحيات/شبكة) — نكمل والتحقق يتم عند إنشاء الحساب
+  UI.setFieldState(referralCodeInput, 'valid', 'سيتم التحقق من كود الإحالة عند إنشاء الحساب.');
   return true;
 }
 

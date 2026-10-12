@@ -296,6 +296,7 @@ function render() {
   }
 
   container.innerHTML = filtered.map(o => renderOrderCard(o)).join('');
+  hydrateReceiptLinks(container);
 
   container.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.orderId));
@@ -351,7 +352,7 @@ function renderOrderCard(o) {
   const customerWhatsapp = escapeHtml(o.profiles?.whatsapp_number || '—');
   const safeOrderId = safeDataAttr(o.id || '');
   const safeStatus = safeDataAttr(o.status || '');
-  const receiptUrl = sanitizeUrl(o.receipt_url);
+  const receiptRef = o.receipt_url || ''; // مرجع قانوني (receipts/...) أو رابط قديم
   const safeWhatsappCopy = safeDataAttr(o.profiles?.whatsapp_number || '');
 
   let actions = '';
@@ -398,6 +399,7 @@ function renderOrderCard(o) {
     destination_account_unverified: 'المبلغ قد لا يكون وصل حساب المتجر — تحقق يدوياً قبل التنفيذ!',
     ref_conflict: 'تعارض في رقم العملية — تحقق يدوياً قبل التنفيذ!',
     editor_signature: 'بصمة محرر صور في الإشعار — تحقق يدوياً قبل التنفيذ!',
+    exif_software_editor: 'وسم برنامج تعديل/إعادة حفظ في ملف الإيصال (EXIF/PNG Software) — تحقق يدوياً قبل التنفيذ!',
     amount_mismatch: 'المبلغ غير مطابق — تحقق يدوياً قبل التنفيذ!'
   };
   const criticalHits = flags.filter((f) => CRITICAL_FLAG_LABELS[f]);
@@ -448,7 +450,7 @@ function renderOrderCard(o) {
         ${optionHtml}
         ${fieldsHtml}
         ${refHtml}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${receiptRef ? `<div><a href="#" data-receipt-ref="${escapeAttribute(receiptRef)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text);">عرض الإيصال</a></div>` : ''}
       </div>
 
       ${reviewHtml}
@@ -525,7 +527,8 @@ async function notifyCustomer(userId, title, message) {
 }
 
 async function logAudit(action, details) {
-  await supabaseClient.from('audit_logs').insert({ admin_id: currentAdminId, action, details });
+  await supabaseClient.from('audit_logs').insert({
+    source: 'admin_page', admin_id: currentAdminId, action, details });
 }
 
 init();

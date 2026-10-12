@@ -7,7 +7,9 @@ const MAX_HISTORY_ITEMS = 8;
 const MAX_OUTPUT_TOKENS = 700;
 const MAX_REQUEST_BYTES = 32 * 1024;
 const GEMINI_TIMEOUT_MS = 20_000;
-const RATE_LIMIT_REQUESTS = 12;
+const RATE_LIMIT_REQUESTS = 12;              // مستخدم مسجّل (JWT صالح)
+const RATE_LIMIT_GUEST_REQUESTS = 6;         // زائر: حد صارم للنافذة نفسها
+const GUEST_GLOBAL_REQUESTS = 60;            // ميزانية كلية للزوار (سقف تكلفة LLM)
 const RATE_LIMIT_WINDOW_SECONDS = 10 * 60;
 const PRODUCTION_ORIGIN = "https://raizey-store-qw.vercel.app";
 
@@ -15,13 +17,46 @@ function env(name: string): string {
   return String(Deno.env.get(name) || "").trim();
 }
 
+// Reads the newer MEEM_PUBLIC_ORIGIN first, then falls back to the legacy
+// RAIZEY_PUBLIC_ORIGIN so an existing deployment keeps working unchanged.
+function publicOriginEnv(): string {
+  return env("MEEM_PUBLIC_ORIGIN") || env("RAIZEY_PUBLIC_ORIGIN");
+}
+
+// ── Origin allowlist (نمط دقيق: دومين الإنتاج + معاينات هذا المشروع فقط) ──
+// الافتراضي يقبل:
+//   • https://raizey-store-qw.vercel.app                (دومين الإنتاج الحالي)
+//   • https://raizey-store-qw-<...>.vercel.app          (معاينات المشروع: فرع/فريق)
+// لتضييقه على اسم الفريق تحديداً اضبط PREVIEW_ORIGIN_REGEX في أسرار الدالة، مثال:
+//   ^https://raizey-store-qw-git-[a-z0-9-]+-<TEAM-SLUG>\.vercel\.app$
+const PROJECT_SLUG = "raizey-store-qw";
+const DEFAULT_PREVIEW_ORIGIN_REGEX = `^https://${PROJECT_SLUG}(-[a-z0-9-]+)?\.vercel\.app$`;
+
+function configuredOrigins(): string[] {
+  const raw = publicOriginEnv() || env("PUBLIC_ORIGINS");
+  if (!raw || raw === "*") return [PRODUCTION_ORIGIN];
+  return [PRODUCTION_ORIGIN, ...raw.split(",").map((value) => value.trim()).filter(Boolean)];
+}
+
+function previewOriginRegex(): RegExp {
+  const raw = env("PREVIEW_ORIGIN_REGEX") || DEFAULT_PREVIEW_ORIGIN_REGEX;
+  try {
+    return new RegExp(raw, "i");
+  } catch (_) {
+    return new RegExp(DEFAULT_PREVIEW_ORIGIN_REGEX, "i");
+  }
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (configuredOrigins().includes(origin)) return true;
+  return previewOriginRegex().test(origin);
+}
+
 function allowedOrigin(request: Request): string {
-  const configured = env("RAIZEY_PUBLIC_ORIGIN");
-  const origins = configured && configured !== "*"
-    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
-    : [PRODUCTION_ORIGIN];
-  const requestOrigin = request.headers.get("Origin") || "";
-  return origins.includes(requestOrigin) ? requestOrigin : origins[0];
+  const origin = request.headers.get("Origin") || "";
+  if (isAllowedOrigin(origin)) return origin;
+  return configuredOrigins()[0];
 }
 
 function corsHeaders(request: Request): Record<string, string> {
@@ -31,6 +66,14 @@ function corsHeaders(request: Request): Record<string, string> {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
+}
+
+// أصل غير مسموح يرفض صراحةً (403) بدل معالجة الطلب بترويسات CORS خاطئة.
+// الطلبات بلا Origin (سكربتات/أدوات) تُترك للتحقق من JWT وحدود المعدل.
+function originForbidden(request: Request): boolean {
+  const origin = request.headers.get("Origin");
+  if (!origin) return false;
+  return !isAllowedOrigin(origin);
 }
 
 function json(request: Request, data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -79,8 +122,11 @@ async function readJsonBody(request: Request): Promise<any> {
 }
 
 function clientAddress(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("cf-connecting-ip") || "unknown";
+  // لا نعتمد على x-forwarded-for (قابل للتزوير من العميل).
+  // فقط ترويسات المنصة (Cloudflare / Supabase edge) — وإلا حاوية "unknown" مشتركة.
+  return request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-real-ip")
+    || "unknown";
 }
 
 async function sha256(value: string): Promise<string> {
@@ -156,6 +202,7 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   if (request.method !== "POST") return json(request, { error: "method_not_allowed" }, 405);
+  if (originForbidden(request)) return json(request, { error: "origin_not_allowed" }, 403);
 
   const supabaseUrl = env("SUPABASE_URL");
   const anonKey = env("SUPABASE_ANON_KEY");
@@ -180,7 +227,7 @@ Deno.serve(async (request) => {
   const rateKey = await sha256(`chat-assistant:${identity}`);
   const { data: rateRows, error: rateError } = await admin.rpc("consume_chat_rate_limit", {
     p_rate_key: rateKey,
-    p_limit: RATE_LIMIT_REQUESTS,
+    p_limit: userId ? RATE_LIMIT_REQUESTS : RATE_LIMIT_GUEST_REQUESTS,
     p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
   });
   if (rateError) {
@@ -193,6 +240,26 @@ Deno.serve(async (request) => {
     return json(request, { error: "rate_limited", retry_after: retryAfter }, 429, {
       "Retry-After": String(retryAfter),
     });
+  }
+
+  // ميزانية الزوار الكلية: تسقّف تكلفة المزوّد حتى لو تلاعب مهاجم بترويسة العنوان
+  if (!userId) {
+    try {
+      const guestKey = await sha256("chat-assistant:guest:global");
+      const { data: guestRows, error: guestError } = await admin.rpc("consume_chat_rate_limit", {
+        p_rate_key: guestKey,
+        p_limit: GUEST_GLOBAL_REQUESTS,
+        p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
+      });
+      const guest = Array.isArray(guestRows) ? guestRows[0] : guestRows;
+      if (guestError || !guest?.allowed) {
+        return json(request, { error: "guest_budget_exhausted" }, 429, {
+          "Retry-After": String(Math.max(60, Number(guest?.retry_after_seconds || RATE_LIMIT_WINDOW_SECONDS))),
+        });
+      }
+    } catch (_) {
+      return json(request, { error: "rate_limiter_unavailable" }, 503);
+    }
   }
 
   let payload: any;

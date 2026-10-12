@@ -318,6 +318,61 @@ function sanitizeUrl(value) {
   }
 }
 
+// =========================================================
+// مرجع الإيصال القانوني (receipts/<uid>/<file>) بدل روابط العميل
+// القاعدة تكتب receipt_url من payment_receipts.receipt_path فقط، والواجهة
+// تولّد رابطاً موقّعاً قصير العمر عند العرض.
+// =========================================================
+function receiptRefPath(value) {
+  if (!value || typeof value !== 'string') return '';
+  const v = value.trim();
+  if (v.startsWith('receipts/')) {
+    const direct = v.slice('receipts/'.length);
+    return direct.includes('..') ? '' : direct;
+  }
+  const clean = sanitizeUrl(v);
+  if (!clean) return '';
+  try {
+    const { pathname } = new URL(clean);
+    const idx = pathname.indexOf('/receipts/');
+    if (idx === -1) return '';
+    const path = decodeURIComponent(pathname.slice(idx + '/receipts/'.length));
+    return path.includes('..') ? '' : path;
+  } catch (error) {
+    return '';
+  }
+}
+
+async function receiptHref(value, expiresInSeconds = 600) {
+  const path = receiptRefPath(value);
+  if (path) {
+    try {
+      const { data, error } = await supabaseClient.storage
+        .from('receipts')
+        .createSignedUrl(path, expiresInSeconds);
+      if (!error && data) return sanitizeUrl(data.signedUrl);
+    } catch (error) { /* fall through */ }
+    return '';
+  }
+  return sanitizeUrl(value);
+}
+
+// يعالج كل الروابط الموسومة data-receipt-ref ويحوّلها إلى روابط موقّعة حديثة
+async function hydrateReceiptLinks(root) {
+  const scope = root || document;
+  const nodes = scope.querySelectorAll('[data-receipt-ref]');
+  if (!nodes.length) return;
+  for (const node of nodes) {
+    const href = await receiptHref(node.dataset.receiptRef, 600);
+    if (href) {
+      node.setAttribute('href', href);
+    } else {
+      node.setAttribute('hidden', 'hidden');
+      node.setAttribute('aria-hidden', 'true');
+    }
+  }
+}
+
 function safeText(value, fallback = '') {
   if (value === null || value === undefined || value === '') return fallback;
   return escapeHtml(value);

@@ -294,7 +294,7 @@ function render() {
   // عند الفتح حتى لا يختفي الإيصال بعد انتهاء صلاحية الرابط القديم
   container.querySelectorAll('.receipt-link').forEach(link => {
     link.addEventListener('click', async (e) => {
-      const path = extractReceiptPath(link.dataset.receiptUrl);
+      const path = window.receiptRefPath(link.dataset.receiptUrl);
       if (!path) return; // اترك الرابط الأصلي يعمل
       e.preventDefault();
       const { data, error } = await supabaseClient.storage
@@ -327,7 +327,7 @@ function renderTopupCard(t) {
   const customerWhatsappCopy = safeDataAttr(t.profiles?.whatsapp_number || '');
   const transactionReference = escapeHtml(t.transaction_reference || '');
   const transactionReferenceCopy = safeDataAttr(t.transaction_reference || '');
-  const receiptUrl = sanitizeUrl(t.receipt_url);
+  const receiptRef = t.receipt_url || ''; // مرجع قانوني (receipts/...) أو رابط قديم
   const safeTopupId = safeDataAttr(t.id || '');
   const rejectionReason = escapeHtml(t.rejection_reason || '');
   const statusLabel = escapeHtml(statusLabels[t.status] || t.status || '');
@@ -371,7 +371,7 @@ function renderTopupCard(t) {
             <button type="button" class="mini-copy-btn" data-copy="${transactionReferenceCopy}">نسخ</button>
           </div>
         ` : ''}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" class="receipt-link" data-receipt-url="${escapeAttribute(receiptUrl)}" style="color: var(--rz-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${receiptRef ? `<div><a href="#" target="_blank" rel="noopener" class="receipt-link" data-receipt-url="${escapeAttribute(receiptRef)}" style="color: var(--rz-accent-text);">عرض الإيصال</a></div>` : ''}
       </div>
       ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${rejectionReason}</div>` : ''}
       ${actions}

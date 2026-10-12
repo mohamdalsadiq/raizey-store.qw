@@ -205,6 +205,7 @@ async function loadOrders() {
   }
 
   container.innerHTML = orders.map(o => renderOrderCard(o)).join('');
+  hydrateReceiptLinks(container);
 
   document.querySelectorAll('.cancel-order-btn').forEach(btn => {
     btn.addEventListener('click', () => cancelOrder(btn.dataset.orderId));
@@ -254,7 +255,7 @@ function renderOrderCard(o) {
         <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</div>
         ${optionHtml} <!-- عرض الخيار المختار هنا -->
         ${fieldsHtml}
-        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text); font-weight:700; text-decoration:none;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض صورة الإيصال</a></div>` : ''}
+        ${o.receipt_url ? `<div><a href="#" data-receipt-ref="${escapeAttribute(o.receipt_url)}" target="_blank" rel="noopener" style="color: var(--rz-accent-text); font-weight: 700; text-decoration: none;"><svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض صورة الإيصال</a></div>` : ''}
       </div>
 
       <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">

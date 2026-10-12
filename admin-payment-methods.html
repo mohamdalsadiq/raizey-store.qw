@@ -176,6 +176,7 @@ async function logAudit(action, targetId, details) {
     // السجل الاحتياطي في audit_logs حتى لا تمر العملية بدون تسجيل
     try {
       await supabaseClient.from('audit_logs').insert({
+    source: 'admin_page',
         admin_id: currentAdminId, action, details: { payment_method_id: targetId, ...(details || {}) }
       });
     } catch (err) {

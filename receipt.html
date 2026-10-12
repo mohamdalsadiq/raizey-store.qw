@@ -353,10 +353,11 @@ function renderReceipt(o) {
     `;
   }
 
+  const safeReceiptRef = escapeAttribute(o.receipt_url || '');
   const receiptLinkHtml = o.receipt_url ? `
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
-      <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
+      <a href="#" data-receipt-ref="${safeReceiptRef}" rel="noopener" class="receipt-receipt-img-link">
         <svg class="rz-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض الإيصال
       </a>
     </div>
@@ -404,7 +405,7 @@ function renderReceipt(o) {
 
       <div class="receipt-row">
         <span class="label">الحالة</span>
-        <span class="receipt-status-badge ${o.status}">
+        <span class="receipt-status-badge ${escapeAttribute(String(o.status || '').replace(/[^a-z_]/gi, ''))}">
           ${statusLabels[o.status] || escapeHtml(o.status)}
         </span>
       </div>
@@ -435,6 +436,7 @@ function renderReceipt(o) {
       </a>
     </div>
   `;
+  hydrateReceiptLinks(document.getElementById('receiptContent'));
 
   document.getElementById('receiptContent').style.display = 'block';
 }

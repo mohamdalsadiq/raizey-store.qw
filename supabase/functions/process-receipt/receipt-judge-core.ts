@@ -339,6 +339,102 @@ const ReceiptJudgeCore = (() => {
     }
   }
 
+  // قراءة وسم EXIF Software من ملف JPEG (APP1 → TIFF → IFD0 tag 0x0131).
+  // البرامج التي تعيد حفظ الصور (محررات/فلاتر) تكتب اسمها هنا غالباً.
+  function readExifSoftwareTag(seg) {
+    try {
+      if (!(seg[0] === 0x45 && seg[1] === 0x78 && seg[2] === 0x69 && seg[3] === 0x66)) return null; // "Exif"
+      const tiff = 6; // "Exif\0\0" ثم يبدأ ترويسة TIFF
+      const little = seg[tiff] === 0x49 && seg[tiff + 1] === 0x49;
+      const read16 = (o) => little ? (seg[o] | (seg[o + 1] << 8)) : ((seg[o] << 8) | seg[o + 1]);
+      const read32 = (o) => (little
+        ? (seg[o] | (seg[o + 1] << 8) | (seg[o + 2] << 16) | (seg[o + 3] << 24))
+        : ((seg[o] << 24) | (seg[o + 1] << 16) | (seg[o + 2] << 8) | seg[o + 3])) >>> 0;
+      const ifd0 = tiff + read32(tiff + 4);
+      if (ifd0 + 2 > seg.length) return null;
+      const count = read16(ifd0);
+      for (let i = 0; i < count; i++) {
+        const entry = ifd0 + 2 + i * 12;
+        if (entry + 12 > seg.length) break;
+        if (read16(entry) !== 0x0131) continue; // XPTitle? no: 0x0131 = Software
+        const len = read32(entry + 4);
+        const valueOffset = len > 4 ? tiff + read32(entry + 8) : entry + 8;
+        if (len <= 0 || len > 200 || valueOffset + len > seg.length) return null;
+        let out = '';
+        for (let k = 0; k < len; k++) {
+          const code = seg[valueOffset + k];
+          if (code === 0) break;
+          out += String.fromCharCode(code);
+        }
+        const clean = out.replace(/[^\x20-\x7E\u0600-\u06FF]/g, '').trim();
+        return clean || null;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function detectExifSoftware(file) {
+    try {
+      const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
+      if (head.length < 24 || head[0] !== 0xFF || head[1] !== 0xD8) return null; // not JPEG
+      let offset = 2;
+      while (offset + 4 <= head.length) {
+        if (head[offset] !== 0xFF) break;
+        const marker = head[offset + 1];
+        const size = (head[offset + 2] << 8) | head[offset + 3];
+        if (size < 2) break;
+        if (marker === 0xE1) {
+          const seg = head.subarray(offset + 4, Math.min(offset + 2 + size, head.length));
+          const software = readExifSoftwareTag(seg);
+          if (software) return software;
+        }
+        if (marker === 0xDA) break; // SOS — بداية بيانات الصورة
+        offset += 2 + size;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // PNG: وسم Software داخل قسم tEXt (تكتبه بعض محررات الشاشة والفلاتر)
+  async function detectPngSoftware(file) {
+    try {
+      const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
+      if (!(head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47)) return null;
+      const text = new TextDecoder('latin1').decode(head);
+      const match = text.match(/Software[\x00\s:]+([^\x00]{3,80})/i);
+      if (match && match[1]) {
+        const clean = match[1].replace(/[^\x20-\x7E\u0600-\u06FF]/g, '').trim();
+        return clean || null;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * فحص سلامة ملف الإيصال — يُستدعى قبل القرار النهائي.
+   * يُعيد رايات تُمنع معها الموافقة التلقائية دائماً (تدقيق إداري إلزامي).
+   */
+  async function probeImageIntegrity(file) {
+    const flags = [];
+    const editor = await detectImageEditing(file);
+    if (editor) flags.push('editor_signature');
+    let software = await detectExifSoftware(file);
+    if (!software) software = await detectPngSoftware(file);
+    if (software) {
+      const lower = String(software).toLowerCase();
+      const matchedEditor = EDITOR_SIGNATURES.find((sig) => lower.includes(sig));
+      if (matchedEditor && !flags.includes('editor_signature')) flags.push('editor_signature');
+      else flags.push('exif_software_editor');
+    }
+    return { flags, software: software || null, editor: editor || null };
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 5) معالجة الصورة — ثلاث صيغ مختلفة تُستخدم في مراحل القراءة
   // ═══════════════════════════════════════════════════════════════════
@@ -1139,6 +1235,7 @@ const ReceiptJudgeCore = (() => {
     latinizeDigits, normalizeText, normalizeRef, digitsOnly, fixOcrDigits,
     countKeywordHits, hasAny, levenshtein, detectLanguage,
     detectProvider, toLines, parseAmountToken, labelHitAt,
+    detectImageEditing, detectExifSoftware, detectPngSoftware, probeImageIntegrity,
     extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts,
     amountVariants, matchAmount, matchRef, buildContext, judge, blankResult
   };

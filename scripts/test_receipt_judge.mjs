@@ -262,6 +262,52 @@ const repeatB = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT25071912
 check("Idempotent decision", repeatA.decision === repeatB.decision, true);
 check("Idempotent amount flag", String(repeatA.riskFlags) === String(repeatB.riskFlags), true);
 
+// ── فحص سلامة ملف الصورة: بصمات المحررات + EXIF/PNG Software (2026-10-11) ──
+{
+  const { ReceiptJudgeCore } = await import("../supabase/functions/process-receipt/receipt-judge-core.ts");
+
+  const editorBlob = new Blob([Buffer.from("....adobe photoshop....JFIF....", "latin1")], { type: "image/jpeg" });
+  const editorProbe = await ReceiptJudgeCore.probeImageIntegrity(editorBlob);
+  check("probe: editor signature detected", editorProbe.flags.includes("editor_signature"), true);
+
+  // JPEG صغير يحمل وسم EXIF Software = "GIMP 2.10" (APP1/IFD0 tag 0x0131)
+  function buildJpegWithExifSoftware(software) {
+    const text = Buffer.from(software + "\0", "latin1");
+    const ifd0 = Buffer.alloc(2 + 12 + 4);
+    ifd0.writeUInt16LE(1, 0);              // عدد المدخلات
+    ifd0.writeUInt16LE(0x0131, 2);         // tag Software
+    ifd0.writeUInt16LE(2, 4);              // type ASCII
+    ifd0.writeUInt32LE(text.length, 6);    // count
+    // قيمة ASCII خارجية: الإزاحة تُحسب من بداية ترويسة TIFF (8 بايت) لا من IFD0
+    ifd0.writeUInt32LE(8 + 2 + 12 + 4, 10);
+    const tiff = Buffer.alloc(8 + ifd0.length + text.length);
+    tiff.write("II", 0, "latin1");
+    tiff.writeUInt16LE(0x2A, 2);
+    tiff.writeUInt32LE(8, 4);
+    ifd0.copy(tiff, 8);
+    text.copy(tiff, 8 + ifd0.length);
+    const exif = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), tiff]);
+    const app1 = Buffer.alloc(4 + exif.length);
+    app1[0] = 0xFF; app1[1] = 0xE1;
+    app1.writeUInt16BE(exif.length + 2, 2);
+    exif.copy(app1, 4);
+    return new Blob([Buffer.concat([Buffer.from([0xFF, 0xD8]), app1, Buffer.from([0xFF, 0xDA, 0x00, 0x02, 0x00, 0x00, 0xFF, 0xD9])])], { type: "image/jpeg" });
+  }
+
+  const exifProbe = await ReceiptJudgeCore.probeImageIntegrity(buildJpegWithExifSoftware("GIMP 2.10.34"));
+  check("probe: EXIF software parsed", exifProbe.software, "GIMP 2.10.34");
+  check("probe: EXIF editor mapped to editor_signature", exifProbe.flags.includes("editor_signature"), true);
+
+  const cleanJpeg = new Blob([Buffer.concat([Buffer.from([0xFF, 0xD8]), Buffer.from([0xFF, 0xDA, 0x00, 0x02, 0x00, 0x00, 0xFF, 0xD9])])], { type: "image/jpeg" });
+  const cleanProbe = await ReceiptJudgeCore.probeImageIntegrity(cleanJpeg);
+  check("probe: clean receipt has no integrity flags", cleanProbe.flags.length, 0);
+
+  const pngBlob = new Blob([Buffer.concat([Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), Buffer.from("tEXtSoftware\0Snapseed", "latin1")])], { type: "image/png" });
+  const pngProbe = await ReceiptJudgeCore.probeImageIntegrity(pngBlob);
+  check("probe: PNG software parsed", pngProbe.software, "Snapseed");
+  check("probe: PNG editor mapped to editor_signature", pngProbe.flags.includes("editor_signature"), true);
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const failure of failures) console.log("  - " + failure);

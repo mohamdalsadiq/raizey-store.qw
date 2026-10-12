@@ -252,6 +252,7 @@ function render() {
         .eq('id', btn.dataset.cancel)
         .eq('status', 'active');
       await supabaseClient.from('audit_logs').insert({
+    source: 'admin_page',
         admin_id: currentAdminId, action: 'إلغاء رمز دفع', details: { code_id: btn.dataset.cancel }
       });
       await loadCodes();
@@ -311,6 +312,7 @@ async function saveCode() {
   if (error) { formError.textContent = 'تعذّر توليد الرمز: ' + error.message; return; }
 
   await supabaseClient.from('audit_logs').insert({
+    source: 'admin_page',
     admin_id: currentAdminId, action: 'توليد رمز دفع',
     details: { code: payload.code, amount, note: payload.note }
   });
