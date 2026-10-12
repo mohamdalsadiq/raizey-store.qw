@@ -50,7 +50,7 @@
   root.innerHTML = `
     <section id="meemAssistantPanel" aria-label="مساعد MEEM الذكي" aria-hidden="true">
       <header class="meem-assistant-head">
-        <div class="meem-assistant-avatar"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></div>
+        <div class="meem-assistant-avatar"><img src="assets/img/meem-mark-48.png" alt="" aria-hidden="true" width="26" height="26" decoding="async"></div>
         <div class="meem-assistant-title">مساعد MEEM الذكي<small>المنتجات والطلبات في مكان واحد</small></div>
         <button class="meem-assistant-close" type="button" aria-label="إغلاق المساعد"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
       </header>
@@ -65,7 +65,7 @@
         <button class="meem-assistant-send" id="meemAssistantSend" type="submit" aria-label="إرسال"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-send"></use></svg></button>
       </form>
     </section>
-    <button id="meemAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-bot"></use></svg></button>
+    <button id="meemAssistantToggle" type="button" aria-label="مساعد الذكاء الاصطناعي — اسحب لتحريكه" aria-expanded="false" title="اسحب الزر لتحريكه في أي مكان"><img class="meem-fab-mark" src="assets/img/meem-mark-48.png" alt="" aria-hidden="true" width="28" height="28" decoding="async"></button>
   `;
   document.body.appendChild(root);
 

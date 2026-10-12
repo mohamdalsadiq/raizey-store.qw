@@ -33,7 +33,7 @@ const PAGES = [
   "admin-staff.html", "admin-categories.html", "admin-coupons.html", "admin-giftcards.html",
   "admin-customers.html", "admin-settings.html", "admin-sections.html",
   "admin-payment-methods.html", "admin-payment-codes.html", "admin-audit-log.html",
-  "admin-referral-milestones.html"
+  "admin-referral-milestones.html", "404.html"
 ];
 
 const MIME = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".webmanifest": "application/manifest+json" };

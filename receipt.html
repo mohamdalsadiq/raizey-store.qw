@@ -24,6 +24,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
 <link rel="icon" sizes="any" href="assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/img/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon-180.png">
 
 <link rel="stylesheet" href="assets/css/style.css">
@@ -34,8 +35,7 @@
     justify-content: center;
     margin: 2px 0 18px;
   }
-  .receipt-brand img { width: 158px; height: auto; }
-  /* light theme uses the re-inked lockup (navy wordmark, deeper gold) */
+  .receipt-brand img { width: 150px; height: 150px; border-radius: 22px; box-shadow: 0 10px 26px rgba(4, 18, 63, .3); }
 
   .receipt-page {
     max-width: 520px;
@@ -234,7 +234,9 @@
 
 <div class="receipt-page">
   <div class="receipt-brand">
-    <img class="brand-lockup" src="assets/img/meem-logo.png" alt="MEEM STORE" width="150" height="150">
+    <img class="brand-lockup" src="assets/img/meem-lockup-200.png"
+        srcset="assets/img/meem-lockup-200.png 1x, assets/img/meem-lockup-400.png 2x"
+        alt="MEEM STORE" width="304" height="200" decoding="async">
   </div>
   <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
     <div style="display: flex; align-items: center; gap: 8px;">

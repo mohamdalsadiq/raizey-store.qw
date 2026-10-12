@@ -25,6 +25,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
 <link rel="icon" sizes="any" href="assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/img/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicon-180.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MEEM STORE">
@@ -325,8 +326,13 @@
     <button class="hamburger-btn" id="openDrawerBtn" title="القائمة">
       <span></span><span></span><span></span>
     </button>
-    <a class="logo" href="index.html" aria-label="MEEM STORE">
-      <img class="brand-mark" src="assets/img/meem-mark.png" alt="MEEM STORE" width="44" height="44">
+    <a class="logo brand-lockup" href="index.html" aria-label="MEEM STORE">
+      <img class="brand-mark" src="assets/img/meem-mark-48.png"
+           srcset="assets/img/meem-mark-48.png 1x, assets/img/meem-mark-96.png 2x"
+           alt="MEEM STORE" width="44" height="44" fetchpriority="high" decoding="async">
+      <img class="brand-name" src="assets/img/meem-wordmark-28.png"
+           srcset="assets/img/meem-wordmark-28.png 1x, assets/img/meem-wordmark-56.png 2x"
+           alt="MEEM STORE" width="104" height="28" decoding="async">
     </a>
     <div class="header-actions">
       <a href="search.html" class="icon-btn" title="بحث" style="color: var(--text-light);">
@@ -342,6 +348,11 @@
 
 <div class="drawer-overlay" id="drawerOverlay">
   <div class="drawer-panel">
+    <div class="drawer-brand">
+      <img src="assets/img/meem-name-80.png"
+           srcset="assets/img/meem-name-40.png 1x, assets/img/meem-name-80.png 2x"
+           alt="MEEM" width="80" height="40" decoding="async">
+    </div>
     <button class="drawer-close-btn" id="closeDrawerBtn" type="button" aria-label="إغلاق القائمة" style="color: var(--text-light);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <div id="drawerGuestBox" style="display: none; padding: 20px 10px;">
       <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 14px;">سجل دخولك عشان تشوف محفظتك وطلباتك</p>
@@ -425,12 +436,23 @@
 </div>
 
 <div id="categoriesContainer" class="catalog-sections">
-  <div style="color: var(--text-muted); font-size: 13px; padding: 20px;">جاري تحميل الألعاب...</div>
+  <div style="color: var(--text-muted); font-size: 13px; padding: 20px; text-align: center;">
+    <img class="mm-mark-pulse" src="assets/img/meem-mark-96.png"
+         srcset="assets/img/meem-mark-96.png 1x, assets/img/meem-mark-192.png 2x"
+         alt="MEEM STORE" width="56" height="56" decoding="async">
+    جاري تحميل الألعاب...
+  </div>
 </div>
 
-<footer class="site-footer" style="background: var(--bg-card); border-top: 1px solid var(--border-color); color: var(--text-muted); padding: 20px 10px;">
-  <p>© 2026 MEEM STORE — جميع الحقوق محفوظة</p>
-</footer>
+<footer class="site-footer">
+    <div class="footer-brand">
+      <img class="footer-logo" src="assets/img/meem-lockup-200.png"
+           srcset="assets/img/meem-lockup-200.png 1x, assets/img/meem-lockup-400.png 2x"
+           alt="MEEM STORE" width="304" height="200" loading="lazy" decoding="async">
+      <p class="footer-copy"><img class="footer-mark" src="assets/img/meem-mark-48.png" alt="MEEM STORE"
+           width="20" height="20" loading="lazy" decoding="async"> © 2026 MEEM STORE — جميع الحقوق محفوظة</p>
+    </div>
+    </footer>
 
 <a href="https://wa.me/249901815039" data-mm-whatsapp-base="https://wa.me/__NUMBER__" class="whatsapp-fab" target="_blank" title="تواصل واتساب">
   <svg width="26" height="26" viewBox="0 0 24 24" fill="#04123F"><path d="M20.5 3.5A11 11 0 0 0 3 17.7 L2 22l4.4-1.2A11 11 0 1 0 20.5 3.5Zm-8.4 16.9a9 9 0 0 1-4.6-1.3l-.3-.2-3 .8.8-2.9-.2-.3a9 9 0 1 1 7.3 3.9Zm5-6.6c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1s-.6.9-.8 1c-.1.2-.3.2-.6.1a7.4 7.4 0 0 1-3.6-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5L9.6 7.1c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-1 1-1 2.3s1 2.7 1.1 2.9c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2-.1-.2-.3-.3-.6-.4Z"/></svg>
@@ -591,10 +613,17 @@ function renderMessage(title, description) {
 
   state.className = 'empty-state';
   state.style.cssText = 'padding:40px 20px; text-align:center; grid-column:1 / -1;';
+  const mark = document.createElement('img');
+  mark.className = 'empty-state__mark';
+  mark.src = 'assets/img/meem-mark-96.png';
+  mark.alt = '';
+  mark.setAttribute('aria-hidden', 'true');
+  mark.width = 48;
+  mark.height = 48;
   heading.textContent = title;
   text.textContent = description;
   text.style.color = 'var(--text-muted)';
-  state.append(heading, text);
+  state.append(mark, heading, text);
   container.replaceChildren(state);
 }
 

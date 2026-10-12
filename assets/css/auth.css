@@ -823,18 +823,7 @@ img.flag {
   .country-btn { min-width: 132px; padding-inline: 9px; font-size: 12.5px; }
   .country-pop { width: min(300px, calc(100vw - 36px)); }
 }
-
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
-
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
-
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
-
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
-
-/* Full master logo (assets/img/meem-logo.png) on the auth cards */
-.auth-logo .brand-lockup { display: block; width: 172px; height: 172px; margin: 0 auto;
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
-
-.auth-logo .brand-lockup { display: block; width: 172px; height: 172px; margin: 0 auto;
-  border-radius: 24px; box-shadow: 0 12px 30px rgba(4, 18, 63, .28); }
+/* ── MEEM STORE lockup on the auth / verify cards ──────────────────────────
+   assets/img/meem-lockup-*.png — the client's stacked artwork, untouched. */
+.auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
+@media (max-width: 400px) { .auth-logo .brand-lockup { width: 168px; } }
