@@ -21,6 +21,8 @@
     #meemAssistantToggle:hover{transform: translateY(-2px);box-shadow: 0 14px 32px rgba(8, 123, 255,.45)}
     #meemAssistantToggle.mm-dragging{cursor: grabbing;transition: none;transform: scale(1.06)}
     #meemAssistantToggle svg{pointer-events: none;width: 28px;height: 28px}
+    #meemAssistantToggle img,#meemAssistantToggle .meem-fab-mark{pointer-events: none;width: 28px;height: 28px;display: block}
+    .meem-assistant-avatar img{width: 26px;height: 26px;display: block}
     #meemAssistantPanel{position: fixed;left: auto;right: auto;top: auto;bottom: auto;width: min(390px,calc(100vw - 24px));height: min(560px,calc(100vh - 24px));background: var(--mm-surface);border: 1px solid var(--mm-border);border-radius: 22px;box-shadow: var(--mm-shadow-lg);display: none;overflow: hidden;z-index: 9999}
     #meemAssistantPanel.is-open{display: flex;flex-direction: column;animation: meemAssistantIn .18s ease-out}
     @keyframes meemAssistantIn{from{opacity: 0;transform: translateY(10px) scale(.98)}to{opacity: 1;transform: none}}
