@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildCorsHeaders,
+  DEFAULT_PREVIEW_ORIGIN_REGEX,
+  resolveAllowedOrigin,
+} from "../_shared/cors.ts";
 
 const MODEL = "gemini-3.5-flash";
 const MAX_MESSAGE_LENGTH = 1200;
@@ -25,22 +30,22 @@ function publicOriginEnv(): string {
   return env("MEEM_PUBLIC_ORIGIN") || env("RAIZEY_PUBLIC_ORIGIN");
 }
 
+// نمط روابط المعاينة (دقيق، بلا "*"): يمكن تجاوزه بـPREVIEW_ORIGIN_REGEX.
+function previewOriginRegex(): string {
+  return env("PREVIEW_ORIGIN_REGEX") || DEFAULT_PREVIEW_ORIGIN_REGEX;
+}
+
 function allowedOrigin(request: Request): string {
-  const configured = env("RAIZEY_PUBLIC_ORIGIN");
-  const origins = configured && configured !== "*"
-    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
-    : [PRODUCTION_ORIGIN];
-  const requestOrigin = request.headers.get("Origin") || "";
-  return origins.includes(requestOrigin) ? requestOrigin : origins[0];
+  return resolveAllowedOrigin({
+    requestOrigin: request.headers.get("Origin") || "",
+    configured: publicOriginEnv(),
+    previewRegex: previewOriginRegex(),
+    productionOrigin: PRODUCTION_ORIGIN,
+  });
 }
 
 function corsHeaders(request: Request): Record<string, string> {
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin(request),
-    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
+  return buildCorsHeaders(allowedOrigin(request));
 }
 
 function json(request: Request, data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {

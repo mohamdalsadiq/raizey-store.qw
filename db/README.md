@@ -18,6 +18,7 @@
 | `migrations/2026-10-08_user_cancel_order.sql` | RPC خادمي `cancel_my_order` بدل التحديث المباشر على `orders` |
 | `migrations/2026-10-09_admin_reject_order.sql` | توحيد `admin_reject_order` مع القاعدة الحية (يستدعي `admin_refund_wallet(p_order_id, …)`) |
 | `migrations/2026-10-09_payment_method_icons.sql` | عمود `payment_methods.icon_url` لأيقونة/شعار كل وسيلة دفع (صفحة الدفع) |
+| `migrations/2026-10-13_p1_oracle_scope_and_coupon_strength.sql` | نطاق `check_tx_ref_available` لصفوف المستخدم نفسه + حد معدل موحّد، وطول كود الدفع 10، وتريجر قوة كود الكوبون (10 خانات أبجدية-رقمية) — مع `rollback/` مرافق |
 
 ## اختبارات
 - `tests/security_invariants.sql` — 20 فحصاً ثابتاً (دفتر المحافظ، المنح، RLS، حراسة الأدمن، منع replay، منع الشحن بلا إيصال، سلامة التريجرات...).

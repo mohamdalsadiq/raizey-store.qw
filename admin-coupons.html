@@ -71,7 +71,11 @@
 
     <div class="field">
       <label>كود الكوبون</label>
-      <input type="text" id="codeInput" placeholder="مثلاً: MEEM10" style="text-transform: uppercase;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" id="codeInput" placeholder="مثال: MEEM2026SAVE" minlength="10" style="text-transform: uppercase;" aria-describedby="codeHint">
+        <button type="button" id="generateCodeBtn" class="modal-cancel-btn" style="white-space: nowrap;">توليد</button>
+      </div>
+      <div class="field-hint" id="codeHint">10 خانات أبجدية-رقمية على الأقل.</div>
     </div>
 
     <div class="field">
@@ -119,6 +123,7 @@ let editingId = null;
 
 const formModal = document.getElementById('formModal');
 const codeInput = document.getElementById('codeInput');
+const generateCodeBtn = document.getElementById('generateCodeBtn');
 const discountInput = document.getElementById('discountInput');
 const maxUsesInput = document.getElementById('maxUsesInput');
 const expiresInput = document.getElementById('expiresInput');
@@ -219,6 +224,19 @@ function closeForm() {
   editingId = null;
 }
 
+function generateCouponCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  let out = '';
+  for (let i = 0; i < 12; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
+
+generateCodeBtn.addEventListener('click', () => {
+  codeInput.value = generateCouponCode();
+  formError.textContent = '';
+});
+
 async function saveCoupon() {
   const code = codeInput.value.trim().toUpperCase();
   const discount = parseFloat(discountInput.value);
@@ -226,6 +244,10 @@ async function saveCoupon() {
   const expiresAt = expiresInput.value ? new Date(expiresInput.value).toISOString() : null;
 
   if (!code) { formError.textContent = 'أدخل كود الكوبون'; return; }
+  if (code.replace(/[^A-Za-z0-9]/g, '').length < 10) {
+    formError.textContent = 'كود الكوبون يجب أن يكون 10 خانات أبجدية-رقمية على الأقل';
+    return;
+  }
   if (!discount || discount <= 0 || discount > 100) { formError.textContent = 'أدخل نسبة خصم صحيحة (1-100)'; return; }
 
   const payload = {

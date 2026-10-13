@@ -113,3 +113,40 @@ bash db/tests/run_banners_security.sh          # لازم 17/17
   لم تُلمَس في هذا العمل.
 - لا تستخدم `git push --force` ولا `git reset --hard` ولا دمجًا في `main`؛ في `main` ما
   زال شغل غير مدموج.
+
+---
+
+## 6. جولة 2026-10-13 — بقية المرحلة 1 (المسارات القابلة للتحقق فقط)
+
+### أ) ما نُفّذ وتحقّق منه في هذه الجولة
+
+| # | العمل | الدليل القابل للتشغيل |
+|---|---|---|
+| 16 | **حد المعدل الموحّد + نطاق أوراكل الإيصالات**: migration جديد يعيد `check_tx_ref_available` ليفحص **صفوف المستخدم نفسه فقط** فوق `consume_chat_rate_limit('txref:<uid>',30,3600)`، ويرفع حد طول كود الدفع من 4 إلى 10، ويضيف تريجر `trg_enforce_coupon_code_strength` (كوبون جديد أو تغيير كود = 10 خانات أبجدية-رقمية على الأقل؛ الصفوف القديمة لا تُمسّ). حد المعدل على الدوال الأربع الأخرى (`validate_coupon`, `validate_payment_code`, `report_fraud_alert`, `log_receipt_fraud_attempt`) موجود أصلًا في `db/migrations/2026-10-08_security_hardening.sql`. | `db/migrations/2026-10-13_p1_oracle_scope_and_coupon_strength.sql` + `db/rollback/…_rollback.sql` (توازن `$fn$` وأقواس سليم؛ الملف مأخوذ حرفيًا من النسخة المعتمدة `2026-10-11_hardening_remaining.sql`) |
+| 17 | **صفحة إدارة الكوبونات متوافقة مع القاعدة الجديدة** (كانت تسمح بكود 6 خانات فيُرفض من التريجر): تحقّق فوري ≥10 خانات أبجدية-رقمية + زر «توليد» + مثال صحيح + نص إرشادي. | `admin-coupons.html` |
+| 18 | **CORS موحّد لدوال الـEdge**: وحدة نقية `_shared/cors.ts` تُطابق أصول الإنتاج الصريحة + **نمطًا دقيقًا** لروابط معاينة المشروع (`^https:\/\/raizey-store-qw(?:-[a-z0-9-]+)?\.vercel\.app$`، بلا `*` وبلا مسارات/منافذ)، وتقرأ `MEEM_PUBLIC_ORIGIN` ثم `RAIZEY_PUBLIC_ORIGIN`، ويمكن تجاوز النمط بـ`PREVIEW_ORIGIN_REGEX`. الدوال تستوردها بدل النسخ المكرّرة. | `supabase/functions/_shared/cors.ts`، `supabase/functions/{chat-assistant,process-receipt}/index.ts`، وفحص `node scripts/cors_check.mjs` |
+
+فحوص نُفّذت الآن (كلها خضراء):
+
+- `node scripts/cors_check.mjs` → **24/24**: الإنتاج يُعاد كما هو، ومعاينة المشروع تُقبل، و9 أشكال مموّهة/خطرة تُرفض وتُرجَع للإنتاج (بما فيها `http://`, منفذ, مسار, نطاق لاحق للنطاق, `*` مكتوبة صراحةً, regex مشوّه), والعقد `Allow-Methods/Headers/Vary` سليم وبلا `*` في أي ترويسة.
+- `python3 scripts/task10_js_syntax_check.py` → **70/70** سكربتًا يُحلَّل (يشمل `admin-coupons.html` المعدّل).
+- `npm test` → **54 passed / 0 failed**.
+- تحليل TS عبر `module.stripTypeScriptTypes` + `vm.SourceTextModule` → الملفات الثلاثة (`cors.ts` والدالتان) تُحلَّل بلا خطأ.
+
+### ب) مطابقة الدوال المنشورة بالمستودع (published-function parity)
+
+قارنّا تعريفات `db/migrations/2026-10-08_security_hardening.sql` بلقطة القاعدة الحية (`~/.raizey-audit/out/11_defs.json`, بتاريخ 2026-10-08). النتيجة: النسخ متطابقة تقريبًا بعد استبعاد أسطر حد المعدل، والفرق الفعلي هو **التأخّر**: القاعدة الحية لا تحمل بعد أيًّا من الهجرات غير المطبَّقة أدناه (حد المعدل، نطاق `check_tx_ref_available`, قوة الكوبون, بنرات, بادئة الإحالة, نسبة بنر الموبايل). أي أن المستودع **متقدّم** على القاعدة، وليس العكس.
+
+### ج) تصحيح مهم في وصف الفروع
+
+التقرير السابق قال إن `meem-rebrand` «يحتوي `hardening-complete`». **هذا غير صحيح** (فحص `git merge-base --is-ancestor cfcfa66 HEAD` = false). الفرعان شقيقان يتفرّعان من `main` (`41a31b5`):
+
+- `hardening-complete` = `cfcfa66` (5 كوميتات، فيها `2026-10-11_hardening_remaining.sql` و`2026-10-11_fix_wallet_refund_guard.sql`).
+- `meem-rebrand` = هذا العمل (12 كوميت، لا يحتوي سابقه).
+
+لذلك: بنود المرحلة 1 المتعلقة بـ`check_tx_ref` وقوة الكوبون أُعيد إنتاجها هنا في migration مستقل (البند 16) كي يكون الفرع مكتفيًا بذاته حتى قبل الدمج.
+
+### د) لا يزال متوقّفًا على الوصول
+
+- **تطبيق أي هجرة** (بما فيها هجرات 2026-10-12 الثلاث والهجرة الجديدة 2026-10-13) يحتاج `SUPABASE_ACCESS_TOKEN`.
+- **إعادة اختبار تدفقات المال** على القاعدة الحية (أهم بند) — متوقّف لنفس السبب.

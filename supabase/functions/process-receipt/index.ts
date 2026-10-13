@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildCorsHeaders,
+  DEFAULT_PREVIEW_ORIGIN_REGEX,
+  resolveAllowedOrigin,
+} from "../_shared/cors.ts";
 import { ReceiptJudgeCore } from "./receipt-judge-core.ts";
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -198,19 +203,19 @@ function json(request: Request, data: unknown, status = 200, extraHeaders: Recor
   });
 }
 
+// نمط روابط المعاينة (دقيق، بلا "*"): يمكن تجاوزه بـPREVIEW_ORIGIN_REGEX.
+function previewOriginRegex(): string {
+  return env("PREVIEW_ORIGIN_REGEX") || DEFAULT_PREVIEW_ORIGIN_REGEX;
+}
+
 function corsHeaders(request: Request): Record<string, string> {
-  const configured = env("RAIZEY_PUBLIC_ORIGIN");
-  const origins = configured && configured !== "*"
-    ? configured.split(",").map((value) => value.trim()).filter(Boolean)
-    : [PRODUCTION_ORIGIN];
-  const requestOrigin = request.headers.get("Origin") || "";
-  const origin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
-  };
+  const origin = resolveAllowedOrigin({
+    requestOrigin: request.headers.get("Origin") || "",
+    configured: publicOriginEnv(),
+    previewRegex: previewOriginRegex(),
+    productionOrigin: PRODUCTION_ORIGIN,
+  });
+  return buildCorsHeaders(origin);
 }
 
 /**
