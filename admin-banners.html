@@ -113,6 +113,33 @@
       </p>
     </div>
 
+    <div class="bn-card" style="display:block; margin-top:12px;">
+      <h3 style="margin:0 0 10px; font-size:14px;">إعدادات السلايدر (تُطبَّق على كل الشرائح)</h3>
+      <div class="link-grid">
+        <div class="field" style="margin:0;">
+          <label for="autoplaySelect">التشغيل التلقائي</label>
+          <select id="autoplaySelect">
+            <option value="true">تشغيل</option>
+            <option value="false">إيقاف</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="intervalInput">المدة بين الشرائح (ثواني)</label>
+          <input type="number" id="intervalInput" min="3" max="10" step="1" inputmode="numeric" value="5">
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="effectSelect">نوع الانتقال</label>
+          <select id="effectSelect">
+            <option value="slide">انزلاق (slide)</option>
+            <option value="fade">تلاشي (fade)</option>
+          </select>
+        </div>
+      </div>
+      <p class="slot-note" style="margin:8px 0 0;" id="sliderNote">
+        عند انتهاء المدة ينتقل البنر تلقائياً. الإيقاف متاح للزائر من زر التشغيل/الإيقاف على البنر نفسه.
+      </p>
+    </div>
+
     <div class="bn-grid" id="bannersList" style="margin-top: 14px;">
       <div style="color: var(--mm-text-muted); font-size: 13px;">جارِ التحميل...</div>
     </div>
@@ -261,12 +288,21 @@
       </div>
     </div>
 
-    <div class="field">
-      <label for="activeInput">الحالة</label>
-      <select id="activeInput">
-        <option value="true">مفعّل</option>
-        <option value="false">معطّل</option>
-      </select>
+    <div class="link-grid">
+      <div class="field">
+        <label for="statusInput">حالة البنر</label>
+        <select id="statusInput">
+          <option value="published">منشور (يظهر للزوار)</option>
+          <option value="draft">مسودة (مخفي)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="activeInput">التفعيل</label>
+        <select id="activeInput">
+          <option value="true">مفعّل</option>
+          <option value="false">معطّل</option>
+        </select>
+      </div>
     </div>
     <div class="field">
       <label for="hideDisabledInput">لو الهدف (منتج/قسم) معطّل</label>
@@ -275,6 +311,9 @@
         <option value="false">أظهرها كما هي</option>
       </select>
     </div>
+    <p class="slot-note" style="margin:-4px 0 0;">
+      المواعيد أدناه بتوقيت الخرطوم (Africa/Khartoum، UTC+2) وتُخزَّن بتوقيت عالمي. إن تُركت فارغة يعمل البنر بلا حدود زمنية.
+    </p>
 
     <div class="field">
       <label>معاينة مطابقة للموقع</label>
@@ -508,29 +547,46 @@ function linkLabel(b) {
   return (map[b.link_type] || b.link_type) + target;
 }
 
-/* نسبة الموبايل إعداد عام في public.settings (مفتاح banner_mobile_aspect). */
+/* نسبة الموبايل + إعدادات السلايدر إعدادات عامة في public.settings. */
 async function loadRatioSetting() {
   const sel = $('mobileRatioSelect');
+  const saveSetting = async (key, value, noteFn, okMsg) => {
+    try {
+      const { error } = await supabaseClient.from('settings')
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (error) throw error;
+      if (noteFn) noteFn(okMsg, false);
+    } catch (err) {
+      if (noteFn) noteFn('تعذر الحفظ: ' + (err && err.message ? err.message : err), true);
+    }
+  };
   if (sel) {
-    sel.addEventListener('change', async () => {
+    sel.addEventListener('change', () => {
       state.mobileRatio = sel.value;
       renderPreview();
-      try {
-        const { error } = await supabaseClient.from('settings')
-          .upsert({ key: 'banner_mobile_aspect', value: sel.value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-        if (error) throw error;
-        setRatioNote('تم حفظ نسبة الموبايل: ' + sel.value, false);
-      } catch (err) {
-        setRatioNote('تعذر حفظ النسبة: ' + (err && err.message ? err.message : err), true);
-      }
+      saveSetting('banner_mobile_ratio', sel.value, setRatioNote, 'تم حفظ نسبة الموبايل: ' + sel.value);
     });
   }
+
+  const autoplay = $('autoplaySelect'), interval = $('intervalInput'), effect = $('effectSelect');
+  const setSliderNote = (t, isErr) => { const n = $('sliderNote'); if (n) { n.textContent = t; n.style.color = isErr ? 'var(--danger)' : 'var(--mm-text-muted)'; } };
+  const clampIv = (v) => Math.min(10, Math.max(3, parseInt(v, 10) || 5));
+  if (autoplay) autoplay.addEventListener('change', () => saveSetting('banner_autoplay', autoplay.value, setSliderNote, 'تم حفظ التشغيل التلقائي: ' + (autoplay.value === 'true' ? 'تشغيل' : 'إيقاف')));
+  if (interval) interval.addEventListener('change', () => { interval.value = clampIv(interval.value); saveSetting('banner_interval', String(interval.value), setSliderNote, 'تم حفظ المدة: ' + interval.value + ' ثواني'); });
+  if (effect) effect.addEventListener('change', () => saveSetting('banner_effect', effect.value, setSliderNote, 'تم حفظ نوع الانتقال: ' + effect.value));
+
   try {
-    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'banner_mobile_aspect').maybeSingle();
-    const v = data && data.value ? String(data.value) : '3:4';
-    state.mobileRatio = ['3:4', '4:5', '1:1', '4:3'].indexOf(v) >= 0 ? v : '3:4';
+    const { data } = await supabaseClient.from('settings')
+      .select('key,value').in('key', ['banner_mobile_ratio', 'banner_mobile_aspect', 'banner_autoplay', 'banner_interval', 'banner_effect']);
+    const map = {};
+    (data || []).forEach((r) => { map[r.key] = r.value; });
+    const v = map.banner_mobile_ratio || map.banner_mobile_aspect || '3:4';
+    state.mobileRatio = ['3:4', '4:5', '1:1', '4:3'].indexOf(String(v)) >= 0 ? String(v) : '3:4';
     if (sel) sel.value = state.mobileRatio;
-  } catch (e) { /* keep the default */ }
+    if (autoplay) autoplay.value = (String(map.banner_autoplay).toLowerCase() === 'false' || String(map.banner_autoplay).toLowerCase() === 'off') ? 'false' : 'true';
+    if (interval) interval.value = String(clampIv(map.banner_interval));
+    if (effect) effect.value = String(map.banner_effect).toLowerCase() === 'fade' ? 'fade' : 'slide';
+  } catch (e) { /* keep the defaults */ }
 }
 
 function setRatioNote(text, isError) {
@@ -570,6 +626,8 @@ function renderList() {
     body.appendChild(el('p', 'bn-card-title',
       b.title || (b.banner_style === 'image_only' ? '(صورة فقط بدون نص)' : '(بدون عنوان)')));
     const meta = el('div', 'bn-meta');
+    const isDraft = b.status === 'draft';
+    meta.appendChild(el('span', 'bn-pill' + (isDraft ? ' off' : ''), isDraft ? 'مسودة' : 'منشور'));
     meta.appendChild(el('span', 'bn-pill' + (b.is_active ? '' : ' off'), b.is_active ? 'مفعّل' : 'معطّل'));
     meta.appendChild(el('span', null, b.banner_style === 'image_text' ? 'صورة + نص' : 'صورة فقط'));
     meta.appendChild(el('span', null, 'الترتيب: ' + b.sort_order));
@@ -591,6 +649,8 @@ function renderList() {
     actions.appendChild(mk('أعلى', () => reorder(b.id, 'up')));
     actions.appendChild(mk('أسفل', () => reorder(b.id, 'down')));
     actions.appendChild(mk(b.is_active ? 'تعطيل' : 'تفعيل', () => toggleActive(b)));
+    actions.appendChild(mk(isDraft ? 'نشر' : 'إلى مسودة', () => toggleStatus(b)));
+    actions.appendChild(mk('نسخ', () => copyBanner(b)));
     actions.appendChild(mk('حذف', () => removeBanner(b), 'danger'));
     body.appendChild(actions);
     card.appendChild(body);
@@ -608,6 +668,21 @@ async function toggleActive(b) {
   if (error) { alert('تعذر التغيير: ' + error.message); return; }
   await loadBanners();
 }
+async function toggleStatus(b) {
+  const next = b.status === 'draft' ? 'published' : 'draft';
+  const { error } = await supabaseClient.rpc('admin_set_banner_status', { p_id: b.id, p_status: next });
+  if (error) {
+    const m = (error.message || '').trim();
+    alert(m === 'ALT_REQUIRED' ? 'لا يمكن النشر قبل كتابة النص البديل (alt) للصورة.' : 'تعذر التغيير: ' + m);
+    return;
+  }
+  await loadBanners();
+}
+async function copyBanner(b) {
+  const { error } = await supabaseClient.rpc('admin_copy_banner', { p_id: b.id });
+  if (error) { alert('تعذر النسخ: ' + error.message); return; }
+  await loadBanners();
+}
 async function removeBanner(b) {
   if (!confirm('حذف هذا البنر نهائياً؟')) return;
   const { error } = await supabaseClient.rpc('admin_delete_banner', { p_id: b.id });
@@ -623,7 +698,7 @@ function resetForm() {
   linkTypeInput.value = 'none';
   pageSelect.value = 'index.html';
   productSelect.value = ''; categorySelect.value = '';
-  activeInput.value = 'true'; hideDisabledInput.value = 'true';
+  activeInput.value = 'true'; hideDisabledInput.value = 'true'; $('statusInput').value = 'published';
   $('ovdInput').value = 'right'; $('ovmInput').value = 'top';
   $('desktopSlotState').textContent = 'لم تُختر صورة بعد';
   $('mobileSlotState').textContent = 'لم تُختر صورة — ستُولَّد من صورة الديسكتوب';
@@ -659,8 +734,10 @@ function openForm(banner) {
     $('ovdInput').value = banner.overlay_position_desktop || 'right';
     $('ovmInput').value = banner.overlay_position_mobile || 'top';
     activeInput.value = String(banner.is_active);
-    hideDisabledInput.value = String(banner.hide_when_target_disabled);
-    const toLocal = (v) => v ? new Date(new Date(v).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+    hideDisabledInput.value = String(banner.hide_if_target_inactive);
+    $('statusInput').value = banner.status === 'draft' ? 'draft' : 'published';
+    // Khartoum is UTC+2 with no DST: convert the stored UTC instant for the input.
+    const toLocal = (v) => v ? new Date(new Date(v).getTime() + 2 * 3600000).toISOString().slice(0, 16) : '';
     startInput.value = toLocal(banner.starts_at);
     endInput.value = toLocal(banner.ends_at);
     state.slots.desktop.url = banner.image_desktop_url;
@@ -707,9 +784,11 @@ function currentPayload() {
   else if (t === 'product') target = productSelect.value || null;
   else if (t === 'category') target = categorySelect.value || null;
   else if (t === 'url') target = urlInput.value.trim();
-  const toIso = (v) => v ? new Date(v).toISOString() : null;
+  // The datetime-local value is Khartoum wall time (UTC+2); store the true UTC instant.
+  const toIso = (v) => v ? new Date(new Date(v).getTime() - 2 * 3600000).toISOString() : null;
   return {
     banner_style: styleInput.value,
+    status: $('statusInput').value,
     title: titleInput.value.trim() || null,
     subtitle: subtitleInput.value.trim() || null,
     cta_text: ctaInput.value.trim() || null,
@@ -721,7 +800,7 @@ function currentPayload() {
     whatsapp_message: waMessageInput.value.trim() || null,
     overlay_position_desktop: $('ovdInput').value,
     overlay_position_mobile: $('ovmInput').value,
-    hide_when_target_disabled: hideDisabledInput.value === 'true',
+    hide_if_target_inactive: hideDisabledInput.value === 'true',
     is_active: activeInput.value === 'true',
     starts_at: toIso(startInput.value),
     ends_at: toIso(endInput.value),
@@ -802,10 +881,13 @@ async function save() {
       SUBTITLE_TOO_LONG: 'النص الفرعي أطول من 90 حرفاً.',
       CTA_TOO_LONG: 'نص الزر أطول من 20 حرفاً.',
       INVALID_URL: 'الرابط الخارجي يجب أن يبدأ بـ https:// ويكون صالحاً.',
-      INVALID_IMAGE_DESKTOP_URL: 'رابط صورة الديسكتوب غير مقبول.',
       PAGE_NOT_ALLOWED: 'الصفحة المختارة غير مسموحة.',
       PRODUCT_NOT_FOUND: 'المنتج غير موجود.',
       CATEGORY_NOT_FOUND: 'القسم غير موجود.',
+      ALT_REQUIRED: 'النص البديل (alt) إلزامي قبل النشر.',
+      INVALID_STATUS: 'حالة البنر غير صحيحة.',
+      INVALID_IMAGE_DESKTOP_URL: 'رابط الصورة يجب أن يكون داخل مجلد المشروع (assets/banners) أو تخزين المشروع.',
+      INVALID_IMAGE_MOBILE_URL: 'رابط صورة الموبايل غير مقبول.',
       PERMISSION_REQUIRED: 'لا تملك صلاحية إدارة الإعدادات.',
       ADMIN_REQUIRED: 'صلاحيتك كمشرف لم تعد فعّالة — أعد تحميل الصفحة.'
     };

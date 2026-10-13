@@ -92,13 +92,66 @@
   .store-section-description { margin: 0 0 15px; color: var(--text-muted); font-size: 12.5px; line-height: 1.7; }
   .store-section .categories-grid { padding: 0 !important; }
 
-  /* شبكة عرض كروت التصنيفات (الألعاب) الموحدة بشكل فخم واستجابة كاملة */
+  /* شبكة عرض كروت التصنيفات — عمودان على الموبايل (تُملأ كاملة حتى لو كان
+     تصنيف واحد)، ثم auto-fill على الشاشات الأكبر. */
   .categories-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)) !important;
-    gap: 14px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
     padding: 10px 16px !important;
+    width: 100% !important;
   }
+  @media (min-width: 640px) {
+    .categories-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important; gap: 14px !important; }
+  }
+
+  /* أيقونة القسم/التصنيف الموحّدة: مربع مدوّر 56-64px بتدرّج أزرق ملكي→كهربائي،
+     حد ذهبي رفيع، أيقونة بيضاء/ذهبية بسُمك 1.75، مع ظهور ناعم. */
+  .mm-ico {
+    --mm-ico-size: 60px;
+    flex: 0 0 auto; width: var(--mm-ico-size); height: var(--mm-ico-size);
+    display: grid; place-items: center; border-radius: 18px;
+    background: linear-gradient(150deg, var(--mm-royal, #0A2A6B), var(--mm-royal-700, #103E96) 55%, #087BFF);
+    border: 1px solid rgba(255, 212, 0, .42);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 10px 24px -14px rgba(8,123,255,.7);
+    color: #fff; overflow: hidden;
+    transition: transform .3s cubic-bezier(.2,.7,.3,1), box-shadow .3s ease;
+  }
+  .mm-ico svg { width: 58%; height: 58%; stroke-width: 1.75; color: #fff; }
+  .mm-ico--gold { color: var(--mm-gold); }
+  .mm-ico--gold svg { color: var(--mm-gold); }
+  .mm-ico img { width: 100%; height: 100%; object-fit: contain; padding: 16%; }
+  .game-card:hover .mm-ico, .mm-ico:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -14px rgba(8,123,255,.85); }
+  @media (prefers-reduced-motion: reduce) {
+    .mm-ico, .game-card:hover .mm-ico { transition: none; transform: none; }
+  }
+
+  /* غلاف التصنيف يكون إطار أيقونة موحّداً حين لا توجد صورة غلاف */
+  .game-thumb--icon { background: transparent !important; border: none !important; height: auto !important; }
+
+  /* صف أيقونات الأقسام (تمرير أفقي على الموبايل) */
+  .section-icon-row {
+    display: flex; gap: 14px; overflow-x: auto; padding: 14px 16px 6px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .section-icon-row::-webkit-scrollbar { display: none; }
+  .section-chip {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 7px;
+    text-decoration: none; scroll-snap-align: start; min-width: 68px;
+  }
+  .section-chip span.section-chip-label {
+    color: var(--text-light); font-size: 11.5px; font-weight: 800; text-align: center;
+    max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .section-chip .mm-ico { --mm-ico-size: 62px; border-radius: 50%; }
+
+  /* بطاقة منتج (الأكثر طلباً / الجديد) */
+  .hl-section .categories-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  @media (min-width: 640px) { .hl-section .categories-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important; } }
+  .prod-card { display: flex; flex-direction: column; }
+  .prod-price { color: var(--mm-gold); font-weight: 900; font-size: 14px; margin-top: 6px; }
+  .prod-count { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
 
   /* كارت التصنيف/اللعبة — حواف ناعمة وظل هادئ وتفاعل لطيف */
   .game-card {
@@ -126,6 +179,7 @@
 
   /* غلاف/أيقونة اللعبة */
   .game-thumb {
+    /* لا يوجد قص: الغلاف يظهر كاملاً داخل إطار مدوّر */
     width: 100% !important;
     height: 125px !important;
     overflow: hidden !important;
@@ -318,6 +372,7 @@
 <link rel="stylesheet" href="assets/css/meem.css">
 <link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
 <script src="assets/js/meem-ui.js"></script>
+<script src="assets/js/category-icons.js"></script>
 </head>
 <body class="mm-has-bottom-nav">
 
@@ -405,6 +460,10 @@
       </div>
       <button type="button" class="mm-hero-arrow mm-hero-arrow-next" id="mmHeroNext" aria-label="الشريحة التالية" hidden></button>
       <button type="button" class="mm-hero-arrow mm-hero-arrow-prev" id="mmHeroPrev" aria-label="الشريحة السابقة" hidden></button>
+      <button type="button" class="mm-hero-playpause" id="mmHeroPlayPause" aria-pressed="true" aria-label="إيقاف الحركة التلقائية" hidden>
+        <svg class="mm-i mm-hero-playpause-i mm-hero-playpause-pause" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pause"></use></svg>
+        <svg class="mm-i mm-hero-playpause-i mm-hero-playpause-play" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-play"></use></svg>
+      </button>
       <div class="swiper-pagination mm-hero-dots" id="mmHeroDots" hidden></div>
     </div>
   </div>
@@ -428,6 +487,7 @@
 </div>
 
 <div id="products" class="products-anchor"></div>
+<div id="sectionRow" class="section-icon-row" aria-label="أقسام المتجر" hidden></div>
 <div id="categoriesContainer" class="catalog-sections">
   <div style="color: var(--text-muted); font-size: 13px; padding: 20px; text-align: center;">
     <img class="mm-mark-pulse" src="assets/img/meem-mark-96.png"
@@ -436,6 +496,7 @@
     جاري تحميل الألعاب...
   </div>
 </div>
+<div id="homeHighlights" class="catalog-sections"></div>
 
 <footer class="site-footer">
     <div class="footer-brand">
@@ -558,15 +619,31 @@ async function init() {
       }
     }
 
-    const [
-      { data: sections, error: sectionsError },
-      { data: categories, error: categoriesError },
-      { data: products, error: productsError }
-    ] = await Promise.all([
-      supabaseClient.from('store_sections').select('id,name,display_order').eq('is_active', true).order('display_order').order('name'),
-      supabaseClient.from('categories').select('id,section_id,name,description,image_url,display_order').eq('is_active', true).not('section_id', 'is', null).order('display_order').order('name'),
+    // Ask the capability marker first so we never request a column that is not
+    // there yet (an unknown column makes PostgREST answer 400).
+    let withIcons = false;
+    try {
+      const { data: marker } = await supabaseClient
+        .from('settings').select('value').eq('key', 'catalog_icons_flag').maybeSingle();
+      withIcons = !!(marker && String(marker.value).toLowerCase() === 'true');
+    } catch (e) { withIcons = false; }
+
+    const SECTIONS_FULL = 'id,name,display_order,description';
+    const SECTIONS_BASE = 'id,name,display_order';
+    const CATS_FULL = 'id,section_id,name,description,image_url,display_order,icon_mode,icon_key,icon_image_url';
+    const CATS_BASE = 'id,section_id,name,description,image_url,display_order';
+
+    const [ sectionsRes, categoriesRes, productsRes ] = await Promise.all([
+      supabaseClient.from('store_sections').select(withIcons ? SECTIONS_FULL : SECTIONS_BASE)
+        .eq('is_active', true).order('display_order').order('name'),
+      supabaseClient.from('categories').select(withIcons ? CATS_FULL : CATS_BASE)
+        .eq('is_active', true).not('section_id', 'is', null).order('display_order').order('name'),
       supabaseClient.from('products').select('category_id').eq('is_active', true)
     ]);
+
+    const sections = sectionsRes.data, sectionsError = sectionsRes.error;
+    const categories = categoriesRes.data, categoriesError = categoriesRes.error;
+    const products = productsRes.data, productsError = productsRes.error;
 
     if (sectionsError) throw sectionsError;
     if (categoriesError) throw categoriesError;
@@ -618,62 +695,97 @@ function createIcon(name, style) {
   return icon;
 }
 
+// Resolve the icon for a section/category row via the shared module. Missing
+// icon columns (before the migration) simply resolve to the smart auto icon.
+function iconSpec(row) {
+  if (window.MeemCategoryIcons) return window.MeemCategoryIcons.resolve(row);
+  return { mode: 'auto', key: 'gamepad-2', image: '' };
+}
+
+// The unified icon frame (blue gradient + thin gold edge). Accepts an optional
+// custom image (rendered inside the same frame) or falls back to a sprite icon.
+function createIconBox(spec, extraClass) {
+  const box = document.createElement('span');
+  box.className = 'mm-ico' + (extraClass ? ' ' + extraClass : '');
+  box.setAttribute('aria-hidden', 'true');
+  if (spec.mode === 'custom' && spec.image) {
+    const url = getSafeImageUrl(spec.image);
+    if (url) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', () => { box.replaceChildren(createIcon(spec.key || 'layout-grid')); }, { once: true });
+      box.appendChild(img);
+      return box;
+    }
+  }
+  const key = (window.MeemCategoryIcons && window.MeemCategoryIcons.isValidKey(spec.key))
+    ? spec.key : 'layout-grid';
+  box.appendChild(createIcon(key));
+  return box;
+}
+
 function createCategoryCard(cat) {
     const name = typeof cat.name === 'string' && cat.name.trim() ? cat.name.trim() : 'تصنيف';
     const description = typeof cat.description === 'string' && cat.description.trim()
-      ? cat.description.trim()
-      : 'تصفح الباقات المتوفرة داخل هذا التصنيف';
+      ? cat.description.trim() : '';
     const imageUrl = getSafeImageUrl(cat.image_url);
+    const spec = iconSpec(cat);
     const card = document.createElement('a');
-    const thumb = document.createElement('div');
     const info = document.createElement('div');
     const nameElement = document.createElement('div');
-    const descriptionElement = document.createElement('div');
 
     card.href = `category.html?id=${encodeURIComponent(String(cat.id))}`;
     card.className = 'game-card';
     card.setAttribute('aria-label', `فتح تصنيف ${name}`);
-    thumb.className = 'game-thumb';
 
+    // Cover image if the admin set one, otherwise the unified icon frame.
     if (imageUrl) {
+      const thumb = document.createElement('div');
+      thumb.className = 'game-thumb';
       const image = document.createElement('img');
       image.src = imageUrl;
       image.alt = name;
       image.loading = 'lazy';
       image.decoding = 'async';
       image.addEventListener('error', () => {
-        thumb.replaceChildren(createIcon('gamepad-2'));
-        thumb.style.cssText = 'color:var(--mm-haze); font-size:32px;';
+        const frame = document.createElement('div');
+        frame.className = 'game-thumb game-thumb--icon';
+        frame.appendChild(createIconBox(spec));
+        thumb.replaceWith(frame);
       }, { once: true });
       thumb.appendChild(image);
+      card.appendChild(thumb);
     } else {
-      thumb.style.cssText = 'color:var(--mm-haze); font-size:32px;';
-      thumb.appendChild(createIcon('gamepad-2'));
+      const thumb = document.createElement('div');
+      thumb.className = 'game-thumb game-thumb--icon';
+      thumb.appendChild(createIconBox(spec));
+      card.appendChild(thumb);
     }
 
     info.className = 'game-info';
     nameElement.className = 'game-name';
     nameElement.textContent = name;
-    descriptionElement.className = 'game-desc';
-    descriptionElement.textContent = description;
-    descriptionElement.title = description;
-    info.append(nameElement, descriptionElement);
-    card.append(thumb, info);
+    info.appendChild(nameElement);
+    if (description) {
+      const descriptionElement = document.createElement('div');
+      descriptionElement.className = 'game-desc';
+      descriptionElement.textContent = description;
+      descriptionElement.title = description;
+      info.appendChild(descriptionElement);
+    }
+    card.append(info);
     return card;
 }
 
-/* أيقونة مميزة لكل قسم حسب كلمات اسمه (Lucide، جميعها موجودة في الـ sprite) */
-function sectionIconFor(name) {
-  const n = String(name || '').toLowerCase();
-  if (/لع|game|ببجي|فري|فاير|pubg|fifa|cod|شدات|جيمز/.test(n)) return 'gamepad-2';
-  if (/اشتراك|subscri|نتفلكس|شاهد|سبوتيفاي|spotify|يوتيوب|youtube/.test(n)) return 'ticket';
-  if (/بطاق|card|جوجل|google|ايتونز|itunes|كارد/.test(n)) return 'id-card';
-  if (/محفظ|رصيد|wallet|balance/.test(n)) return 'wallet';
-  if (/هداي|هدية|gift/.test(n)) return 'gift';
-  if (/شحن|تعبئة|topup|top-?up/.test(n)) return 'zap';
-  if (/تطبيق|برام|software|app/.test(n)) return 'smartphone';
-  if (/دعم|مساعدة|chat|support/.test(n)) return 'headset';
-  if (/متجر|store/.test(n)) return 'store';
+/* الأيقونة الذكية للأقسام عبر الوحدة المشتركة (نفس منطق الأدمن). */
+function sectionIconFor(name, row) {
+  if (window.MeemCategoryIcons) {
+    if (row && (row.icon_mode || row.icon_key)) return window.MeemCategoryIcons.resolve(row).key;
+    return window.MeemCategoryIcons.suggest(name);
+  }
   return 'layers';
 }
 
@@ -707,10 +819,7 @@ function renderCatalog(sections, categories, products) {
 
     const heading = document.createElement('div');
     heading.className = 'store-section-heading';
-    const iconWrap = document.createElement('span');
-    iconWrap.className = 'store-section-icon';
-    iconWrap.setAttribute('aria-hidden', 'true');
-    iconWrap.appendChild(createIcon(sectionIconFor(section.name)));
+    const iconWrap = createIconBox(iconSpec(section));
     const titles = document.createElement('div');
     titles.className = 'store-section-titles';
     const kicker = document.createElement('span');
@@ -726,14 +835,20 @@ function renderCatalog(sections, categories, products) {
     countBadge.textContent = `${sectionProductCount} منتج`;
     heading.append(iconWrap, titles, countBadge);
 
-    const description = document.createElement('p');
-    description.className = 'store-section-description';
-    description.textContent = `${sectionCategories.length} من الألعاب والتصنيفات المتوفرة داخل هذا القسم.`;
+    // The description is admin-authored and optional: it disappears when empty.
+    const descriptionText = typeof section.description === 'string' ? section.description.trim() : '';
 
     const grid = document.createElement('div');
     grid.className = 'categories-grid';
     sectionCategories.forEach(category => grid.appendChild(createCategoryCard(category)));
-    sectionElement.append(heading, description, grid);
+    if (descriptionText) {
+      const description = document.createElement('p');
+      description.className = 'store-section-description';
+      description.textContent = descriptionText;
+      sectionElement.append(heading, description, grid);
+    } else {
+      sectionElement.append(heading, grid);
+    }
     fragment.appendChild(sectionElement);
   });
 
@@ -742,6 +857,131 @@ function renderCatalog(sections, categories, products) {
     return;
   }
   container.replaceChildren(fragment);
+  renderSectionRow(sections);
+  renderHighlights();
+}
+
+function renderSectionRow(sections) {
+  const host = document.getElementById('sectionRow');
+  if (!host) return;
+  if (!sections || !sections.length) { host.hidden = true; return; }
+  const frag = document.createDocumentFragment();
+  sections.forEach((section) => {
+    const chip = document.createElement('a');
+    chip.className = 'section-chip';
+    chip.href = '#section-title-' + section.id;
+    chip.setAttribute('aria-label', 'انتقل إلى قسم ' + section.name);
+    chip.appendChild(createIconBox(iconSpec(section)));
+    const label = document.createElement('span');
+    label.className = 'section-chip-label';
+    label.textContent = section.name;
+    chip.appendChild(label);
+    chip.addEventListener('click', function (e) {
+      const target = document.getElementById('section-title-' + section.id);
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+    frag.appendChild(chip);
+  });
+  host.replaceChildren(frag);
+  host.hidden = false;
+}
+
+function createProductCard(p, rate) {
+  const name = typeof p.name === 'string' && p.name.trim() ? p.name.trim() : 'منتج';
+  const price = Math.max(0, Number(p.price_usd) || 0);
+  const card = document.createElement('a');
+  card.className = 'game-card prod-card';
+  card.href = 'product.html?id=' + encodeURIComponent(String(p.id));
+  card.setAttribute('aria-label', 'فتح ' + name);
+  const thumb = document.createElement('div');
+  thumb.className = 'game-thumb';
+  const url = getSafeImageUrl(p.image_url);
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url; img.alt = name; img.loading = 'lazy'; img.decoding = 'async';
+    img.addEventListener('error', () => {
+      const frame = document.createElement('div');
+      frame.className = 'game-thumb game-thumb--icon';
+      frame.appendChild(createIconBox({ mode: 'auto', key: 'package' }));
+      thumb.replaceWith(frame);
+    }, { once: true });
+    thumb.appendChild(img);
+  } else {
+    thumb.className = 'game-thumb game-thumb--icon';
+    thumb.appendChild(createIconBox({ mode: 'auto', key: 'package' }));
+  }
+  const info = document.createElement('div');
+  info.className = 'game-info';
+  const nm = document.createElement('div'); nm.className = 'game-name'; nm.textContent = name;
+  const pr = document.createElement('div'); pr.className = 'prod-price';
+  pr.textContent = (typeof formatSDG === 'function' ? formatSDG(price * (rate || 1)) : price.toFixed(2)) + ' ج.س';
+  info.append(nm, pr);
+  card.append(thumb, info);
+  return card;
+}
+
+async function renderHighlights() {
+  const host = document.getElementById('homeHighlights');
+  if (!host) return;
+  host.replaceChildren();
+  // capability marker: only render once the functions exist on the backend
+  let flag = false;
+  try {
+    const { data } = await supabaseClient.from('settings').select('value').eq('key', 'home_highlights_flag').maybeSingle();
+    flag = !!(data && String(data.value).toLowerCase() === 'true');
+  } catch (e) { flag = false; }
+  if (!flag) return;
+
+  let rate = 1;
+  try { rate = Number(await getExchangeRate()) || 1; } catch (e) { rate = 1; }
+
+  const [newestRes, topRes] = await Promise.all([
+    supabaseClient.from('products').select('id,name,image_url,price_usd,created_at')
+      .eq('is_active', true).order('created_at', { ascending: false }).limit(8),
+    supabaseClient.rpc('get_top_ordered_products', { p_limit: 8 })
+  ]);
+
+  const top = (() => {
+    let d = topRes && topRes.data;
+    if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = []; } }
+    return Array.isArray(d) ? d : [];
+  })();
+  const newest = (newestRes && !newestRes.error && Array.isArray(newestRes.data)) ? newestRes.data : [];
+
+  const frag = document.createDocumentFragment();
+  if (top.length) frag.appendChild(buildHighlightSection('الأكثر طلباً', 'flame', top, rate, true));
+  if (newest.length) frag.appendChild(buildHighlightSection('جديد في MEEM', 'sparkles', newest, rate, false));
+  host.appendChild(frag);
+}
+
+function buildHighlightSection(title, iconKey, products, rate, withCount) {
+  const section = document.createElement('section');
+  section.className = 'store-section hl-section';
+  const heading = document.createElement('div');
+  heading.className = 'store-section-heading';
+  heading.appendChild(createIconBox({ mode: 'preset', key: iconKey }));
+  const titles = document.createElement('div');
+  titles.className = 'store-section-titles';
+  const h = document.createElement('h2');
+  h.className = 'store-section-title';
+  h.textContent = title;
+  titles.appendChild(h);
+  heading.appendChild(titles);
+  const grid = document.createElement('div');
+  grid.className = 'categories-grid';
+  products.forEach((p) => {
+    const card = createProductCard(p, rate);
+    if (withCount && p.ordered && Number(p.ordered) > 0) {
+      const c = document.createElement('div');
+      c.className = 'prod-count';
+      c.textContent = 'طلب ' + Number(p.ordered).toLocaleString('ar-EG') + ' مرة';
+      const info = card.querySelector('.game-info');
+      if (info) info.appendChild(c);
+    }
+    grid.appendChild(card);
+  });
+  section.append(heading, grid);
+  return section;
 }
 
 init();

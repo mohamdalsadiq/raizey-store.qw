@@ -101,6 +101,10 @@
         <input type="text" id="nameInput" maxlength="120" placeholder="مثلاً: الاشتراكات">
       </div>
       <div class="field">
+        <label>أيقونة القسم</label>
+        <div id="iconPicker"></div>
+      </div>
+      <div class="field">
         <label for="orderInput">ترتيب العرض</label>
         <input type="number" id="orderInput" min="0" step="1" placeholder="0">
       </div>
@@ -126,6 +130,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-client.js"></script>
+  <script src="assets/js/category-icons.js"></script>
+  <script src="assets/js/admin-icon-picker.js"></script>
   <script>
     let sections = [];
     let editingId = null;
@@ -165,9 +171,18 @@
       await loadSections();
     }
     async function loadSections() {
-      const { data, error } = await supabaseClient.from('store_sections').select('id,name,display_order,is_active,created_at').order('display_order').order('name');
-      if (error) { showNotice(errorText(error)); return; }
-      sections = data || [];
+      // Only ask for the newer columns once the catalog migration advertised them.
+      let withIcons = false;
+      try {
+        const { data: marker } = await supabaseClient.from('settings').select('value').eq('key', 'catalog_icons_flag').maybeSingle();
+        withIcons = !!(marker && String(marker.value).toLowerCase() === 'true');
+      } catch (e) { withIcons = false; }
+      const cols = withIcons
+        ? 'id,name,display_order,is_active,created_at,description,icon_mode,icon_key,icon_image_url'
+        : 'id,name,display_order,is_active,created_at';
+      const res = await supabaseClient.from('store_sections').select(cols).order('display_order').order('name');
+      if (res.error) { showNotice(errorText(res.error)); return; }
+      sections = res.data || [];
       renderSections();
     }
     async function categoryCount(sectionId) {
@@ -181,7 +196,7 @@
       container.innerHTML = sections.map((section, index) => `
         <div class="manage-item">
           <div class="manage-item-info">
-            <div class="section-hero-icon" style="width: 44px;height: 44px;border-radius: 13px;font-size: 18px;margin-left: 12px;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-layers"></use></svg></div>
+            <div class="section-hero-icon" data-icon-slot="${section.id}" style="width: 44px;height: 44px;border-radius: 13px;font-size: 18px;margin-left: 12px;"></div>
             <div class="category-meta-text">
               <div class="manage-item-name">${escapeHtml(section.name)} ${!section.is_active ? '<span class="inactive-badge">مخفي</span>' : ''}</div>
               <div class="section-meta"><span>ترتيب: ${Number(section.display_order) || 0}</span><span>${counts[index]} تصنيف</span><span class="section-count">${section.is_active ? 'ظاهر في المتجر' : 'مؤرشف'}</span></div>
@@ -192,8 +207,37 @@
             <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><svg class="mm-i" style="color: var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
           </div>
         </div>`).join('');
+      // fill each icon slot with the resolved icon (custom image or Lucide key)
+      sections.forEach((section) => {
+        const slot = container.querySelector('[data-icon-slot="' + section.id + '"]');
+        if (!slot) return;
+        const spec = window.MeemCategoryIcons ? window.MeemCategoryIcons.resolve(section) : { mode: 'auto', key: 'layout-grid' };
+        if (spec.mode === 'custom' && spec.image) {
+          const img = document.createElement('img');
+          img.src = spec.image; img.alt = ''; img.width = 22; img.height = 22;
+          img.addEventListener('error', () => { slot.replaceChildren(spriteIcon(spec.key)); }, { once: true });
+          slot.replaceChildren(img);
+        } else {
+          slot.replaceChildren(spriteIcon(window.MeemCategoryIcons && window.MeemCategoryIcons.isValidKey(spec.key) ? spec.key : 'layout-grid'));
+        }
+      });
       container.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openForm(btn.dataset.id)));
       container.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteSection(btn.dataset.id)));
+    }
+    function spriteIcon(key) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'mm-i'); svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', 'assets/icons/lucide-sprite.svg#i-' + key);
+      svg.appendChild(use); return svg;
+    }
+    let iconPicker = null;
+    function mountIconPicker(section) {
+      if (!window.MeemIconPicker) return;
+      iconPicker = window.MeemIconPicker.mount(document.getElementById('iconPicker'), {
+        row: section || {},
+        nameProvider: () => nameInput.value
+      });
     }
     function openForm(id = null) {
       editingId = id;
@@ -204,11 +248,13 @@
         nameInput.value = section?.name || '';
         orderInput.value = section?.display_order ?? 0;
         activeInput.value = String(section?.is_active !== false);
+        mountIconPicker(section);
       } else {
         document.getElementById('formModalTitle').textContent = 'قسم جديد';
         nameInput.value = '';
         orderInput.value = sections.length;
         activeInput.value = 'true';
+        mountIconPicker({});
       }
       formModal.classList.add('show');
       nameInput.focus();
@@ -220,11 +266,31 @@
       const button = document.getElementById('formSaveBtn');
       button.disabled = true; button.textContent = 'جاري الحفظ...'; formError.textContent = '';
       const payload = { name, display_order: Math.max(0, parseInt(orderInput.value, 10) || 0), is_active: activeInput.value === 'true' };
-      const response = editingId
-        ? await supabaseClient.from('store_sections').update(payload).eq('id', editingId)
-        : await supabaseClient.from('store_sections').insert(payload);
+      try {
+        let sectionId = editingId;
+        if (editingId) {
+          const response = await supabaseClient.from('store_sections').update(payload).eq('id', editingId);
+          if (response.error) throw new Error(errorText(response.error));
+        } else {
+          const response = await supabaseClient.from('store_sections').insert(payload).select('id').single();
+          if (response.error) throw new Error(errorText(response.error));
+          sectionId = response.data.id;
+        }
+        if (iconPicker && sectionId) {
+          const icon = await iconPicker.resolve();
+          const { error: iconErr } = await supabaseClient.rpc('admin_set_section_icon', {
+            p_id: sectionId, p_mode: icon.icon_mode, p_key: icon.icon_key, p_image: icon.icon_image_url
+          });
+          if (iconErr && iconErr.message && iconErr.message.indexOf('does not exist') === -1) {
+            throw new Error('تم حفظ القسم لكن تعذر حفظ الأيقونة: ' + iconErr.message);
+          }
+        }
+      } catch (e) {
+        button.disabled = false; button.textContent = 'حفظ القسم';
+        formError.textContent = e.message || 'تعذر الحفظ';
+        return;
+      }
       button.disabled = false; button.textContent = 'حفظ القسم';
-      if (response.error) { formError.textContent = errorText(response.error); return; }
       closeForm(); showNotice('تم حفظ القسم بنجاح.', 'success'); await loadSections();
     }
     async function deleteSection(id) {

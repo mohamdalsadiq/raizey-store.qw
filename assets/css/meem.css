@@ -1249,6 +1249,25 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 .mm-hero-arrow-prev { right: 12px; }
 .mm-hero-arrow-prev::before { transform: rotate(135deg); margin-right: 4px; }
 
+/* play/pause — always visible when autoplay is on (WCAG 2.2.2) */
+.mm-hero-playpause {
+  position: absolute; bottom: 12px; z-index: 6;
+  /* RTL: keep it on the left edge, clear of the right-aligned overlay text */
+  left: 12px;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(4,18,63,.62); border: 1px solid rgba(255,255,255,.35);
+  color: #fff; padding: 0;
+}
+.mm-hero-playpause:hover, .mm-hero-playpause:focus-visible {
+  background: rgba(4,18,63,.82); border-color: var(--mm-gold); outline: none;
+}
+.mm-hero-playpause-i { width: 18px; height: 18px; }
+.mm-hero-playpause-play { display: none; }
+.mm-hero-playpause[data-state="paused"] .mm-hero-playpause-pause { display: none; }
+.mm-hero-playpause[data-state="paused"] .mm-hero-playpause-play { display: block; }
+@media (min-width: 768px) { .mm-hero-playpause { bottom: 14px; } }
+
 .mm-hero-dots {
   position: absolute; bottom: 12px; left: 0; right: 0; z-index: 5;
   display: flex; justify-content: center; gap: 8px;

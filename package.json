@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npx --yes serve . -p 3000",
     "start": "npx --yes serve . -p 3000",
-    "test": "node scripts/test_receipt_pipeline.mjs && node scripts/test_receipt_judge.mjs",
+    "test": "node scripts/test_receipt_pipeline.mjs && node scripts/test_receipt_judge.mjs && node scripts/category_icons_check.mjs",
     "test:edge": "bun scripts/test_process_receipt_edge.mjs"
   }
 }

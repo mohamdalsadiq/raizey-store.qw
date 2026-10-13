@@ -11,12 +11,23 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { ROOT, SPRITE_PATH, LUCIDE_VERSION, SIMPLE_ICONS_VERSION, SYSTEM_ICONS, readMap, collectLegacyIcons, collectSpriteRefs, collectLucideAttrs } from "./lib_icons.mjs";
+
+// The curated store icon set lives with the smart-mapping module so the sprite
+// and the picker can never drift apart.
+const require = createRequire(import.meta.url);
+let CATEGORY_ICON_PRESETS = [];
+try { CATEGORY_ICON_PRESETS = require(path.join(ROOT, "assets/js/category-icons.js")).PRESETS || []; }
+catch (e) { console.warn("⚠ could not read assets/js/category-icons.js PRESETS:", e.message); }
 
 const CHECK_ONLY = process.argv.includes("--check");
 const CACHE = path.join(ROOT, ".cache/icons");
+// Two CDNs: unpkg can return transient 500s mid-build, jsDelivr is the fallback.
 const LUCIDE_CDN = (n) => `https://unpkg.com/lucide-static@${LUCIDE_VERSION}/icons/${n}.svg`;
+const LUCIDE_CDN_ALT = (n) => `https://cdn.jsdelivr.net/npm/lucide-static@${LUCIDE_VERSION}/icons/${n}.svg`;
 const BRAND_CDN = (n) => `https://unpkg.com/simple-icons@${SIMPLE_ICONS_VERSION}/icons/${n}.svg`;
+const BRAND_CDN_ALT = (n) => `https://cdn.jsdelivr.net/npm/simple-icons@${SIMPLE_ICONS_VERSION}/icons/${n}.svg`;
 
 const map = readMap();
 
@@ -29,7 +40,7 @@ if (unmapped.length) {
   process.exit(1);
 }
 
-const needed = new Set([...collectSpriteRefs(), ...collectLucideAttrs(), ...SYSTEM_ICONS]);
+const needed = new Set([...collectSpriteRefs(), ...collectLucideAttrs(), ...SYSTEM_ICONS, ...CATEGORY_ICON_PRESETS]);
 for (const fa of legacy.keys()) needed.add(map.icons[fa] ?? map.brands[fa]);
 
 const brandNames = new Set(Object.values(map.brands));
@@ -53,15 +64,29 @@ if (CHECK_ONLY) {
 // ── 3. Fetch sources (cache-first so rebuilds are offline-friendly) ─────────
 fs.mkdirSync(CACHE, { recursive: true });
 
+async function fetchOnce(url) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.text();
+      if (attempt === 3) return null;
+    } catch (_) {
+      if (attempt === 3) return null;
+    }
+    await new Promise((r) => setTimeout(r, 300 * attempt));
+  }
+  return null;
+}
+
 async function fetchIcon(name, isBrand) {
   const cacheFile = path.join(CACHE, `${isBrand ? "brand-" : ""}${name}.svg`);
   if (fs.existsSync(cacheFile)) return fs.readFileSync(cacheFile, "utf8");
-  const url = isBrand ? BRAND_CDN(name) : LUCIDE_CDN(name);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`cannot download ${url} → HTTP ${res.status}`);
-  const svg = await res.text();
-  fs.writeFileSync(cacheFile, svg);
-  return svg;
+  const urls = isBrand ? [BRAND_CDN(name), BRAND_CDN_ALT(name)] : [LUCIDE_CDN(name), LUCIDE_CDN_ALT(name)];
+  for (const url of urls) {
+    const svg = await fetchOnce(url);
+    if (svg) { fs.writeFileSync(cacheFile, svg); return svg; }
+  }
+  throw new Error(`cannot download ${name} from any CDN`);
 }
 
 function innerOf(svg) {

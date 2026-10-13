@@ -1,0 +1,50 @@
+[
+  {
+    "id": "default-support",
+    "banner_style": "image_text",
+    "title": "تواصل معنا مباشرة على واتساب",
+    "subtitle": "فريقنا جاهز للرد على استفساراتك ومتابعة طلبك أولاً بأول",
+    "cta_text": "ابدأ المحادثة",
+    "alt_text": "دعم MEEM STORE عبر واتساب - هاتف وسماعة ومحادثة",
+    "image_desktop_url": "/assets/banners/banner-1-desktop.webp",
+    "image_mobile_url": "/assets/banners/banner-1-mobile.webp",
+    "link_type": "whatsapp",
+    "link_target": null,
+    "whatsapp_message": "مرحباً MEEM STORE، عندي استفسار",
+    "overlay_position_desktop": "right",
+    "overlay_position_mobile": "top",
+    "sort_order": 1
+  },
+  {
+    "id": "default-payment",
+    "banner_style": "image_text",
+    "title": "ادفع من محفظتك أو بتحويل بنكي مباشر",
+    "subtitle": "محفظة داخلية لشحن أسرع، أو دفع مباشر لكل طلب بدون قيود",
+    "cta_text": "طرق الدفع",
+    "alt_text": "محفظة وبطاقة بنكية وتحويل بنكي - طرق الدفع في MEEM STORE",
+    "image_desktop_url": "/assets/banners/banner-2-desktop.webp",
+    "image_mobile_url": "/assets/banners/banner-2-mobile.webp",
+    "link_type": "page",
+    "link_target": "wallet.html",
+    "whatsapp_message": null,
+    "overlay_position_desktop": "right",
+    "overlay_position_mobile": "top",
+    "sort_order": 2
+  },
+  {
+    "id": "default-topup",
+    "banner_style": "image_text",
+    "title": "اشحن رصيدك فوراً بأفضل الأسعار",
+    "subtitle": "شحن ألعاب وبطاقات رقمية بتسليم سريع وأسعار مناسبة",
+    "cta_text": "اشحن الآن",
+    "alt_text": "يد تحكم وعملات ذهبية وجواهر - شحن الألعاب في MEEM STORE",
+    "image_desktop_url": "/assets/banners/banner-3-desktop.webp",
+    "image_mobile_url": "/assets/banners/banner-3-mobile.webp",
+    "link_type": "page",
+    "link_target": "index.html#products",
+    "whatsapp_message": null,
+    "overlay_position_desktop": "right",
+    "overlay_position_mobile": "top",
+    "sort_order": 3
+  }
+]

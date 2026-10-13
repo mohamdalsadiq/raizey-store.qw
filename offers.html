@@ -163,13 +163,27 @@ async function init() {
   updateCartBadge();
   try { exchangeRate = Number(await getExchangeRate()) || 1; } catch (e) { exchangeRate = 1; }
 
-  const { data, error } = await supabaseClient
-    .from('products')
-    .select('id,name,image_url,price_usd,compare_at_price_usd,category_id,delivery_badge_text')
-    .eq('is_active', true)
-    .not('compare_at_price_usd', 'is', null)
-    .order('display_order', { ascending: true })
-    .limit(200);
+  // The is_on_offer flag only exists after the catalog migration; read the marker
+  // first so we never issue a request against a column that is not there yet.
+  const BASE_COLS = 'id,name,image_url,price_usd,compare_at_price_usd,category_id,delivery_badge_text';
+  let useFlag = false;
+  try {
+    const { data: marker } = await supabaseClient
+      .from('settings').select('value').eq('key', 'offers_use_flag').maybeSingle();
+    useFlag = !!(marker && String(marker.value).toLowerCase() === 'true');
+  } catch (e) { useFlag = false; }
+
+  const query = useFlag
+    ? await supabaseClient.from('products')
+        .select(BASE_COLS + ',is_on_offer')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true }).limit(200)
+    : await supabaseClient.from('products')
+        .select(BASE_COLS)
+        .eq('is_active', true)
+        .not('compare_at_price_usd', 'is', null)
+        .order('display_order', { ascending: true }).limit(200);
+  const { data, error } = query;
 
   if (error) {
     showState('تعذر تحميل العروض', 'حدّث الصفحة وحاول مرة أخرى.', 'rotate-cw');
@@ -177,10 +191,11 @@ async function init() {
   }
 
   const offers = (data || [])
-    .filter((p) => Number(p.compare_at_price_usd) > Number(p.price_usd) && Number(p.price_usd) >= 0)
+    .filter((p) => Number(p.price_usd) >= 0 &&
+      (Number(p.compare_at_price_usd) > Number(p.price_usd) || (useFlag && p.is_on_offer === true)))
     .sort((a, b) => {
-      const da = 1 - Number(a.price_usd) / Number(a.compare_at_price_usd);
-      const db = 1 - Number(b.price_usd) / Number(b.compare_at_price_usd);
+      const da = a.compare_at_price_usd ? 1 - Number(a.price_usd) / Number(a.compare_at_price_usd) : 0;
+      const db = b.compare_at_price_usd ? 1 - Number(b.price_usd) / Number(b.compare_at_price_usd) : 0;
       return db - da;
     });
 

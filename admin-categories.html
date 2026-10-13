@@ -170,6 +170,11 @@
     </div>
 
     <div class="field">
+      <label>أيقونة التصنيف</label>
+      <div id="categoryIconPicker"></div>
+    </div>
+
+    <div class="field">
       <label>ترتيب العرض</label>
       <input type="number" id="orderInput" placeholder="0">
     </div>
@@ -203,6 +208,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/category-icons.js"></script>
+<script src="assets/js/admin-icon-picker.js"></script>
 <script>
 let categories = [];
 let sections = [];
@@ -278,6 +285,15 @@ async function loadCategories() {
     render();
 }
 
+function catSprite(key) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'mm-i'); svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', 'assets/icons/lucide-sprite.svg#i-' + key);
+  svg.appendChild(use); return svg;
+}
+
 function render() {
   const container = document.getElementById('categoriesList');
   if (categories.length === 0) {
@@ -288,7 +304,7 @@ function render() {
   container.innerHTML = categories.map(c => {
     const imgHtml = c.image_url
       ? `<img src="${escapeHtml(c.image_url)}" class="category-thumb" alt="${escapeHtml(c.name)}">`
-      : `<div class="category-thumb" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-gamepad-2"></use></svg></div>`;
+      : `<div class="category-thumb" data-caticon="${c.id}" style="background: var(--bg-card); display: flex; align-items: center; justify-content: center; color: var(--mm-accent-text);"></div>`;
 
     return `
       <div class="manage-item">
@@ -314,6 +330,22 @@ function render() {
     `;
   }).join('');
 
+  // resolved icon for rows without a cover image (auto/preset/custom)
+  if (window.MeemCategoryIcons) {
+    categories.forEach((c) => {
+      const slot = container.querySelector('[data-caticon="' + c.id + '"]');
+      if (!slot) return;
+      const spec = window.MeemCategoryIcons.resolve(c);
+      if (spec.mode === 'custom' && spec.image) {
+        const img = document.createElement('img');
+        img.src = spec.image; img.alt = ''; img.width = 22; img.height = 22;
+        img.addEventListener('error', () => { slot.replaceChildren(catSprite(spec.key)); }, { once: true });
+        slot.replaceChildren(img);
+      } else {
+        slot.replaceChildren(catSprite(window.MeemCategoryIcons.isValidKey(spec.key) ? spec.key : 'layout-grid'));
+      }
+    });
+  }
   container.querySelectorAll('[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => openForm(btn.dataset.id));
   });
@@ -322,6 +354,14 @@ function render() {
   });
 }
 
+let categoryIconPicker = null;
+function mountCategoryIconPicker(cat) {
+  if (!window.MeemIconPicker) return;
+  categoryIconPicker = window.MeemIconPicker.mount(document.getElementById('categoryIconPicker'), {
+    row: cat || {},
+    nameProvider: () => nameInput.value
+  });
+}
 function openForm(id) {
   editingId = id;
   formError.textContent = '';
@@ -341,6 +381,7 @@ function openForm(id) {
     orderInput.value = cat.display_order;
     document.getElementById('commissionInput').value = cat.commission_percent ?? 3;
     activeInput.value = String(cat.is_active);
+    mountCategoryIconPicker(cat);
   } else {
     document.getElementById('formModalTitle').textContent = 'تصنيف جديد';
     sectionInput.value = '';
@@ -350,6 +391,7 @@ function openForm(id) {
     orderInput.value = categories.length;
     document.getElementById('commissionInput').value = 3;
     activeInput.value = 'true';
+    mountCategoryIconPicker({});
   }
 
   formModal.classList.add('show');
@@ -423,17 +465,40 @@ async function saveCategory() {
       is_active: isActive
     };
 
-    const { error } = editingId
-      ? await supabaseClient.from('categories').update(payload).eq('id', editingId)
-      : await supabaseClient.from('categories').insert(payload);
+    let categoryId = editingId;
+    if (editingId) {
+      const { error } = await supabaseClient.from('categories').update(payload).eq('id', editingId);
+      if (error) {
+        const code = error.code || '';
+        formError.textContent = code === '42501'
+          ? 'ليس لديك صلاحية إدارة التصنيفات. تأكد من سياسة categories_admin في Supabase.'
+          : 'تعذر حفظ التصنيف. تحقق من البيانات ثم حاول مرة أخرى.';
+        devLog('[MEEM] save category error:', { code, message: error.message });
+        return;
+      }
+    } else {
+      const { data: inserted, error } = await supabaseClient.from('categories').insert(payload).select('id').single();
+      if (error) {
+        formError.textContent = 'تعذر حفظ التصنيف. تحقق من البيانات ثم حاول مرة أخرى.';
+        devLog('[MEEM] save category error:', { code: error.code, message: error.message });
+        return;
+      }
+      categoryId = inserted.id;
+    }
 
-    if (error) {
-      const code = error.code || '';
-      formError.textContent = code === '42501'
-        ? 'ليس لديك صلاحية إدارة التصنيفات. تأكد من سياسة categories_admin في Supabase.'
-        : 'تعذر حفظ التصنيف. تحقق من البيانات ثم حاول مرة أخرى.';
-      devLog('[MEEM] save category error:', { code, message: error.message });
-      return;
+    // icon columns are optional (the picker still works once the migration lands)
+    if (categoryIconPicker && categoryId) {
+      try {
+        const icon = await categoryIconPicker.resolve();
+        const { error: iconErr } = await supabaseClient.rpc('admin_set_category_icon', {
+          p_id: categoryId, p_mode: icon.icon_mode, p_key: icon.icon_key, p_image: icon.icon_image_url
+        });
+        if (iconErr && iconErr.message && iconErr.message.indexOf('does not exist') === -1) {
+          showCategoriesNotice('تم حفظ التصنيف لكن تعذر حفظ الأيقونة: ' + iconErr.message, 'error');
+        }
+      } catch (iconErr) {
+        showCategoriesNotice('تم حفظ التصنيف لكن تعذر حفظ الأيقونة: ' + (iconErr.message || iconErr), 'error');
+      }
     }
 
     closeForm();

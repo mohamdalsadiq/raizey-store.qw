@@ -1,19 +1,26 @@
 /* =========================================================
    MEEM STORE — storefront banner carousel
-   Data: public.get_banners_public()  (RLS-safe, validated server side)
-   Slides are built with DOM APIs only — never innerHTML.
+   Data source, in order:
+     1. public.get_banners_public()  (RLS-safe, validated server side)
+     2. assets/banners/default-banners.json  (repo fallback, short cache)
+   Slides are built with DOM APIs only — never innerHTML with DB data.
    ========================================================= */
 (function () {
   'use strict';
 
   var MOBILE_MAX = 767;
   var REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var FALLBACK_URL = 'assets/banners/default-banners.json';
+  var SETTINGS_URL = 'assets/banners/default-settings.json';
 
-  // Mobile slide ratio is a store setting (public.settings.banner_mobile_aspect).
+  // Mobile slide ratio is a store setting (public.settings.banner_mobile_ratio).
   // Desktop stays 8:3 always. Every slide shares one ratio so the height never
   // jumps between slides during autoplay.
   var MOBILE_RATIOS = { '3:4': '3 / 4', '4:5': '4 / 5', '1:1': '1 / 1', '4:3': '4 / 3' };
   var DEFAULT_MOBILE_RATIO = '3 / 4';
+
+  // Store settings with their safe defaults (used when the DB is unreachable).
+  var DEFAULTS = { mobile: '3:4', autoplay: true, interval: 5, effect: 'slide' };
 
   function applyAspect(value) {
     var root = document.getElementById('mmHeroSwiper');
@@ -22,12 +29,60 @@
     root.style.setProperty('--mm-hero-ar-mobile', css || DEFAULT_MOBILE_RATIO);
   }
 
-  function loadAspect() {
+  function boolish(v, dflt) {
+    var s = String(v == null ? '' : v).trim().toLowerCase();
+    if (s === 'false' || s === 'off' || s === '0' || s === 'no') return false;
+    if (s === 'true' || s === 'on' || s === '1' || s === 'yes') return true;
+    return dflt;
+  }
+
+  function clampInterval(v) {
+    var n = parseInt(v, 10);
+    if (isNaN(n)) return DEFAULTS.interval;
+    return Math.min(10, Math.max(3, n));
+  }
+
+  function normEffect(v) {
+    var s = String(v == null ? '' : v).trim().toLowerCase();
+    return s === 'fade' ? 'fade' : 'slide';
+  }
+
+  function readSettings() {
     var client = window.supabaseClient;
-    if (!client || typeof client.from !== 'function') return Promise.resolve();
-    return client.from('settings').select('value').eq('key', 'banner_mobile_aspect').maybeSingle()
-      .then(function (res) { if (res && !res.error && res.data && res.data.value) applyAspect(res.data.value); })
-      ['catch'](function () {});
+    var result = { mobile: DEFAULTS.mobile, autoplay: DEFAULTS.autoplay, interval: DEFAULTS.interval, effect: DEFAULTS.effect };
+    if (!client || typeof client.from !== 'function') {
+      // No DB: try the tiny repo fallback so a support override still works.
+      return fetch(SETTINGS_URL, { cache: 'no-cache' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { return j ? mergeSettings(result, j) : result; })
+        ['catch'](function () { return result; });
+    }
+    return client.from('settings')
+      .select('key,value')
+      .in('key', ['banner_mobile_ratio', 'banner_mobile_aspect', 'banner_autoplay', 'banner_interval', 'banner_effect'])
+      .then(function (res) {
+        if (res && !res.error && Array.isArray(res.data)) {
+          var map = {};
+          res.data.forEach(function (row) { map[row.key] = row.value; });
+          mergeSettings(result, {
+            mobile: map.banner_mobile_ratio || map.banner_mobile_aspect,
+            autoplay: map.banner_autoplay,
+            interval: map.banner_interval,
+            effect: map.banner_effect
+          });
+        }
+        return result;
+      })
+      ['catch'](function () { return result; });
+  }
+
+  function mergeSettings(target, src) {
+    if (!src) return target;
+    if (src.mobile != null && MOBILE_RATIOS[String(src.mobile).trim()]) target.mobile = String(src.mobile).trim();
+    if (src.autoplay != null) target.autoplay = boolish(src.autoplay, target.autoplay);
+    if (src.interval != null) target.interval = clampInterval(src.interval);
+    if (src.effect != null) target.effect = normEffect(src.effect);
+    return target;
   }
 
   // keep in sync with public.banners_validate()'s page whitelist
@@ -36,6 +91,8 @@
     'my-orders.html': 1, 'product.html': 1, 'category.html': 1, 'search.html': 1,
     'referrals.html': 1, 'notifications.html': 1, 'account.html': 1, 'privacy.html': 1
   };
+
+  function isUuid(v) { return /^[0-9a-fA-F-]{36}$/.test(String(v || '')); }
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -81,9 +138,9 @@
 
     if (type === 'page') {
       href = safeAnchor(target);
-    } else if (type === 'product' && /^[0-9a-fA-F-]{36}$/.test(target)) {
+    } else if (type === 'product' && isUuid(target)) {
       href = 'product.html?id=' + encodeURIComponent(target);
-    } else if (type === 'category' && /^[0-9a-fA-F-]{36}$/.test(target)) {
+    } else if (type === 'category' && isUuid(target)) {
       href = 'category.html?id=' + encodeURIComponent(target);
     } else if (type === 'offers') {
       href = 'offers.html';
@@ -157,7 +214,7 @@
     pic.appendChild(s2);
 
     var img = el('img');
-    img.setAttribute('src', d);
+    img.setAttribute('src', m && window.matchMedia && window.matchMedia('(max-width: ' + MOBILE_MAX + 'px)').matches ? m : d);
     img.setAttribute('alt', typeof b.alt_text === 'string' ? b.alt_text : '');
     img.setAttribute('width', '1920');
     img.setAttribute('height', '720');
@@ -180,10 +237,15 @@
     slide.setAttribute('data-style', b.banner_style === 'image_text' ? 'image_text' : 'image_only');
     slide.setAttribute('data-ovd', b.overlay_position_desktop === 'left' ? 'left' : 'right');
     slide.setAttribute('data-ovm', b.overlay_position_mobile === 'bottom' ? 'bottom' : 'top');
+    slide.setAttribute('role', 'group');
+    slide.setAttribute('aria-roledescription', 'slide');
     if (!appendPicture(slide, b, index === 0)) return null;
 
     var hasText = b.banner_style === 'image_text' &&
       typeof b.title === 'string' && b.title.trim() !== '';
+    var label = (typeof b.title === 'string' && b.title.trim()) ||
+      (typeof b.alt_text === 'string' && b.alt_text) || 'عرض';
+    slide.setAttribute('aria-label', label);
 
     if (hasText) {
       slide.appendChild(el('div', 'mm-slide-scrim'));
@@ -198,15 +260,11 @@
       applyLink(cta, b);
       body.appendChild(cta);
       slide.appendChild(body);
-      slide.setAttribute('role', 'group');
-      slide.setAttribute('aria-label', b.title.trim());
     } else {
       var hit = el('a', 'mm-slide-hit mm-stretched');
-      hit.setAttribute('aria-label', (typeof b.alt_text === 'string' && b.alt_text) || 'عرض');
+      hit.setAttribute('aria-label', label);
       applyLink(hit, b);
       if (hit.getAttribute('href')) slide.appendChild(hit);
-      slide.setAttribute('role', 'group');
-      slide.setAttribute('aria-label', (typeof b.alt_text === 'string' && b.alt_text) || 'عرض');
     }
     return slide;
   }
@@ -216,6 +274,8 @@
     // by CSS, so a missing file can never render a broken-image placeholder.
     var slide = el('div', 'swiper-slide mm-slide mm-slide-default mm-slide-fallback');
     slide.setAttribute('data-style', 'image_only');
+    slide.setAttribute('role', 'group');
+    slide.setAttribute('aria-label', 'MEEM STORE');
     return slide;
   }
 
@@ -230,7 +290,7 @@
     if (tracker) tracker(event, detail);
   }
 
-  function init(root, wrapper, dots, prevBtn, nextBtn) {
+  function init(root, wrapper, dots, prevBtn, nextBtn, settings) {
     var slides = wrapper.children.length;
     var cfg = {
       slidesPerView: 1,
@@ -238,11 +298,20 @@
       rtl: true,
       speed: REDUCED ? 0 : 600,
       watchOverflow: true,
-      keyboard: { enabled: true },
+      keyboard: { enabled: true, onlyInViewport: true },
       a11y: { enabled: true, prevSlideMessage: 'الشريحة السابقة', nextSlideMessage: 'الشريحة التالية', paginationBulletMessage: 'اذهب للشريحة {{index}}' }
     };
-    if (slides > 1 && !REDUCED) {
-      cfg.autoplay = { delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true };
+    if (settings && settings.effect === 'fade' && slides > 1 && !REDUCED) {
+      cfg.effect = 'fade';
+      cfg.fadeEffect = { crossFade: true };
+    }
+    var autoplayOn = !REDUCED && settings && settings.autoplay && slides > 1;
+    if (autoplayOn) {
+      cfg.autoplay = {
+        delay: (settings.interval || DEFAULTS.interval) * 1000,
+        disableOnInteraction: false,
+        pauseOnMouseEnter: true
+      };
     }
     if (slides > 1 && dots) {
       cfg.pagination = { el: dots, clickable: true, bulletElement: 'button' };
@@ -252,21 +321,43 @@
     }
 
     var swiper = new window.Swiper(root, cfg);
+    if (root.swiper === undefined) { try { root.swiper = swiper; } catch (e) {} }
 
-    if (slides > 1 && swiper.autoplay && window.matchMedia('(hover: none)').matches) {
-      root.addEventListener('touchstart', function () {
-        if (swiper.autoplay) swiper.autoplay.stop();
-      }, { passive: true });
-      root.addEventListener('touchend', function () {
-        if (swiper.autoplay) swiper.autoplay.start();
-      }, { passive: true });
+    if (autoplayOn && swiper.autoplay && window.matchMedia('(hover: none)').matches) {
+      root.addEventListener('touchstart', function () { if (swiper.autoplay) swiper.autoplay.stop(); }, { passive: true });
+      root.addEventListener('touchend', function () { if (swiper.autoplay) swiper.autoplay.start(); }, { passive: true });
     }
+
+    wirePlayPause(swiper, root, autoplayOn);
     root.setAttribute('data-ready', '1');
-    track('weem.banners.ready', { slides: slides });
+    track('weem.banners.ready', { slides: slides, effect: cfg.effect || 'slide', autoplay: !!autoplayOn });
     return swiper;
   }
 
-  function render(slidesData) {
+  function wirePlayPause(swiper, root, autoplayOn) {
+    var btn = document.getElementById('mmHeroPlayPause');
+    if (!btn) return;
+    if (!swiper.autoplay || !autoplayOn) { btn.hidden = true; return; }
+    btn.hidden = false;
+    var paused = REDUCED;
+    function paint() {
+      btn.setAttribute('aria-pressed', paused ? 'false' : 'true');
+      btn.setAttribute('aria-label', paused ? 'تشغيل الحركة التلقائية' : 'إيقاف الحركة التلقائية');
+      btn.dataset.state = paused ? 'paused' : 'playing';
+    }
+    paint();
+    btn.addEventListener('click', function () {
+      paused = !paused;
+      if (paused) { swiper.autoplay.stop(); } else { swiper.autoplay.start(); }
+      paint();
+      track('weem.banners.toggle', { paused: paused });
+    });
+    // An explicit user pause also stops autoplay if the pointer leaves the box.
+    btn.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); } });
+  }
+
+  function render(slidesData, settings) {
+    settings = settings || { mobile: DEFAULTS.mobile, autoplay: DEFAULTS.autoplay, interval: DEFAULTS.interval, effect: DEFAULTS.effect };
     var root = document.getElementById('mmHeroSwiper');
     var wrapper = document.getElementById('mmHeroWrapper');
     if (!root || !wrapper) return;
@@ -274,6 +365,13 @@
     var prevBtn = document.getElementById('mmHeroPrev');
     var nextBtn = document.getElementById('mmHeroNext');
 
+    applyAspect(settings.mobile);
+
+    // Tear down a previous instance (used by the admin live preview too).
+    if (root.swiper && typeof root.swiper.destroy === 'function') {
+      try { root.swiper.destroy(true, true); } catch (e) {}
+      root.swiper = undefined;
+    }
     while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
 
     var built = 0;
@@ -291,7 +389,7 @@
     if (nextBtn) nextBtn.hidden = real < 2;
 
     if (window.Swiper) {
-      init(root, wrapper, dots, prevBtn, nextBtn);
+      init(root, wrapper, dots, prevBtn, nextBtn, settings);
     } else {
       root.setAttribute('data-ready', '1');
       root.classList.add('mm-hero-noswiper');
@@ -305,29 +403,45 @@
     wrapper.appendChild(skeleton());
   }
 
+  function fetchDefault() {
+    // Short cache headers on purpose: a stale fallback must not outlive the DB.
+    return fetch(FALLBACK_URL, { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      ['catch'](function () { return []; });
+  }
+
   function load() {
     var root = document.getElementById('mmHeroSwiper');
     if (!root) return;
     showSkeleton();
 
+    var settingsPromise = readSettings();
     var client = window.supabaseClient;
-    if (!client) { render([]); return; }
 
-    loadAspect();
+    if (!client || typeof client.rpc !== 'function') {
+      settingsPromise.then(function (settings) {
+        return fetchDefault().then(function (rows) { render(rows, settings); });
+      });
+      return;
+    }
 
-    client.rpc('get_banners_public').then(function (res) {
-      var data = res && res.data;
-      if (res && res.error) {
-        track('weem.banners.error', { message: String(res.error.message || '') });
-        data = [];
-      }
-      if (typeof data === 'string') {
-        try { data = JSON.parse(data); } catch (e) { data = []; }
-      }
-      render(data);
-    })['catch'](function (e) {
-      track('weem.banners.error', { message: String((e && e.message) || e) });
-      render([]);
+    settingsPromise.then(function (settings) {
+      client.rpc('get_banners_public').then(function (res) {
+        var data = res && res.data;
+        if (res && res.error) {
+          track('weem.banners.error', { message: String(res.error.message || '') });
+          data = null;
+        }
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data); } catch (e) { data = null; }
+        }
+        if (Array.isArray(data) && data.length) { render(data, settings); return; }
+        // DB reachable but empty/unavailable → repo fallback, never a broken box.
+        fetchDefault().then(function (rows) { render(rows, settings); });
+      })['catch'](function (e) {
+        track('weem.banners.error', { message: String((e && e.message) || e) });
+        fetchDefault().then(function (rows) { render(rows, settings); });
+      });
     });
   }
 
@@ -338,6 +452,7 @@
     defaultSlide: defaultSlide,
     buildLink: buildLink,
     applyAspect: applyAspect,
+    readSettings: readSettings,
     track: function (fn) { tracker = fn; }
   };
 

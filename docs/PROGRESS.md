@@ -150,3 +150,72 @@ bash db/tests/run_banners_security.sh          # لازم 17/17
 
 - **تطبيق أي هجرة** (بما فيها هجرات 2026-10-12 الثلاث والهجرة الجديدة 2026-10-13) يحتاج `SUPABASE_ACCESS_TOKEN`.
 - **إعادة اختبار تدفقات المال** على القاعدة الحية (أهم بند) — متوقّف لنفس السبب.
+
+---
+
+## 7. جولة 2026-10-13 (MASTER_SPEC) — البنر + الأيقونات + الرئيسية
+
+المرجع الكامل للمواصفات: `docs/MASTER_SPEC.md` (منسوخة حرفيًا من رسالة المالك).
+هذه الجولة التزمت بالترتيب: البنر أولاً، ثم الأيقونات، ثم الرئيسية/المرحلة 4، ثم تدقيق المرحلة 5.
+
+### أ) البنر (الأولوية الأولى) — منفَّذ ومُتحقَّق منه في متصفح حقيقي
+
+| بند المواصفة | ما نُفّذ | الدليل القابل للتشغيل |
+|---|---|---|
+| أ) الحاوية والمقاسات | ديسكتوب 8:3 بحد أقصى 1440 متوسّط، موبايل بنسبة عامة؛ هامش 12px وزوايا 16-20px؛ `<picture>` بمصدرين + width/height + skeleton؛ أول صورة `fetchpriority=high` بلا lazy | لقطات `ui-shots/banners/{desktop-1440,mobile-390}-hero.png` + قياس النسبة في `report.json` (2.667 و0.75) |
+| أ) نسبة الموبايل إعداد عام | مفتاح `banner_mobile_ratio` (نسقط إلى `banner_mobile_aspect`)، خيارات 3:4/4:5/1:1/4:3 ومعاينة حيّة داخل `admin-banners.html` | `db/migrations/2026-10-13_banners_v2.sql`، `assets/js/banners.js#applyAspect`، `admin-banners.html#mobileRatioSelect` |
+| ب) Swiper v11 محلي | `assets/vendor/swiper` (11.2.10) — RTL، نقاط وأسهم للديسكتوب، سحب لمسي، loop، انتقال slide أو fade تلقائيًا | `assets/js/banners.js`، `report.json` (rtl/allowTouchMove=true) |
+| ب) إمكانية الوصول | زر إيقاف/تشغيل ظاهر (44px، `aria-pressed`)، تنقّل بلوحة المفاتيح، `aria-roledescription`، واحترام `prefers-reduced-motion` | اختبارات جديدة في `scripts/banners_check.mjs`: وقفة/تشغيل + ArrowLeft + reduced-motion |
+| ج) مصدر البيانات بلا القاعدة | إن فشل/فرغ RPC تقرأ `assets/banners/default-banners.json` برؤوس cache قصيرة؛ ولا تظهر أيقونة مكسورة أبدًا | `assets/banners/default-banners.json` + لقطتا `db-down-1440.png` و`total-failure-1440.png` |
+| د) الصور الثلاث | صُنّفت بعين الأداة وحُوّلت WebP في `assets/banners` | جدول التصنيف في `docs/FINAL_REPORT.md`؛ `curl -I` = 200 `image/webp` لكل ملف |
+| هـ) نمطا البنر + النصوص | `image_only` / `image_text` مع تدرّج داكن، عنوان أبيض عريض، فرعي فضي، زر ذهبي `#FFD400` بأيقونة سهم RTL وتوهّج `#087BFF`، وارتفاع 44px | لقطات `*-hero.png` (ctaH=44، ctaBg=rgb(255,212,0)) |
+| و) الروابط | none/page/product/category/offers/whatsapp/url، قوائم منسدلة من البيانات الحقيقية، ورقم واتساب من `settings` | `buildLink()` + `banners_check` يقرأ href الفعلي لواتساب/المحفظة/المنتجات |
+| ز) الأدمن | CRUD + إعادة ترتيب + تفعيل + نسخ + مسودة/منشور + جدولة بتوقيت الخرطوم + رفع صورتين مع اقتصاص WebP | `admin-banners.html` |
+| ح) القاعدة | جدول/RLS/RPCs + نسخ + ترتيب ذرّي + تحقق صارم للروابط ضمن bucket المشروع | `db/migrations/2026-10-13_banners_v2.sql` + rollback |
+| ط) الاختبارات | لقطات 390/1440 تُظهر الصور، قياسات `getBoundingClientRect`، فحص `naturalWidth>0`، لوحة المفاتيح، الإيقاف/التشغيل، reduced-motion، حالات الفراغ/الفشل، وregression | `node scripts/banners_check.mjs` → passed؛ `offers_check` → passed؛ `ui_smoke` → 72/72 |
+
+### ب) أيقونات الأقسام والتصنيفات — منفَّذ ومُتحقَّق منه
+
+- وحدة مشتركة `assets/js/category-icons.js`: تطبيع عربي (همزات/تاء مربوطة/تشكيل/تطويل) + جدول كلمات مفتاحية عربي/إنجليزي + مكتبة أزرار (86 أيقونة Lucide) + `resolve()` بأولوية custom → preset → auto → `layout-grid`.
+- اختبارات وحدة `scripts/category_icons_check.mjs` → **56/56** (مضافة إلى `npm test`).
+- الـ sprite أُعيد بناؤه محليًا: `assets/icons/lucide-sprite.svg` → **141** أيقونة (كان 82)، وكلها موجودة فعلًا.
+- الشكل الموحّد `.mm-ico`: مربع مدوّر بتدرّج أزرق ملكي→كهربائي، حد ذهبي رفيع، أيقونة بيضاء بسُمك 1.75 — تحقّق بصريًا في `ui-shots/icons-shape-390.png`.
+- القاعدة: `db/migrations/2026-10-13_section_category_icons.sql` (أعمدة + bucket `category-icons` + RPCs + mark) مع rollback.
+- الأدمن: `assets/js/admin-icon-picker.js` (تلقائي/مكتبة بحث عربي-إنجليزي/رفع صورة تُقصّ 256×256 WebP <100KB) مربوط في `admin-sections.html` و`admin-categories.html`.
+
+### ج) الرئيسية (المرحلة 4) — منفَّذ جزئيًا بمصادر بيانات حقيقية
+
+- شبكة التصنيفات صارت **عمودين على الموبايل** (كانت تترك نصفًا فارغًا مع تصنيف واحد).
+- الوصف الآلي غير الدقيق (`1 من الألعاب...`) أُزيل؛ صار **وصفًا اختياريًا يكتبه الأدمن** ويختفي عندما يكون فارغًا (`store_sections.description`).
+- **صف أيقونات الأقسام** أعلى الكتالوج (تمرير أفقي، ينقل للقسم).
+- **الأكثر طلبًا** و**جديد في MEEM** من مصادر حقيقية فقط:
+  - الأكثر طلبًا عبر RPC `get_top_ordered_products` التي تُجمّع `orders` الحقيقية (لا أرقام وهمية).
+  - الجديد عبر `products.created_at`.
+  - لا يظهر أي قسم إذا لم تتوفر البيانات (لا تلفيق).
+- لم تُوجد أرقام مبيعات/تقييمات وهمية في `index.html` (فحص نصي).
+
+### د) صحة الفروع والإصلاحات المتوافقة مع القاعدة
+
+- تأكيد: `meem-rebrand` **لا يحتوي** `hardening-complete`؛ الفرعان شقيقان من `main` (`41a31b5`). لذلك أُعيد إنتاج بنود التصليب المتوافقة هنا.
+- **پarity واجهة my-orders:** موجود بالفعل في `meem-rebrand` — زر «إلغاء الطلب» يستدعي RPC `cancel_my_order` (لا تحديث مباشر)، والهجرة `db/migrations/2026-10-08_user_cancel_order.sql` موجودة.
+- صفحات ما زالت تكتب مباشرة (تعتمد على سياسة قائمة): `account.html` تُحدّث صف `profiles` الخاص بالمستخدم (`full_name`/`whatsapp_number`/`player_ids`/`avatar_url`). لم تُسحب هذه السياسة في ملفات التصليب الموجودة في المستودع، لكن يجب تأكيدها على القاعدة الحية (متوقّف على التوكن).
+
+### هـ) الهجرات الجديدة (مكتوبة ومفحوصة ثابتًا، غير مطبَّقة)
+
+| الهجرة | rollback |
+|---|---|
+| `db/migrations/2026-10-13_banners_v2.sql` | `db/rollback/2026-10-13_banners_v2_rollback.sql` |
+| `db/migrations/2026-10-13_section_category_icons.sql` | `db/rollback/2026-10-13_section_category_icons_rollback.sql` |
+| `db/migrations/2026-10-13_home_highlights.sql` | `db/rollback/2026-10-13_home_highlights_rollback.sql` |
+
+كلها idempotent، وتوازن `$$`/`begin`/`commit` مفحوص. الواجهة تتحمّل غياب الأعمدة/الدوال عبر علامات قدرة في `settings` (`offers_use_flag`, `catalog_icons_flag`, `home_highlights_flag`).
+
+### و) فحوص هذه الجولة (كلها خضراء)
+
+`npm test` 110 (54 + 56) · `category_icons_check` 56/56 · `task10_js_syntax_check` 70/70 · `task10_static_audit` 77 = خط الأساس · `banners_check` passed (يشمل الإيقاف/التشغيل والإخفاق الكلّي) · `offers_check` passed · `ui_smoke` 72/72.
+
+### ز) لا يزال متوقّفًا على `SUPABASE_ACCESS_TOKEN`
+
+- إعادة اختبار تدفقات المال داخل `BEGIN…ROLLBACK`.
+- تطبيق أي من هجرات 2026-10-12 و2026-10-13.
+- التحقق من سياسات `profiles` ومدى مطابقة الدوال المنشورة.

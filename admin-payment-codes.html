@@ -150,7 +150,7 @@ function genCode() {
     (window.crypto || window.msCrypto).getRandomValues(buf);
     return Array.from(buf, v => alphabet[v % alphabet.length]).join('');
   };
-  return `RZY-${rnd(4)}-${rnd(4)}`;
+  return `MEEM-${rnd(4)}-${rnd(4)}`;
 }
 
 async function init() {

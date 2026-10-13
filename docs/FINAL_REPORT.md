@@ -242,3 +242,90 @@
 2. **CSP**: يحتاج قرارًا (nonce/hash) وإعادة اختبار كاملة.
 3. **CAPTCHA**: مفتاح من المالك.
 4. **نشر Edge Functions + ضبط الأسرار**: يحتاج وصولًا وقرارًا.
+
+---
+
+# تقرير جولة 2026-10-13 (MASTER_SPEC)
+
+المواصفات الكاملة الحرفية: `docs/MASTER_SPEC.md`.
+
+## 1) جدول تصنيف صور البنرات (التحقق بعين الأداة + الأبعاد)
+
+| # | محتوى الصورة | النوع المطابق | ديسكتوب | موبايل | WebP الحجم |
+|---|---|---|---|---|---|
+| 1 | فقاعة محادثة + هاتف + سماعة (علامة صح ذهبية) | الدعم/واتساب | 1920×720 (8:3) | 1086×1448 (3:4) | 72KB / 85KB |
+| 2 | محفظة ذهبية + بطاقة بنكية + أسهم إلى مبنى بنك + عملات | الدفع | 1920×720 | 1086×1448 | 81KB / 92KB |
+| 3 | يد تحكم + عملات ذهبية + جواهر + برق | الشحن/الألعاب | 1920×720 | 1086×1448 | 113KB / 128KB |
+
+كل الصور < 300KB، والمنطقة الهادئة للنص على **اليمين** في الديسكتوب وعلى **الأعلى** في الموبايل (مطابق لإعداد `overlay_position_*`).
+لا توجد صورة مشكوك فيها؛ الصور الثلاث واضحة التصنيف.
+
+## 2) الملفات المضافة/المعدّلة في هذه الجولة
+
+**جديدة:**
+- `docs/MASTER_SPEC.md` — المواصفات الحرفية.
+- `assets/banners/default-banners.json` + `assets/banners/default-settings.json` — بديل المستودع عندما تتعذّر القاعدة.
+- `assets/js/category-icons.js` — الاختيار الذكي للأيقونات (مشترك).
+- `assets/js/admin-icon-picker.js` — منتقي الأيقونات في الأدمن.
+- `scripts/category_icons_check.mjs` — اختبارات الوحدة (56).
+- `db/migrations/2026-10-13_{banners_v2,section_category_icons,home_highlights}.sql` + rollbacks المرافقة.
+
+**معدّلة:**
+- `assets/js/banners.js` (kv: إعدادات السلايدر + بديل JSON + fade + زر الإيقاف/التشغيل).
+- `index.html` (زر الإيقاف/التشغيل، شبكة عمودين، أيقونات الأقسام، الوصف الاختياري، الأكثر طلبًا/الجديد، علامة القدرة).
+- `assets/css/meem.css` و`assets/css/admin.css` (شكل `.mm-ico`، زر التشغيل، منتقي الأيقونات).
+- `assets/icons/lucide-sprite.svg` (141 أيقونة)، `scripts/build_icons.mjs` (jsDelivr احتياطي + قراءة قائمة الأيقونات).
+- `admin-banners.html` (إعدادات السلايدر + نسبة الموبايل + الحالة/النسخ + توقيت الخرطوم).
+- `admin-sections.html` و`admin-categories.html` (منتقي الأيقونات).
+- `offers.html` (علامة `offers_use_flag` + احترام `is_on_offer`).
+- `admin-payment-codes.html` + `checkout-v2.html` (بادئة رمز الدفع MEEM بدل RZY).
+- `scripts/banners_check.mjs` (اختبارات جديدة)، `package.json` (إضافة اختبار الأيقونات).
+
+## 3) تغييرات القاعدة وترتيب التطبيق
+
+الترتيب (كله idempotent، داخل معاملة، مع rollback مرافق):
+
+1. `2026-10-12_banners.sql` (الأساس: الجدول + RLS + RPCs + bucket).
+2. `2026-10-12_banners_seed_slides.sql` (الشرائح الثلاث).
+3. `2026-10-12_banners_repoint_assets.sql` (مسارات WebP + alt).
+4. `2026-10-12_banner_mobile_aspect.sql` (الإعداد القديم — يبقى متوافقًا).
+5. `2026-10-12_referral_prefix_meem.sql`، `2026-10-12_settings_whatsapp_number.sql`.
+6. **`2026-10-13_banners_v2.sql`** — status/نسخ/ترتيب ذرّي/تحقق صارم + مفاتيح `banner_mobile_ratio/autoplay/interval/effect` + `products.is_on_offer` + `offers_use_flag`.
+7. **`2026-10-13_section_category_icons.sql`** — أعمدة الأيقونات + `store_sections.description` + bucket `category-icons` + RPCs + `catalog_icons_flag`.
+8. **`2026-10-13_home_highlights.sql`** — RPC `get_top_ordered_products` + `home_highlights_flag`.
+
+الـ RPCs الجديدة: `admin_copy_banner`, `admin_set_banner_status`, `admin_reorder_banners(jsonb)`,
+`admin_set_section_icon`, `admin_set_category_icon`, `get_top_ordered_products`.
+
+## 4) خطوات الأدمن (بنرات)
+
+1. **إنشاء**: «إضافة بنر جديد» → اكتب alt (إلزامي) → اختر النمط → ارفع صورة الديسكتوب (اقتصاص بنقطة تركيز أو كامل بخلفية ضبابية، تُصدَّر WebP <300KB) وصورة موبايل اختيارية → اختر الرابط → «منشور» → حفظ.
+2. **تعديل**: من القائمة. **ترتيب**: أزرار أعلى/أسفل (أو `admin_reorder_banners` لترتيب كامل ذرّي).
+3. **جدولة**: حقول البداية/النهاية بتوقيت الخرطوم (تُخزَّن timestamptz).
+4. **مسودة/نشر**: زر «إلى مسودة/نشر» (النشر يرفض بلا alt). **نسخ**: زر «نسخ» يُنشئ مسودة.
+5. **الإعدادات العامة**: نسبة الموبايل + التشغيل التلقائي + المدة (3-10ث) + نوع الانتقال.
+
+## 5) نتائج الاختبارات الفعلية
+
+- `npm test` → **54 + 56 = 110 ناجحة، 0 فاشلة**.
+- `node scripts/category_icons_check.mjs` → **56/56**.
+- `python3 scripts/task10_js_syntax_check.py` → **70/70**.
+- `python3 scripts/task10_static_audit.py` → **77 = خط الأساس**.
+- `node scripts/banners_check.mjs` → **passed** (صور حقيقية، نسب صحيحة، إيقاف/تشغيل، لوحة مفاتيح، reduced-motion، DB-down، إخفاق كلي).
+- `node scripts/offers_check.mjs` → **passed**. `node scripts/ui_smoke.mjs` → **72/72**.
+- `curl -I` لكل صور البنرات → `200 image/webp` (72-128KB)، و`default-banners.json` → `200 application/json`.
+
+## 6) خطوات النشر
+
+1. طبّق الهجرات بالترتيب أعلاه (مع rollbacks جاهزة).
+2. ارفع صورًا إضافية من `admin-banners.html` (bucket `banners` جاهز) إن رغبت بروابط CDN.
+3. (اختياري) CSP بدون `unsafe-inline` — مؤجّل بقرار المالك.
+4. دمج الفروع: `hardening-complete` ثم `meem-rebrand` (الفرعان شقيقان من `main`).
+
+## 7) القيود المعروفة
+
+- **لم تُطبَّق أي هجرة ولا أي اختبار على القاعدة الحية**: لا `SUPABASE_ACCESS_TOKEN` في هذه الـ VM.
+- إعادة اختبار تدفقات المال (rollback-only) لم تُنفَّذ.
+- `account.html` تُحدّث `profiles` مباشرة — يعتمد على سياسة self-update القائمة (لم تُسحب في ملفات التصليب هنا، لكن يلزم تأكيد حيّ).
+- CSP وCAPTCHA مؤجّلان بقرار المالك.
+- البنر يعمل الآن عبر بديل المستودع (الصور الثلاث)، وقراءة القاعدة تُفعَّل تلقائيًا بعد تطبيق الهجرات.

@@ -163,6 +163,91 @@ for (const vp of VIEWPORTS) {
   await ctx.close();
 }
 
+// play/pause + keyboard navigation (desktop)
+{
+  const vp = VIEWPORTS[0];
+  const { ctx, page } = await open(vp);
+  const btn = await page.$("#mmHeroPlayPause");
+  if (!btn) problems.push("play/pause control is missing");
+  else {
+    const visible = await btn.isVisible();
+    if (!visible) problems.push("play/pause control is hidden while autoplay is on");
+    const box = await btn.boundingBox();
+    if (box && (box.width < 44 || box.height < 44)) problems.push(`play/pause tap target ${Math.round(box.width)}x${Math.round(box.height)} < 44`);
+    await btn.click();
+    await page.waitForTimeout(200);
+    let running = await page.evaluate(() => { const s = document.getElementById("mmHeroSwiper").swiper; return !!(s && s.autoplay && s.autoplay.running); });
+    if (running) problems.push("play/pause click did not stop autoplay");
+    const pressed = await btn.getAttribute("aria-pressed");
+    if (pressed !== "false") problems.push(`play/pause aria-pressed after pause = ${pressed}`);
+    await btn.click();
+    await page.waitForTimeout(200);
+    running = await page.evaluate(() => { const s = document.getElementById("mmHeroSwiper").swiper; return !!(s && s.autoplay && s.autoplay.running); });
+    if (!running) problems.push("play/pause click did not resume autoplay");
+  }
+  // keyboard: ArrowLeft should advance (RTL) when the carousel has focus
+  await page.focus("#mmHeroSwiper");
+  const before = await page.evaluate(() => document.getElementById("mmHeroSwiper").swiper.realIndex);
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => document.getElementById("mmHeroSwiper").swiper.realIndex);
+  if (after === before) problems.push("keyboard ArrowLeft did not move to the next slide");
+  await ctx.close();
+  facts.push({ viewport: "control", playPause: !!btn, keyboardMoved: after !== before });
+}
+
+// offline / DB failure: the repo JSON fallback renders the real images
+{
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "ar" });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on("pageerror", (e) => errs.push(e.message));
+  await page.route("**/rest/v1/rpc/get_banners_public**", (r) => r.fulfill({ status: 500, body: "{}" }));
+  await page.goto(`${BASE}/index.html`, { waitUntil: "load" });
+  await page.waitForFunction('document.getElementById("mmHeroSwiper") && document.getElementById("mmHeroSwiper").dataset.ready === "1"', null, { timeout: 20000 });
+  await page.waitForTimeout(800);
+  const info = await page.evaluate(() => {
+    const hero = document.getElementById("mmHeroSwiper");
+    const imgs = [...hero.querySelectorAll("img")];
+    return {
+      slides: hero.querySelectorAll(".mm-slide").length,
+      fallback: hero.querySelectorAll(".mm-slide-fallback").length,
+      decoded: imgs.every((i) => i.naturalWidth > 0),
+      imgCount: imgs.length,
+    };
+  });
+  if (info.slides < 2) problems.push(`DB-down: repo fallback did not render slides (${info.slides})`);
+  if (!info.decoded || info.imgCount < 2) problems.push("DB-down: fallback images did not decode");
+  for (const e of errs) problems.push(`DB-down: page error ${e}`);
+  await page.screenshot({ path: path.join(SHOTS, "db-down-1440.png") });
+  await ctx.close();
+  facts.push({ viewport: "db-down", ...info });
+}
+
+// total failure (RPC + repo JSON unreachable): branded backdrop, never a broken icon
+{
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "ar" });
+  const page = await ctx.newPage();
+  await page.route("**/rest/v1/rpc/get_banners_public**", (r) => r.fulfill({ status: 500, body: "{}" }));
+  await page.route("**/assets/banners/default-banners.json", (r) => r.fulfill({ status: 500, body: "{}" }));
+  await page.goto(`${BASE}/index.html`, { waitUntil: "load" });
+  await page.waitForFunction('document.getElementById("mmHeroSwiper") && document.getElementById("mmHeroSwiper").dataset.ready === "1"', null, { timeout: 20000 });
+  await page.waitForTimeout(500);
+  const info = await page.evaluate(() => {
+    const hero = document.getElementById("mmHeroSwiper");
+    return {
+      fallback: hero.querySelectorAll(".mm-slide-fallback").length,
+      brokenImgs: [...hero.querySelectorAll("img")].filter((i) => i.naturalWidth === 0).length,
+      text: (hero.textContent || "").trim().length,
+    };
+  });
+  if (info.fallback < 1) problems.push("total failure: branded fallback slide missing");
+  if (info.brokenImgs > 0) problems.push(`total failure: ${info.brokenImgs} broken image(s) shown`);
+  await page.screenshot({ path: path.join(SHOTS, "total-failure-1440.png") });
+  await ctx.close();
+  facts.push({ viewport: "total-failure", ...info });
+}
+
 // reduced motion: autoplay must not run
 {
   const vp = VIEWPORTS[0];
