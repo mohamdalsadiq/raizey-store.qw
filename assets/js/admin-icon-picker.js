@@ -217,7 +217,10 @@
       var v = getValue();
       if (v.icon_mode === 'custom' && state.imageUrl && state.blob) {
         if (!window.supabaseClient || !window.supabaseClient.storage) throw new Error('تخزين الصور غير متاح');
-        var path = 'icons/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.webp';
+        var id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
+        var path = 'icons/' + id + '.webp';
         var up = await window.supabaseClient.storage.from('category-icons').upload(path, state.blob, { contentType: 'image/webp' });
         if (up.error) throw new Error('فشل رفع الصورة: ' + up.error.message);
         var pub = window.supabaseClient.storage.from('category-icons').getPublicUrl(path);

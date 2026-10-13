@@ -838,8 +838,16 @@ function renderPreview() {
 }
 
 /* ---------- الحفظ ---------- */
+function uniqueName(prefix) {
+  // Unique per upload (uuid when available) so a re-upload never serves a stale cache.
+  const id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+    ? window.crypto.randomUUID()
+    : (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
+  return prefix + '-' + id + '.webp';
+}
+
 async function uploadBlob(blob, kind) {
-  const path = 'banners/' + kind + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.webp';
+  const path = uniqueName(kind);
   const { error } = await supabaseClient.storage.from('banners').upload(path, blob, { contentType: 'image/webp' });
   if (error) throw new Error('فشل رفع الصورة: ' + error.message);
   const { data } = supabaseClient.storage.from('banners').getPublicUrl(path);
