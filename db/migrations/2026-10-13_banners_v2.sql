@@ -40,6 +40,20 @@ end $$;
 alter table public.banners
   add column if not exists hide_if_target_inactive boolean not null default true;
 
+-- The v1 read policy only checked is_active + the display window, so a draft
+-- row was still readable straight from the table. Public read must require
+-- status = 'published' as well (the storefront also goes through
+-- get_banners_public(), which filters status itself).
+drop policy if exists banners_public_read on public.banners;
+create policy banners_public_read on public.banners
+  for select to anon, authenticated
+  using (
+    status = 'published'
+    and is_active
+    and (starts_at is null or starts_at <= now())
+    and (ends_at   is null or ends_at   >= now())
+  );
+
 -- ---------------------------------------------------------------- 2. image URL scope
 -- A banner image must live in the repo (/assets/banners/...) or the project's
 -- own Supabase storage `banners` bucket. Anything else is rejected.

@@ -1,10 +1,16 @@
--- MEEM STORE — banner security invariants (Phase 3a).
+-- MEEM STORE — banner security invariants.
 --
 -- These checks must never write production data. Because a role switch and a
 -- result table cannot live in the same statement, each probe runs in its own
 -- explicit transaction that ends in ROLLBACK, driven by
 --   db/tests/run_banners_security.sh
--- (the runner needs a Supabase access token; it never prints the token).
+-- with either backend:
+--   live   SUPABASE_ACCESS_TOKEN (or ~/.raizey-audit/live_ro) → Management API
+--   local  MEEM_LOCAL_DSN → the query-check PostgreSQL from db/tests/local_sql_suite.sh
+-- Neither backend ever prints the token.
+--
+-- Run it *after* applying the pending migrations (see docs/FINAL_REPORT.md §3);
+-- probes 18-32 need db/migrations/2026-10-13_banners_v2.sql.
 --
 --   1  anon sees only active, in-window banner rows                        EXPECT 3
 --   2  anon gets the storefront payload from get_banners_public()          EXPECT 3
@@ -23,3 +29,28 @@
 --  15  the banners bucket is public with a 2MB cap                          EXPECT true
 --  16  the banners bucket accepts only jpeg/png/webp                         EXPECT true
 --  17  no anon write policy exists on storage.objects for this bucket        EXPECT 0
+-- 17.b  row level security is on for public.banners                          EXPECT true
+--
+-- MASTER_SPEC §1ح — drafts and the display window:
+--  18  draft / future / expired / inactive fixture rows stay hidden while
+--      the live one shows (anon)                                             EXPECT true
+--  19  get_banners_public() drops the same rows                             EXPECT true
+--  20  a non-admin cannot copy a banner                                     EXPECT ERROR
+--  21  a non-admin cannot change a banner's status                          EXPECT ERROR
+--  22  a non-admin cannot reorder banners                                   EXPECT ERROR
+--  23  anon cannot call the image-url helper                                EXPECT ERROR
+--  24  an arbitrary https host is rejected as an image                      EXPECT ERROR
+--  25  a data: image url is rejected                                        EXPECT ERROR
+--  26  the project's own storage url is accepted                            EXPECT true
+--  27  publishing without alt_text is rejected                              EXPECT ERROR
+--
+-- Admin paths (skipped, never counted as a pass, when profiles has no admin):
+--  28  an admin can create a draft slide                                    EXPECT true
+--  29  copying a banner always lands as a new draft                         EXPECT true
+--  30  publishing a slide without alt_text is rejected                      EXPECT ERROR
+--  31  admin reorder applies the whole order in one call                    EXPECT true
+--  32  a duplicate order is rejected and nothing moves                      EXPECT true
+--
+-- Probes 31/32 run with a claims-only admin identity (role stays the owner) so
+-- the full id list is readable; the RPC still enforces its own guards, which
+-- probes 20-22 cover from a real non-admin role.

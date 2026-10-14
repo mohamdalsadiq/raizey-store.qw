@@ -269,6 +269,8 @@
 - `assets/js/admin-icon-picker.js` — منتقي الأيقونات في الأدمن.
 - `scripts/category_icons_check.mjs` — اختبارات الوحدة (56).
 - `db/migrations/2026-10-13_{banners_v2,section_category_icons,home_highlights}.sql` + rollbacks المرافقة.
+- `db/tests/probe_lib.sh` + `db/tests/storefront_security.sql` + `db/tests/run_storefront_security.sh` — مشغّل الفحوص المشترك (live/local) وفحوص الأيقونات/الأكثر طلبًا.
+- `db/tests/local_bootstrap.sql` + `db/tests/local_sql_suite.sh` + `scripts/gen_local_bootstrap.py` — تشغيل فحوص SQL بلا توكن على PostgreSQL محلي.
 
 **معدّلة:**
 - `assets/js/banners.js` (kv: إعدادات السلايدر + بديل JSON + fade + زر الإيقاف/التشغيل).
@@ -290,12 +292,17 @@
 3. `2026-10-12_banners_repoint_assets.sql` (مسارات WebP + alt).
 4. `2026-10-12_banner_mobile_aspect.sql` (الإعداد القديم — يبقى متوافقًا).
 5. `2026-10-12_referral_prefix_meem.sql`، `2026-10-12_settings_whatsapp_number.sql`.
+5.b **`2026-10-13_p1_oracle_scope_and_coupon_strength.sql`** — نطاق `check_tx_ref_available` + طول كود الدفع/الكوبون.
 6. **`2026-10-13_banners_v2.sql`** — status/نسخ/ترتيب ذرّي/تحقق صارم + مفاتيح `banner_mobile_ratio/autoplay/interval/effect` + `products.is_on_offer` + `offers_use_flag`.
 7. **`2026-10-13_section_category_icons.sql`** — أعمدة الأيقونات + `store_sections.description` + bucket `category-icons` + RPCs + `catalog_icons_flag`.
 8. **`2026-10-13_home_highlights.sql`** — RPC `get_top_ordered_products` + `home_highlights_flag`.
 
 الـ RPCs الجديدة: `admin_copy_banner`, `admin_set_banner_status`, `admin_reorder_banners(jsonb)`,
 `admin_set_section_icon`, `admin_set_category_icon`, `get_top_ordered_products`.
+
+**إصلاحان من جولة 2026-10-14 (اكتشفهما فحص SQL الجديد):**
+- `2026-10-13_banners_v2.sql` يعيد إنشاء سياسة القراءة العامة بشرط `status='published'` — النسخة الأولى من السياسة (v1) كانت تُظهر **المسودات** لأي زائر يقرأ الجدول مباشرة. والـ rollback يعيد سياسة v1.
+- `2026-10-12_banners.sql` يستخدم اسم العمود المعتمد `hide_if_target_inactive` (مع حارس إعادة تسمية لقواعد طبّقت المسودة الأولى) — كان إعادة تطبيق ملف v1 بعد v2 يفشل.
 
 ## 4) خطوات الأدمن (بنرات)
 
@@ -329,3 +336,48 @@
 - `account.html` تُحدّث `profiles` مباشرة — يعتمد على سياسة self-update القائمة (لم تُسحب في ملفات التصليب هنا، لكن يلزم تأكيد حيّ).
 - CSP وCAPTCHA مؤجّلان بقرار المالك.
 - البنر يعمل الآن عبر بديل المستودع (الصور الثلاث)، وقراءة القاعدة تُفعَّل تلقائيًا بعد تطبيق الهجرات.
+
+---
+
+# تقرير جولة 2026-10-14 — اختبارات SQL المطلوبة في المواصفة + تشغيل محلي بلا توكن
+
+المرجع: `docs/MASTER_SPEC.md` §1ط («اختبارات SQL تُكتب الآن وتُشغَّل لما يتوفر التوكن») و§2و/§3.
+
+## 1) ما نُفّذ
+
+| العمل | الملف | الدليل |
+|---|---|---|
+| فحوص البنر v2: ظهور/إخفاء المسودات والمجدولة والمنتهية والمعطّلة، منع الكتابة لغير الأدمن على RPCs الثلاثة الجديدة، نطاق روابط الصور، الترتيب الذرّي (نجاح كامل + رفض التكرار دون تحريك شيء)، تشغيل/نسخ/نشر الأدمن | `db/tests/run_banners_security.sh` (1–32) + `db/tests/banners_security.sql` | 33/33 محليًا |
+| فحوص الأيقونات والأكثر طلبًا: عقد bucket `category-icons` (عام + 200KB + png/webp/jpeg)، منع anon وغير الأدمن من RPCs الأيقونات، رفض mode/key/js:/host خارج البكت، وجود الأعمدة والافتراضي `auto`، علامات القدرة، إخفاء مفاتيح settings غير المسموحة، حد RPC «الأكثر طلبًا» وأن كل رقم يساوي تجميعًا حقيقيًا على `orders` | `db/tests/run_storefront_security.sh` (1–23) + `db/tests/storefront_security.sql` | 24/24 محليًا |
+| مشغّل فحوص مشترك بواجهتين: Management API (live) أو `psql` (local)، وكل فحص داخل معاملة تنتهي بـ ROLLBACK | `db/tests/probe_lib.sh` | نفس الملفات تُشغَّل في الحالتين |
+| تشغيل بلا توكن: قاعدة PostgreSQL محلية + bootstrap بطبع القاعدة الحية (جداول/أدوار/دوال مساعدة، بلا أي صفوف حقيقية) + تطبيق الهجرات مرتين + الفحوص + التراجعات | `db/tests/local_sql_suite.sh`، `db/tests/local_bootstrap.sql`، `scripts/gen_local_bootstrap.py` | `bash db/tests/local_sql_suite.sh` → `RESULT: OK` |
+
+## 2) نتائج التشغيل المحلي (exit 0)
+
+```
+bootstrap                                  ok
+10 هجرات (تمريرة أولى)                      ok ×10
+10 هجرات (تمريرة ثانية = idempotent)        ok ×10
+run_banners_security.sh                    33 passed, 0 failed, 0 skipped
+run_storefront_security.sh                 24 passed, 0 failed, 0 skipped
+9 ملفات rollback بالترتيب العكسي            ok ×9
+RESULT: OK
+```
+
+## 3) إثبات أن الفحوص ليست ورقية (mutation test)
+
+| الحقن | النتيجة |
+|---|---|
+| إعادة سياسة القراءة العامة بلا شرط `status` | `FAIL 18` (المسودات ظهرت) — 32/33 |
+| حذف شرط `is_active` من `get_top_ordered_products` | `FAIL 20` + `FAIL 21` — 22/24 |
+
+بعد إعادة تطبيق الهجرة عادت النتائج 33/33 و24/24.
+
+## 4) علاقته بالتوكن
+
+هذا التشغيل **ليس** بديلًا عن التشغيل الحيّ: هو يتحقق من أن الهجرات تُطبَّق فعلًا وأن SQL الفحوص صحيح وتوقعاته مطابقة، لكنه لا يلمس صفوف المشروع. لم تُطبَّق أي هجرة على القاعدة الحية ولا زال `SUPABASE_ACCESS_TOKEN` مطلوبًا لتشغيل:
+
+```bash
+SUPABASE_ACCESS_TOKEN=... bash db/tests/run_banners_security.sh     # بعد تطبيق الهجرات
+SUPABASE_ACCESS_TOKEN=... bash db/tests/run_storefront_security.sh
+```

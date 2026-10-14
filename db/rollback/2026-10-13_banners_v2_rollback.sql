@@ -179,6 +179,16 @@ create policy settings_select on public.settings
                  'referral_signup_discount_percent', 'whatsapp_number',
                  'banner_mobile_aspect'));
 
+-- 5.b restore the v1 public read policy (it no longer has a status column)
+drop policy if exists banners_public_read on public.banners;
+create policy banners_public_read on public.banners
+  for select to anon, authenticated
+  using (
+    is_active
+    and (starts_at is null or starts_at <= now())
+    and (ends_at   is null or ends_at   >= now())
+  );
+
 -- 6. drop the v2 columns
 alter table public.banners drop constraint if exists banners_status_chk;
 alter table public.banners drop column if exists status;

@@ -1,0 +1,34 @@
+-- MEEM STORE — icon and homepage-highlight invariants (MASTER_SPEC §2و / §3).
+--
+-- Same rules as db/tests/banners_security.sql: every probe runs in its own
+-- transaction that ends in ROLLBACK, so no production row is ever changed.
+-- Driven by db/tests/run_storefront_security.sh (live management API or a
+-- local PostgreSQL via MEEM_LOCAL_DSN).
+--
+-- Needs db/migrations/2026-10-13_section_category_icons.sql and
+--       db/migrations/2026-10-13_home_highlights.sql applied.
+--
+--  1  the category-icons bucket is public with a 200KB cap                  EXPECT true
+--  2  the bucket accepts only jpeg/png/webp (no svg)                        EXPECT true
+--  3  no anon write policy exists on the bucket                             EXPECT 0
+--  4  anon cannot call admin_set_section_icon()                             EXPECT ERROR
+--  5  anon cannot call admin_set_category_icon()                            EXPECT ERROR
+--  6  a non-admin cannot call admin_set_section_icon()                      EXPECT ERROR
+--  7  a non-admin cannot call admin_set_category_icon()                     EXPECT ERROR
+--  8  anon cannot call icon_fields_validate()                               EXPECT ERROR
+--  9  an unknown icon_mode is rejected                                      EXPECT ERROR
+-- 10  a malformed preset key is rejected                                    EXPECT ERROR
+-- 11  custom mode without an image is rejected                              EXPECT ERROR
+-- 12  a javascript: icon image is rejected                                  EXPECT ERROR
+-- 13  an off-bucket https icon image is rejected                            EXPECT ERROR
+-- 14  a valid preset key is accepted                                        EXPECT ok
+-- 15  icon_mode / icon_key / icon_image_url exist on both tables            EXPECT 6
+-- 16  the icon_mode columns default to 'auto'                               EXPECT 2
+-- 17  the capability markers were seeded                                   EXPECT 2
+-- 17.b row level security is on for settings                               EXPECT true
+-- 18  the settings policy hides every non-whitelisted key from anon         EXPECT 0
+-- 19  anon can read the most-ordered feed                                   EXPECT ok
+-- 20  the feed never returns an inactive product                            EXPECT 0
+-- 21  the feed honours the requested limit                                  EXPECT true
+-- 22  the feed caps a huge limit at 24                                      EXPECT true
+-- 23  every "ordered" number equals a real aggregate over orders            EXPECT true

@@ -19,7 +19,7 @@ create table if not exists public.banners (
   whatsapp_message          text,
   overlay_position_desktop  text not null default 'right',
   overlay_position_mobile   text not null default 'top',
-  hide_when_target_disabled boolean not null default true,
+  hide_if_target_inactive   boolean not null default true,
   sort_order                integer not null default 0,
   is_active                 boolean not null default true,
   starts_at                 timestamptz,
@@ -58,6 +58,20 @@ create table if not exists public.banners (
     end
   )
 );
+
+-- The column shipped as hide_when_target_disabled in the first draft of this
+-- file; keep databases that already ran that draft working.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema='public' and table_name='banners'
+               and column_name='hide_when_target_disabled')
+     and not exists (select 1 from information_schema.columns
+             where table_schema='public' and table_name='banners'
+               and column_name='hide_if_target_inactive') then
+    alter table public.banners rename column hide_when_target_disabled to hide_if_target_inactive;
+  end if;
+end $$;
 
 -- constraints are dropped+re-added so that re-running this file repairs an
 -- older definition (the table itself is created above only when missing)
@@ -180,7 +194,7 @@ begin
     'link_type', v_link, 'link_target', v_target,
     'whatsapp_message', left(nullif(btrim(coalesce(p_payload->>'whatsapp_message','')),''), 400),
     'overlay_position_desktop', v_ovd, 'overlay_position_mobile', v_ovm,
-    'hide_when_target_disabled', coalesce((p_payload->>'hide_when_target_disabled')::boolean, true),
+    'hide_if_target_inactive', coalesce((p_payload->>'hide_if_target_inactive')::boolean, true),
     'sort_order', coalesce((p_payload->>'sort_order')::integer, 0),
     'is_active', coalesce((p_payload->>'is_active')::boolean, true),
     'starts_at', nullif(btrim(coalesce(p_payload->>'starts_at','')),'')::timestamptz,
@@ -213,12 +227,12 @@ begin
     insert into public.banners (
       banner_style, title, subtitle, cta_text, alt_text, image_desktop_url, image_mobile_url,
       link_type, link_target, whatsapp_message, overlay_position_desktop, overlay_position_mobile,
-      hide_when_target_disabled, sort_order, is_active, starts_at, ends_at, created_by, updated_by)
+      hide_if_target_inactive, sort_order, is_active, starts_at, ends_at, created_by, updated_by)
     values (
       v->>'banner_style', v->>'title', v->>'subtitle', v->>'cta_text', v->>'alt_text',
       v->>'image_desktop_url', v->>'image_mobile_url', v->>'link_type', v->>'link_target',
       v->>'whatsapp_message', v->>'overlay_position_desktop', v->>'overlay_position_mobile',
-      (v->>'hide_when_target_disabled')::boolean, (v->>'sort_order')::integer, (v->>'is_active')::boolean,
+      (v->>'hide_if_target_inactive')::boolean, (v->>'sort_order')::integer, (v->>'is_active')::boolean,
       (v->>'starts_at')::timestamptz, (v->>'ends_at')::timestamptz, v_uid, v_uid)
     returning id into v_id;
   else
@@ -227,7 +241,7 @@ begin
       alt_text=v->>'alt_text', image_desktop_url=v->>'image_desktop_url', image_mobile_url=v->>'image_mobile_url',
       link_type=v->>'link_type', link_target=v->>'link_target', whatsapp_message=v->>'whatsapp_message',
       overlay_position_desktop=v->>'overlay_position_desktop', overlay_position_mobile=v->>'overlay_position_mobile',
-      hide_when_target_disabled=(v->>'hide_when_target_disabled')::boolean,
+      hide_if_target_inactive=(v->>'hide_if_target_inactive')::boolean,
       sort_order=(v->>'sort_order')::integer, is_active=(v->>'is_active')::boolean,
       starts_at=(v->>'starts_at')::timestamptz, ends_at=(v->>'ends_at')::timestamptz, updated_by=v_uid
     where id = p_id
@@ -356,7 +370,7 @@ as $$
       and (b.starts_at is null or b.starts_at <= now())
       and (b.ends_at   is null or b.ends_at   >= now())
       and (
-        not b.hide_when_target_disabled
+        not b.hide_if_target_inactive
         or b.link_type = 'none'
         or (b.link_type = 'product'  and exists (select 1 from public.products   p where p.id = b.link_target::uuid and p.is_active))
         or (b.link_type = 'category' and exists (select 1 from public.categories c where c.id = b.link_target::uuid and c.is_active))

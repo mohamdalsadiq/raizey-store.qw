@@ -53,9 +53,9 @@ revoke all on function public.icon_image_url_ok(text) from public, anon, authent
 
 -- ---------------------------------------------------------------- 3. storage bucket
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('category-icons','category-icons', true, 209715, array['image/jpeg','image/png','image/webp'])
+values ('category-icons','category-icons', true, 204800, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do update
-  set public = true, file_size_limit = 209715,
+  set public = true, file_size_limit = 204800,
       allowed_mime_types = array['image/jpeg','image/png','image/webp'];
 
 drop policy if exists category_icons_public_read on storage.objects;
