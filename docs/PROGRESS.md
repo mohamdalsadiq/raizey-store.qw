@@ -32,8 +32,9 @@ npm test                                       # 0 فشل
 فحوص SQL (كل فحص داخل معاملة تنتهي بـ ROLLBACK — لا تلمس أي صف):
 
 ```bash
+bash db/tests/probe_lib_selftest.sh            # اختبار المشغّل نفسه (الواجهتان) — لازم: self-test OK
 bash db/tests/local_sql_suite.sh               # بلا توكن: PostgreSQL محلي + الهجرات + الفحوص + التراجعات
-                                               # لازم: 33/33 و 24/24 و RESULT: OK
+                                               # لازم: self-test OK · 33/33 · 24/24 · RESULT: OK
 # على القاعدة الحية (بعد تطبيق الهجرات، ولا يطبع أي سر):
 SUPABASE_ACCESS_TOKEN=... bash db/tests/run_banners_security.sh      # 33 فحصًا
 SUPABASE_ACCESS_TOKEN=... bash db/tests/run_storefront_security.sh   # 24 فحصًا
@@ -242,6 +243,7 @@ python3 -m venv ~/work/pgvenv && ~/work/pgvenv/bin/pip install pgserver   # مر
 | 20 | **فحوص الأيقونات والأكثر طلبًا** (§2و/§3): عقد bucket `category-icons` (عام + 200KB + png/webp/jpeg بلا svg)، منع anon وغير الأدمن من RPCs الأيقونات، رفض `mode`/`key`/`javascript:`/مضيف خارج البكت، وجود الأعمدة بقيمة `auto`، علامات القدرة، إخفاء مفاتيح `settings` غير المسموحة، وأن كل رقم في «الأكثر طلبًا» يساوي تجميعًا حقيقيًا على `orders` | `db/tests/run_storefront_security.sh` — **24/24** |
 | 21 | **مشغّل فحوص مشترك** بواجهتين: Management API (حيّ) أو `psql` (محلي) — نفس الفحص لا يتغيّر | `db/tests/probe_lib.sh` |
 | 22 | **تشغيل بلا توكن**: PostgreSQL 16 محلي (حزمة `pgserver`) + `local_bootstrap.sql` بطبع القاعدة الحية (بلا أي صف حقيقي) + تطبيق الهجرات العشر **مرتين** + الفحوص + ملفات التراجع بالترتيب العكسي | `bash db/tests/local_sql_suite.sh` → `RESULT: OK` |
+| 23 | **اختبار المشغّل نفسه**: واجهة الإدارة (بلا توكن، مقابل mock يحاكي شكل ردّ API) + مسارات التصحيح/الفشل/التخطي | `bash db/tests/probe_lib_selftest.sh` → `self-test OK` (3 ناجحة/2 فاشلة/1 متخطّاة كما هو متوقّع) |
 
 ### ب) عيبان حقيقيان كشفهما الفحص (وأُصلحا)
 

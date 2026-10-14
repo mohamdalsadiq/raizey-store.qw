@@ -120,6 +120,8 @@ for m in "${MIGRATIONS[@]}"; do run_file "$m" "$m (again)"; done
 export MEEM_LOCAL_DSN="$DSN"
 export MEEM_PSQL="$PGBIN/psql"
 suite_status=0
+step "db/tests/probe_lib_selftest.sh (harness backends)"
+bash "$HERE/probe_lib_selftest.sh" || suite_status=1
 step "db/tests/run_banners_security.sh"
 bash "$HERE/run_banners_security.sh" || suite_status=1
 step "db/tests/run_storefront_security.sh"

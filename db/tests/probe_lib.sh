@@ -5,7 +5,8 @@
 # ROLLBACK, so it can never change production data. Two backends:
 #
 #   live   SUPABASE_ACCESS_TOKEN (or ~/.raizey-audit/live_ro) →
-#          the Supabase Management API (/database/query). Optional PROJECT_REF.
+#          the Supabase Management API (/database/query). Optional PROJECT_REF,
+#          and PROBE_API_BASE for the db/tests/probe_lib_selftest.sh mock.
 #   local  MEEM_LOCAL_DSN="postgresql://postgres@/postgres?host=/tmp/meem&port=5599"
 #          → a local PostgreSQL started by db/tests/local_sql_suite.sh
 #
@@ -38,12 +39,13 @@ _probe_run() {
       printf '%s' "$out"
     fi
   else
-    local ref="${PROJECT_REF:-rglbfizqolrenwfsndyv}" token body
+    local ref="${PROJECT_REF:-rglbfizqolrenwfsndyv}" base token body
+    base="${PROBE_API_BASE:-https://api.supabase.com}"
     token="$(probe_token)"
     if [ -z "$token" ]; then printf 'NO_TOKEN'; return 0; fi
     body="$(python3 -c 'import json,sys;print(json.dumps({"query":sys.argv[1]}))' "$sql")"
     out="$(curl -s -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
-           --data-binary "$body" "https://api.supabase.com/v1/projects/$ref/database/query")"
+           --data-binary "$body" "$base/v1/projects/$ref/database/query")"
     if printf '%s' "$out" | grep -q '"message"'; then
       printf 'ERROR'
     else

@@ -350,11 +350,13 @@
 | فحوص البنر v2: ظهور/إخفاء المسودات والمجدولة والمنتهية والمعطّلة، منع الكتابة لغير الأدمن على RPCs الثلاثة الجديدة، نطاق روابط الصور، الترتيب الذرّي (نجاح كامل + رفض التكرار دون تحريك شيء)، تشغيل/نسخ/نشر الأدمن | `db/tests/run_banners_security.sh` (1–32) + `db/tests/banners_security.sql` | 33/33 محليًا |
 | فحوص الأيقونات والأكثر طلبًا: عقد bucket `category-icons` (عام + 200KB + png/webp/jpeg)، منع anon وغير الأدمن من RPCs الأيقونات، رفض mode/key/js:/host خارج البكت، وجود الأعمدة والافتراضي `auto`، علامات القدرة، إخفاء مفاتيح settings غير المسموحة، حد RPC «الأكثر طلبًا» وأن كل رقم يساوي تجميعًا حقيقيًا على `orders` | `db/tests/run_storefront_security.sh` (1–23) + `db/tests/storefront_security.sql` | 24/24 محليًا |
 | مشغّل فحوص مشترك بواجهتين: Management API (live) أو `psql` (local)، وكل فحص داخل معاملة تنتهي بـ ROLLBACK | `db/tests/probe_lib.sh` | نفس الملفات تُشغَّل في الحالتين |
+| اختبار المشغّل نفسه: واجهة الإدارة مقابل mock لشكل ردّ API (تصحيح القيمة، كشف الخطأ، التوقّع الخاطئ، probe_ok، التخطي) | `db/tests/probe_lib_selftest.sh` | `self-test OK` |
 | تشغيل بلا توكن: قاعدة PostgreSQL محلية + bootstrap بطبع القاعدة الحية (جداول/أدوار/دوال مساعدة، بلا أي صفوف حقيقية) + تطبيق الهجرات مرتين + الفحوص + التراجعات | `db/tests/local_sql_suite.sh`، `db/tests/local_bootstrap.sql`، `scripts/gen_local_bootstrap.py` | `bash db/tests/local_sql_suite.sh` → `RESULT: OK` |
 
 ## 2) نتائج التشغيل المحلي (exit 0)
 
 ```
+probe_lib_selftest.sh (الواجهتان)          self-test OK
 bootstrap                                  ok
 10 هجرات (تمريرة أولى)                      ok ×10
 10 هجرات (تمريرة ثانية = idempotent)        ok ×10
