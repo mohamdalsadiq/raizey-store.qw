@@ -68,7 +68,30 @@ checks AS (
            OR has_function_privilege('anon','public.verify_privilege_model()','EXECUTE')),
          'anonymous visitors cannot execute admin/utility routines'
   UNION ALL
-  -- 7) every admin routine keeps its internal guard
+  -- 7) trigger helpers are not a client-callable surface
+  SELECT 'no_client_exec_trigger_helpers', NOT EXISTS (
+           SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+           WHERE n.nspname='public'
+             AND p.proname = ANY (ARRAY[
+               'apply_referral_signup_metadata','assert_wallet_ledger_entry',
+               'award_loyalty_points','derive_receipt_url_from_receipt',
+               'enforce_coupon_code_strength','handle_new_user','link_order_payment_code',
+               'protect_notification_fields','protect_order_fields','protect_profile_columns',
+               'protect_profile_fields','protect_profile_insert','protect_topup_insert',
+               'set_order_code','set_row_updated_at','set_store_sections_updated_at',
+               'touch_subcategories_updated_at','validate_receipt_path',
+               'verify_order_price_before_insert'])
+             AND (has_function_privilege('anon',p.oid,'EXECUTE')
+               OR has_function_privilege('authenticated',p.oid,'EXECUTE'))
+         ), 'the 19 trigger helpers are reachable only through the trigger machinery (EXECUTE revoked from public, anon, authenticated)'
+  UNION ALL
+  -- 8) the profiles policy guard must stay callable by the role the policy runs as
+  SELECT 'profile_guard_exec_kept',
+         has_function_privilege('authenticated','public.profile_guard_fields_unchanged(uuid,text,boolean,uuid,text,text,boolean,boolean,boolean,boolean,integer)','EXECUTE')
+         AND NOT has_function_privilege('anon','public.profile_guard_fields_unchanged(uuid,text,boolean,uuid,text,text,boolean,boolean,boolean,boolean,integer)','EXECUTE'),
+         'authenticated keeps EXECUTE on the profiles WITH CHECK guard; anon does not'
+  UNION ALL
+  -- 9) every admin routine keeps its internal guard
   SELECT 'admin_routines_guarded', NOT EXISTS (
            SELECT 1 FROM f
            WHERE f.sig ~ '^(admin_|upsert_admin_permissions|set_store_maintenance|set_store_exchange_rate|bootstrap_super_admin|process_referral_commission|append_admin_audit_log|get_admin_notification_counts|get_my_admin_context|has_admin_permission|is_admin|is_super_admin)'
@@ -78,7 +101,7 @@ checks AS (
              AND f.src NOT ILIKE '%ADMIN_REQUIRED%'
          ), 'every admin-level routine checks admin/super-admin internally'
   UNION ALL
-  -- 8) order price/receipt trigger references real columns only
+  -- 10) order price/receipt trigger references real columns only
   SELECT 'order_trigger_valid_columns', (
            SELECT pg_get_functiondef(p.oid) NOT ILIKE '%NEW.payment_method%'
                   AND pg_get_functiondef(p.oid) NOT ILIKE '%NEW.tx_ref%'
@@ -87,7 +110,7 @@ checks AS (
            WHERE n.nspname='public' AND p.proname='verify_order_price_before_insert'
          ), 'verify_order_price_before_insert uses payment_type/transaction_reference'
   UNION ALL
-  -- 9) topup insert protection
+  -- 11) topup insert protection
   SELECT 'topup_insert_protected', (
            EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_protect_topup_insert' AND tgenabled <> 'D')
            AND (SELECT pg_get_functiondef(p.oid) ILIKE '%topup_requires_receipt%'
@@ -95,13 +118,13 @@ checks AS (
                 WHERE n.nspname='public' AND p.proname='protect_topup_insert')
          ), 'receipt-less topup rows are rejected server-side'
   UNION ALL
-  -- 10) pg_stat_statements closed to clients
+  -- 12) pg_stat_statements closed to clients
   SELECT 'pg_stat_statements_locked',
          NOT has_function_privilege('anon','extensions.pg_stat_statements(boolean)','EXECUTE')
          AND NOT has_function_privilege('authenticated','extensions.pg_stat_statements(boolean)','EXECUTE'),
          'no client role can read the statement history'
   UNION ALL
-  -- 11) referral code entropy + constraint
+  -- 13) referral code entropy + constraint
   SELECT 'referral_code_entropy', (
            (SELECT pg_get_functiondef(p.oid) ILIKE '%FOR i IN 1..8%'
             FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
@@ -110,7 +133,7 @@ checks AS (
                        AND pg_get_constraintdef(oid) LIKE '%{5,12}%')
          ), 'short codes use 8 random chars (alphabet without ambiguous glyphs)'
   UNION ALL
-  -- 12) no permissive policy on sensitive tables
+  -- 14) no permissive policy on sensitive tables
   SELECT 'no_open_policies', NOT EXISTS (
            SELECT 1 FROM pg_policies
            WHERE schemaname='public'
@@ -120,7 +143,7 @@ checks AS (
              AND (qual = 'true' OR with_check = 'true')
          ), 'no USING(true) / WITH CHECK(true) policy on sensitive tables'
   UNION ALL
-  -- 13) completion guard present
+  -- 15) completion guard present
   SELECT 'completion_guard', (
            SELECT pg_get_functiondef(p.oid) ILIKE '%unverified_payment_evidence%'
                   AND pg_get_functiondef(p.oid) ILIKE '%payment_code_id%'
@@ -129,7 +152,7 @@ checks AS (
            LIMIT 1
          ), 'orders cannot be completed without verifiable payment evidence'
   UNION ALL
-  -- 14) receipt claim quarantine + rate limit
+  -- 16) receipt claim quarantine + rate limit
   SELECT 'claim_quarantine_and_throttle', (
            SELECT pg_get_functiondef(p.oid) ILIKE '%v_status_in       := ''needs_review''%'
                   AND pg_get_functiondef(p.oid) ILIKE '%claim:%'
@@ -137,37 +160,37 @@ checks AS (
            WHERE n.nspname='public' AND p.proname='claim_payment_receipt'
          ), 'unscanned claims are quarantined and throttled per user'
   UNION ALL
-  -- 15) RLS enabled on every public table
+  -- 17) RLS enabled on every public table
   SELECT 'rls_enabled_everywhere', NOT EXISTS (
            SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
            WHERE n.nspname='public' AND c.relkind='r' AND NOT c.relrowsecurity
          ), 'row level security is enabled on all public tables'
   UNION ALL
-  -- 16) receipt uniqueness (replay protection)
+  -- 18) receipt uniqueness (replay protection)
   SELECT 'receipt_uniqueness', (
            EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='uq_payment_receipts_tx_norm')
            AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='uq_payment_receipts_hash')
            AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='unique_orders_receipt_hash')
          ), 'tx_ref and receipt image hashes are unique (no replay)'
   UNION ALL
-  -- 17) payment evidence schema + linker
+  -- 19) payment evidence schema + linker
   SELECT 'payment_code_linking', (
            EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='payment_code_id')
            AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_link_order_payment_code' AND tgdeferrable)
          ), 'code orders are linked to the consumed payment code'
   UNION ALL
-  -- 18) scan results fully locked to service role
+  -- 20) scan results fully locked to service role
   SELECT 'receipt_scan_results_locked',
          NOT has_table_privilege('anon','public.receipt_scan_results','SELECT')
          AND NOT has_table_privilege('authenticated','public.receipt_scan_results','SELECT'),
          'client roles cannot read the server-side scan records'
   UNION ALL
-  -- 19) storage: receipts bucket private
+  -- 21) storage: receipts bucket private
   SELECT 'receipts_bucket_private',
          (SELECT NOT public FROM storage.buckets WHERE id='receipts'),
          'receipt images are not publicly readable'
   UNION ALL
-  -- 20) admin audit trail cannot be forged by customers
+  -- 22) admin audit trail cannot be forged by customers
   SELECT 'audit_trail_trust', (
            (SELECT with_check ILIKE '%is_admin()%' FROM pg_policies
             WHERE tablename='audit_logs' AND cmd='INSERT')
@@ -175,7 +198,7 @@ checks AS (
                 WHERE tablename='audit_logs' AND cmd='SELECT')
          ), 'audit_logs writes/reads require an admin session'
   UNION ALL
-  -- 21) customer cancellation is server-side and ownership-checked
+  -- 23) customer cancellation is server-side and ownership-checked
   SELECT 'customer_cancel_rpc',
          has_function_privilege('authenticated','public.cancel_my_order(uuid)','EXECUTE')
          AND NOT has_function_privilege('anon','public.cancel_my_order(uuid)','EXECUTE')
