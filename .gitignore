@@ -14,3 +14,5 @@ supabase/.temp/
 # Dependencies / local verification tools
 node_modules/
 ui-shots/
+# generated module written by scripts/test_process_receipt_edge.mjs
+scripts/.tmp/

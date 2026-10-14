@@ -269,3 +269,101 @@ python3 -m venv ~/work/pgvenv && ~/work/pgvenv/bin/pip install pgserver   # مر
 ### هـ) ملاحظة على §7.ج (تصحيح)
 
 في القسم 7.ج كُتب أن «الواجهة تتحمّل غياب الأعمدة/الدوال عبر علامات قدرة في `settings`». دقيق: العلامات موجودة ومقروءة، وصارت الآن مُختبَرة محليًا (الفحص 17 في مجموعة المتجر).
+
+---
+
+## 9. جولة 2026-10-14 (ب) — التوكن وصل: تطبيق حيّ + فحوص حيّة
+
+### أ) التحقق والتخزين
+
+- `GET /v1/projects` → 200؛ `raizey-store` (`rglbfizqolrenwfsndyv`, `eu-central-1`, `ACTIVE_HEALTHY`)؛ استعلام حقيقي → PostgreSQL 17.6.
+- التوكن في `$HOME/.raizey-audit/live_rw` (`0600`، خارج المستودع). الترتيب: `SUPABASE_ACCESS_TOKEN` → `PROBE_TOKEN_FILE` → `live_rw` → `live_ro`. لا يُطبع ولا يُرفع في Git.
+
+### ب) ما نُفّذ على القاعدة الحية
+
+| # | العمل | الدليل |
+|---|---|---|
+| 24 | **تطبيق الهجرات العشر** بالترتيب الموثّق | `bash db/tests/live_sql.sh --migrations` → 10/10 `ok` |
+| 25 | **فحوص أمن البنر** (§1ط) حيًّا | `run_banners_security.sh` → **33/33** (كانت 28 + 1 متخطّى قبل إصلاح المشغّل) |
+| 26 | **الأيقونات + الرئيسية** حيًّا | `run_storefront_security.sh` → **27/27** |
+| 27 | **تدفقات المال** (استدعاء فعلي للـ RPCs داخل ROLLBACK) | `run_money_flow.sh` → **24/24** |
+| 28 | **الثوابت الأمنية/المالية** | `live_sql.sh -f db/tests/security_invariants.sql` → **21/21 passed** |
+| 29 | **لقطة استعادة** قبل أي تغيير (صفوف/سياسات/تعريفات/مفاتيح/بكتات) | `~/.raizey-audit/out/live_prechange_20261014-090633.json` |
+
+الحالة النهائية للقاعدة: أعمدة `banners` (بـ `status` و`hide_if_target_inactive`) · 8 دوال بنر · `admin_set_section_icon`/`admin_set_category_icon`/`get_top_ordered_products` · 20 مفتاح `settings` · bucket `category-icons` (عام، 204800، png/webp/jpeg) · `icon_key`/`description` على الأقسام والتصنيفات · `products.is_on_offer` · سياسة قراءة البنرات مقيّدة بـ `status='published'`. **صفوف المشروع لم تتغيّر** (3 بنرات كما هي).
+
+### ج) عيبان في أدوات الفحص كشفهما التشغيل الحيّ
+
+1. **المشغّل الحيّ كان يقرأ العمود باسم `v` فقط** → `None` بصمت لأي استعلام باسم آخر، ولهذا تخطّى فحوص الأدمن 28–32 رغم وجود أدمن. صار يقرأ أول عمود من أول صف (كسلوك `psql -At`)، مع فحص انحدار في `probe_lib_selftest.sh` (عمود باسم مختلف، صف فارغ، `probe_any`).
+2. **`live_sql.sh -f` مع مسار مطلق** كان يفشل (سبق المسار بمسار المستودع). أُصلح + `live_sql_selftest.sh` (18 فحصًا على mock لإدارة Supabase، بلا توكن).
+
+### د) المجموعة المحلية (بلا توكن)
+
+`bash db/tests/local_sql_suite.sh` → **exit 0 · RESULT: OK**: bootstrap → 10 هجرات ×2 → اختبارا المشغّل (`probe_lib_selftest` و`live_sql_selftest`) → البنر 33/33 → الواجهة 26 + 1 متخطّى → 9 تراجعات.
+
+في هذه الجولة صار الـ bootstrap يمثّل حقيقة القاعدة أكثر: سياسة `profiles_update_own` (account.html يكتب صف نفسه) ومنح `UPDATE` على `profiles` لـ `authenticated` — بدونهما كان فحص «العميل يحدّث ملفه» يفشل محليًا بينما ينجح حيًّا.
+
+`run_money_flow.sh` **خارج** التشغيل المحلي عمدًا: دوال المال من جولة 2026-10-08 (غير الممثّلة في الـ bootstrap)، والمجموعة ترفض العمل هناك (exit 3) بدل نجاح زائف.
+
+### هـ) ما بقي متوقّفًا
+
+CSP · CAPTCHA · نشر Edge Functions/الأسرار · تأكيد تدفّقات المتصفح (تسجيل دخول/دفع) داخل متصفح حقيقي.
+
+---
+
+## 10. جولة 2026-10-14 (ج) — أقل صلاحية ممكنة + إصلاح رمز الإحالة + تحقق نهائي
+
+### أ) تغييران في القاعدة (مع تراجع مرفق لكل منهما)
+
+| الهجرة | ماذا تفعل | لماذا |
+|---|---|---|
+| `db/migrations/2026-10-14_revoke_internal_execute.sql` | `REVOKE EXECUTE … FROM public, anon, authenticated` على 19 دالة تريجر داخلية، مع `GRANT … TO service_role` | PostgreSQL يمنح `EXECUTE` لـ `PUBLIC` على كل دالة جديدة افتراضيًا، فصارت كل مساعدات التريجر واجهة قابلة للنداء. نداء التريجر لا يفحص `EXECUTE` (الآلة الداخلية تنادي الدالة)، فسحب المنح لا يغيّر أي سلوك. `profile_guard_fields_unchanged` مستثناة عمدًا: تعبير سياسة `profiles_update_own` يُنفَّذ بهوية المُنادي فيحتاجها `authenticated`. الفحص الذاتي داخل الملف يرفع استثناءً إن بقي أي دور عميل يملك `EXECUTE` |
+| `db/migrations/2026-10-14_referral_code_check_for_anon.sql` | `GRANT EXECUTE … TO anon` على `validate_referral_short_code(text)` | `register.html` يتحقق من كود الإحالة **قبل** إنشاء الحساب (أي كـ `anon`) ويمنع الإرسال عند الفشل؛ بلا هذا المنح يعود **كل** كود — صحيحًا كان أو خطأً — برسالة «كود الإحالة غير موجود أو غير صالح» ويُمنع التسجيل بكود إحالة. آمن لأن الدالة تُرجع `(valid, reason)` فقط بلا أي بيانات، وفضاء الأكواد صار `MEEM` + 8 خانات من 32 رمزًا (≈1.1e12)، والدالة `STABLE SECURITY DEFINER` بـ `search_path` مثبّت ولا تكتب. الإسناد نفسه يحسمه التريجر لا العميل |
+
+كلاهما idempotent، ولهما ملف تراجع في `db/rollback/`.
+
+### ب) التحقق الحيّ بعد التغييرين
+
+| القياس | الأمر | النتيجة |
+|---|---|---|
+| المنح الفعلي لـ `anon` | استعلام `has_function_privilege` | **3 دوال فقط**: `get_banners_public()` · `get_top_ordered_products(integer)` · `validate_referral_short_code(text)` |
+| دوال `SECURITY DEFINER` بلا `search_path` | استعلام `pg_proc`/`proconfig` | **0** |
+| جداول بلا `RLS` | استعلام `pg_class`/`relrowsecurity` | **0** (81 سياسة) |
+| صحة رمز الإحالة كـ`anon` | `run_storefront_security.sh` الفحص 27 و28 | **نجح**: كود مجهول → `false/not_found`، والنداء لا يفشل |
+| أمن البنر | `bash db/tests/run_banners_security.sh` | **33/33** |
+| الأيقونات/الرئيسية/الملف الشخصي/الإحالة | `bash db/tests/run_storefront_security.sh` | **29/29** (كان 27 في الجولة السابقة: أُضيف فحصا الحس الشخصي والإحالة) |
+| تدفقات المال | `bash db/tests/run_money_flow.sh` | **24/24** |
+| الثوابت الأمنية/المالية | `bash db/tests/live_sql.sh -f db/tests/security_invariants.sql` | **23/23 `passed`** (فحصان جديدان: حدود نداء مساعدات التريجر، وبقاء `profile_guard_fields_unchanged` مناحةً لـ`authenticated`) |
+
+### ج) ثلاث علل حقيقية في أدوات الفحص/الواجهة كُشفت وأُصلحت
+
+1. **`scripts/offers_check.mjs` كان يقيس الصفحة قبل أن تستقر**: `#content` تبدأ `hidden` في الترميز، فالشرط القديم كان يصدُق فورًا ثم يفشل بلا سبب واضح. الشرط الجديد: «صندوق الحالة مخفي» أو «لم يعد يحمل نص التحميل» — **لا** «نص التحميل غائب»، لأن مسار النجاح يضبط `hidden` ولا يمسح النص (عقدة مخفية تبقى تحتفظ بنصها). وأي انتهاء مهلة صار يُبلَّغ عنه بسبب مقروء (الأخطاء/الطلبات الفاشلة) بدل انهيار استثناء.
+2. **`npm run test:edge` كان معطّلًا**: الوحدة المولَّدة في `scripts/.tmp/` تحمل `import … from "../_shared/cors.ts"` الذي يُحلّ إلى `scripts/_shared/cors.ts` غير الموجود. أُعيد كتابة المُحدِّد إلى `../../supabase/functions/_shared/cors.ts` → **94 فحصًا ناجحًا**. وأُضيف `scripts/.tmp/` إلى `.gitignore`.
+3. **تناقض قياس التباين**: `getComputedStyle` يُرجع ألوان `oklab()/oklch()` الناتجة عن `color-mix()`، وكان المقياس يقرؤها كثلاثيات 0..255 فيبلّغ عن نسب خاطئة (1.44:1) لنص مقروء بوضوح. صار يحوّل oklab/oklch فعليًا ويدمج الشفافية قبل الحساب، وكل نص على خلفية `--primary` صار يستخدم `--mm-on-primary` (نص داكن على الذهبي) بدل `--ink`.
+
+### د) التحقق النهائي الشامل (كل ما أُعيد تشغيله بعد آخر تعديل)
+
+| المجموعة | الأمر | النتيجة |
+|---|---|---|
+| اختبارات المستودع | `npm test` | **54 + 56 فحصًا، 0 فاشل** |
+| Edge Function | `npm run test:edge` | **94 ناجح، 0 فاشل** |
+| المجموعة المحلية | `bash db/tests/local_sql_suite.sh` | **exit 0 · RESULT: OK** (12 هجرة ×2، البنر 33/33، الواجهة 28 + 1 متخطّى، 10 تراجعات) |
+| اختبارا المشغّل | `probe_lib_selftest.sh` · `live_sql_selftest.sh` | **self-test OK** لكلٍّ منهما |
+| تباين الألوان | `node scripts/ui_contrast.mjs` | **36 صفحة نظيفة** |
+| دخان الواجهة | `node scripts/ui_smoke.mjs` | **72/72 صفحة×مقاس** |
+| العروض | `node scripts/offers_check.mjs` | **ناجح** (بيانات حيّة + عقد البطاقة + المقاسان) |
+| البنر (متصفح) | `node scripts/banners_check.mjs` | **ناجح** |
+| CORS | `node scripts/cors_check.mjs` | **24/24** |
+| فحوص الجولة | `node scripts/round_checks.mjs` | **ناجح** |
+
+### و) توسيع الثوابت: 23 بدل 21
+
+أُضيف فحصان إلى `db/tests/security_invariants.sql`: `no_client_exec_trigger_helpers` (أي من مساعدات التريجر الـ19 لا يستطيع `anon` ولا `authenticated` نداءها) و`profile_guard_exec_kept` (بقاء `profile_guard_fields_unchanged` مناحةً لـ`authenticated` لأن تعبير سياسة `profiles_update_own` ينفَّذ بهويته، وسحبها من `anon`).
+
+وإثباتًا لأنهما ليسا ورقيَّين: `grant execute on function public.handle_new_user() to anon` داخل معاملة يجعل القياس يعود `1` (أي تفحص بفشل)، وبعد `ROLLBACK` يعود `0`. منح المشروع لم يتغيّر ولا صف واحد تحرّك.
+
+### هـ) ما زال متوقّفًا (بلا ادّعاء إنجاز)
+
+- تأكيد تدفّقات حقيقية بتسجيل دخول ودفع داخل متصفح: يحتاج حسابًا/جلسة مستخدم حقيقية، والفحوص كلها تعمل بلا كتابة أي صف.
+- CSP بدون `unsafe-inline`، وCAPTCHA، ونشر Edge Functions وضبط الأسرار: قرار المالك.
+- شبكة هذه الـ VM تتعثّر أحيانًا في `cdn.jsdelivr.net` (تحميل `supabase-js`) فيتعطّل أي فحص متصفح يعتمد على بيانات حيّة في تلك المحاولة؛ إعادة التشغيل تُنجح الفحص. الصفحات نفسها تُحمّل المكتبة بنجاح في التشغيل النظيف.

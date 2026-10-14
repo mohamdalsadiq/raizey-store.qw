@@ -59,6 +59,13 @@ function buildModule() {
     .replace(
       /^import\s+\{\s*ReceiptJudgeCore\s*\}\s+from\s+"\.\/receipt-judge-core\.ts";\s*$/m,
       judgeSrc,
+    )
+    // The generated copy lives in scripts/.tmp/, two levels deeper than the
+    // Edge function, so its own `../_shared/cors.ts` specifier would resolve to
+    // scripts/_shared/cors.ts and the import would fail before any test runs.
+    .replace(
+      /from\s+"\.\.\/_shared\/cors\.ts"/,
+      'from "../../supabase/functions/_shared/cors.ts"',
     );
 }
 

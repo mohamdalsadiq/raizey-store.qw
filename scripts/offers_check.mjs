@@ -36,8 +36,39 @@ for (const vp of [{ name: "desktop-1440", w: 1440, h: 900 }, { name: "mobile-390
   page.on("requestfailed", (r) => errors.push("requestfailed: " + r.url()));
 
   await page.goto(`${BASE}/offers.html`, { waitUntil: "load" });
-  await page.waitForFunction('document.getElementById("stateBox").hidden === true || document.getElementById("content").hidden === true', null, { timeout: 20000 });
+  // Wait for init() to settle. Neither flag alone works:
+  //   · the success path only sets stateBox.hidden = true, it never clears the
+  //     loading copy — a hidden node keeps its text, so "text says جارِ تحميل"
+  //     stays true for the rest of the page's life;
+  //   · #content starts hidden in the markup, so testing it proves nothing.
+  // Settled therefore means: the state box was hidden (products rendered) or it
+  // no longer carries the loading copy (empty/error copy replaced it).
+  let settled = true;
+  try {
+    await page.waitForFunction(() => {
+      const box = document.getElementById("stateBox");
+      if (!box) return false;
+      const stillLoading = /جارِ تحميل/.test(box.textContent || "");
+      return box.hidden === true || !stillLoading;
+    }, null, { timeout: 20000 });
+  } catch (e) {
+    settled = false;
+  }
+  if (!settled) {
+    // Never fail with a bare timeout: the actionable signal is *why* the page
+    // is still on the loading copy (blocked CDN, failed request, JS error).
+    const detail = errors.length ? errors.slice(0, 3).join(" | ") : "no console error and no failed request";
+    problems.push(`${vp.name}: offers.html never left the loading state — ${detail}`);
+    facts.push({ viewport: vp.name, settled: false, errors });
+    await ctx.close();
+    continue;
+  }
   await page.waitForTimeout(600);
+  // Thumbnails are loading="lazy": until the browser starts fetching one,
+  // currentSrc is "" and naturalWidth is 0. Force every thumbnail to decode
+  // first, otherwise the naturalWidth assertion is a race, not a check.
+  await page.evaluate(() => Promise.all(
+    Array.from(document.querySelectorAll("#offersGrid img")).map((i) => i.decode().catch(() => {}))));
 
   const live = await page.evaluate(() => {
     const grid = document.getElementById("offersGrid");
@@ -57,7 +88,7 @@ for (const vp of [{ name: "desktop-1440", w: 1440, h: 900 }, { name: "mobile-390
       document.querySelectorAll("#offersGrid .offer-card").forEach((c) => {
         const img = c.querySelector("img");
         if (img && !img.getAttribute("alt")) out.push("missing alt");
-        if (img && img.naturalWidth === 0) out.push("image not decoded: " + img.currentSrc);
+        if (img && img.getAttribute("src") && img.naturalWidth === 0) out.push("image not decoded: " + (img.currentSrc || img.src));
         if (!c.getAttribute("aria-label")) out.push("missing aria-label");
       });
       return out;
