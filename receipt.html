@@ -153,7 +153,9 @@
     padding: 14px;
     border-radius: 12px;
     background: var(--primary);
-    color: var(--ink);
+    /* dark ink on the gold button: --ink is the near-white *text* colour of the
+       dark theme, which gave 1.35:1 on gold (unreadable) */
+    color: var(--mm-on-primary);
     font-size: 15px;
     font-weight: 800;
     text-align: center;

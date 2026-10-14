@@ -42,7 +42,38 @@ for (const file of FILES) {
   await page.waitForTimeout(600);
   if (/login\.html$/.test(page.url()) && !file.startsWith("login")) continue; // auth-guarded page
   const found = await page.evaluate(() => {
-    const parse = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+    // getComputedStyle serialises modern colour syntax (oklab/oklch, produced by
+    // color-mix() and relative colours) instead of rgb(). The plain number parser
+    // used to read those as if they were rgb triplets in 0..255 and report a
+    // bogus 1.44:1 on text that is plainly readable — see docs/FINAL_REPORT.md,
+    // round 2026-10-14 (c). Convert properly instead.
+    const oklabToRgb = (L, A, B, alpha) => {
+      const l_ = L + 0.3963377774 * A + 0.2158037573 * B;
+      const m_ = L - 0.1055613458 * A - 0.0638541728 * B;
+      const s_ = L - 0.0894841775 * A - 1.2914855480 * B;
+      const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+      const lin = [
+        4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+      ];
+      const srgb = (v) => Math.round(Math.min(1, Math.max(0, v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055)) * 255);
+      return [...lin.map(srgb), alpha];
+    };
+    const parse = (c) => {
+      if (typeof c !== "string") return [];
+      const modern = c.startsWith("oklab(") || c.startsWith("oklch(");
+      if (modern) {
+        const n = (c.match(/-?[\d.]+(?:e-?\d+)?/g) || []).map(Number);
+        const alpha = c.includes("/") ? (n[3] === undefined ? 1 : n[3]) : 1;
+        if (c.startsWith("oklch(")) {
+          const h = ((n[2] || 0) * Math.PI) / 180;
+          return oklabToRgb(n[0] || 0, (n[1] || 0) * Math.cos(h), (n[1] || 0) * Math.sin(h), alpha);
+        }
+        return oklabToRgb(n[0] || 0, n[1] || 0, n[2] || 0, alpha);
+      }
+      return (c.match(/[\d.]+/g) || []).map(Number);
+    };
     const lum = ([r, g, b]) => {
       const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
       return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
@@ -71,9 +102,14 @@ for (const file of FILES) {
       if (el.closest(".mm-reveal:not(.is-visible)")) return;
       const rect = el.getBoundingClientRect();
       if (rect.width < 4 || rect.height < 4) return;
-      const fg = parse(cs.color).slice(0, 3);
       const bg = effectiveBg(el);
       if (!bg) return;
+      const fgRaw = parse(cs.color);
+      const fgAlpha = fgRaw.length === 4 ? fgRaw[3] : 1;
+      // semi-transparent text: composite it over the background before measuring
+      const fg = fgAlpha < 1
+        ? fgRaw.slice(0, 3).map((v, i) => v * fgAlpha + bg[i] * (1 - fgAlpha))
+        : fgRaw.slice(0, 3);
       const size = parseFloat(cs.fontSize);
       const weight = Number(cs.fontWeight) || 400;
       const large = size >= 24 || (size >= 18.66 && weight >= 700);

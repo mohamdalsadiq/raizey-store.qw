@@ -98,9 +98,9 @@
   font-size: 13px;
   font-weight: 700;
 }
-.btn-confirm { background: var(--primary); color: var(--ink); }
+.btn-confirm { background: var(--primary); color: var(--mm-on-primary); }
 .btn-reject { background: rgba(255, 107, 107,0.15); color: var(--danger); }
-.btn-complete { background: var(--primary); color: var(--ink); }
+.btn-complete { background: var(--primary); color: var(--mm-on-primary); }
 
 .customer-info {
   font-size: 12px;
