@@ -46,6 +46,12 @@ if [ -z "$PGBIN" ] || [ ! -x "$PGBIN/psql" ]; then
 fi
 
 # Migrations in the order documented in docs/FINAL_REPORT.md §5.
+#
+# NOTE: db/tests/run_money_flow.sh is deliberately *not* part of this local run.
+# The money RPCs come from the 2026-10-08 hardening round, whose shape this
+# bootstrap does not model (no wallet_transactions), and a suite that silently
+# passes because a function is missing is worse than no suite. It refuses to run
+# (exit 3) unless the money RPCs exist, and it is run against the live project.
 MIGRATIONS=(
   "db/migrations/2026-10-12_referral_prefix_meem.sql"
   "db/migrations/2026-10-12_banners.sql"
@@ -57,8 +63,12 @@ MIGRATIONS=(
   "db/migrations/2026-10-13_banners_v2.sql"
   "db/migrations/2026-10-13_section_category_icons.sql"
   "db/migrations/2026-10-13_home_highlights.sql"
+  "db/migrations/2026-10-14_revoke_internal_execute.sql"
+  "db/migrations/2026-10-14_referral_code_check_for_anon.sql"
 )
 ROLLBACKS=(
+  "db/rollback/2026-10-14_referral_code_check_for_anon_rollback.sql"
+  "db/rollback/2026-10-14_revoke_internal_execute_rollback.sql"
   "db/rollback/2026-10-13_home_highlights_rollback.sql"
   "db/rollback/2026-10-13_section_category_icons_rollback.sql"
   "db/rollback/2026-10-13_banners_v2_rollback.sql"
@@ -122,6 +132,8 @@ export MEEM_PSQL="$PGBIN/psql"
 suite_status=0
 step "db/tests/probe_lib_selftest.sh (harness backends)"
 bash "$HERE/probe_lib_selftest.sh" || suite_status=1
+step "db/tests/live_sql_selftest.sh (live runner, mocked Management API)"
+bash "$HERE/live_sql_selftest.sh" || suite_status=1
 step "db/tests/run_banners_security.sh"
 bash "$HERE/run_banners_security.sh" || suite_status=1
 step "db/tests/run_storefront_security.sh"

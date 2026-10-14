@@ -605,6 +605,41 @@ AS $function$
                                                                                                                                                                                                                                 END;
                                                                                                                                                                                                                                 $function$
 ;
+CREATE OR REPLACE FUNCTION public.validate_referral_short_code(p_code text)
+ RETURNS TABLE(valid boolean, reason text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_norm text := upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g'));
+  v_referrer uuid;
+BEGIN
+  IF length(v_norm) < 5 OR length(v_norm) > 32 THEN
+    RETURN QUERY SELECT false, 'invalid_format';
+    RETURN;
+  END IF;
+
+  SELECT p.id INTO v_referrer
+  FROM public.profiles p
+  WHERE upper(coalesce(p.referral_short_code, '')) = v_norm
+     OR upper(coalesce(p.referral_code, '')) = v_norm
+  LIMIT 1;
+
+  IF v_referrer IS NULL THEN
+    RETURN QUERY SELECT false, 'not_found';
+    RETURN;
+  END IF;
+
+  IF auth.uid() IS NOT NULL AND v_referrer = auth.uid() THEN
+    RETURN QUERY SELECT false, 'self_referral';
+    RETURN;
+  END IF;
+
+  RETURN QUERY SELECT true, 'valid';
+END;
+$function$
+;
 
 
 -- ---------------------------------------------------------------- 6. row level security
@@ -646,6 +681,12 @@ create policy payment_methods_select_active_anon on public.payment_methods
   for select to anon using (is_active = true);
 create policy profiles_select_own on public.profiles
   for select to authenticated using (id = auth.uid() or is_admin());
+-- account.html updates its own profiles row directly, so the live project has a
+-- self-update policy. Mirrored here with the identity gate only: the live
+-- WITH CHECK also calls profile_guard_fields_unchanged(...) to freeze role,
+-- is_banned and the loyalty/referral columns, which this stub does not model.
+create policy profiles_update_own on public.profiles
+  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
 -- ---------------------------------------------------------------- 7. minimal data
 -- One admin (super admin) and one plain customer, mirroring the live roles.
@@ -685,6 +726,9 @@ from (values
 -- the storefront's own read grants: RLS must stay the only gate
 -- (banners is created later by its own migration, which grants it itself)
 grant select on all tables in schema public to anon, authenticated;
+-- the live project also lets a signed-in user UPDATE their own profiles row
+-- (account.html); the profiles_update_own policy is the restriction there.
+grant update on public.profiles to authenticated;
 grant select on storage.objects, storage.buckets to anon, authenticated;
 grant insert, update, delete on storage.objects to authenticated;
 

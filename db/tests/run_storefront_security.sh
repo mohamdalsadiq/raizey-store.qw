@@ -14,6 +14,12 @@ if [ -z "${MEEM_LOCAL_DSN:-}" ] && [ -z "$(probe_token)" ]; then
   echo "no access token available"; exit 2
 fi
 
+# account.html writes profiles directly (full_name / whatsapp_number / player_ids
+# / avatar_url) instead of going through an RPC, so the profile policies are the
+# only gate there. These two probes are the live confirmation docs asked for.
+CUSTOMER_UUID="$(_probe_run "select id::text from public.profiles where role='customer' and coalesce(is_banned,false)=false order by created_at, id limit 1")"
+OTHER_UUID="$(_probe_run "select id::text from public.profiles where role='customer' and coalesce(is_banned,false)=false order by created_at desc, id limit 1")"
+
 # ------------------------------------------------------------------ icons bucket
 probe "1 category-icons bucket is public with a 200KB cap" true \
  "select (public and file_size_limit = 204800)::text as v from storage.buckets where id='category-icons';"
@@ -81,6 +87,45 @@ probe "23 every ordered number equals a real aggregate" true \
       select count(*) from public.orders o
       where o.product_id = (e->>'id')::uuid and o.status in ('completed','in_progress'))
   ))::text as v;"
+
+# ------------------------------------------------- 24. profile self-service writes
+case "$CUSTOMER_UUID" in
+  [0-9a-fA-F]*-*-*-*-*) has_customer=1 ;;
+  *) has_customer=0 ;;
+esac
+if [ "$has_customer" = "1" ]; then
+  probe "24 a signed-in customer can update their own profile" 1 \
+   "begin; set local role authenticated; set local request.jwt.claims='{\"role\":\"authenticated\",\"sub\":\"$CUSTOMER_UUID\"}';
+    with u as (update public.profiles set full_name = coalesce(full_name,'probe') where id = '$CUSTOMER_UUID' returning 1)
+    select count(*)::text as v from u;
+    rollback;"
+  # registration validates the referral code while the visitor is still signed
+  # out; if this call fails the page blocks account creation (real bug found and
+  # fixed on 2026-10-14, see db/migrations/2026-10-14_referral_code_check_for_anon.sql)
+  probe_ok "27 anon can validate a referral code" \
+   "begin; set local role anon; set local request.jwt.claims='{\"role\":\"anon\"}';
+    select valid::text as v from public.validate_referral_short_code('MEEMZZZZZZZZ');
+    rollback;"
+  probe "28 an unknown referral code reports not_found" "false/not_found" \
+   "begin; set local role anon; set local request.jwt.claims='{\"role\":\"anon\"}';
+    select (v.valid::text || '/' || v.reason) as v from public.validate_referral_short_code('MEEMZZZZZZZZ') v;
+    rollback;"
+  probe_any "25 anon reads no profile row (no GRANT on live, zero rows locally)" \
+   "begin; set local role anon; set local request.jwt.claims='{\"role\":\"anon\"}';
+    select count(*)::text as v from public.profiles;
+    rollback;" ERROR 0
+  if [ "$OTHER_UUID" != "$CUSTOMER_UUID" ]; then
+    probe "26 a customer cannot change another customer's profile" 0 \
+     "begin; set local role authenticated; set local request.jwt.claims='{\"role\":\"authenticated\",\"sub\":\"$CUSTOMER_UUID\"}';
+      with u as (update public.profiles set full_name = coalesce(full_name,'probe') where id = '$OTHER_UUID' returning 1)
+      select count(*)::text as v from u;
+      rollback;"
+  else
+    skip "26 a customer cannot change another profile" "only one customer profile exists"
+  fi
+else
+  skip "24-26 profile self-service writes" "no customer profile"
+fi
 
 printf '\n%s passed, %s failed, %s skipped\n' "$probe_pass" "$probe_fail" "$probe_skip"
 [ "$probe_fail" -eq 0 ]

@@ -1,0 +1,40 @@
+-- MEEM STORE — index of the money-flow probes run by db/tests/run_money_flow.sh
+--
+-- Every probe runs inside its own transaction that ends in ROLLBACK, so the live
+-- rows are never touched. They call the real RPCs as the real roles (anon /
+-- authenticated / owner) instead of only inspecting definitions, which is what
+-- db/tests/security_invariants.sql does.
+--
+--  # | probe                                            | proves
+-- ---+--------------------------------------------------+-------------------------------------------
+--  1 | anon creates a wallet order                      | no EXECUTE for anon on the money RPCs
+--  2 | anon claims a receipt                            | same, receipt claim path
+--  3 | anon cancels an order                            | same, customer cancel path
+--  4 | anon redeems a payment code                      | same, code redeem path
+--  5 | anon creates a bank order                        | same, bulk bank order path
+--  6 | anon creates a wallet top-up                     | same, top-up-from-receipt path
+--  7 | customer completes an order                      | admin_update_order_status needs manage_orders
+--  8 | customer refunds a wallet                        | admin_refund_wallet is admin-only
+--  9 | customer rejects an order                        | admin_reject_order is admin-only
+-- 10 | customer mints a payment code                    | admin_create_payment_code is admin-only
+-- 11 | customer inserts an order directly               | orders has no INSERT grant for authenticated
+-- 12 | customer moves a wallet balance                  | wallets has no UPDATE grant for authenticated
+-- 13 | completing a bank order with no receipt          | unverified_payment_evidence (bank branch)
+-- 14 | completing a wallet order with no debit          | unverified_payment_evidence (wallet branch)
+-- 15 | completing a code order with no used code        | unverified_payment_evidence (code branch)
+-- 16 | completing with a written override reason        | the documented escape hatch still works
+-- 17 | completed → in_progress                          | the status machine rejects illegal transitions
+-- 18 | inserting an order below the real price          | verify_order_price_before_insert → price_tampered
+-- 19 | inserting a bank order with no receipt_id        | same trigger → receipt_required
+-- 20 | moving wallets.balance with no ledger entry      | trg_assert_wallet_ledger (deferred) fires
+-- 21 | owner cancels own pending_review order           | cancel_my_order works for the owner
+-- 22 | another customer cancels that order              | ownership is enforced → order_not_found
+-- 23 | owner cancels a completed order                  | state machine → invalid_status_transition
+-- 24 | redeeming an already-used payment code           | replay protection → already_used
+--
+-- The task-6 style probes (13-19, 21-23) insert a synthetic order as the owner
+-- role with the admin JWT claims so the price guard under test is the one that
+-- runs; the fixture is discarded by the ROLLBACK at the end of each probe.
+--
+-- Expectations that depend on a fixture are skipped (never counted as passed)
+-- when the project has no admin/customer/product/wallet/used-code to test with.

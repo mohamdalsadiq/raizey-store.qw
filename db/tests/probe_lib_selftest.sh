@@ -28,6 +28,11 @@ class Handler(BaseHTTPRequestHandler):
         query = json.loads(self.rfile.read(length) or b"{}").get("query", "")
         if "/*mock:boom*/" in query:
             payload, status = {"message": "synthetic SQL error", "code": "XX000"}, 400
+        elif "/*mockfirst:" in query:
+            # a query whose result column is named something other than "v"
+            start = query.find("/*mockfirst:")
+            value = query[start + len("/*mockfirst:"):query.index("*/", start)]
+            payload, status = [{"some_other_name": value}], 200
         else:
             start = query.find("/*mock:")
             value = ""
@@ -67,8 +72,13 @@ unset MEEM_LOCAL_DSN
 
 echo "--- live-backend parsing (mock of the Management API)"
 probe "a returned value is compared" 3 "select /*mock:3*/ 1 as v;"
+probe "a column not named v is read by position" 42 "select /*mockfirst:42*/ 1;"
+probe "an empty result row is read as empty" "" "select /*mock:*/ 1;"
 probe "a returned error becomes ERROR" ERROR "select /*mock:boom*/ 1 as v;"
 probe "a wrong expectation is reported" 4 "select /*mock:3*/ 1 as v;"
+probe_any "either of two accepted results passes" "select /*mock:A*/ 1;" B A
+probe_msg "a rejection reason is matched" "already_used" "select /*mock:Rejected: already_used*/ 1;"
+probe_msg "a wrong rejection reason fails" "insufficient" "select /*mock:Rejected: already_used*/ 1;"
 probe_ok "probe_ok accepts a value" "select /*mock:ok*/ 1 as v;"
 probe_ok "probe_ok rejects an error" "select /*mock:boom*/ 1 as v;"
 skip "a skipped probe is not a pass" "synthetic reason"
@@ -78,8 +88,8 @@ check() { # check <what> <expected> <actual>
   if [ "$2" = "$3" ]; then printf 'ok    %s = %s\n' "$1" "$3"
   else printf 'FAIL  %s (expected %s, got %s)\n' "$1" "$2" "$3"; selftest_fail=$((selftest_fail + 1)); fi
 }
-check "passes" 3 "$probe_pass"
-check "failures" 2 "$probe_fail"
+check "passes" 7 "$probe_pass"
+check "failures" 3 "$probe_fail"
 check "skips" 1 "$probe_skip"
 
 if [ "$selftest_fail" -eq 0 ]; then
