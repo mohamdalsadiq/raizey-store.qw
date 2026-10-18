@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
+import { readBoundedJson } from "../_shared/request-body.ts";
 import {
   buildCorsHeaders,
   DEFAULT_PREVIEW_ORIGIN_REGEX,
@@ -295,7 +295,7 @@ function parseImagePayload(base64Value: unknown, mimeValue: unknown): ParsedImag
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes).buffer);
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -728,14 +728,14 @@ function buildAdminClient() {
 }
 
 async function enforceRateLimit(admin: any, userId: string): Promise<boolean> {
-  const since = new Date(Date.now() - RATE_WINDOW_MINUTES * 60_000).toISOString();
-  const { count, error } = await admin
-    .from("receipt_scan_results")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", since);
+  const { data, error } = await admin.rpc('consume_chat_rate_limit', {
+    p_rate_key: 'receipt-scan:' + userId,
+    p_limit: MAX_SCANS_PER_WINDOW,
+    p_window_seconds: RATE_WINDOW_MINUTES * 60,
+  });
   if (error) throw error;
-  return (count || 0) < MAX_SCANS_PER_WINDOW;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row?.allowed === true;
 }
 
 /**
@@ -947,8 +947,10 @@ async function processScan(request: Request, admin: any, userId: string, body: a
           bank_key: m.bank_key ?? null,
         };
       }
-    } catch (_) { /* بدون بيانات وسيلة — الفحص يكمل بالمنطق القديم */ }
+    } catch (_) { /* A failed lookup must never authorize a receipt. */ }
   }
+  if (!expectedMethod) return smartReview('invalid_payment_method', 'اختر وسيلة دفع متاحة ثم أعد فحص الإيصال.');
+  options.expectedAccount = expectedMethod.account_number || '';
   // قبل أي استدعاء AI: هل فحصنا هذا الإيصال نفسه بنفس المدخلات للتوّ؟
   const reused = await findReusableScan(admin, userId, hash, options);
   if (reused) return reused;
@@ -1115,12 +1117,20 @@ Deno.serve(async (request: Request) => {
     const { data, error } = await admin.auth.getUser(token);
     if (error || !data?.user) return json(request, { ok: false, error: "auth_required" }, 401);
     const userId = data.user.id;
-    const rawBody = await request.text();
-    if (!rawBody || rawBody.length > MAX_REQUEST_CHARS) return json(request, { ok: false, error: "request_too_large" }, 413);
-    let body: any;
-    try { body = JSON.parse(rawBody); } catch (_) { return json(request, { ok: false, error: "invalid_json" }, 400); }
+    const userClient = createClient(env('SUPABASE_URL'), env('SUPABASE_ANON_KEY'), {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: context, error: contextError } = await userClient.rpc('get_session_security_context');
+    if (contextError || !context?.allowed) return json(request, { ok: false, error: context?.requires_mfa ? 'mfa_required' : 'access_denied' }, 403);
     if (!(await enforceRateLimit(admin, userId))) {
       return json(request, { ok: false, error: "rate_limited" }, 429, { "Retry-After": "600" });
+    }
+    let body: any;
+    try { body = await readBoundedJson(request, MAX_REQUEST_CHARS); }
+    catch (error) {
+      const tooLarge = error instanceof Error && error.message === 'payload_too_large';
+      return json(request, { ok: false, error: tooLarge ? 'request_too_large' : 'invalid_json' }, tooLarge ? 413 : 400);
     }
     const result = await processScan(request, admin, userId, body);
     return json(request, { ok: true, ...result });

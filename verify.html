@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script src="assets/js/pages/verify.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -90,80 +90,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/vendor/supabase-2.118.0.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/mfa-guard.js"></script>
 <script src="assets/js/auth-ui.js"></script>
-<script>
-const UI = window.MeemAuthUI;
-const email = sessionStorage.getItem('pending_email');
-if (!email) window.location.href = 'register.html';
-
-const subTextEl = document.getElementById('subText');
-subTextEl.textContent = 'أرسلنا كودًا من 6 أرقام إلى ';
-const emailStrong = document.createElement('strong');
-emailStrong.dir = 'ltr';
-emailStrong.textContent = email;
-subTextEl.appendChild(emailStrong);
-
-const errorBox = document.getElementById('formError');
-const successBox = document.getElementById('formSuccess');
-const submitBtn = document.getElementById('submitBtn');
-const resendBtn = document.getElementById('resendBtn');
-const form = document.getElementById('verifyForm');
-
-const otp = UI.bindOtpInputs(document.getElementById('otpBox'), () => form.requestSubmit());
-const timer = UI.createResendTimer(resendBtn, document.getElementById('resendTimer'), 60);
-otp.focus();
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  errorBox.textContent = '';
-  const code = otp.value();
-
-  if (code.length !== 6) {
-    errorBox.textContent = 'أدخل الكود كاملاً (6 أرقام)';
-    return;
-  }
-
-  UI.setLoading(submitBtn, true, 'جارِ التحقق...');
-
-  try {
-    const { error } = await supabaseClient.auth.verifyOtp({ email, token: code, type: 'signup' });
-
-    if (error) {
-      errorBox.textContent = error.status === 429
-        ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل'
-        : 'الكود غير صحيح أو منتهي الصلاحية';
-      otp.clear();
-      return;
-    }
-
-    sessionStorage.removeItem('pending_email');
-    successBox.textContent = 'تم تفعيل حسابك بنجاح، جارِ فتح المتجر...';
-    setTimeout(() => { window.location.href = 'index.html'; }, 700);
-  } catch (_) {
-    errorBox.textContent = 'تعذر التحقق الآن، حاول مرة أخرى';
-  } finally {
-    UI.setLoading(submitBtn, false);
-  }
-});
-
-resendBtn.addEventListener('click', async () => {
-  successBox.textContent = '';
-  errorBox.textContent = '';
-  timer.start(60);
-
-  try {
-    const { error } = await supabaseClient.auth.resend({ type: 'signup', email });
-    if (error) {
-      errorBox.textContent = 'تعذرت إعادة الإرسال، حاول بعد قليل';
-    } else {
-      successBox.textContent = 'إذا كان الحساب بانتظار التحقق، فسيصلك كود جديد';
-    }
-  } catch (_) {
-    errorBox.textContent = 'تعذرت إعادة الإرسال، حاول بعد قليل';
-  }
-});
-</script>
+<script src="assets/js/pages/verify-2.js"></script>
 </body>
 </html>

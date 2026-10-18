@@ -1,5 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import {
   buildCorsHeaders,
   DEFAULT_PREVIEW_ORIGIN_REGEX,
@@ -232,6 +231,10 @@ Deno.serve(async (request) => {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  if (userId) {
+    const { data: context, error: contextError } = await supabase.rpc('get_session_security_context');
+    if (contextError || !context?.allowed) return json(request, { error: context?.requires_mfa ? 'mfa_required' : 'access_denied' }, 403);
+  }
 
   const [{ data: products }, ordersResult, { data: settings }] = await Promise.all([
     supabase.from("products")

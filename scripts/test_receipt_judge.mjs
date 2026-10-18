@@ -1,3 +1,4 @@
+import { stripTypeScriptTypes } from 'node:module';
 /*
  * MEEM STORE — اختبار نواة الحكم الحتمية (receipt-judge-core)
  * =====================================================================
@@ -14,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const judgePath = fileURLToPath(new URL("../supabase/functions/process-receipt/receipt-judge-core.ts", import.meta.url));
 
 function loadJudgeCore() {
-  const raw = fs.readFileSync(judgePath, "utf8");
+  const raw = stripTypeScriptTypes(fs.readFileSync(judgePath, "utf8"));
   // الملف JavaScript صرف بلا أنواع: نزيل سطر التصدير فقط ونشغّله في VM.
   const source = raw.replace(/export\s*\{\s*ReceiptJudgeCore\s*\};?\s*$/m, "") + "\n;globalThis.__ReceiptJudgeCore = ReceiptJudgeCore;";
   const context = { globalThis: {}, console };
