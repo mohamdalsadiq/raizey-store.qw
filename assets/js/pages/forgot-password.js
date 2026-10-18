@@ -1,0 +1,1 @@
+/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}

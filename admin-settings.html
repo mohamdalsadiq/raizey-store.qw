@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script>/* MEEM theme bootstrap: applies the saved theme before first paint */try{var t=localStorage.getItem('meem-theme')||localStorage.getItem('raizey-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script src="assets/js/pages/admin-settings.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -120,83 +120,10 @@
   <a href="index.html" style="color: var(--mm-accent-text); font-weight: 700;">← رجوع للمتجر</a>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/vendor/supabase-2.118.0.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script>
-async function init() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
-
-  const { data: profile } = await supabaseClient
-    .from('profiles').select('role, is_banned').eq('id', session.user.id).single();
-
-  if (!profile || profile.role !== 'admin' || profile.is_banned === true) {
-    document.getElementById('accessDenied').style.display = 'block';
-    return;
-  }
-  const { data: canManageSettings, error: permissionError } = await supabaseClient.rpc('has_admin_permission', { permission_key: 'manage_settings' });
-  if (permissionError || canManageSettings !== true) {
-    document.getElementById('accessDenied').style.display = 'block';
-    return;
-  }
-
-  currentAdminId = session.user.id;
-  document.getElementById('adminPage').style.display = 'block';
-
-  const { data: settingsRows } = await supabaseClient
-    .from('settings')
-    .select('key, value')
-    .in('key', ['usd_to_sdg_rate', 'profit_margin_percent', 'whatsapp_number']);
-
-  const map = {};
-  (settingsRows || []).forEach(r => { map[r.key] = r.value; });
-
-  document.getElementById('rateInput').value = map.usd_to_sdg_rate || '';
-  document.getElementById('marginInput').value = map.profit_margin_percent || '0';
-  document.getElementById('whatsappInput').value = map.whatsapp_number || '';
-
-  document.getElementById('saveBtn').addEventListener('click', saveRate);
-}
-
-let currentAdminId = null;
-
-async function saveRate() {
-  const errorBox = document.getElementById('formError');
-  const successBox = document.getElementById('formSuccess');
-  errorBox.textContent = '';
-  successBox.textContent = '';
-
-  const rate = parseFloat(document.getElementById('rateInput').value);
-  const margin = parseFloat(document.getElementById('marginInput').value) || 0;
-
-  if (!rate || rate <= 0) {
-    errorBox.textContent = 'أدخل سعر صرف صحيح';
-    return;
-  }
-
-  await supabaseClient.from('settings').update({ value: String(rate), updated_at: new Date().toISOString() }).eq('key', 'usd_to_sdg_rate');
-  await supabaseClient.from('settings').update({ value: String(margin), updated_at: new Date().toISOString() }).eq('key', 'profit_margin_percent');
-
-  const whatsapp = (document.getElementById('whatsappInput').value || '').replace(/[^0-9]/g, '');
-  if (whatsapp && whatsapp.length < 8) {
-    errorBox.textContent = 'رقم واتساب غير صحيح — اكتبه بصيغة دولية بدون +';
-    return;
-  }
-  if (whatsapp) {
-    await supabaseClient.from('settings')
-      .update({ value: whatsapp, updated_at: new Date().toISOString() })
-      .eq('key', 'whatsapp_number');
-  }
-
-  await supabaseClient.from('audit_logs').insert({
-    admin_id: currentAdminId, action: 'تعديل الإعدادات العامة', details: { rate, margin }
-  });
-
-  successBox.textContent = 'تم حفظ الإعدادات بنجاح';
-}
-
-init();
-</script>
+<script src="assets/js/mfa-guard.js"></script>
+<script src="assets/js/pages/admin-settings-2.js"></script>
 <script src="assets/js/admin-nav.js"></script>
 </body>
 </html>

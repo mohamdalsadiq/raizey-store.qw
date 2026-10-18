@@ -220,7 +220,7 @@ const ReceiptJudgeCore = (() => {
   // ═══════════════════════════════════════════════════════════════════
   // 3) أدوات نصية (عربي/إنجليزي)
   // ═══════════════════════════════════════════════════════════════════
-  function latinizeDigits(str) {
+  function latinizeDigits(str: unknown) {
     return String(str == null ? '' : str)
       .replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660))
       .replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x06F0));
@@ -228,7 +228,7 @@ const ReceiptJudgeCore = (() => {
 
   // تطبيع عام: يوحّد الهمزات والياء والتاء المربوطة، يزيل التشكيل،
   // ويحوّل الفواصل العربية (٬ ٫) والرموز إلى ما يقابلها لاتينياً
-  function normalizeText(str) {
+  function normalizeText(str: unknown) {
     return latinizeDigits(str)
       .toLowerCase()
       .replace(/[\u064B-\u0652\u0640]/g, '')     // تشكيل + تطويل
@@ -245,25 +245,25 @@ const ReceiptJudgeCore = (() => {
   }
 
   // تطبيع رقم العملية — نفس منطق normalize_tx_ref في قاعدة البيانات
-  function normalizeRef(str) {
+  function normalizeRef(str: unknown) {
     if (!str) return '';
     return latinizeDigits(str).toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
 
-  function digitsOnly(str) {
+  function digitsOnly(str: unknown) {
     return latinizeDigits(String(str == null ? '' : str)).replace(/\D/g, '');
   }
 
   // تصحيح أخطاء OCR داخل السلاسل الرقمية: يُطبَّق فقط إذا كان الرمز
   // غالبيته أرقام، حتى لا نُفسد كلمات حقيقية
-  const DIGIT_CONFUSIONS = {
+  const DIGIT_CONFUSIONS: Record<string, string> = {
     o: '0', O: '0', d: '0', D: '0', q: '9', Q: '0', '°': '0', 'ه': '0',
     i: '1', I: '1', l: '1', L: '1', '!': '1', '|': '1', ']': '1', '[': '1',
     z: '2', Z: '2', s: '5', S: '5', b: '6', G: '6', g: '9',
     t: '7', T: '7', B: '8', '&': '8', a: '4', A: '4', e: '8', '€': '8'
   };
 
-  function fixOcrDigits(token) {
+  function fixOcrDigits(token: unknown) {
     const t = String(token || '');
     if (!t) return '';
     const digits = (t.match(/\d/g) || []).length;
@@ -274,7 +274,7 @@ const ReceiptJudgeCore = (() => {
     return out;
   }
 
-  function countKeywordHits(text, list) {
+  function countKeywordHits(text: string, list: string[]) {
     let hits = 0;
     const found = [];
     for (const kw of list) {
@@ -283,13 +283,13 @@ const ReceiptJudgeCore = (() => {
     return { hits, found };
   }
 
-  function hasAny(text, list) {
+  function hasAny(text: string, list: string[]) {
     for (const kw of list) if (kw && text.includes(kw)) return true;
     return false;
   }
 
   // مسافة ليفنشتاين (لسلاسل قصيرة) — لمقارنة أرقام العمليات
-  function levenshtein(a, b) {
+  function levenshtein(a: string, b: string) {
     a = String(a); b = String(b);
     if (a === b) return 0;
     if (!a.length) return b.length;
@@ -312,7 +312,7 @@ const ReceiptJudgeCore = (() => {
   }
 
   // كشف لغة الإشعار (للتقرير فقط)
-  function detectLanguage(text) {
+  function detectLanguage(text: string) {
     const ar = (text.match(/[\u0600-\u06FF]/g) || []).length;
     const en = (text.match(/[a-z]/gi) || []).length;
     if (ar >= 8 && en >= 8) return 'mixed';
@@ -324,7 +324,7 @@ const ReceiptJudgeCore = (() => {
   // ═══════════════════════════════════════════════════════════════════
   // 4) فحص بصمات التعديل داخل الملف
   // ═══════════════════════════════════════════════════════════════════
-  async function detectImageEditing(file) {
+  async function detectImageEditing(file: Blob) {
     try {
       const head = await file.slice(0, 128 * 1024).arrayBuffer();
       const tail = await file.slice(Math.max(0, file.size - 48 * 1024)).arrayBuffer();
@@ -343,7 +343,7 @@ const ReceiptJudgeCore = (() => {
   // 5) معالجة الصورة — ثلاث صيغ مختلفة تُستخدم في مراحل القراءة
   // ═══════════════════════════════════════════════════════════════════
 
-  function detectProvider(text) {
+  function detectProvider(text: string) {
     let best = null;
     for (const p of PROVIDERS) {
       const brand = countKeywordHits(text, p.brand.map(normalizeText));
@@ -359,7 +359,7 @@ const ReceiptJudgeCore = (() => {
   // ═══════════════════════════════════════════════════════════════════
   // 8) تحليل الأسطر واستخراج الحقول
   // ═══════════════════════════════════════════════════════════════════
-  function toLines(rawText) {
+  function toLines(rawText: string) {
     return String(rawText || '')
       .split(/\r?\n/)
       .map(l => normalizeText(l))
@@ -367,7 +367,7 @@ const ReceiptJudgeCore = (() => {
   }
 
   // تفسير رقم مالي بأي صيغة: 52,332 | 52332.00 | 52.332,00 | 52 332
-  function parseAmountToken(token) {
+  function parseAmountToken(token: unknown) {
     let s = latinizeDigits(String(token || '')).replace(/[^\d.,\s]/g, '').trim();
     if (!s) return null;
     s = s.replace(/\s+/g, '');            // 52 332 → 52332
@@ -402,7 +402,7 @@ const ReceiptJudgeCore = (() => {
 
   const NUM_TOKEN_RE = /\d[\d.,\s]{0,18}\d|\d/g;
 
-  function labelHitAt(line, labels) {
+  function labelHitAt(line: string, labels: string[]) {
     for (const l of labels) {
       const idx = line.indexOf(l);
       if (idx !== -1) return { label: l, index: idx };
@@ -435,13 +435,13 @@ const ReceiptJudgeCore = (() => {
     'mobile number', 'phone number', 'wallet'
   ];
 
-  function extractAmounts(lines) {
+  function extractAmounts(lines: string[]) {
     const amountLabels = AMOUNT_LABELS.map(normalizeText);
     const excludeLabels = NON_AMOUNT_LABELS.map(normalizeText);
     const identifierLabels = IDENTIFIER_LINE_LABELS.map(normalizeText);
-    const out = [];
+    const out: Array<{value: number; weight: number; excluded?: boolean; line?: number; source?: string; formatted?: boolean}> = [];
 
-    const push = (value, weight, opts) => {
+    const push = (value: number | null, weight: number, opts: Record<string, unknown>) => {
       if (value === null || !isFinite(value) || value <= 0) return;
       if (value > 1e12) return;
       out.push(Object.assign({ value, weight }, opts || {}));
@@ -520,7 +520,7 @@ const ReceiptJudgeCore = (() => {
    *   - لذلك نفصل البادئة الأبجدية ونحفظها كما هي، ونطبّق التصحيح على بقية
    *     الرمز فقط (حيث يكون الخلط بين 0/O و1/I شائعاً).
    */
-  function refCandidateValue(token) {
+  function refCandidateValue(token: unknown) {
     const t = String(token || '');
     const match = t.match(/^([a-z]*)(.*)$/i);
     const prefix = (match && match[1]) || '';
@@ -528,7 +528,7 @@ const ReceiptJudgeCore = (() => {
     return (prefix ? prefix.toUpperCase() : '') + fixOcrDigits(rest);
   }
 
-  function extractTxRef(lines, joinedText, provider) {
+  function extractTxRef(lines: string[], joinedText: string, provider: any) {
     const refLabels = REF_LABELS.map(normalizeText);
     const candidates = [];
 
@@ -587,7 +587,7 @@ const ReceiptJudgeCore = (() => {
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'ابريل', 'مايو', 'يونيو', 'يوليو',
                      'اغسطس', 'سبتمبر', 'اكتوبر', 'نوفمبر', 'ديسمبر'];
 
-  function extractDateTime(text) {
+  function extractDateTime(text: string) {
     // ترتيب مهم: صيغة السنة أولاً (2026-03-14) قبل صيغة اليوم أولاً (14-03-2026)،
     // وإلا اقتُطع "26-03-14" من "2026-03-14" وفُهم أنه عام 2014 → إشعار "قديم" زائف.
     const patterns = [
@@ -605,7 +605,7 @@ const ReceiptJudgeCore = (() => {
   }
 
   // محاولة تحويل التاريخ المقروء إلى Date (لكشف الإشعارات القديمة)
-  function parseReceiptDate(str) {
+  function parseReceiptDate(str: unknown) {
     if (!str) return null;
     const s = latinizeDigits(str).toLowerCase();
     let m = s.match(/(\d{1,2})[-/\s]([a-z]{3})[a-z]*[-/\s](\d{2,4})/);
@@ -642,7 +642,7 @@ const ReceiptJudgeCore = (() => {
     return null;
   }
 
-  function extractAccounts(text) {
+  function extractAccounts(text: string) {
     // ملاحظة: النص المدخل هنا مُطبَّع مسبقاً (normalizeText): "إلى/الى" ← "الي"،
     // و"ة" ← "ه". الأنماط أدناه مكتوبة بالصيغة المُطبَّعة عمداً.
     const from = text.match(/(?:من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
@@ -659,8 +659,8 @@ const ReceiptJudgeCore = (() => {
   // هل اسم صاحب الحساب المُسجّل في الإدارة ظاهر في نص الإيصال؟
   // متساهلة عمداً: تطبيع عربي + نصف الكلمات الدالة على الأقل.
   // إشارة داعمة فقط — عدم التطابق يمنع القبول التلقائي ولا يرفض.
-  function beneficiaryNameMatches(text, name) {
-    const clean = (s) => normalizeText(String(s || ''))
+  function beneficiaryNameMatches(text: string, name: string) {
+    const clean = (s: unknown) => normalizeText(String(s || ''))
       .replace(/[^a-z\u0600-\u06FF\s]/g, ' ')
       .replace(/\s+/g, ' ').trim();
     const words = clean(name).split(' ').filter(w => w.length >= 3);
@@ -674,7 +674,7 @@ const ReceiptJudgeCore = (() => {
   // ═══════════════════════════════════════════════════════════════════
   // 9) المطابقة
   // ═══════════════════════════════════════════════════════════════════
-  function amountVariants(target) {
+  function amountVariants(target: number) {
     // صيغ رقمية محتملة للمبلغ المطلوب داخل نص مقروء آلياً
     const t = Math.round(target);
     const set = new Set([String(t), String(t) + '00', String(t) + '0']);
@@ -682,7 +682,7 @@ const ReceiptJudgeCore = (() => {
     return Array.from(set);
   }
 
-  function matchAmount(candidates, expected, flatDigits, digitRuns) {
+  function matchAmount(candidates: any[], expected: number, flatDigits: string, digitRuns: string[]) {
     if (!expected || expected <= 0) {
       return { matched: false, value: null, checked: false, best: null, labelledMismatch: false };
     }
@@ -764,7 +764,7 @@ const ReceiptJudgeCore = (() => {
     };
   }
 
-  function matchRef(manualRef, refInfo, joinedText) {
+  function matchRef(manualRef: string, refInfo: any, joinedText: string) {
     const manual = normalizeRef(manualRef);
     if (!manual) return { matched: false, conflict: false, checked: false };
 
@@ -812,8 +812,8 @@ const ReceiptJudgeCore = (() => {
   // ═══════════════════════════════════════════════════════════════════
   // 10) بناء السياق من النصوص المقروءة + محرك القرار
   // ═════════════════════════════════════════════════════════════════════
-  function buildContext(texts, options) {
-    const joined = texts.map(t => normalizeText(t)).join(' \n ');
+  function buildContext(texts: string[], options: Record<string, any>) {
+    const joined = texts.map((t: string) => normalizeText(t)).join(' \n ');
     const lines = toLines(texts.join('\n'));
     const flatDigits = digitsOnly(joined);
     const provider = detectProvider(joined);
@@ -839,7 +839,7 @@ const ReceiptJudgeCore = (() => {
    * محرك القرار: يطبّق التصنيف ثم الاستخراج ثم المطابقة على سياق جاهز.
    * الرفض هنا لا يحدث إلا بيقين عالٍ؛ وأي شك يذهب إلى المراجعة اليدوية.
    */
-  function judge(ctx, options, result) {
+  function judge(ctx: Record<string, any>, options: Record<string, any>, result: Record<string, any>) {
     const expectedAmount = Number(options.expectedAmount) || 0;
     const manualRef = options.manualRef || '';
     const expectedAccount = digitsOnly(options.expectedAccount || '');
@@ -889,7 +889,7 @@ const ReceiptJudgeCore = (() => {
     const accounts = extractAccounts(joined);
     result.extracted.txRef = refInfo.labelledValue || refInfo.value;
     result.extracted.txRefCandidates = refInfo.all;
-    result.extracted.amountCandidates = amountList.slice(0, 12).map(a => a.value);
+    result.extracted.amountCandidates = amountList.slice(0, 12).map((a: {value: number}) => a.value);
     result.extracted.dateTime = extractDateTime(joined);
     result.extracted.fromAccount = accounts.from;
     result.extracted.toAccount = accounts.to;

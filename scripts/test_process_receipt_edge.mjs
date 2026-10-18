@@ -53,7 +53,7 @@ function buildModule() {
   return indexSrc
     .replace(/^import\s+"jsr:[^"]+";\s*$/m, "")
     .replace(
-      /^import\s+\{\s*createClient\s*\}\s+from\s+"npm:@supabase\/supabase-js@2";\s*$/m,
+      /^import\s+\{\s*createClient\s*\}\s+from\s+"npm:@supabase\/supabase-js@2(?:\.[0-9]+\.[0-9]+)?";\s*$/m,
       "const createClient = (...args) => globalThis.__meemCreateClient(...args);",
     )
     .replace(
@@ -64,8 +64,8 @@ function buildModule() {
     // Edge function, so its own `../_shared/cors.ts` specifier would resolve to
     // scripts/_shared/cors.ts and the import would fail before any test runs.
     .replace(
-      /from\s+"\.\.\/_shared\/cors\.ts"/,
-      'from "../../supabase/functions/_shared/cors.ts"',
+      /from\s+"\.\.\/_shared\/(cors|request-body)\.ts"/g,
+      'from "../../supabase/functions/_shared/$1.ts"',
     );
 }
 
@@ -131,6 +131,7 @@ function createAdminMock(state) {
   return {
     auth: { getUser: async (token) => (token === GOOD_TOKEN ? { data: { user: { id: "user-1" } }, error: null } : { data: { user: null }, error: { message: "invalid_jwt" } }) },
     from,
+    rpc: async (name) => ({ data: name === 'get_session_security_context' ? { allowed: true } : [{ allowed: state.scanCount < 12 }], error: null }),
   };
 }
 
@@ -197,7 +198,7 @@ const MODEL_LIST_BODY = {
 };
 
 /** ينفّذ فحصاً واحداً ببديل Supabase/Gemini مخصّص ويعيد النتيجة والحالة. */
-async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = null, reusableScan = null, fetchHandler, expectStatus }) {
+async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = {id: "a6180000-0000-4000-8000-000000000020", name: null, account_number: null}, reusableScan = null, fetchHandler, expectStatus }) {
   const state = { inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
@@ -225,7 +226,7 @@ const baseBody = {
   expectedAmount: 125000,
   manualRef: "FT250719123456",
   expectedAccount: "2050123456789012",
-  expectedMethodId: null,
+  expectedMethodId: "a6180000-0000-4000-8000-000000000020",
 };
 
 await import(pathToFileURL(tmpFile).href);
@@ -439,7 +440,7 @@ console.log("\n── منع إعادة الفحص (نفس البصمة والم
     receipt_hash: "a".repeat(64),
     expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
     risk_flags: [],
-    ocr_data: { expected_method_id: null, result_snapshot: snapshot },
+    ocr_data: { expected_method_id: "a6180000-0000-4000-8000-000000000020", result_snapshot: snapshot },
     ...overrides,
   });
 

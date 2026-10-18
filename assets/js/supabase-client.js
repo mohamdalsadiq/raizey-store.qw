@@ -48,6 +48,11 @@ function devWarn(...args) {
 function getFriendlyError(errMsg) {
   if (!errMsg) return 'حصل خطأ غير متوقع. يرجى المحاولة مجدداً.';
   const msg = String(errMsg).toLowerCase();
+  if (msg.includes('rate_limited')) return 'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.';
+  if (msg.includes('mfa_required')) return 'أكمل التحقق بخطوتين للمتابعة.';
+  if (msg.includes('idempotency_conflict')) return 'تغيّرت بيانات الطلب. حدّث الصفحة قبل المحاولة مجدداً.';
+  if (msg.includes('receipt_scan_method_mismatch') || msg.includes('receipt_scan_amount_mismatch'))
+    return 'تغيّرت وسيلة الدفع أو قيمة الطلب. أعد فحص الإيصال قبل الإرسال.';
   if (msg.includes('insufficient_balance'))
     return 'رصيدك في المحفظة غير كافٍ لإتمام الطلب.';
   if (msg.includes('wallet_missing') || msg.includes('wallet_not_found'))
@@ -107,6 +112,40 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
     }
   });
   window.supabaseClient = supabaseClient;
+  const guardedActions = new Set([
+    'create_wallet_orders_bulk', 'create_bank_orders_bulk', 'redeem_payment_code_order',
+    'create_wallet_topup_from_receipt', 'redeem_gift_card', 'validate_coupon'
+  ]);
+  const rawRpc = supabaseClient.rpc.bind(supabaseClient);
+  const pendingActionIds = new Map();
+  supabaseClient.rpc = function (name, args, options) {
+    if (!guardedActions.has(name)) return rawRpc(name, args, options);
+    return (async () => {
+      const bytes = new TextEncoder().encode(JSON.stringify([name, args || {}]));
+      const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const key = 'meem_action_' + (sessionData?.session?.user?.id || 'guest') + '_' + hash;
+      let requestId = pendingActionIds.get(key);
+      try { requestId = requestId || sessionStorage.getItem(key); } catch (_) {}
+      if (!requestId) requestId = crypto.randomUUID();
+      pendingActionIds.set(key, requestId);
+      try { sessionStorage.setItem(key, requestId); } catch (_) {}
+      const result = await rawRpc('execute_store_action', {
+        p_action: name, p_payload: args || {}, p_request_id: requestId
+      }, options);
+      // A transport error may hide a committed payment. Retain its ID for retry.
+      if (result.error || !result.data || typeof result.data.ok !== 'boolean') return result;
+      const envelope = result.data;
+      pendingActionIds.delete(key);
+      try { sessionStorage.removeItem(key); } catch (_) {}
+      if (!envelope.ok) return { ...result, data: null, error: {
+        message: envelope.error || 'action_failed', code: 'STORE_ACTION_FAILED',
+        retry_after: envelope.retry_after || null
+      }};
+      return { ...result, data: envelope.data, error: null };
+    })();
+  };
 
   // إصلاح تدفق استعادة كلمة السر: رابط الاستعادة في الإيميل يهبط على
   // الصفحة الرئيسية (Site URL) — نوجّهه لصفحة تعيين كلمة السر الجديدة.
