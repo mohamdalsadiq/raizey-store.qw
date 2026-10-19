@@ -827,3 +827,23 @@ img.flag {
    assets/img/meem-lockup-*.png — the client's stacked artwork, untouched. */
 .auth-logo .brand-lockup { display: block; width: 200px; height: auto; margin: 0 auto; }
 @media (max-width: 400px) { .auth-logo .brand-lockup { width: 168px; } }
+
+.referral-details { margin: 18px 0; }
+.referral-details summary { cursor: pointer; font-size: 14px; min-height: 36px; color: var(--text-secondary, #c9d4f0); }
+.referral-details summary span { font-size: 12px; }
+.referral-details .field { margin-top: 12px; }
+.signup-consent { font-size: 12px; line-height: 1.9; margin: 16px 0; color: var(--text-muted); }
+.signup-consent a { color: var(--mm-link); text-decoration: underline; }
+
+.auth-card--signup { padding: 22px 22px 18px; }
+.auth-card--signup .auth-logo { margin-bottom: 10px; }
+.auth-card--signup .auth-logo .brand-lockup { width: 130px; }
+.auth-card--signup .auth-sub { margin-bottom: 16px; }
+.auth-card--signup .field { margin-bottom: 12px; }
+.auth-card--signup .field-hint:empty { display: none; }
+.auth-card--signup .input-wrap input { min-height: 48px; }
+.auth-card--signup .pw-rules { display: none; }
+.auth-card--signup .pw-label:empty { display: none; }
+.auth-card--signup .referral-details { margin: 12px 0 4px; }
+.auth-card--signup .signup-consent { margin: 8px 0 14px; }
+.auth-card--signup .auth-divider { margin-block: 16px; }

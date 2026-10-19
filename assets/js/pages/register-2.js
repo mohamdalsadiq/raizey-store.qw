@@ -5,10 +5,7 @@ const submitBtn = document.getElementById('submitBtn');
 
 const fullNameInput = document.getElementById('fullName');
 const emailInput = document.getElementById('email');
-const phoneInput = document.getElementById('whatsapp');
 const passwordInput = document.getElementById('password');
-const confirmInput = document.getElementById('confirmPassword');
-const policyInput = document.getElementById('acceptPolicy');
 const referralCodeInput = document.getElementById('referralCode');
 let referralValidationTimer = null;
 
@@ -20,7 +17,6 @@ UI.bindPasswordStrength(
   document.getElementById('pwStrengthLabel'),
   document.getElementById('pwRules')
 );
-UI.bindConfirmPassword(passwordInput, confirmInput);
 
 fullNameInput.addEventListener('input', () => {
   const v = fullNameInput.value.trim();
@@ -29,31 +25,6 @@ fullNameInput.addEventListener('input', () => {
     ? UI.setFieldState(fullNameInput, 'valid', '')
     : UI.setFieldState(fullNameInput, 'invalid', 'الاسم قصير جداً');
 });
-
-const picker = window.MeemCountries.createCountryPicker({
-  root: document.getElementById('countrySelect'),
-  button: document.getElementById('countryBtn'),
-  popup: document.getElementById('countryPop'),
-  searchInput: document.getElementById('countrySearch'),
-  listBox: document.getElementById('countryList'),
-  input: phoneInput,
-  onChange: validatePhone
-});
-
-function validatePhone() {
-  const raw = phoneInput.value.replace(/\D/g, '');
-  phoneInput.value = raw;
-  if (!raw) { UI.setFieldState(phoneInput, null, ''); return false; }
-  if (picker.isValid(raw)) {
-    UI.setFieldState(phoneInput, 'valid', 'رقم صحيح: ' + picker.fullNumber(raw));
-    return true;
-  }
-  const lens = picker.country.len.join(' أو ');
-  UI.setFieldState(phoneInput, 'invalid', 'رقم ' + picker.country.ar + ' يجب أن يكون ' + lens + ' أرقام بدون صفر في البداية');
-  return false;
-}
-phoneInput.addEventListener('input', validatePhone);
-phoneInput.addEventListener('blur', validatePhone);
 
 async function validateReferralCode(showMessage = true) {
   const code = referralCodeInput.value.trim().toUpperCase();
@@ -89,18 +60,19 @@ referralCodeInput.addEventListener('blur', () => validateReferralCode(true));
 
 const referralFromUrl = new URLSearchParams(window.location.search).get('ref');
 if (referralFromUrl) {
+  document.querySelector('.referral-details').open = true;
   referralCodeInput.value = referralFromUrl.trim().toUpperCase().slice(0, 32);
   validateReferralCode(false);
 }
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (submitBtn.disabled) return;
   errorBox.textContent = '';
 
   const fullName = fullNameInput.value.trim();
   const email = emailInput.value.trim();
   const password = passwordInput.value;
-  const confirmPassword = confirmInput.value;
   const referralCode = referralCodeInput.value.trim().toUpperCase();
 
   if (fullName.length < 3) {
@@ -114,43 +86,25 @@ form.addEventListener('submit', async (e) => {
     emailInput.focus();
     return;
   }
-  if (!validatePhone()) {
-    errorBox.textContent = 'أدخل رقم واتساب صحيح حسب الدولة المختارة';
-    phoneInput.focus();
-    return;
-  }
   if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
     errorBox.textContent = 'كلمة السر لازم تكون 8 أحرف على الأقل وتحتوي على حرف ورقم';
     passwordInput.focus();
     return;
   }
-  if (password !== confirmPassword) {
-    errorBox.textContent = 'كلمة السر غير متطابقة';
-    confirmInput.focus();
-    return;
-  }
-  if (!policyInput.checked) {
-    errorBox.textContent = 'يجب الموافقة على سياسة الخصوصية وشروط الاستخدام للمتابعة';
-    policyInput.focus();
-    return;
-  }
-  if (referralCode && !(await validateReferralCode(true))) {
-    errorBox.textContent = 'تحقق من كود الإحالة قبل إنشاء الحساب';
-    referralCodeInput.focus();
-    return;
-  }
-
   UI.setLoading(submitBtn, true, 'جارِ الإنشاء...');
-
   try {
+    if (referralCode && !(await validateReferralCode(true))) {
+      errorBox.textContent = 'تحقق من كود الإحالة قبل إنشاء الحساب';
+      referralCodeInput.focus();
+      return;
+    }
+
     const { error } = await supabaseClient.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName.slice(0, 120),
-          whatsapp_number: picker.fullNumber(phoneInput.value),
-          whatsapp_country: picker.country.iso.toUpperCase(),
           referral_code_used: referralCode || null
         }
       }

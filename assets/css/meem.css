@@ -1117,8 +1117,7 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 
 
 /* ── 25. Storefront banner carousel (data: public.get_banners_public) ──────
-   Desktop box 1920x720 (8:3), mobile box 1086x1448 (3:4 - the ratio of the
-   supplied mobile artwork, so nothing is ever cropped). The container owns the
+   Desktop box 1920x640 (3:1), mobile box 1080x608 (16:9). Independent mobile art is cropped within its own frame. The container owns the
    aspect ratio: there is no fixed height and no max-height that could clip. */
 .mm-hero { padding: 14px 12px 0; }
 @media (min-width: 768px) { .mm-hero { padding: 18px 20px 0; } }
@@ -1137,10 +1136,10 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 @media (min-width: 768px) { .mm-hero-swiper { border-radius: 20px; } }
 
 /* Every slide shares one ratio (no height jump while autoplaying).
-   Mobile ratio comes from public.settings.banner_mobile_aspect (default 3:4);
-   desktop is fixed at 8:3. */
-.mm-slide { position: relative; aspect-ratio: var(--mm-hero-ar-mobile, 3 / 4); }
-@media (min-width: 768px) { .mm-slide { aspect-ratio: 8 / 3; } }
+   Mobile ratio comes from public.settings.banner_mobile_ratio (default 16:9);
+   desktop is fixed at 3:1. */
+.mm-slide { position: relative; aspect-ratio: var(--mm-hero-ar-mobile, 16 / 9); }
+@media (min-width: 768px) { .mm-slide { aspect-ratio: 3 / 1; } }
 
 /* Branded backdrop — no rows yet, or an artwork failed to load. Purely CSS:
    a blue gradient plus the mark, so there is never a broken-image icon. */
@@ -1237,7 +1236,7 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
   color: #fff; display: none;
 }
 .mm-hero-swiper:hover .mm-hero-arrow,
-.mm-hero-arrow:focus-visible { display: block; }
+.mm-hero-arrow:focus-visible, .mm-hero-swiper:focus-within .mm-hero-arrow { display: block; }
 @media (hover: none) { .mm-hero-swiper:hover .mm-hero-arrow { display: none; } }
 .mm-hero-arrow::before {
   content: ''; display: block; width: 10px; height: 10px; margin: 0 auto;
@@ -1285,8 +1284,8 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 
 /* mobile: text may be pinned to the top or the bottom of the frame */
 @media (max-width: 767px) {
-  .mm-slide-body { padding: 16px; max-width: 100%; justify-content: flex-start; padding-top: 22px; }
-  .mm-slide[data-ovm="bottom"] .mm-slide-body { justify-content: flex-end; padding-top: 16px; padding-bottom: 26px; }
+  .mm-slide-body { padding: 12px 14px 25px; gap: 5px; max-width: 100%; justify-content: center; }
+  .mm-slide[data-ovm="bottom"] .mm-slide-body { justify-content: flex-end; padding-top: 16px; padding-bottom: 25px; }
   .mm-slide[data-ovm="top"] .mm-slide-scrim {
     background: linear-gradient(180deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 58%);
   }
@@ -1294,7 +1293,7 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
     background: linear-gradient(0deg, rgba(4,18,63,.88) 0%, rgba(4,18,63,.55) 34%, rgba(4,18,63,0) 58%);
   }
   /* controls are for desktop; mobile uses swipe + the dots stay out of the art */
-  .mm-hero-dots { display: none; }
+  .mm-hero-dots { display: flex; bottom: 10px; }
   .mm-slide-title { max-width: 92%; }
   .mm-slide-sub { max-width: 92%; }
   .mm-slide-body { align-items: center; text-align: center; }
@@ -1317,3 +1316,14 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 
 .products-anchor { scroll-margin-top: 72px; }
 @media (min-width: 768px) { .products-anchor { scroll-margin-top: 96px; } }
+
+.mm-hero-swiper [hidden] { display: none !important; }
+.mm-hero-swiper:focus-visible, .mm-slide-cta:focus-visible { outline: 3px solid var(--mm-gold); outline-offset: -3px; }
+@media (max-width: 767px) {
+ .mm-slide-title { font-size: clamp(16px, 4.5vw, 25px); }
+ .mm-slide-sub { font-size: clamp(11px, 2.9vw, 14px); line-height: 1.55; }
+ .mm-slide-scrim { background: linear-gradient(270deg, #04123ff0, #04123f99 65%, #04123f40) !important; }
+ .mm-slide-cta { min-height: 40px; padding: 0 14px; font-size: 12px; }
+}
+
+.mm-slide-body .mm-stretched::after { content: none; }

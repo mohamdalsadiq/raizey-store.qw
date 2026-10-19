@@ -2,7 +2,7 @@
    MEEM STORE — storefront banner carousel
    Data source, in order:
      1. public.get_banners_public()  (RLS-safe, validated server side)
-     2. assets/banners/default-banners.json  (repo fallback, short cache)
+     2. A neutral brand slide on an unavailable or empty response
    Slides are built with DOM APIs only — never innerHTML with DB data.
    ========================================================= */
 (function () {
@@ -10,17 +10,16 @@
 
   var MOBILE_MAX = 767;
   var REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  var FALLBACK_URL = 'assets/banners/default-banners.json';
   var SETTINGS_URL = 'assets/banners/default-settings.json';
 
   // Mobile slide ratio is a store setting (public.settings.banner_mobile_ratio).
-  // Desktop stays 8:3 always. Every slide shares one ratio so the height never
+  // Desktop stays 3:1. Every slide shares one ratio so the height never
   // jumps between slides during autoplay.
-  var MOBILE_RATIOS = { '3:4': '3 / 4', '4:5': '4 / 5', '1:1': '1 / 1', '4:3': '4 / 3' };
-  var DEFAULT_MOBILE_RATIO = '3 / 4';
+  var MOBILE_RATIOS = window.MeemBannerUtils.ratios;
+  var DEFAULT_MOBILE_RATIO = '16 / 9';
 
   // Store settings with their safe defaults (used when the DB is unreachable).
-  var DEFAULTS = { mobile: '3:4', autoplay: true, interval: 5, effect: 'slide' };
+  var DEFAULTS = { mobile: '16:9', autoplay: true, interval: 5, effect: 'slide' };
 
   function applyAspect(value) {
     var root = document.getElementById('mmHeroSwiper');
@@ -112,11 +111,12 @@
   }
 
   // only same-origin relative paths, https URLs, or Supabase storage URLs
-  function safeImageUrl(u) {
-    if (typeof u !== 'string') return '';
+  function safeImageUrl(u, preview) {
+    if (typeof u !== 'string' || u.includes('..')) return '';
     var v = u.trim();
-    if (/^\/[^/]/.test(v)) return v;
-    if (/^https:\/\//i.test(v)) return v;
+    if (preview && v.startsWith('blob:' + location.origin + '/')) return v;
+    if (/^\/assets\/banners\/[A-Za-z0-9_@.-]+\.(webp|png|jpg|jpeg)$/.test(v)) return v;
+    if (/^https:\/\/rglbfizqolrenwfsndyv\.supabase\.co\/storage\/v1\/object\/public\/banners\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_@.-]+\.(webp|png|jpg|jpeg)$/.test(v)) return v;
     return '';
   }
 
@@ -191,33 +191,25 @@
     }
   }
 
-  function appendPicture(box, b, eager) {
-    var d = safeImageUrl(b.image_desktop_url);
-    var m = safeImageUrl(b.image_mobile_url);
+  function appendPicture(box, b, eager, options) {
+    options = options || {};
+    var d = safeImageUrl(b.image_desktop_url, options.preview);
+    var m = safeImageUrl(b.image_mobile_url, options.preview);
     if (!d) return false;
 
-    var d2 = d.replace(/\.webp$/i, '@2x.webp');
-    var m2 = m ? m.replace(/\.webp$/i, '@2x.webp') : '';
     var pic = el('picture', 'mm-slide-media');
-
-    if (m) {
-      var s1 = document.createElement('source');
-      s1.setAttribute('media', '(max-width: ' + MOBILE_MAX + 'px)');
-      s1.setAttribute('type', 'image/webp');
-      s1.setAttribute('srcset', m + ' 1x' + (m2 !== m ? ', ' + m2 + ' 2x' : ''));
-      pic.appendChild(s1);
+    // Only reference files that exist. Uploaded WebP does not imply an @2x asset.
+    if (m && !options.preview) {
+      var mobile = document.createElement('source');
+      mobile.media = '(max-width: ' + MOBILE_MAX + 'px)';
+      mobile.srcset = m;
+      pic.appendChild(mobile);
     }
-    var s2 = document.createElement('source');
-    s2.setAttribute('media', '(min-width: ' + (MOBILE_MAX + 1) + 'px)');
-    s2.setAttribute('type', 'image/webp');
-    s2.setAttribute('srcset', d + ' 1x' + (d2 !== d ? ', ' + d2 + ' 2x' : ''));
-    pic.appendChild(s2);
-
     var img = el('img');
-    img.setAttribute('src', m && window.matchMedia && window.matchMedia('(max-width: ' + MOBILE_MAX + 'px)').matches ? m : d);
+    img.setAttribute('src', options.preview && options.view === 'mobile' ? (m || d) : d);
     img.setAttribute('alt', typeof b.alt_text === 'string' ? b.alt_text : '');
     img.setAttribute('width', '1920');
-    img.setAttribute('height', '720');
+    img.setAttribute('height', '640');
     img.setAttribute('decoding', 'async');
     img.setAttribute('loading', eager ? 'eager' : 'lazy');
     if (eager) img.setAttribute('fetchpriority', 'high');
@@ -232,14 +224,14 @@
     return true;
   }
 
-  function buildSlide(b, index) {
+  function buildSlide(b, index, options) {
     var slide = el('div', 'swiper-slide mm-slide');
     slide.setAttribute('data-style', b.banner_style === 'image_text' ? 'image_text' : 'image_only');
     slide.setAttribute('data-ovd', b.overlay_position_desktop === 'left' ? 'left' : 'right');
     slide.setAttribute('data-ovm', b.overlay_position_mobile === 'bottom' ? 'bottom' : 'top');
     slide.setAttribute('role', 'group');
     slide.setAttribute('aria-roledescription', 'slide');
-    if (!appendPicture(slide, b, index === 0)) return null;
+    if (!appendPicture(slide, b, index === 0, options)) return null;
 
     var hasText = b.banner_style === 'image_text' &&
       typeof b.title === 'string' && b.title.trim() !== '';
@@ -298,7 +290,7 @@
       rtl: true,
       speed: REDUCED ? 0 : 600,
       watchOverflow: true,
-      keyboard: { enabled: true, onlyInViewport: true },
+      keyboard: { enabled: false },
       a11y: { enabled: true, prevSlideMessage: 'الشريحة السابقة', nextSlideMessage: 'الشريحة التالية', paginationBulletMessage: 'اذهب للشريحة {{index}}' }
     };
     if (settings && settings.effect === 'fade' && slides > 1 && !REDUCED) {
@@ -306,11 +298,12 @@
       cfg.fadeEffect = { crossFade: true };
     }
     var autoplayOn = !REDUCED && settings && settings.autoplay && slides > 1;
-    if (autoplayOn) {
+    if (slides > 1) {
       cfg.autoplay = {
+        enabled: !!autoplayOn,
         delay: (settings.interval || DEFAULTS.interval) * 1000,
         disableOnInteraction: false,
-        pauseOnMouseEnter: true
+        pauseOnMouseEnter: false
       };
     }
     if (slides > 1 && dots) {
@@ -323,37 +316,50 @@
     var swiper = new window.Swiper(root, cfg);
     if (root.swiper === undefined) { try { root.swiper = swiper; } catch (e) {} }
 
-    if (autoplayOn && swiper.autoplay && window.matchMedia('(hover: none)').matches) {
-      root.addEventListener('touchstart', function () { if (swiper.autoplay) swiper.autoplay.stop(); }, { passive: true });
-      root.addEventListener('touchend', function () { if (swiper.autoplay) swiper.autoplay.start(); }, { passive: true });
-    }
-
-    wirePlayPause(swiper, root, autoplayOn);
+    wireCarouselInteraction(swiper, root, autoplayOn, slides);
     root.setAttribute('data-ready', '1');
     track('weem.banners.ready', { slides: slides, effect: cfg.effect || 'slide', autoplay: !!autoplayOn });
     return swiper;
   }
 
-  function wirePlayPause(swiper, root, autoplayOn) {
-    var btn = document.getElementById('mmHeroPlayPause');
-    if (!btn) return;
-    if (!swiper.autoplay || !autoplayOn) { btn.hidden = true; return; }
-    btn.hidden = false;
-    var paused = REDUCED;
-    function paint() {
-      btn.setAttribute('aria-pressed', paused ? 'false' : 'true');
-      btn.setAttribute('aria-label', paused ? 'تشغيل الحركة التلقائية' : 'إيقاف الحركة التلقائية');
-      btn.dataset.state = paused ? 'paused' : 'playing';
+  function wireCarouselInteraction(swiper, root, autoplayOn, slides) {
+    if (!swiper.autoplay || slides < 2) return;
+    root.tabIndex = 0;
+    var playing = !!autoplayOn, hovering = false, focused = false, touching = false;
+    var pointerStart = null, moved = false;
+    function sync() {
+      if (playing && !hovering && !focused && !touching && !document.hidden) swiper.autoplay.start();
+      else swiper.autoplay.stop();
+      root.dataset.motion = playing ? 'playing' : 'paused';
     }
-    paint();
-    btn.addEventListener('click', function () {
-      paused = !paused;
-      if (paused) { swiper.autoplay.stop(); } else { swiper.autoplay.start(); }
-      paint();
-      track('weem.banners.toggle', { paused: paused });
+    function toggle() { playing = !playing; if (playing) { focused = false; hovering = false; } sync(); }
+    root.onpointerenter = function (e) { if (e.pointerType === 'mouse') { hovering = true; sync(); } };
+    root.onpointerleave = function () { hovering = false; sync(); };
+    root.onpointerdown = function (e) { pointerStart = { x: e.clientX, y: e.clientY }; moved = false; touching = true; sync(); };
+    root.onpointermove = function (e) { if (pointerStart && Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y) > 10) moved = true; };
+    function release() { if (!touching) return; touching = false; pointerStart = null; sync(); }
+    document.addEventListener('pointerup', release);
+    document.addEventListener('pointercancel', release);
+    root.onclick = function (e) {
+      if (!moved && !e.target.closest('a,button')) toggle();
+    };
+    root.onfocusin = function () { focused = !touching; sync(); };
+    root.onfocusout = function (e) { focused = root.contains(e.relatedTarget); sync(); };
+    root.onkeydown = function (e) {
+      if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); swiper.slideNext(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); swiper.slidePrev(); }
+      if (e.key === ' ' && e.target === root) { e.preventDefault(); toggle(); }
+    };
+    function visibility() { sync(); }
+    document.addEventListener('visibilitychange', visibility);
+    swiper.on('destroy', function () {
+      document.removeEventListener('visibilitychange', visibility);
+      document.removeEventListener('pointerup', release);
+      document.removeEventListener('pointercancel', release);
+      root.onclick = root.onpointerdown = root.onpointermove = root.onpointerenter = root.onpointerleave = root.onfocusin = root.onfocusout = root.onkeydown = null;
     });
-    // An explicit user pause also stops autoplay if the pointer leaves the box.
-    btn.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); } });
+    sync();
   }
 
   function render(slidesData, settings) {
@@ -377,7 +383,7 @@
     var built = 0;
     if (Array.isArray(slidesData) && slidesData.length) {
       slidesData.forEach(function (b, i) {
-        var s = buildSlide(b, i);
+        var s = buildSlide(b, built);
         if (s) { wrapper.appendChild(s); built++; }
       });
     }
@@ -404,10 +410,8 @@
   }
 
   function fetchDefault() {
-    // Short cache headers on purpose: a stale fallback must not outlive the DB.
-    return fetch(FALLBACK_URL, { cache: 'no-cache' })
-      .then(function (r) { return r.ok ? r.json() : []; })
-      ['catch'](function () { return []; });
+    // Failed reads cannot prove a campaign is published or within its schedule.
+    return Promise.resolve([]);
   }
 
   function load() {
@@ -435,8 +439,8 @@
         if (typeof data === 'string') {
           try { data = JSON.parse(data); } catch (e) { data = null; }
         }
-        if (Array.isArray(data) && data.length) { render(data, settings); return; }
-        // DB reachable but empty/unavailable → repo fallback, never a broken box.
+        if (Array.isArray(data)) { render(data, settings); return; }
+        // An authoritative empty result must not resurrect unpublished promotions.
         fetchDefault().then(function (rows) { render(rows, settings); });
       })['catch'](function (e) {
         track('weem.banners.error', { message: String((e && e.message) || e) });

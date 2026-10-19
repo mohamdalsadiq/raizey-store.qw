@@ -3,8 +3,8 @@
    الكتابة كلها عبر RPCs محمية (is_admin + has_admin_permission + audit log).
    كل إخراج بيانات يمر عبر textContent / DOM — لا innerHTML.
    ========================================================= */
-const DESKTOP_BOX = { w: 1920, h: 720 };
-const MOBILE_BOX  = { w: 1086, h: 1448 };
+const DESKTOP_BOX = { w: 1920, h: 640 };
+const BU = window.MeemBannerUtils;
 const MAX_BYTES = 300 * 1024;
 const ALLOWED_PAGES = [
   ['index.html', 'الصفحة الرئيسية'],
@@ -32,7 +32,7 @@ function blank(node) { while (node.firstChild) node.removeChild(node.firstChild)
 
 const state = {
   banners: [], editing: null, products: [], categories: [], pvView: 'desktop',
-  mobileRatio: '3:4',
+  mobileRatio: '16:9', previewUrls: [],
   slots: { desktop: null, mobile: null }
 };
 function newSlot() { return { file: null, img: null, mode: 'cover', fx: .5, fy: .5, url: '', blob: null }; }
@@ -41,15 +41,16 @@ function newSlot() { return { file: null, img: null, mode: 'cover', fx: .5, fy: 
 function loadImageFromFile(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('تعذر قراءة ملف الصورة'));
-    img.src = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذر قراءة ملف الصورة')); };
+    img.src = url;
   });
 }
 
 function drawSlot(canvas, img, box, mode, fx, fy) {
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
+  const W = canvas.width = box.w, H = canvas.height = box.h;
   ctx.clearRect(0, 0, W, H);
   if (!img) { ctx.fillStyle = '#04123F'; ctx.fillRect(0, 0, W, H); return; }
   const targetRatio = box.w / box.h;
@@ -87,7 +88,7 @@ function canvasToWebp(canvas) {
   });
 }
 
-function slotBox(name) { return name === 'desktop' ? DESKTOP_BOX : MOBILE_BOX; }
+function slotBox(name) { return name === 'desktop' ? DESKTOP_BOX : BU.mobileBox(state.mobileRatio); }
 
 function refreshSlot(name) {
   const slot = state.slots[name];
@@ -112,9 +113,9 @@ async function exportSlot(name) {
 function bindCrop(name) {
   const wrap = $(name + 'CropWrap');
   const focus = $(name + 'Focus');
-  const slot = state.slots[name];
   let dragging = false;
   const setFrom = (event) => {
+    const slot = state.slots[name];
     const r = wrap.getBoundingClientRect();
     slot.fx = Math.min(Math.max((event.clientX - r.left) / r.width, 0), 1);
     slot.fy = Math.min(Math.max((event.clientY - r.top) / r.height, 0), 1);
@@ -124,18 +125,18 @@ function bindCrop(name) {
   };
   wrap.addEventListener('pointerdown', (e) => { dragging = true; try { wrap.setPointerCapture(e.pointerId); } catch (_) {} setFrom(e); });
   wrap.addEventListener('pointermove', (e) => { if (dragging) setFrom(e); });
-  wrap.addEventListener('pointerup', () => { dragging = false; });
+  wrap.addEventListener('pointerup', async () => { dragging = false; try { await exportSlot(name); renderPreview(); } catch (e) { formError.textContent = e.message; } });
   wrap.addEventListener('pointercancel', () => { dragging = false; });
 
-  $(name + 'ModeToggle').addEventListener('click', (e) => {
+  $(name + 'ModeToggle').addEventListener('click', async (e) => {
+    const slot = state.slots[name];
     const btn = e.target.closest('button[data-mode]');
     if (!btn) return;
     slot.mode = btn.dataset.mode;
-    [...$('desktopModeToggle').querySelectorAll('button'), ...$('mobileModeToggle').querySelectorAll('button')]
-      .forEach((b) => { if (b.dataset.mode === slot.mode) b.classList.add('active'); });
     [...$(name + 'ModeToggle').querySelectorAll('button')]
       .forEach((b) => b.classList.toggle('active', b === btn));
     refreshSlot(name);
+    if (slot.img) { try { await exportSlot(name); renderPreview(); } catch (err) { formError.textContent = err.message; } }
   });
 }
 
@@ -145,7 +146,7 @@ async function pickFile(name, file) {
   if (file.size > 12 * 1024 * 1024) throw new Error('ملف المصدر كبير جداً (الحد 12MB)');
   const img = await loadImageFromFile(file);
   const slot = state.slots[name];
-  slot.file = file; slot.img = img; slot.fx = .5; slot.fy = .5;
+  slot.file = file; slot.img = img; slot.fx = .5; slot.fy = .5; slot.url = ''; slot.blob = null;
   $(name + 'CropWrap').hidden = false;
   $(name + 'Focus').style.left = '50%';
   $(name + 'Focus').style.top = '50%';
@@ -205,15 +206,22 @@ async function loadRatioSetting() {
         .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
       if (error) throw error;
       if (noteFn) noteFn(okMsg, false);
+      return true;
     } catch (err) {
       if (noteFn) noteFn('تعذر الحفظ: ' + (err && err.message ? err.message : err), true);
+      return false;
     }
   };
   if (sel) {
-    sel.addEventListener('change', () => {
-      state.mobileRatio = sel.value;
-      renderPreview();
-      saveSetting('banner_mobile_ratio', sel.value, setRatioNote, 'تم حفظ نسبة الموبايل: ' + sel.value);
+    sel.addEventListener('change', async () => {
+      const old = state.mobileRatio;
+      sel.disabled = true;
+      if (await saveSetting('banner_mobile_ratio', sel.value, setRatioNote, 'تم حفظ نسبة الموبايل: ' + sel.value)) {
+        state.mobileRatio = sel.value;
+        if (state.slots.mobile?.img) await exportSlot('mobile');
+        renderPreview();
+      } else sel.value = old;
+      sel.disabled = false;
     });
   }
 
@@ -229,8 +237,8 @@ async function loadRatioSetting() {
       .select('key,value').in('key', ['banner_mobile_ratio', 'banner_mobile_aspect', 'banner_autoplay', 'banner_interval', 'banner_effect']);
     const map = {};
     (data || []).forEach((r) => { map[r.key] = r.value; });
-    const v = map.banner_mobile_ratio || map.banner_mobile_aspect || '3:4';
-    state.mobileRatio = ['3:4', '4:5', '1:1', '4:3'].indexOf(String(v)) >= 0 ? String(v) : '3:4';
+    const v = map.banner_mobile_ratio || map.banner_mobile_aspect || '16:9';
+    state.mobileRatio = BU.ratios[String(v)] ? String(v) : '16:9';
     if (sel) sel.value = state.mobileRatio;
     if (autoplay) autoplay.value = (String(map.banner_autoplay).toLowerCase() === 'false' || String(map.banner_autoplay).toLowerCase() === 'off') ? 'false' : 'true';
     if (interval) interval.value = String(clampIv(map.banner_interval));
@@ -282,8 +290,8 @@ function renderList() {
     meta.appendChild(el('span', null, 'الترتيب: ' + b.sort_order));
     meta.appendChild(el('span', null, linkLabel(b)));
     if (b.starts_at || b.ends_at) {
-      const f = (v) => v ? new Date(v).toLocaleString('ar-EG') : '—';
-      meta.appendChild(el('span', null, 'من ' + f(b.starts_at) + ' إلى ' + f(b.ends_at)));
+      const f = (v) => v ? new Date(v).toLocaleString('ar-EG', { timeZone: 'Africa/Khartoum', dateStyle: 'medium', timeStyle: 'short' }) : '—';
+      meta.appendChild(el('span', null, 'من ' + f(b.starts_at) + ' إلى ' + f(b.ends_at) + ' (الخرطوم UTC+2)'));
     }
     body.appendChild(meta);
 
@@ -333,7 +341,7 @@ async function copyBanner(b) {
   await loadBanners();
 }
 async function removeBanner(b) {
-  if (!confirm('حذف هذا البنر نهائياً؟')) return;
+  if (!confirm('حذف البنر «' + (b.title || b.alt_text || 'صورة فقط') + '» نهائياً؟ لا يمكن التراجع عن الحذف.')) return;
   const { error } = await supabaseClient.rpc('admin_delete_banner', { p_id: b.id });
   if (error) { alert('تعذر الحذف: ' + error.message); return; }
   await loadBanners();
@@ -347,7 +355,7 @@ function resetForm() {
   linkTypeInput.value = 'none';
   pageSelect.value = 'index.html';
   productSelect.value = ''; categorySelect.value = '';
-  activeInput.value = 'true'; hideDisabledInput.value = 'true'; $('statusInput').value = 'published';
+  activeInput.value = 'true'; hideDisabledInput.value = 'true'; $('statusInput').value = 'draft';
   $('ovdInput').value = 'right'; $('ovmInput').value = 'top';
   $('desktopSlotState').textContent = 'لم تُختر صورة بعد';
   $('mobileSlotState').textContent = 'لم تُختر صورة — ستُولَّد من صورة الديسكتوب';
@@ -386,7 +394,7 @@ function openForm(banner) {
     hideDisabledInput.value = String(banner.hide_if_target_inactive);
     $('statusInput').value = banner.status === 'draft' ? 'draft' : 'published';
     // Khartoum is UTC+2 with no DST: convert the stored UTC instant for the input.
-    const toLocal = (v) => v ? new Date(new Date(v).getTime() + 2 * 3600000).toISOString().slice(0, 16) : '';
+    const toLocal = BU.utcToKhartoum;
     startInput.value = toLocal(banner.starts_at);
     endInput.value = toLocal(banner.ends_at);
     state.slots.desktop.url = banner.image_desktop_url;
@@ -397,9 +405,10 @@ function openForm(banner) {
   updateCounters();
   syncStyleFields();
   syncLinkFields();
+  if (!formModal.open) formModal.showModal();
   formModal.classList.add('show');
 }
-function closeForm() { formModal.classList.remove('show'); state.editing = null; }
+function closeForm() { formModal.close(); formModal.classList.remove('show'); state.editing = null; state.previewUrls.forEach(URL.revokeObjectURL); state.previewUrls = []; }
 
 function updateCounters() {
   [[titleInput, 'titleCounter', 45], [subtitleInput, 'subtitleCounter', 90], [ctaInput, 'ctaCounter', 20]]
@@ -434,7 +443,7 @@ function currentPayload() {
   else if (t === 'category') target = categorySelect.value || null;
   else if (t === 'url') target = urlInput.value.trim();
   // The datetime-local value is Khartoum wall time (UTC+2); store the true UTC instant.
-  const toIso = (v) => v ? new Date(new Date(v).getTime() - 2 * 3600000).toISOString() : null;
+  const toIso = BU.khartoumToUtc;
   return {
     banner_style: styleInput.value,
     status: $('statusInput').value,
@@ -461,14 +470,17 @@ function currentPayload() {
 function renderPreview() {
   const frame = $('pvFrame');
   blank(frame);
-  const payload = currentPayload();
+  let payload;
+  try { payload = currentPayload(); } catch (_) { frame.appendChild(el('p', 'slot-note', 'تحقق من تاريخ الجدولة.')); return; }
+  state.previewUrls.forEach(URL.revokeObjectURL); state.previewUrls = [];
+  function previewUrl(blob) { const url = URL.createObjectURL(blob); state.previewUrls.push(url); return url; }
   if (!payload.image_desktop_url && state.slots.desktop.blob) {
-    payload.image_desktop_url = URL.createObjectURL(state.slots.desktop.blob);
+    payload.image_desktop_url = previewUrl(state.slots.desktop.blob);
   }
   const isMobile = state.pvView === 'mobile';
   if (isMobile) {
     if (!payload.image_mobile_url && state.slots.mobile.blob) {
-      payload.image_mobile_url = URL.createObjectURL(state.slots.mobile.blob);
+      payload.image_mobile_url = previewUrl(state.slots.mobile.blob);
     }
     if (!payload.image_mobile_url) {
       payload.image_mobile_url = payload.image_desktop_url;
@@ -478,10 +490,10 @@ function renderPreview() {
     frame.appendChild(el('div', 'slot-note', 'اختر صورة لعرض المعاينة.'));
     return;
   }
-  var ratioMap = { '3:4': '3 / 4', '4:5': '4 / 5', '1:1': '1 / 1', '4:3': '4 / 3' };
-  frame.style.aspectRatio = isMobile ? (ratioMap[state.mobileRatio] || '3 / 4') : '8 / 3';
+  var ratioMap = BU.ratios;
+  frame.style.aspectRatio = isMobile ? (ratioMap[state.mobileRatio] || '16 / 9') : '3 / 1';
   $('pvStage').classList.toggle('is-mobile', isMobile);
-  const slide = window.MeemBanners.buildSlide(payload, 0);
+  const slide = window.MeemBanners.buildSlide(payload, 0, { preview: true, view: state.pvView });
   if (!slide) { frame.appendChild(el('div', 'slot-note', 'تعذر بناء المعاينة.')); return; }
   frame.appendChild(slide);
 }
@@ -506,8 +518,12 @@ async function uploadBlob(blob, kind) {
 async function save() {
   formError.textContent = '';
   const btn = $('formSaveBtn');
+  if (btn.disabled) return;
   btn.disabled = true;
   try {
+    const draft = currentPayload();
+    if (draft.status === 'published' && !draft.alt_text) throw new Error('ALT_REQUIRED');
+    if (draft.starts_at && draft.ends_at && draft.ends_at <= draft.starts_at) throw new Error('INVALID_SCHEDULE');
     const d = state.slots.desktop, m = state.slots.mobile;
     if (d.img) { d.url = await uploadBlob(await exportSlot('desktop'), 'desktop'); }
     else if (!d.url) throw new Error('اختر صورة الديسكتوب أولاً');
@@ -517,7 +533,7 @@ async function save() {
     } else if (!m.url) {
       if (!d.img) throw new Error('لا يمكن توليد صورة الموبايل بدون صورة ديسكتوب جديدة');
       const canvas = $('mobileCanvas');
-      drawSlot(canvas, d.img, MOBILE_BOX, d.mode, d.fx, d.fy);
+      drawSlot(canvas, d.img, slotBox('mobile'), d.mode, d.fx, d.fy);
       const blob = await canvasToWebp(canvas);
       if (blob.size > MAX_BYTES) throw new Error('صورة الموبايل المولَّدة أكبر من 300KB');
       m.url = await uploadBlob(blob, 'mobile');
@@ -542,6 +558,7 @@ async function save() {
       PRODUCT_NOT_FOUND: 'المنتج غير موجود.',
       CATEGORY_NOT_FOUND: 'القسم غير موجود.',
       ALT_REQUIRED: 'النص البديل (alt) إلزامي قبل النشر.',
+      INVALID_SCHEDULE: 'أدخل مواعيد صحيحة، على أن يكون الانتهاء بعد البداية بتوقيت الخرطوم.',
       INVALID_STATUS: 'حالة البنر غير صحيحة.',
       INVALID_IMAGE_DESKTOP_URL: 'رابط الصورة يجب أن يكون داخل مجلد المشروع (assets/banners) أو تخزين المشروع.',
       INVALID_IMAGE_MOBILE_URL: 'رابط صورة الموبايل غير مقبول.',
@@ -572,6 +589,7 @@ async function init() {
 
   $('addNewBtn').addEventListener('click', () => openForm(null));
   $('formCancelBtn').addEventListener('click', closeForm);
+  formModal.addEventListener('cancel', event => { event.preventDefault(); closeForm(); });
   $('formSaveBtn').addEventListener('click', save);
   $('desktopPickBtn').addEventListener('click', () => $('desktopFileInput').click());
   $('mobilePickBtn').addEventListener('click', () => $('mobileFileInput').click());

@@ -5,10 +5,10 @@ DO $$BEGIN
  IF EXISTS(SELECT 1 FROM auth.users WHERE id::text LIKE 'a6180000-0000-4000-8000-%') THEN RAISE EXCEPTION 'audit_fixture_collision'; END IF;
 END$$;
 INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES
- ('a6180000-0000-4000-8000-000000000001','audit-a-20261018@example.invalid','{"full_name":"Audit A"}'),
- ('a6180000-0000-4000-8000-000000000002','audit-b-20261018@example.invalid','{"full_name":"Audit B"}'),
- ('a6180000-0000-4000-8000-000000000003','audit-admin-20261018@example.invalid','{"full_name":"Audit Staff"}'),
- ('a6180000-0000-4000-8000-000000000004','audit-super-20261018@example.invalid','{"full_name":"Audit Super"}');
+ ('a6180000-0000-4000-8000-000000000001','audit-a-20261018@example.invalid','{"whatsapp_number":"+249912345678","full_name":"Audit A"}'),
+ ('a6180000-0000-4000-8000-000000000002','audit-b-20261018@example.invalid','{"whatsapp_number":"+249912345678","full_name":"Audit B"}'),
+ ('a6180000-0000-4000-8000-000000000003','audit-admin-20261018@example.invalid','{"whatsapp_number":"+249912345678","full_name":"Audit Staff"}'),
+ ('a6180000-0000-4000-8000-000000000004','audit-super-20261018@example.invalid','{"whatsapp_number":"+249912345678","full_name":"Audit Super"}');
 SET LOCAL session_replication_role=replica;
 UPDATE public.profiles SET role='admin' WHERE id IN ('a6180000-0000-4000-8000-000000000003','a6180000-0000-4000-8000-000000000004');
 SET LOCAL session_replication_role=origin;

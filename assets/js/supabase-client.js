@@ -49,6 +49,8 @@ function getFriendlyError(errMsg) {
   if (!errMsg) return 'حصل خطأ غير متوقع. يرجى المحاولة مجدداً.';
   const msg = String(errMsg).toLowerCase();
   if (msg.includes('rate_limited')) return 'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.';
+  if (msg.includes('whatsapp_required')) return 'أضف رقم واتساب من حسابك لمتابعة الطلب.';
+  if (msg.includes('invalid_whatsapp')) return 'أدخل رقم واتساب صحيحًا مع رمز الدولة.';
   if (msg.includes('mfa_required')) return 'أكمل التحقق بخطوتين للمتابعة.';
   if (msg.includes('idempotency_conflict')) return 'تغيّرت بيانات الطلب. حدّث الصفحة قبل المحاولة مجدداً.';
   if (msg.includes('receipt_scan_method_mismatch') || msg.includes('receipt_scan_amount_mismatch'))

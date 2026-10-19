@@ -84,6 +84,7 @@ async function loadDrawer() {
 
 // ---------- جلب وعرض كروت الألعاب الموحدة ----------
 async function init() {
+  renderHighlights().catch(() => {});
   try {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
     if (sessionError) throw sessionError;
@@ -339,7 +340,7 @@ function renderCatalog(sections, categories, products) {
   }
   container.replaceChildren(fragment);
   renderSectionRow(sections);
-  renderHighlights();
+
 }
 
 function renderSectionRow(sections) {
@@ -405,6 +406,8 @@ async function renderHighlights() {
   const host = document.getElementById('homeHighlights');
   if (!host) return;
   host.replaceChildren();
+  const topHost = document.getElementById('homeTopOrdered');
+  if (topHost) topHost.replaceChildren();
   // capability marker: only render once the functions exist on the backend
   let flag = false;
   try {
@@ -430,7 +433,7 @@ async function renderHighlights() {
   const newest = (newestRes && !newestRes.error && Array.isArray(newestRes.data)) ? newestRes.data : [];
 
   const frag = document.createDocumentFragment();
-  if (top.length) frag.appendChild(buildHighlightSection('الأكثر طلباً', 'flame', top, rate, true));
+  if (top.length && topHost) topHost.appendChild(buildHighlightSection('الأكثر شراءً', 'flame', top, rate, true));
   if (newest.length) frag.appendChild(buildHighlightSection('جديد في MEEM', 'sparkles', newest, rate, false));
   host.appendChild(frag);
 }
