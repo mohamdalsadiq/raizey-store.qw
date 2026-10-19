@@ -22,6 +22,8 @@
 <link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
 <script src="assets/js/meem-ui.js"></script>
 <style>
+  .bn-editor { width: min(760px, calc(100% - 24px)); max-height: 92dvh; margin: auto; padding: 0; border: 1px solid var(--mm-border); border-radius: 16px; background: var(--mm-surface); color: var(--mm-text); }
+  .bn-editor::backdrop { background: var(--mm-overlay); }
   .bn-grid { display: grid; gap: 14px; }
   .bn-card { display: flex; gap: 14px; align-items: flex-start; background: var(--mm-surface); border: 1px solid var(--mm-border); border-radius: 16px; padding: 12px; }
   .bn-card.is-off { opacity: .55; }
@@ -46,13 +48,20 @@
   .pv-toggle { display: flex; gap: 6px; flex-wrap: wrap; }
   .pv-toggle button { min-height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--mm-border); background: var(--mm-surface-2); color: var(--mm-text); font-weight: 700; font-size: 12px; cursor: pointer; }
   .pv-toggle button.active { background: var(--mm-gold); color: var(--mm-royal-950); border-color: var(--mm-gold); }
-  .pv-stage { margin-top: 10px; max-width: 100%; }
-  .pv-stage.is-mobile { max-width: 340px; margin-inline: auto; }
+  .pv-stage { margin-top: 10px; width: 100%; max-width: 100%; }
+  .pv-stage.is-mobile { width: min(340px, 100%); margin-inline: auto; }
   .pv-frame { position: relative; border-radius: 16px; overflow: hidden; background: var(--mm-royal-900); }
-  .pv-frame .mm-slide { position: relative; }
+  .pv-frame .mm-slide { position: absolute; inset: 0; aspect-ratio: auto; }
+  .is-mobile .mm-slide-body { padding: 12px 14px 25px; gap: 5px; justify-content: center; }
+  .is-mobile .mm-slide-title { font-size: 17px; }
+  .is-mobile .mm-slide-sub { font-size: 12px; }
+  .is-mobile .mm-slide-cta { font-size: 12px; min-height: 40px; padding: 0 14px; }
+  .is-mobile .mm-slide-scrim { background: linear-gradient(270deg, #04123ff0, #04123f99 65%, #04123f40); }
+  .is-mobile .mm-slide-sub { line-height: 1.55; }
   .link-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
   @media (min-width: 720px) { .link-grid { grid-template-columns: 1fr 1fr; } }
 </style>
+<link rel="stylesheet" href="assets/css/whatsapp-onboarding.css">
 </head>
 <body>
 <a class="mm-skip-link" href="#mainContent">تخطَّ إلى المحتوى</a>
@@ -90,8 +99,8 @@
   <div id="mainContent">
     <div class="bn-card" style="display:block;">
       <p class="slot-note" style="margin:0 0 8px;">
-        المقاسات المعتمدة: <strong>ديسكتوب 1920×720</strong> (نسبة 8:3) و<strong>موبايل 1086×1448</strong> (نسبة 3:4).
-        خلي العنصر المهم في وسط الصورة، ومنطقة النصوص الهادئة على اليمين في الديسكتوب وعلى الأعلى في الموبايل.
+        المقاسات المعتمدة: <strong>ديسكتوب 1920×640</strong> (نسبة 3:1) و<strong>موبايل 1080×608</strong> (نسبة 16:9).
+        خلي العنصر المهم في وسط الصورة، ومنطقة النصوص الهادئة على اليمين في الديسكتوب ومساحة واضحة للنص في الموبايل.
         أي صورة تُصدَّر WebP بالمقاس الصحيح وبأقل من 300KB في المتصفح قبل الرفع.
       </p>
       <button class="add-new-btn" id="addNewBtn" type="button">+ إضافة بنر جديد</button>
@@ -101,14 +110,16 @@
       <div class="field" style="max-width:340px; margin:0;">
         <label for="mobileRatioSelect">نسبة بنر الموبايل (إعداد عام لكل الشرائح)</label>
         <select id="mobileRatioSelect">
-          <option value="3:4">3:4 — عمودي (الافتراضي لكل صورك الحالية)</option>
+          <option value="3:2">3:2 — أفقي متوازن</option>
+          <option value="16:9">16:9 — أفقي مدمج (الموصى به)</option>
+          <option value="3:4">3:4 — عمودي</option>
           <option value="4:5">4:5 — عمودي أقصر</option>
           <option value="1:1">1:1 — مربّع</option>
           <option value="4:3">4:3 — أفقي</option>
         </select>
       </div>
       <p class="slot-note" style="margin:8px 0 0;" id="mobileRatioNote">
-        الديسكتوب ثابت على 8:3. كل الشرائح تتبع هذه النسبة كي لا يقفز ارتفاع البنر بين الشريحة والأخرى.
+        الديسكتوب ثابت على 3:1. كل الشرائح تتبع هذه النسبة كي لا يقفز ارتفاع البنر بين الشريحة والأخرى.
         إذا رفعت صورة بنسبة مختلفة، اختر «اقتصاص مع نقطة تركيز» أو «الصورة كاملة + خلفية ضبابية».
       </p>
     </div>
@@ -136,7 +147,7 @@
         </div>
       </div>
       <p class="slot-note" style="margin:8px 0 0;" id="sliderNote">
-        عند انتهاء المدة ينتقل البنر تلقائياً. الإيقاف متاح للزائر من زر التشغيل/الإيقاف على البنر نفسه.
+        عند انتهاء المدة ينتقل البنر تلقائياً. يستطيع الزائر إيقاف الحركة باللمس والتنقل بالسحب. آخر عرض يتبعه أول عرض بحركة متصلة.
       </p>
     </div>
 
@@ -146,9 +157,20 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="formModal">
-  <div class="modal-box" style="max-width: 760px; width: calc(100% - 24px); max-height: 92vh; overflow-y: auto;">
+<dialog class="bn-editor" id="formModal" aria-labelledby="formModalTitle">
+  <div class="modal-box" style="width: 100%; max-width: none;">
     <div class="modal-title" id="formModalTitle">بنر جديد</div>
+    <div class="field">
+      <label>معاينة مطابقة للموقع</label>
+      <div class="pv-toggle" id="pvToggle">
+        <button type="button" data-view="desktop" class="active">ديسكتوب</button>
+        <button type="button" data-view="mobile">موبايل</button>
+      </div>
+      <div class="pv-stage" id="pvStage">
+        <div class="pv-frame" id="pvFrame"></div>
+      </div>
+    </div>
+
 
     <div class="field">
       <label for="styleInput">نمط البنر</label>
@@ -159,7 +181,7 @@
     </div>
 
     <div class="field">
-      <label for="desktopFileInput">صورة الديسكتوب (1920×720) — إلزامية</label>
+      <label for="desktopFileInput">صورة الديسكتوب (1920×640) — إلزامية</label>
       <div class="slot" data-slot="desktop">
         <div class="slot-head">
           <span class="slot-note" id="desktopSlotState">لم تُختر صورة بعد</span>
@@ -174,7 +196,7 @@
           <span class="counter" id="desktopSizeNote"></span>
         </div>
         <div class="crop-wrap" id="desktopCropWrap" hidden>
-          <canvas id="desktopCanvas" width="960" height="360"></canvas>
+          <canvas id="desktopCanvas" width="1920" height="640"></canvas>
           <span class="crop-focus" id="desktopFocus" style="left:50%; top:50%;"></span>
         </div>
         <p class="slot-note" id="desktopCropHint" hidden>اسحب داخل المعاينة لتحديد نقطة التركيز — تُقص الصورة الأصلية حولها.</p>
@@ -182,7 +204,7 @@
     </div>
 
     <div class="field">
-      <label for="mobileFileInput">صورة الموبايل (1086×1448) — اختيارية</label>
+      <label for="mobileFileInput">صورة الموبايل (1080×608) — اختيارية</label>
       <div class="slot" data-slot="mobile">
         <div class="slot-head">
           <span class="slot-note" id="mobileSlotState">لم تُختر صورة — ستُولَّد من صورة الديسكتوب</span>
@@ -197,15 +219,15 @@
           <span class="counter" id="mobileSizeNote"></span>
         </div>
         <div class="crop-wrap" id="mobileCropWrap" hidden>
-          <canvas id="mobileCanvas" width="420" height="560"></canvas>
+          <canvas id="mobileCanvas" width="1080" height="608"></canvas>
           <span class="crop-focus" id="mobileFocus" style="left:50%; top:50%;"></span>
         </div>
       </div>
     </div>
 
     <div class="field">
-      <label for="altInput">النص البديل للصورة (alt)</label>
-      <input type="text" id="altInput" maxlength="160" placeholder="وصف مختصر للصورة">
+      <label for="altInput">وصف الصورة — إلزامي قبل النشر</label>
+      <input type="text" id="altInput" maxlength="160" placeholder="وصف مختصر يوضح محتوى الصورة">
     </div>
 
     <div id="textFields">
@@ -315,17 +337,6 @@
       المواعيد أدناه بتوقيت الخرطوم (Africa/Khartoum، UTC+2) وتُخزَّن بتوقيت عالمي. إن تُركت فارغة يعمل البنر بلا حدود زمنية.
     </p>
 
-    <div class="field">
-      <label>معاينة مطابقة للموقع</label>
-      <div class="pv-toggle" id="pvToggle">
-        <button type="button" data-view="desktop" class="active">ديسكتوب</button>
-        <button type="button" data-view="mobile">موبايل</button>
-      </div>
-      <div class="pv-stage" id="pvStage">
-        <div class="pv-frame" id="pvFrame"></div>
-      </div>
-    </div>
-
     <div class="form-error" id="formError"></div>
 
     <div class="modal-actions">
@@ -333,7 +344,7 @@
       <button class="modal-confirm-btn" id="formSaveBtn" type="button" style="background: var(--mm-primary); color: var(--mm-on-primary);">حفظ</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <div class="modal-overlay" id="accessDenied">
   <div class="modal-box" style="text-align:center;">
@@ -348,6 +359,9 @@
 <script src="assets/vendor/supabase-2.118.0.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/mfa-guard.js"></script>
+<script src="assets/js/phone-country-picker.js"></script>
+<script src="assets/js/whatsapp-onboarding.js"></script>
+<script src="assets/js/banner-utils.js"></script>
 <script src="assets/js/banners.js"></script>
 <script src="assets/js/pages/admin-banners-2.js"></script>
 </body>

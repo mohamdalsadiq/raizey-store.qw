@@ -16,22 +16,7 @@ let otpTargetEmail = '';
 UI.bindPasswordToggles();
 UI.bindEmailValidation(emailInput);
 
-function redirectAfterLogin() {
-  const savedRedirect = sessionStorage.getItem('redirect_after_login');
-  sessionStorage.removeItem('redirect_after_login');
-  if (savedRedirect) {
-    try {
-      const redirectUrl = new URL(savedRedirect, window.location.origin);
-      if (redirectUrl.origin === window.location.origin) {
-        window.location.assign(redirectUrl.href);
-        return;
-      }
-    } catch (_) {
-      // تجاهل أي رابط غير صالح والعودة إلى الصفحة الرئيسية.
-    }
-  }
-  window.location.href = 'index.html';
-}
+async function redirectAfterLogin() { await window.MeemAuthFlow.finishSignIn(); }
 
 function clearMessages() {
   errorBox.textContent = '';
@@ -49,6 +34,7 @@ function resetOtpMode() {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (e.submitter?.disabled) return;
   clearMessages();
 
   const email = emailInput.value.trim();
@@ -81,7 +67,7 @@ form.addEventListener('submit', async (e) => {
         : 'الإيميل أو كلمة السر غير صحيحة';
       return;
     }
-    redirectAfterLogin();
+    await redirectAfterLogin();
   } catch (_) {
     errorBox.textContent = 'تعذر تسجيل الدخول الآن، حاول مرة أخرى';
   } finally {
@@ -114,7 +100,7 @@ otpModeBtn.addEventListener('click', async () => {
     });
     if (error) throw error;
     otpTargetEmail = email;
-    otpCodeSub.textContent = 'أرسلنا كودًا من 6 أرقام إلى ' + email;
+    otpCodeSub.textContent = 'إذا كان هذا البريد مسجلاً لدينا، أرسلنا إليه كودًا من 6 أرقام.';
     form.hidden = true;
     otpModeBtn.hidden = true;
     otpLoginPanel.hidden = false;
@@ -143,6 +129,7 @@ otpModeBtn.addEventListener('click', async () => {
 
 document.getElementById('otpLoginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (e.submitter?.disabled) return;
   clearMessages();
   const code = loginOtp.value();
   if (code.length !== 6) {
@@ -164,7 +151,7 @@ document.getElementById('otpLoginForm').addEventListener('submit', async (e) => 
       loginOtp.clear();
       return;
     }
-    redirectAfterLogin();
+    await redirectAfterLogin();
   } catch (_) {
     errorBox.textContent = 'تعذر التحقق الآن، حاول مرة أخرى';
   } finally {
@@ -180,7 +167,7 @@ otpResendBtn.addEventListener('click', async () => {
       email: otpTargetEmail,
       options: { shouldCreateUser: false }
     });
-    if (error) throw error;
+    if (error && !isNoAccountError(error)) throw error;
   } catch (err) {
     errorBox.textContent = err && err.status === 429
       ? 'محاولات كثيرة، انتظر قليلاً قبل إعادة المحاولة'

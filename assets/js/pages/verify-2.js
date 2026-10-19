@@ -18,9 +18,11 @@ const form = document.getElementById('verifyForm');
 const otp = UI.bindOtpInputs(document.getElementById('otpBox'), () => form.requestSubmit());
 const timer = UI.createResendTimer(resendBtn, document.getElementById('resendTimer'), 60);
 otp.focus();
+timer.start(60);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (submitBtn.disabled) return;
   errorBox.textContent = '';
   const code = otp.value();
 
@@ -44,7 +46,7 @@ form.addEventListener('submit', async (e) => {
 
     sessionStorage.removeItem('pending_email');
     successBox.textContent = 'تم تفعيل حسابك بنجاح، جارِ فتح المتجر...';
-    setTimeout(() => { window.location.href = 'index.html'; }, 700);
+    await window.MeemAuthFlow.finishSignIn();
   } catch (_) {
     errorBox.textContent = 'تعذر التحقق الآن، حاول مرة أخرى';
   } finally {

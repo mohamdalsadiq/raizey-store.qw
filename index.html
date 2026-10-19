@@ -373,6 +373,7 @@
 <link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
 <script src="assets/js/meem-ui.js"></script>
 <script src="assets/js/category-icons.js"></script>
+<link rel="stylesheet" href="assets/css/whatsapp-onboarding.css">
 </head>
 <body class="mm-has-bottom-nav">
 
@@ -452,18 +453,13 @@
   </div>
 </div>
 
+<p class="sr-only" id="bannerTouchHint">اسحب للتنقل بين العروض. اضغط على الصورة لإيقاف الحركة أو تشغيلها. بلوحة المفاتيح استخدم السهمين للتنقل والمسافة للتحكم بالحركة.</p>
 <section class="mm-hero" aria-label="عروض MEEM STORE">
   <div class="mm-hero-shell">
-    <div class="swiper mm-hero-swiper" id="mmHeroSwiper" aria-roledescription="carousel">
+    <div class="swiper mm-hero-swiper" id="mmHeroSwiper" role="region" aria-label="عروض المتجر" aria-roledescription="carousel" aria-describedby="bannerTouchHint">
       <div class="swiper-wrapper" id="mmHeroWrapper">
         <div class="swiper-slide mm-slide mm-slide-skeleton" aria-hidden="true"></div>
       </div>
-      <button type="button" class="mm-hero-arrow mm-hero-arrow-next" id="mmHeroNext" aria-label="الشريحة التالية" hidden></button>
-      <button type="button" class="mm-hero-arrow mm-hero-arrow-prev" id="mmHeroPrev" aria-label="الشريحة السابقة" hidden></button>
-      <button type="button" class="mm-hero-playpause" id="mmHeroPlayPause" aria-pressed="true" aria-label="إيقاف الحركة التلقائية" hidden>
-        <svg class="mm-i mm-hero-playpause-i mm-hero-playpause-pause" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pause"></use></svg>
-        <svg class="mm-i mm-hero-playpause-i mm-hero-playpause-play" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-play"></use></svg>
-      </button>
       <div class="swiper-pagination mm-hero-dots" id="mmHeroDots" hidden></div>
     </div>
   </div>
@@ -486,6 +482,7 @@
   </div>
 </div>
 
+<div id="homeTopOrdered" class="catalog-sections"></div>
 <div id="products" class="products-anchor"></div>
 <div id="sectionRow" class="section-icon-row" aria-label="أقسام المتجر" hidden></div>
 <div id="categoriesContainer" class="catalog-sections">
@@ -515,7 +512,10 @@
 <script src="assets/vendor/supabase-2.118.0.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/mfa-guard.js"></script>
+<script src="assets/js/phone-country-picker.js"></script>
+<script src="assets/js/whatsapp-onboarding.js"></script>
 <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
+<script src="assets/js/banner-utils.js"></script>
 <script src="assets/js/banners.js"></script>
 <script src="assets/js/pages/index-2.js"></script>
   <script src="assets/js/meem-assistant.js"></script>

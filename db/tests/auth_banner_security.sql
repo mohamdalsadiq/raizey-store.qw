@@ -1,0 +1,90 @@
+-- Synthetic rows only. The entire suite rolls back, including auth users and audit logs.
+BEGIN;
+SET LOCAL statement_timeout='20s';
+DO $$BEGIN
+ IF EXISTS(SELECT 1 FROM auth.users WHERE id::text LIKE 'b6180000-0000-4000-8000-%') THEN RAISE EXCEPTION 'fixture_collision'; END IF;
+END$$;
+INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES
+ ('b6180000-0000-4000-8000-000000000001','onboarding-a@example.invalid','{"full_name":"<img src=x onerror=alert(1)>","role":"admin","loyalty_points":99999}'),
+ ('b6180000-0000-4000-8000-000000000002','onboarding-b@example.invalid','{"full_name":"Test B"}'),
+ ('b6180000-0000-4000-8000-000000000003','onboarding-admin@example.invalid','{"full_name":"Test Admin"}'),
+ ('b6180000-0000-4000-8000-000000000004','onboarding-staff@example.invalid','{"full_name":"Test Staff"}');
+SET LOCAL session_replication_role=replica;
+UPDATE public.profiles SET role='admin' WHERE id IN ('b6180000-0000-4000-8000-000000000003','b6180000-0000-4000-8000-000000000004');
+SET LOCAL session_replication_role=origin;
+INSERT INTO public.admin_permissions(profile_id,can_manage_settings) VALUES ('b6180000-0000-4000-8000-000000000003',true);
+INSERT INTO public.categories(id,name,is_active) VALUES('b6180000-0000-4000-8000-000000000010','Onboarding test',true);
+INSERT INTO public.products(id,category_id,name,price_usd,is_active) VALUES('b6180000-0000-4000-8000-000000000011','b6180000-0000-4000-8000-000000000010','Onboarding test',0.01,true);
+INSERT INTO public.settings(key,value) VALUES('usd_to_sdg_rate','150'),('profit_margin_percent','0') ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value;
+UPDATE public.wallets SET balance=100 WHERE user_id='b6180000-0000-4000-8000-000000000001';
+CREATE TEMP TABLE results(name text,passed boolean);
+GRANT INSERT,SELECT ON results TO authenticated,anon;
+CREATE FUNCTION pg_temp.check_result(label text,ok boolean) RETURNS void LANGUAGE sql AS $$ INSERT INTO results VALUES(label,coalesce(ok,false)); $$;
+CREATE FUNCTION pg_temp.attempt(command text) RETURNS text LANGUAGE plpgsql AS $$
+BEGIN EXECUTE command; RETURN 'accepted'; EXCEPTION WHEN OTHERS THEN RETURN SQLERRM; END $$;
+SELECT pg_temp.check_result('signup_metadata_cannot_escalate', (SELECT role='customer' AND loyalty_points=0 AND whatsapp_number IS NULL FROM public.profiles WHERE id='b6180000-0000-4000-8000-000000000001'));
+SELECT pg_temp.check_result('arabic_local_phone_normalized', private.normalize_whatsapp('٠٩١٢٣٤٥٦٧٨')='+249912345678');
+SELECT pg_temp.check_result('international_phone_normalized', private.normalize_whatsapp('00 966 50 123 4567')='+966501234567');
+SELECT pg_temp.check_result('phone_script_rejected',private.normalize_whatsapp('<script>+249912345678</script>') IS NULL);
+SELECT pg_temp.check_result('short_phone_rejected',private.normalize_whatsapp('+249123') IS NULL);
+SELECT pg_temp.check_result('oversized_phone_rejected',private.normalize_whatsapp('+'||repeat('9',99)) IS NULL);
+SELECT pg_temp.check_result('arbitrary_image_project_rejected',NOT public.banners_validate_image_url('https://evil.supabase.co/storage/v1/object/public/banners/x.webp'));
+SELECT pg_temp.check_result('image_traversal_rejected',NOT public.banners_validate_image_url('/assets/banners/../x.webp'));
+SELECT pg_temp.check_result('encoded_image_traversal_rejected',NOT public.banners_validate_image_url('https://rglbfizqolrenwfsndyv.supabase.co/storage/v1/object/public/banners/%2e%2e/x.webp'));
+SELECT pg_temp.check_result('svg_image_rejected',NOT public.banners_validate_image_url('/assets/banners/attack.svg'));
+SELECT pg_temp.check_result('bucket_mime_and_size', (SELECT file_size_limit=2097152 AND allowed_mime_types=ARRAY['image/jpeg','image/png','image/webp'] FROM storage.buckets WHERE id='banners'));
+SET LOCAL ROLE anon;
+SELECT pg_temp.check_result('anonymous_completion_denied', pg_temp.attempt($q$SELECT public.complete_whatsapp_onboarding('+249912345678')$q$) LIKE '%permission denied%');
+SELECT pg_temp.check_result('anonymous_profile_status_denied',pg_temp.attempt('SELECT public.get_own_onboarding_status()') LIKE '%permission denied%');
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{"sub":"b6180000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal1"}',true);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check_result('new_account_requires_phone',NOT (public.get_own_onboarding_status()->>'has_whatsapp')::boolean);
+SELECT pg_temp.check_result('invalid_contact_not_saved',pg_temp.attempt($q$SELECT public.complete_whatsapp_onboarding('123')$q$)='invalid_whatsapp');
+SELECT pg_temp.check_result('order_without_contact_rejected', (public.execute_store_action('create_wallet_orders_bulk','{"p_items":[{"product_id":"b6180000-0000-4000-8000-000000000011","quantity":1}]}',gen_random_uuid())->>'error')='whatsapp_required');
+SELECT pg_temp.check_result('failed_order_did_not_charge',(SELECT balance=100 FROM public.wallets WHERE user_id=auth.uid()));
+SELECT pg_temp.check_result('saudi_selection_rejects_sudan_number',pg_temp.attempt($q$SELECT public.complete_whatsapp_onboarding('+249912345678','SA')$q$)='invalid_whatsapp');
+SELECT pg_temp.check_result('saudi_selection_rejects_wrong_prefix',pg_temp.attempt($q$SELECT public.complete_whatsapp_onboarding('+966912345678','SA')$q$)='invalid_whatsapp');
+SELECT pg_temp.check_result('palestine_valid',(public.complete_whatsapp_onboarding('+970599123456','PS')->>'completed')::boolean);
+SELECT pg_temp.check_result('valid_contact_saved',(public.complete_whatsapp_onboarding('0912345678')->>'completed')::boolean);
+SELECT pg_temp.check_result('completion_persists',(public.get_own_onboarding_status()->>'has_whatsapp')::boolean);
+SELECT pg_temp.check_result('other_profile_hidden',NOT EXISTS(SELECT 1 FROM public.profiles WHERE id='b6180000-0000-4000-8000-000000000002'));
+UPDATE public.profiles SET whatsapp_number='+249999999999' WHERE id='b6180000-0000-4000-8000-000000000002';
+SELECT pg_temp.check_result('contact_cannot_be_cleared',pg_temp.attempt($q$UPDATE public.profiles SET whatsapp_number='' WHERE id=auth.uid()$q$)='invalid_whatsapp');
+SELECT pg_temp.check_result('customer_banner_publish_denied',pg_temp.attempt($q$SELECT public.admin_save_banner(null,'{"image_desktop_url":"/assets/banners/x.webp","alt_text":"Test","status":"published"}')$q$) <> 'accepted');
+SELECT pg_temp.check_result('customer_settings_write_denied',pg_temp.attempt($q$INSERT INTO public.settings(key,value) VALUES('banner_effect','fade') ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value$q$) <> 'accepted');
+SELECT pg_temp.check_result('customer_banner_upload_denied',pg_temp.attempt($q$INSERT INTO storage.objects(bucket_id,name) VALUES('banners','test.webp')$q$) <> 'accepted');
+RESET ROLE;
+SELECT pg_temp.check_result('other_contact_unchanged',(SELECT whatsapp_number IS NULL FROM public.profiles WHERE id='b6180000-0000-4000-8000-000000000002'));
+INSERT INTO auth.mfa_factors(id,user_id,factor_type,status,secret,friendly_name,created_at,updated_at)
+ VALUES(gen_random_uuid(),'b6180000-0000-4000-8000-000000000001','totp','verified','synthetic-only','test',now(),now());
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check_result('aal1_cannot_complete_contact',pg_temp.attempt($q$SELECT public.complete_whatsapp_onboarding('+249912345678')$q$)='mfa_required');
+SELECT pg_temp.check_result('aal1_cannot_read_contact_status',pg_temp.attempt('SELECT public.get_own_onboarding_status()')='mfa_required');
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{"sub":"b6180000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}',true);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check_result('aal2_contact_allowed',(public.get_own_onboarding_status()->>'has_whatsapp')::boolean);
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{"sub":"b6180000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal1"}',true);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check_result('staff_without_settings_cannot_upload',pg_temp.attempt($q$INSERT INTO storage.objects(bucket_id,name) VALUES('banners','staff.webp')$q$) <> 'accepted');
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{"sub":"b6180000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal1"}',true);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check_result('publish_without_alt_denied',pg_temp.attempt($q$SELECT public.admin_save_banner(null,'{"image_desktop_url":"/assets/banners/x.webp","status":"published"}')$q$)='ALT_REQUIRED');
+SELECT pg_temp.check_result('javascript_link_denied',pg_temp.attempt($q$SELECT public.admin_save_banner(null,'{"image_desktop_url":"/assets/banners/x.webp","status":"draft","link_type":"url","link_target":"javascript:alert(1)"}')$q$) <> 'accepted');
+SELECT pg_temp.check_result('invalid_slider_setting_denied',pg_temp.attempt($q$INSERT INTO public.settings(key,value) VALUES('banner_interval','0') ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value$q$) <> 'accepted');
+SELECT pg_temp.check_result('admin_valid_upload_allowed',pg_temp.attempt($q$INSERT INTO storage.objects(bucket_id,name) VALUES('banners','test.webp')$q$)='accepted');
+SELECT pg_temp.check_result('admin_svg_upload_denied',pg_temp.attempt($q$INSERT INTO storage.objects(bucket_id,name) VALUES('banners','test.svg')$q$) <> 'accepted');
+CREATE TEMP TABLE saved_banner AS SELECT public.admin_save_banner(null,'{"image_desktop_url":"/assets/banners/x.webp","status":"published","alt_text":"test"}') AS id;
+SELECT pg_temp.check_result('valid_banner_saved', (SELECT id IS NOT NULL FROM saved_banner));
+CREATE TEMP TABLE copied_banner AS SELECT public.admin_copy_banner((SELECT id FROM saved_banner)) AS id;
+SELECT pg_temp.check_result('copy_is_draft',(SELECT b.status='draft' FROM public.banners b JOIN copied_banner c ON c.id=b.id));
+SELECT public.admin_set_banner_status((SELECT id FROM saved_banner),'draft');
+SELECT pg_temp.check_result('draft_not_in_public_rpc', NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.get_banners_public()) b WHERE b->>'id'=(SELECT id::text FROM saved_banner)));
+SELECT public.admin_delete_banner((SELECT id FROM copied_banner));
+SELECT pg_temp.check_result('admin_delete_works',NOT EXISTS(SELECT 1 FROM public.banners WHERE id=(SELECT id FROM copied_banner)));
+RESET ROLE;
+SELECT * FROM results ORDER BY name;
+ROLLBACK;
