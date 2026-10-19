@@ -3,6 +3,7 @@
   const client = window.supabaseClient;
   const error = document.getElementById('error');
   const button = document.getElementById('verify');
+  button.disabled = true;
   let factorId = null;
   async function finish() { await window.MeemAuthFlow.finishSignIn(); }
   async function init() {
@@ -17,6 +18,7 @@
       if (factorsError) throw factorsError;
       factorId = (data?.totp || []).find(f => f.status === 'verified')?.id || null;
       if (!factorId) throw new Error('factor_unavailable');
+      button.disabled = false;
     } catch (_) { error.textContent = 'تعذر تجهيز التحقق بخطوتين. أعد المحاولة أو تواصل مع الدعم.'; button.disabled = true; }
   }
   document.getElementById('mfaForm').addEventListener('submit', async event => {

@@ -27,4 +27,17 @@ for(const tz of ['UTC','Africa/Khartoum','America/New_York','Asia/Tokyo']) {
 }
 assert.throws(()=>u.khartoumToUtc('2026-02-31T12:00'));assert.throws(()=>u.khartoumToUtc('garbage'));checks+=2;
 assert.equal(u.mobileBox('3:2').h,720);assert.equal(u.mobileBox('16:9').h,608);checks+=2;
+// Slow factor discovery must not expose an actionable verification form.
+let resolveFactors, submitted=0;
+const nodes=Object.fromEntries(['error','verify','mfaForm','code','logout'].map(id=>[id,{disabled:false,value:'123456',addEventListener(type,handler){this[type]=handler;}}]));
+const challengeContext={document:{getElementById:id=>nodes[id]},location:{replace(){}},window:{MeemAuthFlow:{finishSignIn:async()=>{}},supabaseClient:{auth:{getSession:async()=>({data:{session:{}}}),mfa:{
+ getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:'aal1',nextLevel:'aal2'}}),
+ listFactors:()=>new Promise(resolve=>{resolveFactors=resolve;}),
+ challengeAndVerify:async()=>{submitted++;return {error:new Error('invalid')};}
+}}}}};
+vm.createContext(challengeContext);vm.runInContext(fs.readFileSync('assets/js/mfa.js','utf8'),challengeContext);
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(nodes.verify.disabled,true);await nodes.mfaForm.submit({preventDefault(){}});assert.equal(submitted,0);checks+=2;
+resolveFactors({data:{totp:[{id:'test-factor',status:'verified'}]}});await new Promise(resolve=>setImmediate(resolve));
+assert.equal(nodes.verify.disabled,false);await nodes.mfaForm.submit({preventDefault(){}});assert.equal(submitted,1);assert.equal(nodes.verify.disabled,false);checks+=3;
 console.log(`Auth/banner client: ${checks} passed (MFA return paths, redirect attacks, Khartoum across four device timezones).`);
