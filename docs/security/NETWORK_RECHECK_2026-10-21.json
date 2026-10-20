@@ -1,0 +1,16 @@
+{
+  "checkedAtUtc": "2026-10-20T23:19:24Z",
+  "checkedAtKhartoum": "2026-10-21T01:19:24+02:00",
+  "environmentId": "ccarenv_b64_Y2NhcmVudl82MjFlZWNlODBjMDA4MTkxOTViNmNlYzdlNDYwMzFhOQ",
+  "specRevision": "8",
+  "observedSpecRevision": "8",
+  "observationsCurrent": true,
+  "policyState": "enforced",
+  "allowedHosts": [],
+  "stagingConnect": "403 Forbidden at CONNECT proxy",
+  "oauthConnect": "403 Forbidden at CONNECT proxy",
+  "strixAuth": "Not signed in; manual OAuth flow reached browser-approval step and was cancelled before collecting credentials because token exchange is network-blocked",
+  "strixAssessment": "Not started",
+  "codeqlAlerts": "GitHub API Forbidden; no alerts read",
+  "zapArtifact": "GitHub connector created file reference; downloading ZIP returned HTTP 403; full report not read"
+}
