@@ -2,7 +2,7 @@
 /**
  * MEEM STORE — unit tests for assets/js/category-icons.js
  *   · normalization (hamza / taa-marbuta / tashkeel / tatweel)
- *   · every documented keyword maps to the documented Lucide key
+ *   · every documented keyword maps to its stable category key
  *   · unknown names fall back to layout-grid (never undefined)
  *   · every rule key + preset exists in the sprite
  *   · resolve() honours custom / preset / auto, and degrades to auto
@@ -47,6 +47,10 @@ const TABLE = [
   ["موسيقى", "music"], ["سبوتيفاي", "music"],
   ["جواهر", "gem"], ["جيمز", "gem"], ["uc", "gem"], ["diamonds", "gem"],
   ["محفظة", "wallet"],
+  ["AI", "brain"], ["ادوات الذكاء الاصطناعي", "brain"], ["اشتراكات ChatGPT", "brain"],
+  ["توثيقات", "badge-check"], ["توثيق حسابات", "badge-check"],
+  ["بطاقات فيزا", "credit-card"], ["Visa", "credit-card"], ["credit card", "credit-card"],
+  ["بطاقة هوية", "id-card"],
   ["تطبيقات", "app-window"], ["apps", "app-window"],
   ["خدمات", "sparkles"],
   ["شحن رصيد", "wallet"],
@@ -56,7 +60,7 @@ const TABLE = [
 for (const [name, expected] of TABLE) eq(CI.suggest(name), expected, `suggest(${JSON.stringify(name)})`);
 
 // ── 3. preset / rule integrity vs the sprite ────────────────────────────────
-const sprite = fs.readFileSync(path.join(ROOT, "assets/icons/lucide-sprite.svg"), "utf8");
+const sprite = fs.readFileSync(path.join(ROOT, "assets/icons/category-sprite.svg"), "utf8");
 const spriteIds = new Set([...sprite.matchAll(/<symbol id="i-([a-z0-9-]+)"/g)].map((m) => m[1]));
 
 const srcText = fs.readFileSync(path.join(ROOT, "assets/js/category-icons.js"), "utf8");
@@ -78,6 +82,11 @@ eq(CI.resolve({}).key, "layout-grid", "resolve empty → fallback");
 eq(CI.isValidKey("gamepad-2"), true, "valid key");
 eq(CI.isValidKey("not-real"), false, "unknown key rejected");
 eq(CI.isValidKey("<script>"), false, "markup rejected");
+eq(CI.matches('brain', 'AI'), true, 'search AI');
+eq(CI.matches('mail', 'AI'), false, 'AI search does not match unrelated mail');
+eq(CI.matches('credit-card', 'فيزا'), true, 'search Visa Arabic');
+eq(CI.matches('badge-check', 'توثيق'), true, 'search verification Arabic');
+eq(CI.matches('layout-grid', 'zzzz-unknown'), false, 'unknown search has no false grid match');
 
 console.log(`category-icons: ${pass} passed, ${fail} failed`);
 if (fail) { failures.forEach((f) => console.error("  ✖ " + f)); process.exit(1); }

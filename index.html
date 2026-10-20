@@ -105,46 +105,38 @@
     .categories-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important; gap: 14px !important; }
   }
 
-  /* أيقونة القسم/التصنيف الموحّدة: مربع مدوّر 56-64px بتدرّج أزرق ملكي→كهربائي،
-     حد ذهبي رفيع، أيقونة بيضاء/ذهبية بسُمك 1.75، مع ظهور ناعم. */
+  /* Strong category emblems use the same artwork as the admin picker. */
   .mm-ico {
     --mm-ico-size: 60px;
     flex: 0 0 auto; width: var(--mm-ico-size); height: var(--mm-ico-size);
     display: grid; place-items: center; border-radius: 18px;
-    background: linear-gradient(150deg, var(--mm-royal, #0A2A6B), var(--mm-royal-700, #103E96) 55%, #087BFF);
-    border: 1px solid rgba(255, 212, 0, .42);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 10px 24px -14px rgba(8,123,255,.7);
-    color: #fff; overflow: hidden;
-    transition: transform .3s cubic-bezier(.2,.7,.3,1), box-shadow .3s ease;
+    background: #092A91; border: 1px solid rgba(255, 212, 0, .38);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 5px 12px rgba(6,26,92,.2);
+    color: #FFD400; overflow: hidden;
   }
-  .mm-ico svg { width: 58%; height: 58%; stroke-width: 1.75; color: #fff; }
-  .mm-ico--gold { color: var(--mm-gold); }
-  .mm-ico--gold svg { color: var(--mm-gold); }
-  .mm-ico img { width: 100%; height: 100%; object-fit: contain; padding: 16%; }
-  .game-card:hover .mm-ico, .mm-ico:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -14px rgba(8,123,255,.85); }
-  @media (prefers-reduced-motion: reduce) {
-    .mm-ico, .game-card:hover .mm-ico { transition: none; transform: none; }
-  }
+  .mm-ico svg { width: 60%; height: 60%; color: inherit; }
+  .mm-ico img { width: 100%; height: 100%; object-fit: contain; padding: 14%; }
+  .game-card:hover .mm-ico, .section-chip:hover .mm-ico { border-color: #FFD400; background: #061A5C; }
 
   /* غلاف التصنيف يكون إطار أيقونة موحّداً حين لا توجد صورة غلاف */
   .game-thumb--icon { background: transparent !important; border: none !important; height: auto !important; }
 
   /* صف أيقونات الأقسام (تمرير أفقي على الموبايل) */
   .section-icon-row {
-    display: flex; gap: 14px; overflow-x: auto; padding: 14px 16px 6px;
+    display: flex; gap: 16px; overflow-x: auto; padding: 18px 16px 20px;
     scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   .section-icon-row::-webkit-scrollbar { display: none; }
   .section-chip {
     flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 7px;
-    text-decoration: none; scroll-snap-align: start; min-width: 68px;
+    text-decoration: none; scroll-snap-align: start; width: 88px; min-width: 88px;
   }
   .section-chip span.section-chip-label {
     color: var(--text-light); font-size: 11.5px; font-weight: 800; text-align: center;
-    max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 88px; line-height: 1.6; overflow-wrap: anywhere;
   }
-  .section-chip .mm-ico { --mm-ico-size: 62px; border-radius: 50%; }
+  .section-chip .mm-ico { --mm-ico-size: 68px; border-radius: 20px; }
 
   /* بطاقة منتج (الأكثر طلباً / الجديد) */
   .hl-section .categories-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
@@ -369,10 +361,10 @@
 
 
 <!-- MEEM UI system (tokens + components + icons + behaviour) -->
-<link rel="stylesheet" href="assets/css/meem.css">
+<link rel="stylesheet" href="assets/css/meem.css?v=20261020">
 <link rel="stylesheet" href="assets/vendor/swiper/swiper-bundle.min.css">
 <script src="assets/js/meem-ui.js"></script>
-<script src="assets/js/category-icons.js"></script>
+<script src="assets/js/category-icons.js?v=20261020"></script>
 <link rel="stylesheet" href="assets/css/whatsapp-onboarding.css">
 </head>
 <body class="mm-has-bottom-nav">
@@ -482,9 +474,9 @@
   </div>
 </div>
 
-<div id="homeTopOrdered" class="catalog-sections"></div>
 <div id="products" class="products-anchor"></div>
 <div id="sectionRow" class="section-icon-row" aria-label="أقسام المتجر" hidden></div>
+<div id="homeTopOrdered" class="catalog-sections"></div>
 <div id="categoriesContainer" class="catalog-sections">
   <div style="color: var(--text-muted); font-size: 13px; padding: 20px; text-align: center;">
     <img class="mm-mark-pulse" src="assets/img/meem-mark-96.png"
@@ -517,7 +509,7 @@
 <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
 <script src="assets/js/banner-utils.js"></script>
 <script src="assets/js/banners.js"></script>
-<script src="assets/js/pages/index-2.js"></script>
+<script src="assets/js/pages/index-2.js?v=20261020"></script>
   <script src="assets/js/meem-assistant.js"></script>
 <nav class="mm-bottom-nav" aria-label="التنقل السريع">
   <a href="index.html" class="is-active" aria-current="page"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-house"></use></svg><span>الرئيسية</span></a>

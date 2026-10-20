@@ -8,7 +8,7 @@
      #FFFFFF silver      (text & cards)
      #087BFF electric    (links, interaction, glow)
      #061A5C deep navy   (page background — derived "very dark blue")
-   Icons: Lucide sprite (assets/icons/lucide-sprite.svg) — one library, no mixing.
+   Icons: Lucide for interface actions; Phosphor Duotone for catalog categories.
    Theme: DARK is the identity and the default. Light is opt-in via [data-theme="light"].
    ============================================================================= */
 
@@ -1327,3 +1327,6 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 }
 
 .mm-slide-body .mm-stretched::after { content: none; }
+
+/* Catalog artwork is filled SVG, separate from stroked interface controls. */
+.mm-category-icon { width: 1.5em; height: 1.5em; display: inline-block; flex-shrink: 0; fill: currentColor; stroke: none; vertical-align: middle; }

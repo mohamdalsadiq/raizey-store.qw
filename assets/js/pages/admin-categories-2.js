@@ -73,12 +73,7 @@ async function loadCategories() {
 }
 
 function catSprite(key) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'mm-i'); svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
-  svg.setAttribute('aria-hidden', 'true');
-  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  use.setAttribute('href', 'assets/icons/lucide-sprite.svg#i-' + key);
-  svg.appendChild(use); return svg;
+  return window.MeemCategoryIcons.createIcon(key);
 }
 
 function render() {

@@ -493,3 +493,14 @@
   border: 1px dashed var(--border-color); color: var(--mm-accent-text); font-weight: 800; font-size: 13px;
 }
 .mip-thumb { margin-top: 4px; }
+
+.admin-banner-shortcut { display: flex; align-items: center; gap: 14px; padding: 18px; margin-bottom: 22px; border: 1px solid rgba(255,212,0,.4); border-radius: 16px; background: #092A91; color: #fff; text-decoration: none; }
+.admin-banner-shortcut > svg { width: 32px; height: 32px; color: #FFD400; flex-shrink: 0; }
+.admin-banner-shortcut strong { display: block; font-size: 16px; }
+.admin-banner-shortcut small { display: block; margin-top: 5px; color: #e0e8ff; line-height: 1.7; }
+.admin-banner-shortcut-action { margin-inline-start: auto; color: #FFD400; white-space: nowrap; font-weight: 800; font-size: 12px; }
+.admin-banner-shortcut:focus-visible { outline: 3px solid #FFD400; outline-offset: 4px; }
+.mm-icon-picker .mm-ico { display: grid; place-items: center; width: var(--mm-ico-size,60px); height: var(--mm-ico-size,60px); border-radius: 12px; background: #092A91; color: #FFD400; border: 1px solid rgba(255,212,0,.38); }
+.mm-icon-picker .mm-ico svg { width: 65%; height: 65%; color: inherit; }
+.mm-icon-picker .mm-ico img { width: 100%; height: 100%; object-fit: contain; }
+@media (max-width:480px) { .admin-banner-shortcut { flex-wrap: wrap; } .admin-banner-shortcut > span:nth-child(2) { flex: 1; min-width: 180px; } }
