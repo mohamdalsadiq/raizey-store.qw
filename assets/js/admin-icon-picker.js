@@ -1,6 +1,6 @@
 /* =========================================================
    MEEM STORE — admin icon picker (sections & categories)
-   Modes: automatic | preset (Lucide library) | custom image.
+   Modes: automatic | preset (Phosphor Duotone library) | custom image.
    Custom images: PNG/JPG/WEBP only (no SVG), cropped & resized to
    256x256 WebP < 100KB in the browser, uploaded to category-icons.
    Requires: assets/js/category-icons.js (window.MeemCategoryIcons).
@@ -18,15 +18,10 @@
     if (text != null) n.textContent = text;
     return n;
   }
-  function iconSvg(key, cls) {
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', cls || 'mm-i');
-    svg.setAttribute('aria-hidden', 'true');
-    var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', 'assets/icons/lucide-sprite.svg#i-' + key);
-    svg.appendChild(use);
-    return svg;
+  function iconSvg(key) {
+    return CI.createIcon(key);
   }
+
   function frame(key, image, size) {
     var box = el('span', 'mm-ico');
     box.style.setProperty('--mm-ico-size', size + 'px');
@@ -99,8 +94,8 @@
       var spec = currentSpec();
       previewWrap.replaceChildren(frame(spec.key, spec.mode === 'custom' ? spec.image : '', 64));
       var label = el('span', 'mip-preview-label');
-      label.textContent = spec.mode === 'auto' ? ('تلقائي: ' + spec.key)
-        : spec.mode === 'preset' ? ('مختار: ' + spec.key) : 'صورة مخصصة';
+      label.textContent = spec.mode === 'auto' ? 'اختيار تلقائي حسب الاسم'
+        : spec.mode === 'preset' ? 'الأيقونة المختارة' : 'صورة مخصصة';
       previewWrap.appendChild(label);
     }
     function renderSeg() {
@@ -134,18 +129,18 @@
     function renderLibrary() {
       var search = el('input', 'mip-search');
       search.type = 'search';
-      search.placeholder = 'ابحث بالعربي أو الإنجليزي…';
+      search.placeholder = 'ألعاب، AI، توثيق، فيزا…';
+      search.setAttribute('aria-label', 'البحث في مكتبة الأيقونات');
       var grid = el('div', 'mip-grid');
       function paint(q) {
         grid.replaceChildren();
         var query = (q || '').toLowerCase();
-        var suggested = query && CI ? CI.suggest(query, '') : '';
         (CI ? CI.PRESETS : []).forEach(function (key) {
-          if (query && key.indexOf(query) === -1 && key !== suggested) return;
+          if (query && !CI.matches(key, query)) return;
           var b = el('button', 'mip-cell' + (state.key === key ? ' active' : ''));
           b.type = 'button';
-          b.title = key;
-          b.setAttribute('aria-label', key);
+          b.title = CI.label(key);
+          b.setAttribute('aria-label', CI.label(key));
           b.setAttribute('aria-pressed', state.key === key ? 'true' : 'false');
           b.appendChild(frame(key, '', 40));
           b.addEventListener('click', function () {

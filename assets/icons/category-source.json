@@ -1,0 +1,9 @@
+{
+  "package": "@phosphor-icons/core",
+  "version": "2.1.1",
+  "style": "duotone",
+  "source": "https://github.com/phosphor-icons/core",
+  "license": "MIT",
+  "icons": 87,
+  "sha256": "f6d724417238287d9cd604e4afd885d613cf048c89d154ecb030e17af3db54f3"
+}

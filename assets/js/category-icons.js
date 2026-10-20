@@ -1,6 +1,6 @@
 /* =========================================================
    MEEM STORE — smart category/section icons (shared: storefront + admin)
-   One icon library only: Lucide (assets/icons/lucide-sprite.svg).
+   Category artwork: Phosphor Duotone (local, pinned, MIT).
    Exposes window.MeemCategoryIcons and (for tests) module.exports.
    No innerHTML with DB data — callers use the returned key with the sprite.
    ========================================================= */
@@ -13,10 +13,10 @@
 
   var FALLBACK = 'layout-grid';
 
-  // Curated Lucide set suited to a digital-goods store. Every key here is present
-  // in assets/icons/lucide-sprite.svg (the builder reads this list).
+  // Curated category set suited to a digital-goods store. Every key here is present
+  // in assets/icons/category-sprite.svg (the builder reads this list).
   var PRESETS = [
-    'gamepad-2', 'joystick', 'swords', 'crosshair', 'target', 'flame', 'zap', 'rocket',
+    'brain', 'gamepad-2', 'joystick', 'swords', 'crosshair', 'target', 'flame', 'zap', 'rocket',
     'crown', 'trophy', 'medal', 'gem', 'coins', 'wallet', 'banknote', 'gift', 'ticket',
     'id-card', 'credit-card', 'smartphone', 'monitor', 'tv', 'clapperboard', 'music',
     'headphones', 'app-window', 'cloud', 'download', 'layers', 'package', 'store', 'tag',
@@ -29,9 +29,13 @@
     'truck', 'briefcase', 'badge-check', 'piggy-bank', 'receipt', 'search', 'film', 'hash'
   ];
 
-  // Ordered rules: first match wins. Values are Lucide keys (must exist in the sprite).
+  // Ordered rules: first match wins. Values are stable preset keys (must exist in the sprite).
   // Each rule tests a normalized (lowercase, de-tashkeel, unified-letters) haystack.
   var RULES = [
+    [/\bai\b|artificial\s*intelligence|chat\s*gpt|chatgpt|claude|gemini|midjourney|deepseek|ذكاء|شات\s*جي|جيميني/, 'brain'],
+    [/توثيق|موثق|تحقق|verified|verification|blue\s*(tick|check)/, 'badge-check'],
+    [/فيزا|visa|ماستر|mastercard|بطاق.*بنكي|credit\s*card|debit/, 'credit-card'],
+    [/هوية|هويه|هويات|id\s*card|identity/, 'id-card'],
     [/pubg|ببجي|ببجى|بابجي/, 'crosshair'],
     [/free\s*fire|فري\s*فاير|فريفاير|freefire/, 'flame'],
     [/call\s*of\s*duty|\bcod\b|كول\s*اوف|كولوف/, 'swords'],
@@ -115,6 +119,49 @@
     [/خدمات|service|services/, 'sparkles']
   ];
 
+  var LABELS = {
+    'brain': 'ذكاء اصطناعي AI ChatGPT Claude Gemini أدوات اشتراكات',
+    'bot': 'روبوت بوت مساعد', 'badge-check': 'توثيق حسابات شارة تحقق',
+    'credit-card': 'فيزا ماستركارد بطاقات بنكية دفع', 'id-card': 'بطاقة هوية',
+    'gamepad-2': 'ألعاب يد تحكم بلايستيشن Xbox', 'joystick': 'ألعاب عصا تحكم',
+    'crosshair': 'ببجي PUBG تصويب', 'flame': 'فري فاير Free Fire نار',
+    'swords': 'قتال كول أوف ديوتي سيوف', 'gift': 'بطاقات هدايا كروت',
+    'wallet': 'محفظة رصيد', 'banknote': 'تحويل بنك نقود', 'coins': 'عملات',
+    'gem': 'جواهر شدات', 'clapperboard': 'اشتراكات نتفلكس شاهد',
+    'circle-play': 'جوجل بلاي تشغيل', 'music': 'موسيقى سبوتيفاي',
+    'app-window': 'تطبيقات برامج', 'shield-check': 'أمان حماية',
+    'cloud': 'سحابة تخزين', 'key-round': 'مفاتيح تفعيل تراخيص',
+    'globe': 'عالمي إنترنت', 'message-circle': 'دردشة تواصل واتساب ديسكورد',
+    'headphones': 'سماعات صوت', 'smartphone': 'هاتف آيفون آبل',
+    'monitor': 'كمبيوتر ستيم', 'tv': 'تلفزيون بث', 'video': 'فيديو تصوير',
+    'image': 'صور', 'palette': 'تصميم رسم', 'camera': 'كاميرا',
+    'sparkles': 'خدمات مميزة', 'package': 'باقات حزم', 'store': 'متجر',
+    'ticket': 'تذاكر قسائم', 'percent': 'عروض خصومات كوبونات',
+    'crown': 'تاج كلاش', 'trophy': 'بطولة فيفا', 'rocket': 'فورتنايت صاروخ',
+    'puzzle': 'روبلوكس ألغاز', 'dices': 'ماينكرافت مكعبات',
+    'cpu': 'معالج', 'database': 'قاعدة بيانات', 'server': 'استضافة خادم',
+    'terminal': 'برمجة كود', 'book-open': 'كتب قراءة', 'graduation-cap': 'تعليم دورات',
+    'receipt': 'فواتير', 'hash': 'رمز QR باركود', 'layout-grid': 'أقسام تصنيفات'
+  };
+  function label(key) { return LABELS[key] || key; }
+  function matches(key, query) {
+    var q = normalize(query);
+    var text = normalize(key + ' ' + label(key));
+    var literalMatch = /^[a-z0-9]{1,2}$/.test(q) ? text.split(' ').includes(q) : text.includes(q);
+    return !q || literalMatch || suggest(q, '__none__') === key;
+  }
+  function createIcon(key) {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'mm-category-icon');
+    svg.setAttribute('viewBox', '0 0 256 256');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', 'assets/icons/category-sprite.svg#i-' + (isValidKey(key) ? key : FALLBACK));
+    svg.appendChild(use);
+    return svg;
+  }
+
   // Arabic normalization: strip tashkeel/tatweel, unify alef/yaa/taa-marbuta.
   function normalize(value) {
     if (value == null) return '';
@@ -153,6 +200,9 @@
   }
 
   return {
+    createIcon: createIcon,
+    label: label,
+    matches: matches,
     FALLBACK: FALLBACK,
     PRESETS: PRESETS.slice(),
     normalize: normalize,

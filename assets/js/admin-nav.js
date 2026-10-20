@@ -4,6 +4,7 @@
 
   const NAV_ITEMS = [
     ['admin.html', 'الرئيسية'],
+    ['admin-banners.html', 'إدارة البنرات'],
     ['admin-orders.html', 'الطلبات'],
     ['admin-topups.html', 'شحن المحافظ'],
     ['admin-products.html', 'المنتجات'],

@@ -72,7 +72,7 @@ let sections = [];
             <button class="admin-action-btn" data-action="delete" data-id="${section.id}" title="حذف"><svg class="mm-i" style="color: var(--danger);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
           </div>
         </div>`).join('');
-      // fill each icon slot with the resolved icon (custom image or Lucide key)
+      // fill each icon slot with the resolved icon (custom image or Phosphor artwork)
       sections.forEach((section) => {
         const slot = container.querySelector('[data-icon-slot="' + section.id + '"]');
         if (!slot) return;
@@ -90,11 +90,7 @@ let sections = [];
       container.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteSection(btn.dataset.id)));
     }
     function spriteIcon(key) {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'mm-i'); svg.setAttribute('aria-hidden', 'true');
-      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-      use.setAttribute('href', 'assets/icons/lucide-sprite.svg#i-' + key);
-      svg.appendChild(use); return svg;
+      return window.MeemCategoryIcons.createIcon(key);
     }
     let iconPicker = null;
     function mountIconPicker(section) {

@@ -9,6 +9,8 @@ BASE=os.environ.get('BASE_URL','http://127.0.0.1:3000')
 rows=json.loads((ROOT/'assets/banners/default-banners.json').read_text())
 UID='b6180000-0000-4000-8000-000000000001'
 FACTOR='b6180000-0000-4000-8000-000000000099'
+sections=[{'id':f'b6180000-0000-4000-8000-{i+200:012d}','name':name,'icon_mode':'auto','display_order':i,'is_active':True} for i,name in enumerate(['الألعاب','AI','توثيقات','بطاقات فيزا'])]
+categories=[{'id':f'b6180000-0000-4000-8000-{i+300:012d}','section_id':s['id'],'name':s['name'],'icon_mode':'auto','display_order':i,'is_active':True} for i,s in enumerate(sections)]
 checks=[]
 def check(name, ok=True):
  assert ok,name
@@ -46,8 +48,12 @@ class API:
   if path.endswith('/has_admin_permission'):reply(self.admin);return
   if path.endswith('/validate_referral_short_code'):reply([{'valid':True}]);return
   if path.endswith('/admin_save_banner'):self.saved=data;reply('b6180000-0000-4000-8000-000000000098');return
+  if path.endswith('/profiles') and 'id=eq.' not in r.request.url:reply([]);return
   if path.endswith('/profiles'):reply({'role':'admin' if self.admin else 'customer','is_banned':False,'full_name':'Test','whatsapp_number':'+249912345678'});return
   if path.endswith('/get_top_ordered_products'):reply([{'id':'b6180000-0000-4000-8000-000000000055','name':'منتج الاختبار','image_url':'/assets/banners/banner-1-desktop.webp','price_usd':1,'order_count':3}]);return
+  if path.endswith('/store_sections'):reply(sections);return
+  if path.endswith('/categories'):reply(categories);return
+  if path.endswith('/settings') and 'eq.catalog_icons_flag' in r.request.url:reply({'value':'true'});return
   if path.endswith('/settings') and 'eq.home_highlights_flag' in r.request.url:reply({'value':'true'});return
   if path.endswith('/settings') and 'eq.usd_to_sdg_rate' in r.request.url:reply({'value':'150'});return
   if path.endswith('/settings'):reply([{'key':'banner_mobile_ratio','value':'16:9'},{'key':'banner_autoplay','value':'true'},{'key':'banner_interval','value':'5'},{'key':'banner_effect','value':'slide'}]);return
@@ -105,6 +111,11 @@ with sync_playwright() as p:
    current=page.evaluate('document.querySelector("#mmHeroSwiper").swiper.realIndex');page.locator('#mmHeroSwiper').focus();page.keyboard.press('ArrowLeft');page.wait_for_timeout(650)
    check(f'Keyboard next slide {width}px',page.evaluate('document.querySelector("#mmHeroSwiper").swiper.realIndex')!=current)
   else:check('Reduced motion does not auto-play',page.evaluate('!document.querySelector("#mmHeroSwiper").swiper.autoplay.running'))
+  page.locator('#sectionRow .section-chip').first.wait_for()
+  check(f'Section icons before best sellers {width}px',page.evaluate("Boolean(document.querySelector('#sectionRow').compareDocumentPosition(document.querySelector('#homeTopOrdered')) & Node.DOCUMENT_POSITION_FOLLOWING)"))
+  expected_keys=['gamepad-2','brain','badge-check','credit-card']
+  actual=page.locator('#sectionRow use').evaluate_all('(nodes)=>nodes.map(n=>n.getAttribute("href"))')
+  check(f'Specific new category artwork {width}px',actual==['assets/icons/category-sprite.svg#i-'+k for k in expected_keys])
   page.screenshot(path=str(OUT/f'banner-{width}-{reduce}.png'))
   check(f'Banner no JavaScript exceptions {width}px',not errors);ctx.close()
  ctx,api,page,errors=setup(has_touch=True,is_mobile=True)
@@ -134,7 +145,14 @@ with sync_playwright() as p:
  ctx,api,page,errors=setup();api.empty=True;page.goto(BASE+'/index.html');page.wait_for_function("() => document.querySelector('#mmHeroSwiper').dataset.ready==='1'")
  check('Unpublished all banners does not resurrect fallback ads',page.locator('.mm-slide-default').count()==1);ctx.close()
  ctx,api,page,errors=setup(1280,900,session('aal2'),timezone_id='America/New_York');api.admin=True;api.phone=True
- page.goto(BASE+'/admin-banners.html');page.locator('.bn-actions button').first.wait_for();page.locator('.bn-actions button').first.click()
+ page.goto(BASE+'/admin.html');page.locator('.admin-banner-shortcut').wait_for()
+ check('Canonical navigation retains banner management',page.locator('.admin-nav a[href="admin-banners.html"]').count()==1)
+ page.screenshot(path=str(OUT/'admin-banner-shortcut.png'))
+ page.locator('.admin-banner-shortcut').click();page.wait_for_url('**/admin-banners.html')
+ check('Banner nav is current after dashboard navigation',page.locator('.admin-nav a[aria-current="page"]').get_attribute('href')=='admin-banners.html')
+ page.locator('#autoplaySelect').wait_for();page.locator('#addNewBtn').wait_for()
+ check('Slider controls reachable from dashboard')
+ page.locator('.bn-actions button').first.wait_for();page.locator('.bn-actions button').first.click()
  check('Schedule input is Khartoum in New York browser',page.locator('#startInput').input_value()=='2026-10-18T18:30')
  page.locator('#formSaveBtn').click();page.wait_for_function("() => !document.querySelector('#formModal').classList.contains('show')")
  check('Schedule saves exact UTC instant from any browser',api.saved['p_payload']['starts_at']=='2026-10-18T16:30:00.000Z')
@@ -146,7 +164,19 @@ with sync_playwright() as p:
  page.screenshot(path=str(OUT/'admin-preview.png'))
  page.locator('#statusInput').select_option('published');page.locator('#formSaveBtn').click();page.wait_for_function("() => document.querySelector('#formError').textContent.includes('إلزامي')")
  check('Publishing without alt blocked before upload')
- check('Admin flow no JavaScript exceptions',not errors);ctx.close()
+ check('Admin flow no JavaScript exceptions',not errors)
+ page.locator('#formCancelBtn').click();page.locator('.admin-nav a[href="admin-sections.html"]').click();page.locator('#addNewBtn').click()
+ page.locator('#nameInput').fill('توثيق حسابات');page.locator('.mip-seg-btn').filter(has_text='من المكتبة').click()
+ page.locator('.mip-search').fill('فيزا');page.locator('.mip-cell').click()
+ check('Arabic icon search selects Visa artwork',page.locator('.mip-preview use').get_attribute('href')=='assets/icons/category-sprite.svg#i-credit-card')
+ page.locator('.mip-search').fill('AI');page.locator('.mip-cell').click()
+ check('AI artwork selectable from admin',page.locator('.mip-preview use').get_attribute('href')=='assets/icons/category-sprite.svg#i-brain')
+ page.locator('.mip-search').fill('');check('All 87 icons available',page.locator('.mip-cell').count()==87)
+ page.screenshot(path=str(OUT/'admin-icon-library.png'))
+ check('Admin icon picker no JavaScript exceptions',not errors);ctx.close()
+ ctx,api,page,errors=setup(session_data=session('aal2'));api.phone=True
+ page.goto(BASE+'/admin-banners.html');page.locator('#accessDenied.show').wait_for()
+ check('Customer cannot reach banner controls',not page.locator('#addNewBtn').is_visible());ctx.close()
  browser.close()
 (OUT/'results.json').write_text(json.dumps({'checks':checks,'count':len(checks)},ensure_ascii=False,indent=2))
 print(f'Browser: {len(checks)} checks passed; screenshots: {OUT}')

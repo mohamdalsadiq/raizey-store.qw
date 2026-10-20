@@ -171,8 +171,7 @@ function getSafeImageUrl(value) {
 }
 
 function createIcon(name, style) {
-  // Single icon system: Lucide sprite (see assets/icons/lucide-sprite.svg)
-  const icon = window.rzIcon(name);
+  const icon = window.MeemCategoryIcons.createIcon(name);
   if (style) icon.style.cssText = style;
   return icon;
 }

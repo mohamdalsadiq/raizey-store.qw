@@ -27,6 +27,8 @@ if (!process.argv.includes('--syntax-only')) {
   }
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/vendor/manifest.json'),'utf8'));
   for(const [name,hash] of Object.entries(manifest)) if(createHash('sha256').update(fs.readFileSync(path.join(root,'assets/vendor',name))).digest('hex')!==hash) failures.push(name+': vendor digest mismatch');
+  const categorySource=JSON.parse(fs.readFileSync(path.join(root,'assets/icons/category-source.json'),'utf8'));
+  if(createHash('sha256').update(fs.readFileSync(path.join(root,'assets/icons/category-sprite.svg'))).digest('hex')!==categorySource.sha256) failures.push('Category sprite digest mismatch');
 }
 if(failures.length) { console.error(failures.join('\n'));process.exit(1); }
 console.log(`Static ${process.argv.includes('--syntax-only')?'lint':'build'} passed; ${checked} scripts parse; asset and CSP checks complete.`);
