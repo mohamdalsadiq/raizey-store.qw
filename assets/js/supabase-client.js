@@ -92,8 +92,8 @@ function getFriendlyError(errMsg) {
   return 'حصل خطأ أثناء إتمام الطلب. يرجى المحاولة مجدداً أو التواصل مع الدعم.';
 }
 const runtimeSupabaseConfig = window.__SUPABASE_CONFIG__ || {};
-const SUPABASE_URL = runtimeSupabaseConfig.url || "https://rglbfizqolrenwfsndyv.supabase.co";
-const SUPABASE_ANON_KEY = runtimeSupabaseConfig.anonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJnbGJmaXpxb2xyZW53ZnNuZHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNDY4NzMsImV4cCI6MjA5ODcyMjg3M30.bJywsPvgXPdsNOZlVTIwYHz3Z2zcobwinGuUXAb5ev4";
+const SUPABASE_URL = runtimeSupabaseConfig.url || "https://dvcsdbsnnbdpzaiccjej.supabase.co";
+const SUPABASE_ANON_KEY = runtimeSupabaseConfig.anonKey || "sb_publishable_So4SLV9-AjYoKW1V6Q0eTQ_vcW_-K3u";
 // القراءة العامة المطلوبة للوصول إلى Edge Function؛ لا تُعرّف هنا أي خدمة سرية.
 window.SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;

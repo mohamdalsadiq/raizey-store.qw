@@ -116,7 +116,7 @@
     var v = u.trim();
     if (preview && v.startsWith('blob:' + location.origin + '/')) return v;
     if (/^\/assets\/banners\/[A-Za-z0-9_@.-]+\.(webp|png|jpg|jpeg)$/.test(v)) return v;
-    if (/^https:\/\/rglbfizqolrenwfsndyv\.supabase\.co\/storage\/v1\/object\/public\/banners\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_@.-]+\.(webp|png|jpg|jpeg)$/.test(v)) return v;
+    if (/^https:\/\/dvcsdbsnnbdpzaiccjej\.supabase\.co\/storage\/v1\/object\/public\/banners\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_@.-]+\.(webp|png|jpg|jpeg)$/.test(v)) return v;
     return '';
   }
 
