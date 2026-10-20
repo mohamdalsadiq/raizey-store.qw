@@ -1,5 +1,7 @@
 {
   "supabase-2.118.0.min.js": "ee3be8de192b97cb1d73d1e95d6b82bb1f6b658c0f97c4ef757fc331996ed3d3",
   "chart-4.5.1.min.js": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
-  "libphonenumber-max-1.13.15.js": "1c0013a6cd33e5d55337efddc7faa540eb76542930850477426c15bfc6259044"
+  "libphonenumber-max-1.13.15.js": "1c0013a6cd33e5d55337efddc7faa540eb76542930850477426c15bfc6259044",
+  "swiper/swiper-bundle.min.js": "1e313555b04cb9b5273b7a817158708a05f58e18f91d97a4239dab6f68d23c4a",
+  "swiper/swiper-bundle.min.css": "95482d9f6501bcbcb3fb9309e776cf547d3553ed4dbb95c595223cf876277684"
 }

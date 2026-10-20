@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "test": "node scripts/test_receipt_pipeline.mjs && node scripts/test_receipt_judge.mjs && node scripts/category_icons_check.mjs",
+    "test": "node scripts/test_receipt_pipeline.mjs && node scripts/test_receipt_judge.mjs && node scripts/category_icons_check.mjs && node scripts/test_vendor_security.mjs",
     "test:edge": "node scripts/test_process_receipt_edge.mjs",
     "test:security": "node scripts/test_security_db.mjs",
     "lint": "node scripts/verify-build.mjs --syntax-only",
@@ -18,7 +18,8 @@
     "@supabase/supabase-js": "2.118.0",
     "chart.js": "4.5.1",
     "deno": "2.9.6",
-    "libphonenumber-js": "1.13.15"
+    "libphonenumber-js": "1.13.15",
+    "swiper": "12.2.0"
   },
   "engines": {
     "node": ">=24"
