@@ -16,6 +16,14 @@ try {
   const countryMigration = fs.readFileSync(new URL('../supabase/migrations/20261019001000_phone_number_country_rules.sql', import.meta.url), 'utf8');
   await db.exec(countryMigration);
   await db.exec(countryMigration);
+  const catalogStorageMigration = fs.readFileSync(new URL('../supabase/migrations/20261020211409_restrict_catalog_storage_permissions.sql', import.meta.url), 'utf8');
+  await db.exec(catalogStorageMigration);
+  await db.exec(catalogStorageMigration);
+  const storageResults = await db.exec(fs.readFileSync(new URL('../db/tests/catalog_storage_permissions.sql', import.meta.url), 'utf8'));
+  const storageChecks = storageResults.flatMap(r => r.rows || []).filter(r => Object.hasOwn(r, 'passed'));
+  for (const check of storageChecks) console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.name}`);
+  for (const check of storageChecks) assert.equal(check.passed, true, check.name);
+  console.log(`Catalog storage: ${storageChecks.length} passed; fixtures rolled back.`);
   let countryChecks=0;
   for (const country of getCountries()) {
     const example=getExampleNumber(country,examples);
