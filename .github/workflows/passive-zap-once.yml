@@ -1,0 +1,23 @@
+name: Passive ZAP baseline (one time)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/passive-zap-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  passive-zap:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'security/continuous-checks-2026-10-20'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: https://raizey-store-qw.vercel.app
+          allow_issue_writing: false
+          fail_action: false
+          cmd_options: '-m 1 -I -s'
