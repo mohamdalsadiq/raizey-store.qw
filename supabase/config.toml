@@ -14,3 +14,8 @@ verify_jwt = true
 # وتفرض rate limiting خادميًا على المستخدم أو عنوان الشبكة.
 [functions.chat-assistant]
 verify_jwt = false
+
+# Telegram has no Supabase user JWT. The handler instead requires the webhook
+# secret AND an exact numeric owner ID/private chat. Missing settings fail closed.
+[functions.telegram-admin]
+verify_jwt = false
