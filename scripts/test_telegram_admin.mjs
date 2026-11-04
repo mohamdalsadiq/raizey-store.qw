@@ -53,7 +53,9 @@ test('another user, group chat, anonymous sender and spoofed callback cannot pro
 });
 test('owner test performs read-only probe and sends success without order/customer details', async () => {
   const { handler, state } = fixture();
-  assert.equal((await handler(request())).status, 200);
+  const response = await handler(request());
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).database_connected, true);
   assert.equal(state.probes, 1); assert.equal(state.sent.length, 1);
   assert.equal(state.sent[0].body.chat_id, owner.id);
   assert.match(state.sent[0].body.text, /نجح اختبار الربط/);
@@ -87,13 +89,15 @@ test('database failure is reported to owner without secrets or false success', a
     probeDatabase: async () => { throw new Error('sensitive database details'); },
     fetch: async (_url, options) => { sent.push(JSON.parse(options.body)); return Response.json({ ok: true }); },
   });
-  assert.equal((await handler(request())).status, 200);
+  const response = await handler(request());
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).database_connected, false);
   assert.match(sent[0].text, /لم ينجح/); assert.doesNotMatch(sent[0].text, /sensitive|نجح اختبار الربط/);
 });
 test('Telegram errors do not echo a token or upstream error text', async () => {
   const handler = createTelegramAdminHandler(config, { probeDatabase: async () => {}, fetch: async () => { throw new Error(config.botToken); } });
   const result = await handler(request());
-  assert.equal(result.status, 502); assert.deepEqual(await result.json(), { error: 'delivery_failed' });
+  assert.equal(result.status, 502); assert.deepEqual(await result.json(), { error: 'delivery_failed', database_connected: true });
 });
 
 test('deployed entrypoint only uses HEAD on orders; database keys never reach Telegram', async () => {

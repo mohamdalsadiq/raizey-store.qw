@@ -64,14 +64,17 @@ export function createTelegramAdminHandler(config: Config, dependencies: Depende
     const command = callback ? callback.data : message.text?.trim();
     if (!["/start", "/test", "connection:test"].includes(command || "")) return json(200, { ok: true });
 
+    let databaseConnected: boolean | undefined;
     try {
       if (callback?.id) await telegram("answerCallbackQuery", { callback_query_id: callback.id });
       let text = "MEEM STORE 💙\nمساعد إدارة المتجر — اختبار الاتصال\nاضغط الزر لفحص اتصال قاعدة بيانات المتجر.";
       if (command !== "/start") {
         try {
           await dependencies.probeDatabase();
+          databaseConnected = true;
           text = "✅ نجح اختبار الربط\nتلجرام ↔ خادم المتجر ↔ قاعدة بيانات الطلبات\nهذا اختبار قراءة فقط؛ لم يتم تعديل أي طلب أو رصيد.";
         } catch {
+          databaseConnected = false;
           text = "⚠️ البوت يستقبل أوامرك، لكن فحص قاعدة البيانات لم ينجح.\nلم يتم تعديل أي طلب. راجع إعدادات الاتصال ثم أعد الاختبار.";
         }
       }
@@ -79,10 +82,10 @@ export function createTelegramAdminHandler(config: Config, dependencies: Depende
         chat_id: Number(config.ownerId), text, protect_content: true,
         reply_markup: { inline_keyboard: [[{ text: "🔌 فحص الربط بالمتجر", callback_data: "connection:test" }]] },
       });
-      return json(200, { ok: true });
+      return json(200, { ok: true, ...(databaseConnected === undefined ? {} : { database_connected: databaseConnected }) });
     } catch {
       // Never log bot-token URLs, incoming updates or upstream response bodies.
-      return json(502, { error: "delivery_failed" });
+      return json(502, { error: "delivery_failed", ...(databaseConnected === undefined ? {} : { database_connected: databaseConnected }) });
     }
   };
 }
