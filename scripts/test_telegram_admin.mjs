@@ -130,3 +130,36 @@ test('deployed entrypoint only uses HEAD on orders; database keys never reach Te
     }
   } finally { globalThis.fetch = originalFetch; globalThis.Deno = originalDeno; }
 });
+
+test('entrypoint loads server-only Vault settings, rejects missing headers early, and fails closed without token', async () => {
+  const originalFetch = globalThis.fetch, originalDeno = globalThis.Deno;
+  try {
+    for (const configured of [true, false]) {
+      let deployedHandler, vaultCalls = 0, probes = 0, telegramCalls = 0;
+      const env = { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEYS: JSON.stringify({ telegram: 'sb_secret_server_test' }) };
+      globalThis.Deno = { env: { get: name => env[name] }, serve: handler => { deployedHandler = handler; } };
+      globalThis.fetch = async (url, options) => {
+        const parsed = new URL(url);
+        if (parsed.hostname === 'project.supabase.co') {
+          assert.equal(options.headers.apikey, 'sb_secret_server_test');
+          assert.equal(options.headers.Authorization, undefined);
+          if (parsed.pathname.endsWith('/rpc/telegram_admin_configuration')) {
+            vaultCalls++; assert.equal(options.method, 'POST'); assert.equal(options.body, '{}');
+            return Response.json(configured ? { ...config } : { ...config, botToken: '' });
+          }
+          assert.equal(parsed.pathname, '/rest/v1/orders'); assert.equal(options.method, 'HEAD'); probes++;
+          return new Response(null, { status: 200 });
+        }
+        assert.equal(parsed.hostname, 'api.telegram.org');
+        assert.doesNotMatch(JSON.stringify(options), /sb_secret_server_test/);
+        telegramCalls++; return Response.json({ ok: true });
+      };
+      await import(`../supabase/functions/telegram-admin/index.ts?vault-test=${configured}`);
+      assert.equal((await deployedHandler(new Request('https://example.invalid'))).status, 405);
+      assert.equal((await deployedHandler(request(undefined, { 'X-Telegram-Bot-Api-Secret-Token': '' }))).status, 401);
+      assert.equal(vaultCalls, 0);
+      assert.equal((await deployedHandler(request())).status, configured ? 200 : 503);
+      assert.equal(vaultCalls, 1); assert.equal(probes, configured ? 1 : 0); assert.equal(telegramCalls, configured ? 1 : 0);
+    }
+  } finally { globalThis.fetch = originalFetch; globalThis.Deno = originalDeno; }
+});

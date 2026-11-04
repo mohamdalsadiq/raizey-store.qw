@@ -12,6 +12,24 @@
 
 ## الإعداد الآمن
 
+### الإعداد عبر Vault (المستخدم في مشروع المتجر)
+
+المهاجرة `telegram_admin_vault_configuration` تضيف قارئ إعدادات خاصاً في
+`private`، وواجهة RPC بصلاحيات `service_role` فقط. المالك المشاهد في محادثة
+Saved Messages وسر webhook العشوائي يحفظان كإعدادات مشفرة في Vault.
+
+المفتاح المتبقي يضاف من حساب مالك المشروع في Supabase Vault باسم
+`meem_telegram_bot_token`. لا يوضع المفتاح في Git أو في محادثات الدعم.
+الإعدادات الأخرى هي `meem_telegram_webhook_secret` و`meem_telegram_owner_id`.
+يمكن تغيير المفتاح في Vault؛ يعيد الخادم قراءة الإعدادات كل 30 ثانية.
+
+الوصول إلى `public.telegram_admin_configuration()` ممنوع عن `anon` و
+`authenticated`، حتى لو كان المستخدم مديراً في واجهة الموقع. الدالة العامة
+`SECURITY INVOKER`؛ قارئ Vault المعزول داخل `private` هو وحده `SECURITY DEFINER`،
+وببحث أسماء فارغ وفحص دور الخادم. لا يتم كشف Vault عبر REST مباشرة.
+
+### بديل: أسرار Edge Functions
+
 1. أنشئ بوت المتجر من حساب المالك عبر BotFather الرسمي.
 2. احفظ القيم التالية في Supabase Dashboard → Edge Functions → Secrets:
    - `TELEGRAM_BOT_TOKEN`: مفتاح البوت، ولا يُنشر في الكود أو المحادثات أو روابط المتصفح.
@@ -41,6 +59,7 @@
 
 ```sh
 npm run test:telegram
+npm run test:telegram-db
 deno check supabase/functions/telegram-admin/index.ts
 ```
 
