@@ -11,7 +11,8 @@ await run('ALTER TABLE storage.buckets ADD COLUMN file_size_limit bigint, ADD CO
 for(const file of ['20261018200000_auth_onboarding_banner_controls.sql','20261019001000_phone_number_country_rules.sql','20261020211409_restrict_catalog_storage_permissions.sql','20261105084312_receipt_and_store_maintenance.sql']) await run(fs.readFileSync('supabase/migrations/'+file,'utf8'));
 await run(fs.readFileSync('supabase/migrations/20261105090230_mandatory_receipt_validation.sql','utf8'));
 await run(fs.readFileSync('supabase/migrations/20261105090230_mandatory_receipt_validation.sql','utf8'));
-await run(fs.readFileSync('db/pending/receipt_scan_usage_policy.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261105191648_receipt_scan_usage_policy.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261105192028_receipt_scan_usage_indexes.sql','utf8'));
 const a='d6040000-0000-4000-8000-000000000001',b='d6040000-0000-4000-8000-000000000002',staff='d6040000-0000-4000-8000-000000000003',method='d6040000-0000-4000-8000-000000000010',path=a+'/verified/d6040000-0000-4000-8000-000000000020.png';
 await run(`BEGIN; INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES('${a}','maintenance-a@example.invalid','{}'),('${b}','maintenance-b@example.invalid','{}'),('${staff}','maintenance-staff@example.invalid','{}');
 SET LOCAL session_replication_role=replica; UPDATE profiles SET role='admin' WHERE id='${staff}'; SET LOCAL session_replication_role=origin;

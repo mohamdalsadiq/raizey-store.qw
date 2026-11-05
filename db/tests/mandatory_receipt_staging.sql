@@ -5,7 +5,7 @@ DECLARE
  u uuid := 'ba550000-0000-4000-8000-000000000001';
  method uuid := 'ba550000-0000-4000-8000-000000000002';
  sid uuid := 'ba550000-0000-4000-8000-000000000003';
- attachment uuid;
+ attachment uuid; lease_id uuid;
  image_path text := 'ba550000-0000-4000-8000-000000000001/verified/ba550000-0000-4000-8000-000000000004.png';
  payload jsonb; response jsonb; blocked boolean; checks integer := 0;
 BEGIN
@@ -40,6 +40,11 @@ BEGIN
   IF response->>'ok' IS DISTINCT FROM 'false' THEN RAISE EXCEPTION 'FAIL expired scan accepted'; END IF; checks:=checks+1;
   RESET ROLE;
   UPDATE public.receipt_scan_results SET expires_at=now()+interval '30 minutes' WHERE id=sid;
+  response:=public.begin_receipt_scan_usage(u,repeat('c',64),repeat('d',64));
+  lease_id:=(response->>'leaseId')::uuid;
+  IF response->>'allowed' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'FAIL fixture usage admission'; END IF;
+  UPDATE public.receipt_scan_results SET ocr_data=ocr_data||jsonb_build_object('usage_lease_id',lease_id,'usage_context_key',repeat('d',64),'completed_machine_check',true) WHERE id=sid;
+  PERFORM public.finish_receipt_scan_usage(u,lease_id,sid);
   SET LOCAL ROLE authenticated;
   SELECT public.execute_store_action('create_wallet_topup_from_receipt',jsonb_set(payload,'{p_amount}','2'),gen_random_uuid()) INTO response;
   IF response->>'ok' IS DISTINCT FROM 'false' THEN RAISE EXCEPTION 'FAIL altered amount accepted'; END IF; checks:=checks+1;

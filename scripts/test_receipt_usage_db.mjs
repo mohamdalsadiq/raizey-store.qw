@@ -42,8 +42,10 @@ try{
  await run(fs.readFileSync('supabase/migrations/20261018082730_comprehensive_security_audit_fixes.sql','utf8'));
  await run('ALTER TABLE storage.buckets ADD COLUMN file_size_limit bigint, ADD COLUMN allowed_mime_types text[]');
  for(const f of ['20261018200000_auth_onboarding_banner_controls.sql','20261019001000_phone_number_country_rules.sql','20261020211409_restrict_catalog_storage_permissions.sql','20261105084312_receipt_and_store_maintenance.sql','20261105090230_mandatory_receipt_validation.sql'])await run(fs.readFileSync('supabase/migrations/'+f,'utf8'));
- const policy=fs.readFileSync('db/pending/receipt_scan_usage_policy.sql','utf8');
+ const policy=fs.readFileSync('supabase/migrations/20261105191648_receipt_scan_usage_policy.sql','utf8');
  await run(policy);await run(policy);
+await run(fs.readFileSync('supabase/migrations/20261105192028_receipt_scan_usage_indexes.sql','utf8'));
+ await run(fs.readFileSync('db/tests/receipt_scan_usage_staging.sql','utf8'));
  check('policy defaults to 50 simultaneous admissions',(await value('SELECT concurrency_limit AS v FROM private.receipt_scan_policy'))===50);
  await run(`INSERT INTO auth.users(id,email,raw_user_meta_data) SELECT ('aabb0000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'usage'||n||'@example.invalid','{}' FROM generate_series(1,205) n;
  INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES('${admin}','usage-admin@example.invalid','{}'),('${staff}','usage-staff@example.invalid','{}');
