@@ -8,6 +8,7 @@ let receiptFile = null;
 let appliedCoupon = null;
 let savedTxRef = null;      // رقم العملية بعد الحفظ
 let checkoutScanRevision = 0;
+let checkoutScanBusy = false;
 let checkoutScanContext = null;
 let scanResult = null;      // نتيجة الفحص الذكي للصورة الحالية
 let isDirectBuy = false;    // شراء مباشر (زر "اشترِ الآن") — لا علاقة له بالسلة
@@ -594,9 +595,9 @@ function attachCheckoutEvents(canUseWallet) {
     return window.MeemReceiptPipeline.serverVerify(file, opts, extraFile);
   }
 
-  fileBox.onclick = () => { if (savedTxRef) fileInput.click(); };
+  fileBox.onclick = () => { if (!checkoutScanBusy && savedTxRef) fileInput.click(); };
   fileInput.onchange = async () => {
-    if (!fileInput.files.length) return;
+    if (checkoutScanBusy || !fileInput.files.length) return;
     if (!savedTxRef) {
       document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع الصورة.';
       fileInput.value = '';
@@ -606,7 +607,7 @@ function attachCheckoutEvents(canUseWallet) {
   };
 
   async function runScan(file, secondFile) {
-    if (!file) return;
+    if (checkoutScanBusy || !file) return;
     invalidateCheckoutReceipt();
     receiptFile = file;
     const revision = checkoutScanRevision, context = checkoutReceiptContext();
@@ -627,6 +628,11 @@ function attachCheckoutEvents(canUseWallet) {
     hideShortfall();
     fileBox.innerHTML = `<svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
+    checkoutScanBusy = true;
+    const activity = window.MeemReceiptPipeline.beginScanActivity(statusEl, [fileInput, fileBox, placeOrderBtn,
+      document.getElementById('retryCheckoutReceiptBtn'), document.getElementById('receiptInput3'),
+      document.getElementById('fileUploadBox3'), document.getElementById('remainderRefBtn')]);
+    try {
 
     // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
     const softReview = (flag) => ({
@@ -649,7 +655,7 @@ function attachCheckoutEvents(canUseWallet) {
     let analysis;
     try {
       const scanOpts = {
-        onStatus: message => { statusEl.textContent = message; },
+        onStatus: message => activity.update(message),
         expectedAmount: currentTotal(),
         manualRef: savedTxRef,
         expectedAccount: selectedMethodAccount,
@@ -659,7 +665,7 @@ function attachCheckoutEvents(canUseWallet) {
       // الفحص الوحيد هو Edge Function الموثّق؛ لا يوجد OCR أو قرار مالي داخل المتصفح.
       const scan = (async () => {
         statusEl.style.color = 'var(--text-muted)';
-        statusEl.textContent = 'جارِ فحص الصورة بأمان على الخادم...';
+        activity.update('جارٍ إرسال الصورة للفحص الآمن…');
         try {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
@@ -766,6 +772,9 @@ function attachCheckoutEvents(canUseWallet) {
     } else {
 
     }
+    } finally {
+      activity.finish(); checkoutScanBusy = false;
+    }
   }
 
   // رسالة إرشادية دقيقة حسب سبب المنع
@@ -859,6 +868,7 @@ function attachCheckoutEvents(canUseWallet) {
   }
 
   remainderBtn.onclick = async () => {
+    if (checkoutScanBusy || remainderBtn.disabled) return;
     const raw = remainderInput.value.trim();
     const norm = window.MeemReceiptPipeline
       ? MeemReceiptPipeline.normalizeRef(raw)
@@ -902,18 +912,21 @@ function attachCheckoutEvents(canUseWallet) {
     }
   };
 
-  fileBox3.onclick = () => { if (splitPayment && splitPayment.secondRef) fileInput3.click(); };
+  fileBox3.onclick = () => { if (!checkoutScanBusy && splitPayment && splitPayment.secondRef) fileInput3.click(); };
   fileInput3.onchange = async () => {
-    if (!fileInput3.files.length || !splitPayment || !splitPayment.secondRef) return;
+    if (checkoutScanBusy || !fileInput3.files.length || !splitPayment || !splitPayment.secondRef) return;
     const f = fileInput3.files[0];
     scanResult = null; checkoutScanContext = null; splitPayment.secondScan = null;
     const splitAtStart = splitPayment, revisionAtStart = ++checkoutScanRevision, contextAtStart = checkoutReceiptContext(), refAtStart = splitPayment.secondRef;
     const statusEl = document.getElementById('remainderStatus');
     statusEl.style.color = 'var(--text-muted)';
-    statusEl.textContent = 'جارِ فحص إشعار المبلغ المتبقي...';
+    checkoutScanBusy = true;
+    const activity = window.MeemReceiptPipeline.beginScanActivity(statusEl, [fileInput, fileInput3, fileBox, fileBox3,
+      remainderBtn, placeOrderBtn, document.getElementById('retryCheckoutReceiptBtn')]);
+    try {
     let res = null;
     const opts = {
-      onStatus: message => { statusEl.textContent = message; },
+      onStatus: message => activity.update(message),
       expectedAmount: splitPayment.remaining,
       manualRef: splitPayment.secondRef,
       expectedAccount: selectedMethodAccount,
@@ -935,10 +948,10 @@ function attachCheckoutEvents(canUseWallet) {
 
     const activeSplit = splitPayment;
     const revision = checkoutScanRevision, context = checkoutReceiptContext();
-    statusEl.textContent = 'جارِ تثبيت فحص الدفعة الأولى بالمبلغ الظاهر فيها...';
+    activity.update('جارٍ إكمال التحقق من الإشعارين…');
     let first;
     try {
-      first = await serverVerify(activeSplit.firstFile, {onStatus:message=>{statusEl.textContent=message;},expectedAmount:activeSplit.paid,manualRef:savedTxRef,expectedMethodId:selectedMethodId}, null);
+      first = await serverVerify(activeSplit.firstFile, {onStatus:message=>activity.update(message),expectedAmount:activeSplit.paid,manualRef:savedTxRef,expectedMethodId:selectedMethodId}, null);
     } catch (_) { first = null; }
     if (revision !== checkoutScanRevision || context !== checkoutReceiptContext() || splitPayment !== activeSplit) return;
     if (!first?.submissionAllowed || !first.automaticCheckComplete || !first.scanId) {
@@ -957,6 +970,9 @@ function attachCheckoutEvents(canUseWallet) {
     shortfallBox.style.borderColor = 'var(--primary)';
     fileBox.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم قبول الإشعارين (دفع مجزّأ)`;
     fileBox.classList.add('has-file');
+    } finally {
+      activity.finish(); checkoutScanBusy = false;
+    }
   };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);

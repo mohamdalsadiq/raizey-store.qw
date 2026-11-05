@@ -19,6 +19,49 @@
   const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
   const EDGE_TIMEOUT_MS = 160000;
 
+  // Shared, indeterminate feedback. No invented percentage or completion time.
+  // Caller guards own the scan; this helper only locks controls and renders UI.
+  function beginScanActivity(status, controls) {
+    const locked = [...new Set((controls || []).filter(Boolean))].map(el => {
+      const saved = {el, disabled: typeof el.disabled === 'boolean' ? el.disabled : null,
+        aria: el.getAttribute('aria-disabled'), locked: el.classList.contains('receipt-scan-locked')};
+      if (saved.disabled !== null) el.disabled = true;
+      el.setAttribute('aria-disabled', 'true');
+      el.classList.add('receipt-scan-locked');
+      return saved;
+    });
+    const doc = root.document;
+    let copy = null, message = null, finished = false;
+    if (status && doc) {
+      const orbit = doc.createElement('span');
+      orbit.className = 'receipt-scan-orbit'; orbit.setAttribute('aria-hidden', 'true');
+      copy = doc.createElement('div'); copy.className = 'receipt-scan-copy';
+      const title = doc.createElement('strong'); title.textContent = 'جارٍ فحص إشعار التحويل';
+      message = doc.createElement('p'); message.textContent = 'نقرأ الصورة ونتحقق من بيانات التحويل. ستظهر النتيجة هنا.';
+      copy.append(title, message);
+      const track = doc.createElement('span'); track.className = 'receipt-scan-track'; track.setAttribute('aria-hidden', 'true');
+      status.replaceChildren(orbit, copy, track);
+      status.classList.add('receipt-scan-busy');
+      status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.setAttribute('aria-busy', 'true');
+    }
+    return {
+      update(text) { if (!finished && message && status.contains(copy)) message.textContent = String(text || 'جارٍ فحص الصورة…'); },
+      finish() {
+        if (finished) return;
+        finished = true;
+        for (const saved of locked) {
+          if (saved.disabled !== null) saved.el.disabled = saved.disabled;
+          if (saved.aria === null) saved.el.removeAttribute('aria-disabled'); else saved.el.setAttribute('aria-disabled', saved.aria);
+          if (!saved.locked) saved.el.classList.remove('receipt-scan-locked');
+        }
+        if (status) {
+          if (copy && status.contains(copy)) status.replaceChildren();
+          status.classList.remove('receipt-scan-busy'); status.setAttribute('aria-busy', 'false');
+        }
+      }
+    };
+  }
+
   function validateImageFile(file) {
     if (!file || !(file instanceof Blob)) throw new Error('missing_image');
     const mimeType = String(file.type || '').toLowerCase();
@@ -205,6 +248,7 @@
   }
 
   root.MeemReceiptPipeline = {
+    beginScanActivity,
     fileToBase64,
     validateImageFile,
     compressForServer,

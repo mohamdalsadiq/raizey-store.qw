@@ -4,6 +4,7 @@ let receiptFile = null;
 let receiptAnalysis = null;
 let receiptScanContext = null;
 let walletScanRevision = 0;
+let walletScanBusy = false;
 let savedWalletTxRef = null; // رقم العملية بعد التحقق المبكر (قبل رفع الإيصال)
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
@@ -80,6 +81,7 @@ async function init() {
   const fileError = document.getElementById('fileError');
 
   fileBox.addEventListener('click', () => {
+    if (walletScanBusy || fileInput.disabled) return;
     if (!savedWalletTxRef) {
       document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع صورة الإيصال.';
       return;
@@ -87,6 +89,10 @@ async function init() {
     fileInput.click();
   });
   fileInput.addEventListener('change', async () => {
+    if (walletScanBusy || fileInput.disabled) return;
+    const originalDisabled = fileInput.disabled;
+    fileInput.disabled = true;
+    try {
     fileError.textContent = '';
     resetReceiptScan();
     if (fileInput.files.length === 0) return;
@@ -108,7 +114,9 @@ async function init() {
     receiptFile = file;
     document.getElementById('receiptFileLabel').textContent = receiptFile.name;
     fileBox.classList.add('has-file');
+    fileInput.disabled = originalDisabled;
     await runWalletReceiptScan();
+    } finally { fileInput.disabled = originalDisabled; }
   });
 
   // تعديل المبلغ يبطل الفحص فقط (لا يبطل التحقق من رقم العملية)
@@ -287,6 +295,7 @@ function walletReceiptContext() {
     consent: document.getElementById('geminiConsentWallet').checked });
 }
 async function runWalletReceiptScan() {
+  if (walletScanBusy || document.getElementById('receiptInput')?.disabled) return;
   const status = document.getElementById('receiptScanStatus'), errorBox = document.getElementById('formError');
   resetReceiptScan();
   const revision = walletScanRevision, context = walletReceiptContext(), file = receiptFile;
@@ -297,9 +306,12 @@ async function runWalletReceiptScan() {
     errorBox.textContent = 'اختر صورة ووسيلة تحويل ومبلغاً صحيحاً، وتحقق من رقم العملية أولاً.'; return;
   }
   if (!document.getElementById('geminiConsentWallet').checked) { status.textContent = 'وافق على الفحص الآلي ثم أعد فحص الصورة؛ لا يمكن الإرسال دون فحص.'; return; }
-  status.textContent = 'جارِ الفحص الآلي...';
+  walletScanBusy = true;
+  const activity = MeemReceiptPipeline.beginScanActivity(status, ['receiptInput', 'fileUploadBox',
+    'retryWalletReceiptBtn', 'submitTopupBtn'].map(id => document.getElementById(id)));
+  try {
   const analysis = await MeemReceiptPipeline.analyze(file, { expectedAmount: amount, manualRef,
-    expectedMethodId: methodId, onStatus: message => { status.textContent=message; } });
+    expectedMethodId: methodId, onStatus: message => activity.update(message) });
   if (revision !== walletScanRevision || context !== walletReceiptContext() || file !== receiptFile) return;
   renderWalletScanReport(analysis, amount, manualRef);
   if (!receiptAnalysisAllowed(analysis)) {
@@ -308,6 +320,11 @@ async function runWalletReceiptScan() {
   }
   receiptAnalysis = analysis; receiptScanContext = context;
   status.textContent = 'اجتاز الإشعار الفحص الآلي. اعتماد التحويل يتطلب مراجعة سجل الحساب من الإدارة.';
+  } catch (_) {
+    status.textContent = 'تعذّر إكمال الفحص. أعد المحاولة بعد قليل؛ لم يُنشأ طلب.';
+  } finally {
+    activity.finish(); walletScanBusy = false;
+  }
 }
 
 async function checkUnifiedTransactionRef(transactionRef) {
@@ -508,6 +525,7 @@ async function loadTopups() {
 }
 
 async function submitTopup() {
+  if (walletScanBusy) return;
   const errorBox = document.getElementById('formError');
   const fileError = document.getElementById('fileError');
   errorBox.textContent = '';
