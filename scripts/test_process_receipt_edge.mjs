@@ -151,7 +151,16 @@ function createAdminMock(state) {
     storage: { from: () => ({ upload: async (path, bytes, options) => { state.uploads.push({path,bytes,options}); return {data:{path},error:null}; }, remove: async () => ({error:null}) }) },
     auth: { getUser: async (token) => (token === GOOD_TOKEN ? { data: { user: { id: "user-1" } }, error: null } : { data: { user: null }, error: { message: "invalid_jwt" } }) },
     from,
-    rpc: async (name) => ({ data: name === 'get_session_security_context' ? { allowed: true } : [{ allowed: state.scanCount < 12 }], error: null }),
+    rpc: async (name,args) => {
+      state.rpcs.push({name,args});
+      if(state.rpcOverrides[name]) return state.rpcOverrides[name];
+      if(name==='get_session_security_context') return {data:{allowed:true},error:null};
+      if(name==='get_receipt_scan_usage') return {data:{dailyLimit:5,remaining:5,usedToday:0,violations:0,violationLimit:3,suspended:false},error:null};
+      if(name==='begin_receipt_scan_usage') return {data:{allowed:true,leaseId:'ae550000-0000-4000-8000-000000000001'},error:null};
+      if(name==='meter_receipt_scan_usage' || name==='validate_receipt_scan_usage') return {data:true,error:null};
+      if(name==='finish_receipt_scan_usage') return {data:{dailyLimit:5,remaining:4,violations:0,violationLimit:3,suspended:false,leaseCompleted:true},error:null};
+      return {data:[{allowed:state.scanCount<12}],error:null};
+    },
   };
 }
 
@@ -218,9 +227,14 @@ const MODEL_LIST_BODY = {
 };
 
 /** ينفّذ فحصاً واحداً ببديل Supabase/Gemini مخصّص ويعيد النتيجة والحالة. */
-async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = {id: "a6180000-0000-4000-8000-000000000020", name: null, account_number: "2050123456789012"}, reusableScan = null, fetchHandler, expectStatus, visual = null }) {
+async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = {id: "a6180000-0000-4000-8000-000000000020", name: null, account_number: "2050123456789012"}, reusableScan = null, fetchHandler, expectStatus, visual = null, rpcOverrides = {} }) {
   structuredOverride = visual;
-  const state = { attachments: [], uploads: [], inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
+  const state = { attachments: [], uploads: [], inserted: [], filters: [], rpcs:[], rpcOverrides, scanCount, paymentMethod, reusableScan };
+  if(reusableScan?.ocr_data){
+    const method=paymentMethod?{id:String(paymentMethod.id),name:paymentMethod.name??null,account_name:paymentMethod.account_name??null,account_number:paymentMethod.account_number??null,bin_prefixes:paymentMethod.bin_prefixes??null,bank_key:paymentMethod.bank_key??null}:null;
+    const hash=await crypto.subtle.digest('SHA-256',Buffer.from(body.imageBase64,'base64')).then(b=>Buffer.from(b).toString('hex'));
+    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1'}))).then(b=>Buffer.from(b).toString('hex'))}};
+  }
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
     GEMINI_API_KEY: API_KEY,
@@ -740,6 +754,36 @@ console.log("\n── حالات عدائية وفشل مغلق ──");
  check('partial transfer not registered as accepted evidence',partial.state.uploads.length,0);
  const noVisual=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},fetchHandler:async(_u,init)=>JSON.parse(init.body).generationConfig.responseMimeType ? httpResponse(200,geminiTextResponse('{}')) : httpResponse(200,geminiTextResponse(validBankakText()))});
  check('matching OCR alone never authorizes',noVisual.json.submissionAllowed,false);
+}
+
+console.log("\n── الحصة والتجميد وقياس كل استدعاء ──");
+{
+ const baseHandler=async()=>httpResponse(200,geminiTextResponse(validBankakText()));
+ for(const reason of ['receipt_daily_limit','receipt_store_daily_limit','receipt_provider_daily_limit','receipt_scan_in_progress']){
+  const result=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{begin_receipt_scan_usage:{data:{allowed:false,reason,usage:{remaining:0}},error:null}}});
+  check(reason+' prevents AI',fetchedUrls.length,0);check(reason+' denies submit',result.json.submissionAllowed,false);
+ }
+ const frozen=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{get_receipt_scan_usage:{data:{suspended:true},error:null}}});
+ check('frozen user denied before AI',fetchedUrls.length,0);check('frozen reason',frozen.json.riskFlags[0],'receipt_feature_suspended');
+ const result=await runScan({body:baseBody,fetchHandler:baseHandler});
+ check('each actual generation is metered',result.state.rpcs.filter(r=>r.name==='meter_receipt_scan_usage').length,fetchedUrls.filter(u=>u.includes(':generateContent')).length);
+ check('server scan stores its quota lease',result.state.inserted[0].payload.ocr_data.usage_lease_id,'ae550000-0000-4000-8000-000000000001');
+ check('completed scan marked for quota',result.state.inserted[0].payload.ocr_data.completed_machine_check,true);
+ const noLease=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{finish_receipt_scan_usage:{data:{leaseCompleted:false},error:null}}});
+ check('unfinished lease cannot return usable proof',noLease.json.submissionAllowed,false);
+ const backendDown=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{get_receipt_scan_usage:{data:null,error:{message:'offline'}}}});
+ check('unavailable quota backend fails closed',backendDown.status,500);check('unavailable policy makes no AI calls',fetchedUrls.length,0);
+ const empty=await runScan({body:baseBody,fetchHandler:async()=>httpResponse(200,geminiEmptyResponse())});
+ check('unreadable image counted as a completed attempt',empty.state.inserted[0].payload.ocr_data.completed_machine_check,true);
+ check('unreadable image is never an abuse strike',empty.state.inserted[0].payload.ocr_data.non_receipt_confirmed,false);
+ const uncertain=await runScan({body:baseBody,visual:{is_receipt:true,document_type:'transfer_receipt',is_complete:false},fetchHandler:baseHandler});
+ check('incomplete receipt is not an abuse strike',uncertain.state.inserted[0].payload.ocr_data.non_receipt_confirmed,false);
+ const unrelated=await runScan({body:baseBody,visual:{is_receipt:false,document_type:'other',is_complete:false},fetchHandler:async()=>httpResponse(200,geminiTextResponse('This is an advertisement for a shop. Visit the website for information and offers.'))});
+ check('two agreeing classifications record unrelated image',unrelated.state.inserted[0].payload.ocr_data.non_receipt_confirmed,true);
+ check('unrelated content is not retained in OCR text',unrelated.state.inserted[0].payload.ocr_data.raw_text_excerpt,'');
+ const qid='ae550000-0000-4000-8000-000000000002';
+ const queued=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{begin_receipt_scan_usage:{data:{allowed:false,reason:'receipt_queued',ticketId:qid,position:2},error:null}}});
+ check('queue contains only a ticket',queued.json.queue.ticketId,qid);check('queued request does not call Gemini',fetchedUrls.length,0);
 }
 
 // ── عقد الميزانية الزمنية (regression) ────────────────────────────────

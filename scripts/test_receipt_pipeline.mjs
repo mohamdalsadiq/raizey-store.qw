@@ -164,6 +164,31 @@ console.log("\n── عدم تسريب الأسرار إلى الواجهة ─
   check("fallback flags exposed for the UI", Array.isArray(pipeline.fallbackFlags) && pipeline.fallbackFlags.length > 0, true);
 }
 
+console.log("\n── انتظار الضغط والحصة ──");
+{
+  let calls=0;
+  const ticket='ae550000-0000-4000-8000-000000000002';
+  const statuses=[];
+  const {pipeline,requests}=loadPipeline({fetchImpl:async(url)=>{
+    calls++;
+    if(calls===1)return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1}});
+    if(url.includes('operation=poll'))return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,canRetry:true}});
+    return jsonResponse(200,{ok:true,scanId:'queue-scan',receiptHash:'a'.repeat(64),receiptPath:'owner/verified/test.png',attachmentId:'a',decision:'accept',submissionAllowed:true,receiptPolicy:'mandatory-visual-v1',automaticCheckComplete:true,usage:{remaining:4,dailyLimit:5,violations:0}});
+  }});
+  const result=await pipeline.analyze(pngFile(),{onStatus:s=>statuses.push(s)});
+  check('queue resumes full scan after a lightweight poll',result.scanId,'queue-scan');
+  check('poll contains only ticket id',requests[1].init.body,JSON.stringify({ticketId:ticket}));
+  check('poll never retransmits the image',requests[1].init.body.includes('imageBase64'),false);
+  check('retry preserves exact image and context',requests[2].init.body,requests[0].init.body);
+  check('queue status shown',statuses.some(s=>s.includes('انتظار')),true);
+  check('remaining count shown',result.message.includes('4 من 5'),true);
+  const frozen=await analyzeWith(async()=>jsonResponse(200,{ok:true,submissionAllowed:false,message:'الفحص مجمد',usage:{remaining:2,dailyLimit:5,violations:3,violationLimit:3,suspended:true}}));
+  check('suspension message preserved',frozen.message.includes('مجمد'),true);
+  check('suspension never authorizes payment',frozen.submissionAllowed,false);
+  const aborted=await analyzeWith(async()=>jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,retryAfter:1}}),{serverTimeoutMs:40});
+  check('cancel during queue wait is safe',aborted.riskFlags[0],'server_ocr_timeout');
+}
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const failure of failures) console.log("  - " + failure);

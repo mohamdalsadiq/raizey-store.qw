@@ -17,7 +17,7 @@
   const COMPRESS_ABOVE_BYTES = 900 * 1024;
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
-  const EDGE_TIMEOUT_MS = 100000;
+  const EDGE_TIMEOUT_MS = 160000;
 
   function validateImageFile(file) {
     if (!file || !(file instanceof Blob)) throw new Error('missing_image');
@@ -112,35 +112,43 @@
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS));
+    const headers = {'Content-Type':'application/json','Authorization':`Bearer ${token}`,
+      ...(root.SUPABASE_ANON_KEY ? {apikey:root.SUPABASE_ANON_KEY} : {})};
+    const body={imageBase64,mimeType:compressed.mimeType || file.type || 'image/jpeg',
+      expectedAmount:opts.expectedAmount,manualRef:opts.manualRef,expectedAccount:opts.expectedAccount,expectedMethodId:opts.expectedMethodId || null};
+    const send=async(url,payload)=>{
+      const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload),signal:controller.signal});
+      let data=null;try{data=await response.json();}catch(_){}
+      if(response.status===401 || response.status===403) throw new Error('auth_required');
+      if(response.status===429) throw new Error('server_rate_limited');
+      if(!response.ok || !data || data.ok===false){const e=new Error(data?.error || `server_http_${response.status}`);e.serverMessage=data?.message;throw e;}
+      return data;
+    };
+    const pause=(ms)=>new Promise((resolve,reject)=>{
+      const stop=()=>{clearTimeout(t);reject(Object.assign(new Error('aborted'),{name:'AbortError'}));};
+      const t=setTimeout(()=>{controller.signal.removeEventListener('abort',stop);resolve();},ms);
+      if(controller.signal.aborted) stop(); else controller.signal.addEventListener('abort',stop,{once:true});
+    });
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...(root.SUPABASE_ANON_KEY ? { apikey: root.SUPABASE_ANON_KEY } : {})
-        },
-        body: JSON.stringify({
-          imageBase64,
-          mimeType: compressed.mimeType || file.type || 'image/jpeg',
-          expectedAmount: opts.expectedAmount,
-          manualRef: opts.manualRef,
-          expectedAccount: opts.expectedAccount,
-          expectedMethodId: opts.expectedMethodId || null
-        }),
-        signal: controller.signal
-      });
-      let data = null;
-      try { data = await response.json(); } catch (_) {}
-      if (response.status === 401 || response.status === 403) throw new Error('auth_required');
-      if (response.status === 429) throw new Error('server_rate_limited');
-      if (!response.ok || !data || data.ok === false) {
-        const error = new Error((data && data.error) || `server_http_${response.status}`);
-        error.serverMessage = data && data.message;
-        throw error;
+      let data=await send(endpoint,body);
+      const queuedAt=Date.now();
+      while(data.queue && Date.now()-queuedAt<45000){
+        const queue=data.queue;
+        if(!/^[0-9a-f-]{36}$/i.test(String(queue.ticketId || ''))) throw new Error('invalid_queue_ticket');
+        if(typeof opts.onStatus==='function')opts.onStatus(`الإيصال في انتظار الدور — موضعك: ${Number(queue.position)||1}.`);
+        await pause(Math.min(5000,Math.max(1000,Number(queue.retryAfter||3)*1000)));
+        const polled=await send(endpoint+'?operation=poll',{ticketId:queue.ticketId});
+        data=polled.queue?.canRetry ? await send(endpoint,body) : polled;
       }
+      if(data.queue) data.message='الفحص ما زال في انتظار الدور. أعد تجهيز نفس الإيصال بعد قليل؛ لم تُستهلك حصة فحص مكتمل ولم يُنشأ طلب.';
       if ((data.decision === 'accept' || data.decision === 'review_admin') && data.submissionAllowed !== true) throw new Error('server_scan_contract_invalid');
       if (data.submissionAllowed === true && (!data.receiptHash || !data.receiptPath || !data.attachmentId || !data.scanId || data.receiptPolicy !== 'mandatory-visual-v1' || data.automaticCheckComplete !== true)) throw new Error('server_scan_contract_invalid');
+      const u=data.usage;
+      if(u && Number.isInteger(u.remaining) && Number.isInteger(u.dailyLimit)){
+        data.message=(data.message || '')+` المتبقي اليوم: ${u.remaining} من ${u.dailyLimit}؛ تتجدد الحصة منتصف الليل بتوقيت السودان.`;
+        if(u.suspended) data.message+=' ميزة الفحص مجمدة حتى مراجعة الإدارة.';
+        else if(Number(u.violations)>0) data.message+=` تحذير إساءة استخدام: ${u.violations} من ${u.violationLimit}. ارفع إشعار تحويل فقط.`;
+      }
       return data;
     } finally {
       clearTimeout(timer);
@@ -155,7 +163,7 @@
       message: message || 'تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.',
       riskFlags: [flag], confidence: null, provider: null, providerName: null,
       language: null, passes: 0, textLength: 0, version: 4,
-      source: 'edge-client', submissionAllowed: false,
+      source: 'edge-client',
       extracted: { txRef: null, amount: null, dateTime: null },
       refVerified: false, amountVerified: false
     };
@@ -167,7 +175,7 @@
     try {
       onStatus('جارِ إرسال الإيصال للفحص الآمن على الخادم...');
       const result = await serverVerify(file, opts, opts.extraFile || null);
-      onStatus('اكتمل الفحص الخادمي.');
+      onStatus(result.queue ? 'الفحص في انتظار توفر السعة.' : 'تمت معالجة طلب الفحص.');
       return result;
     } catch (error) {
       if (typeof opts.onServerError === 'function') opts.onServerError(error);

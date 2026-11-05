@@ -299,11 +299,11 @@ async function runWalletReceiptScan() {
   if (!document.getElementById('geminiConsentWallet').checked) { status.textContent = 'وافق على الفحص الآلي ثم أعد فحص الصورة؛ لا يمكن الإرسال دون فحص.'; return; }
   status.textContent = 'جارِ الفحص الآلي...';
   const analysis = await MeemReceiptPipeline.analyze(file, { expectedAmount: amount, manualRef,
-    expectedMethodId: methodId });
+    expectedMethodId: methodId, onStatus: message => { status.textContent=message; } });
   if (revision !== walletScanRevision || context !== walletReceiptContext() || file !== receiptFile) return;
   renderWalletScanReport(analysis, amount, manualRef);
   if (!receiptAnalysisAllowed(analysis)) {
-    status.textContent = 'لم يكتمل الفحص الآلي؛ لا يمكن إرسال الطلب. أعد المحاولة بصورة واضحة عند عودة الخدمة.';
+    status.textContent = analysis.message || 'لم يكتمل الفحص الآلي؛ لا يمكن إرسال الطلب. أعد المحاولة لاحقاً.';
     return;
   }
   receiptAnalysis = analysis; receiptScanContext = context;

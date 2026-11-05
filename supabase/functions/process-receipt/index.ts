@@ -103,7 +103,7 @@ const JSON_PROMPT =
   "1) انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح ولا حذف أصفار. " +
   "2) amount = مبلغ التحويل فقط (وليس الرصيد ولا الرسوم ولا الضريبة) بأرقام لاتينية بلا فواصل آلاف. " +
   "3) حوّل الأرقام العربية (٠١٢٣٤٥٦٧٨٩) إلى لاتينية داخل الحقول المهيكلة. " +
-  "4) status = نتيجة العملية كما تظهر في الصورة (successful / failed / pending) ولو بالعربية انقلها كما هي. " +
+  "4) status = successful أو failed أو pending أو unknown فقط؛ حوّل المعنى العربي إلى هذه القيم دون تخمين. " +
   "5) raw_text = انسخ كل النص الظاهر في الصورة حرفياً (كل سطر كما هو) بلا تلخيص ولا ترجمة. " +
   'إذا لم تكن أي قيمة ظاهرة بوضوح تماماً في الصورة اتركها سلسلة فارغة "". ' +
   "ممنوع الاختراع أو الاستنتاج. أعد JSON فقط.";
@@ -115,7 +115,11 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
 ];
 
+type GeminiBudget = () => Promise<void>;
+
 type ScanOptions = {
+  usageLeaseId?: string;
+  usageContextKey?: string;
   receiptPath?: string;
   attachmentId?: string;
   expectedAmount: number;
@@ -476,9 +480,11 @@ async function postGeminiGenerate(
   apiKey: string,
   tag: string,
   timeoutMs: number,
+  budget?: GeminiBudget,
 ): Promise<any> {
   const url = `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
   const attempt = async (payload: Record<string, any>) => {
+    if (budget) await budget();
     const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
@@ -532,6 +538,7 @@ async function callGeminiModel(
   mimeType: string,
   apiKey: string,
   timeoutMs: number,
+  budget?: GeminiBudget,
 ): Promise<{ text: string; usage: GeminiUsage | null }> {
   const data = await postGeminiGenerate(model, {
     contents: [{
@@ -543,7 +550,7 @@ async function callGeminiModel(
     }],
     generationConfig: { temperature: 0, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
     safetySettings: SAFETY_SETTINGS,
-  }, apiKey, "gemini_request", timeoutMs);
+  }, apiKey, "gemini_request", timeoutMs, budget);
   const usage = readUsage(data);
   let text = textFromCandidate(data, "gemini_request");
   // بعض النماذج تُصرّ على إرجاع JSON حتى مع طلب نص صريح — نستخرج raw_text.
@@ -569,6 +576,7 @@ async function extractTextWithGemini(
   apiKey: string,
   models: string[],
   deadline: number,
+  budget?: GeminiBudget,
 ): Promise<OcrOutcome> {
   let lastError: any = null;
   const attempts: GeminiAttempt[] = [];
@@ -582,7 +590,7 @@ async function extractTextWithGemini(
         () =>
           callGeminiModel(
             model, base64Data, mimeType, apiKey,
-            Math.min(GEMINI_REQUEST_TIMEOUT_MS, Math.max(3000, deadline - Date.now())),
+            Math.min(GEMINI_REQUEST_TIMEOUT_MS, Math.max(3000, deadline - Date.now())), budget,
           ),
         (info) => attempts.push({ model: info.model, error: `retry_after_http_${info.status}`, status: info.status }),
       );
@@ -616,7 +624,7 @@ async function extractTextWithGemini(
   throw lastError;
 }
 
-async function callGeminiJson(model: string, parts: any[], apiKey: string, timeoutMs: number) {
+async function callGeminiJson(model: string, parts: any[], apiKey: string, timeoutMs: number, budget?: GeminiBudget) {
   const data = await postGeminiGenerate(model, {
     contents: [{ role: "user", parts: parts.concat([{ text: JSON_PROMPT }]) }],
     generationConfig: {
@@ -630,7 +638,7 @@ async function callGeminiJson(model: string, parts: any[], apiKey: string, timeo
       responseMimeType: "application/json",
       thinkingConfig: { thinkingBudget: 0 },
     },
-  }, apiKey, "gemini_json", timeoutMs);
+  }, apiKey, "gemini_json", timeoutMs, budget);
   const candidate = data?.candidates?.[0];
   const partsOut = candidate?.content?.parts;
   const usage = readUsage(data);
@@ -648,6 +656,7 @@ async function structuredPass(
   apiKey: string,
   models: string[],
   deadline: number,
+  budget?: GeminiBudget,
 ): Promise<{ data: Record<string, any>; model: string; attempts: GeminiAttempt[]; usage: GeminiUsage | null }> {
   let lastError: any = null;
   const attempts: GeminiAttempt[] = [];
@@ -661,7 +670,7 @@ async function structuredPass(
         () =>
           callGeminiJson(
             model, parts, apiKey,
-            Math.min(GEMINI_JSON_TIMEOUT_MS, Math.max(3000, deadline - Date.now())),
+            Math.min(GEMINI_JSON_TIMEOUT_MS, Math.max(3000, deadline - Date.now())), budget,
           ),
         (info) => attempts.push({ model: info.model, error: `retry_after_http_${info.status}`, status: info.status }),
       );
@@ -811,6 +820,10 @@ async function saveScan(
       // لقطة الرد الكامل: تُتيح إعادة إجابة مطابقة بلا أي استدعاء Gemini عند
       // إعادة رفع نفس الإيصال بنفس المدخلات (انظر findReusableScan).
       receipt_policy: result.receiptPolicy || null,
+      usage_lease_id: options.usageLeaseId || null,
+      usage_context_key: options.usageContextKey || null,
+      completed_machine_check: result.completedMachineCheck === true,
+      non_receipt_confirmed: result.nonReceiptConfirmed === true,
       automatic_check_complete: result.automaticCheckComplete === true,
       visual_check: result.visualCheck || null,
       result_snapshot: result,
@@ -873,10 +886,13 @@ async function findReusableScan(
     const flags: string[] = Array.isArray(data.risk_flags) ? data.risk_flags : [];
     if (flags.some((flag) => String(flag).startsWith("server_ocr_"))) return null;
     const ocrData = data.ocr_data || {};
-    if (ocrData.receipt_policy !== RECEIPT_POLICY || ocrData.automatic_check_complete !== true) return null;
+    if (ocrData.receipt_policy !== RECEIPT_POLICY || ocrData.completed_machine_check !== true || !ocrData.usage_lease_id) return null;
     if (String(ocrData.expected_method_id || "") !== String(options.expectedMethodId || "")) return null;
+    if(ocrData.usage_context_key !== options.usageContextKey) return null;
     const snapshot = ocrData.result_snapshot;
-    if (!snapshot || typeof snapshot !== "object" || !ocrData.receipt_path || !ocrData.attachment_id) return null;
+    if (!snapshot || typeof snapshot !== "object") return null;
+    if (snapshot.submissionAllowed && (!ocrData.receipt_path || !ocrData.attachment_id)) return null;
+    if (!(await usageRpc(admin,'validate_receipt_scan_usage',{p_user:userId,p_scan:data.id}))) return null;
     return {
       ...(snapshot as ScanResult),
       scanId: data.id,
@@ -890,6 +906,28 @@ async function findReusableScan(
     // أي خطأ في قراءة الكاش يعني فقط أننا نكمل الفحص العادي — لا نُسقط الطلب.
     return null;
   }
+}
+
+async function usageRpc(admin: any, name: string, args: Record<string, unknown>) {
+  const {data,error}=await admin.rpc(name,args);
+  if(error || data==null) throw new Error('receipt_policy_unavailable');
+  return data;
+}
+function usageDenied(admission: any): ScanResult {
+  const code=String(admission?.reason || 'receipt_policy_unavailable');
+  const messages: Record<string,string>={
+    receipt_feature_suspended:'ميزة الفحص مجمدة مؤقتاً بسبب تكرار صور غير مرتبطة بالدفع. تواصل مع الإدارة لمراجعة التجميد.',
+    receipt_daily_limit:'استهلكت حصة الفحص لهذا اليوم. تظهر الحصة وموعد تجددها بالأسفل؛ يمكن للإدارة مراجعة حالتك.',
+    receipt_store_daily_limit:'اكتملت سعة الفحص اليومية للمتجر. لم يُنشأ طلب؛ تواصل مع الإدارة.',
+    receipt_provider_daily_limit:'اكتملت ميزانية اتصالات الفحص لهذا اليوم. لم يُنشأ طلب؛ تواصل مع الإدارة.',
+    receipt_scan_in_progress:'لديك فحص جارٍ أو صورة أخرى في انتظار الدور. انتظر نتيجتها أولاً.',
+    receipt_queue_expired:'انتهت مهلة انتظار الدور؛ أعد تجهيز الإيصال. لم تُستهلك حصة فحص مكتمل.',
+    receipt_queue_full:'قائمة انتظار الفحص ممتلئة مؤقتاً. أعد المحاولة لاحقاً.',
+    receipt_queued:'إيصالك في انتظار الدور. لا تُسجّل أي عملية مالية قبل اكتمال الفحص.'
+  };
+  return {...smartReview(code,messages[code] || 'تعذّر التحقق من سياسة الفحص؛ أعد المحاولة لاحقاً.'),
+    usage:admission?.usage || null,
+    ...(code==='receipt_queued' ? {queue:{ticketId:admission.ticketId,position:admission.position,retryAfter:admission.retryAfter || 3,canRetry:admission.canRetry===true}} : {})};
 }
 
 async function processScan(request: Request, admin: any, userId: string, body: any): Promise<ScanResult> {
@@ -944,12 +982,37 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   // قبل أي استدعاء AI: هل فحصنا هذا الإيصال نفسه بنفس المدخلات للتوّ؟
   if (!Number.isFinite(options.expectedAmount) || options.expectedAmount <= 0 || options.expectedAmount > 10000000 || normalizeRefForStorage(options.manualRef).length < 6) return smartReview("invalid_scan_context", "أدخل المبلغ ورقم العملية الصحيحين أولاً.");
   if (!String(expectedMethod.account_number || "").replace(/[^0-9]/g, "")) return smartReview("payment_destination_not_configured", "وسيلة الدفع تحتاج ضبط حساب الاستلام من الإدارة قبل استقبال الإيصالات.");
+  const contextKey=await sha256Hex(new TextEncoder().encode(JSON.stringify({hash,amount:options.expectedAmount,ref:normalizeRefForStorage(options.manualRef),method:expectedMethod,policy:RECEIPT_POLICY})));
+  options.usageContextKey=contextKey;
+  const usage=await usageRpc(admin,'get_receipt_scan_usage',{p_user:userId});
+  if(usage.suspended) return usageDenied({reason:'receipt_feature_suspended',usage});
   const reused = await findReusableScan(admin, userId, hash, options);
-  if (reused) return reused;
+  if (reused) return {...reused,usage};
 
   const apiKey = env("GEMINI_API_KEY");
   if (!apiKey) return smartReview('gemini_not_configured', 'الفحص الآلي غير متاح حالياً؛ لم يُنشأ طلب. حاول لاحقاً.');
 
+  const admission=await usageRpc(admin,'begin_receipt_scan_usage',{p_user:userId,p_hash:hash,p_context:contextKey});
+  if(admission.reason==='receipt_cached'){
+    const racedCache=await findReusableScan(admin,userId,hash,options);
+    if(racedCache) return {...racedCache,usage:admission.usage};
+    return usageDenied({reason:'receipt_scan_in_progress',usage:admission.usage});
+  }
+  if(admission.allowed!==true) return usageDenied(admission);
+  options.usageLeaseId=admission.leaseId;
+  const budget=async()=>{if((await usageRpc(admin,'meter_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId}))!==true) throw new Error('receipt_provider_budget_exhausted');};
+  try {
+    const result=await performReceiptScan(admin,userId,image,hash,options,apiKey,expectedMethod,budget);
+    const state=await usageRpc(admin,'finish_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId,p_scan:result.scanId || null});
+    if(result.submissionAllowed && state.leaseCompleted!==true) return usageDenied({reason:'receipt_policy_unavailable',usage:state});
+    return {...result,usage:state};
+  } catch(error) {
+    try{await usageRpc(admin,'finish_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId,p_scan:null});}catch(_){}
+    throw error;
+  }
+}
+async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash:string,options:ScanOptions,apiKey:string,expectedMethod:NonNullable<ExpectedMethod>,budget:GeminiBudget):Promise<ScanResult> {
+  const {base64:imageBase64,mimeType,bytes}=image;
   const diagnostics: GeminiDiagnostics = { models: [], orderSource: "unknown", chosen: null, attempts: [] };
   const resolved = await resolveGeminiModels(apiKey);
   diagnostics.models = resolved.models;
@@ -958,7 +1021,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
 
   let rawText = "";
   try {
-    const first = await extractTextWithGemini(imageBase64, mimeType, apiKey, resolved.models, deadline);
+    const first = await extractTextWithGemini(imageBase64, mimeType, apiKey, resolved.models, deadline, budget);
     diagnostics.chosen = first.model;
     diagnostics.attempts = first.attempts.slice();
     addGeminiUsage(diagnostics, first.usage);
@@ -975,10 +1038,12 @@ async function processScan(request: Request, admin: any, userId: string, body: a
       rejected.riskFlags = ["not_a_receipt"];
       rejected.message = "الصورة المرفوعة لا تحتوي على نص واضح لإشعار تحويل. ارفع لقطة شاشة كاملة من تطبيق البنك.";
       rejected.source = "edge";
+      rejected.receiptPolicy = RECEIPT_POLICY;
+      rejected.completedMachineCheck = true; // unreadable is a completed attempt, never an abuse strike
       rejected.submissionAllowed = false;
       rejected.mimeType = mimeType;
       rejected.rawExcerpt = null;
-      const scan = await saveScan(admin, userId, hash, bytes, options, rejected, diagnostics, "");
+      const scan = await saveScan(admin, userId, hash, bytes, options, rejected, diagnostics, "", expectedMethod);
       return { ...rejected, scanId: scan.id, receiptHash: hash, receiptPath: options.receiptPath, attachmentId: options.attachmentId, expiresAt: scan.expires_at };
     }
     const technical = smartReview(
@@ -1014,7 +1079,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   // The model never sees the customer's expected amount, reference or account.
   let visual: Record<string, any>;
   try {
-    const classified = await structuredPass([{inline_data:{mime_type:mimeType,data:imageBase64}}], apiKey, resolved.models, deadline);
+    const classified = await structuredPass([{inline_data:{mime_type:mimeType,data:imageBase64}}], apiKey, resolved.models, deadline, budget);
     addGeminiUsage(diagnostics, classified.usage);
     visual = classified.data;
   } catch (_) {
@@ -1035,6 +1100,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   const accountInText = ocrDestination ? ocrDestination === to : labelledDestination;
   const amountsInText = (normalizedText.match(/\d[\d,٬]*(?:[.٫]\d{1,2})?/g) || []).map(v => Number(v.replace(/[,٬]/g,'').replace('٫','.')));
   const amountInText = Number.isFinite(visualAmount) && amountsInText.some(v => Math.abs(v-visualAmount)<0.01);
+  const originalNotReceipt = (result.riskFlags || []).includes("not_a_receipt");
   const documentOk = visual?.is_receipt === true && visual.document_type === 'transfer_receipt' &&
     visual.is_complete === true && visual.receipt_count === 1 && visual.has_tampering === false && visual.contains_instructions === false;
   const fieldsOk = visual.status === 'successful' && /^(SDG|ج[.]?\s?س[.]?|جنيه سوداني)$/i.test(String(visual.currency).trim()) &&
@@ -1044,6 +1110,8 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   const amountOk = Number.isFinite(visualAmount) && Math.abs(visualAmount-options.expectedAmount) < 0.01;
   const checked = documentOk && fieldsOk && !unsafeFlags && result.refVerified === true && result.extracted?.statusOk === true;
   result.passes = 2;
+  result.completedMachineCheck = true;
+  result.nonReceiptConfirmed = originalNotReceipt && rawText.trim().length>=20 && visual.is_receipt===false && visual.document_type==='other';
   result.visualCheck = {isReceipt:documentOk, fieldsCorroborated:fieldsOk, destinationMatched:to === expectedTo, status:visual.status === 'successful' ? 'successful' : 'unverified'};
   result.extractedFields = sanitizeStructuredFields(visual);
   result.receiptPolicy = RECEIPT_POLICY;
@@ -1082,7 +1150,8 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   // لتعبئة p_ocr_excerpt، بينما كان الخادم لا يُرسل الحقل إطلاقاً (يعود لـ
   // undefined) فيبقى مقتطف OCR في الطلب فارغاً دائماً. نفس النص المحفوظ
   // خادمياً في ocr_data.raw_text_excerpt، وبنفس حد الواجهة (300 حرف).
-  result.rawExcerpt = rawText.trim() ? rawText.slice(0, 300) : null;
+  result.rawExcerpt = result.nonReceiptConfirmed ? null : (rawText.trim() ? rawText.slice(0, 300) : null);
+  if(result.nonReceiptConfirmed){ result.extracted={}; result.extractedFields=null; rawText=''; }
   const scan = await saveScan(admin, userId, hash, bytes, options, result, diagnostics, rawText, expectedMethod);
   return { ...result, scanId: scan.id, receiptHash: hash, receiptPath: options.receiptPath, attachmentId: options.attachmentId, expiresAt: scan.expires_at };
 }
@@ -1106,14 +1175,25 @@ Deno.serve(async (request: Request) => {
     });
     const { data: context, error: contextError } = await userClient.rpc('get_session_security_context');
     if (contextError || !context?.allowed) return json(request, { ok: false, error: context?.requires_mfa ? 'mfa_required' : 'access_denied' }, 403);
-    if (!(await enforceRateLimit(admin, userId))) {
+    const polling=new URL(request.url).searchParams.get('operation')==='poll';
+    if(polling){
+      const {data:pollRate,error:pollRateError}=await admin.rpc('consume_chat_rate_limit',{p_rate_key:'receipt-poll:'+userId,p_limit:90,p_window_seconds:600});
+      const row=Array.isArray(pollRate)?pollRate[0]:pollRate;
+      if(pollRateError || row?.allowed!==true) return json(request,{ok:false,error:'rate_limited'},429);
+    }
+    if (!polling && !(await enforceRateLimit(admin, userId))) {
       return json(request, { ok: false, error: "rate_limited" }, 429, { "Retry-After": "600" });
     }
     let body: any;
-    try { body = await readBoundedJson(request, MAX_REQUEST_CHARS); }
+    try { body = await readBoundedJson(request, polling ? 2048 : MAX_REQUEST_CHARS); }
     catch (error) {
       const tooLarge = error instanceof Error && error.message === 'payload_too_large';
       return json(request, { ok: false, error: tooLarge ? 'request_too_large' : 'invalid_json' }, tooLarge ? 413 : 400);
+    }
+    if(polling){
+      if(!/^[0-9a-f-]{36}$/i.test(String(body?.ticketId || ''))) return json(request,{ok:false,error:'invalid_ticket'},400);
+      const polled=await usageRpc(admin,'poll_receipt_scan_usage',{p_user:userId,p_ticket:body.ticketId});
+      return json(request,{ok:true,...usageDenied(polled)});
     }
     const result = await processScan(request, admin, userId, body);
     return json(request, { ok: true, ...result });

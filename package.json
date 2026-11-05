@@ -11,7 +11,8 @@
     "lint": "node scripts/verify-build.mjs --syntax-only",
     "build": "node scripts/verify-build.mjs",
     "typecheck": "deno check --node-modules-dir=manual supabase/functions/process-receipt/index.ts supabase/functions/chat-assistant/index.ts",
-    "test:maintenance": "node scripts/test_maintenance_client.mjs && node scripts/test_maintenance_db.mjs"
+    "test:maintenance": "node scripts/test_maintenance_client.mjs && node scripts/test_maintenance_db.mjs && npm run test:usage",
+    "test:usage": "node scripts/test_receipt_usage_db.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",

@@ -639,8 +639,8 @@ function attachCheckoutEvents(canUseWallet) {
     });
 
     // حرس زمني على مستوى الواجهة (حزام أمان ثانٍ فوق حرس المحرك نفسه):
-    // بعد 100 ثانية تنتهي حالة التحميل حتماً بنتيجة واضحة.
-    const UI_SCAN_DEADLINE_MS = 100000;
+    // مهلة تشمل انتظار الدور والفحص، مع نتيجة واضحة عند تعذر الإكمال.
+    const UI_SCAN_DEADLINE_MS = 180000;
     let uiWatchdog = null;
     const uiGuard = new Promise(resolve => {
       uiWatchdog = setTimeout(() => resolve(softReview('ui_scan_timeout')), UI_SCAN_DEADLINE_MS);
@@ -649,6 +649,7 @@ function attachCheckoutEvents(canUseWallet) {
     let analysis;
     try {
       const scanOpts = {
+        onStatus: message => { statusEl.textContent = message; },
         expectedAmount: currentTotal(),
         manualRef: savedTxRef,
         expectedAccount: selectedMethodAccount,
@@ -912,6 +913,7 @@ function attachCheckoutEvents(canUseWallet) {
     statusEl.textContent = 'جارِ فحص إشعار المبلغ المتبقي...';
     let res = null;
     const opts = {
+      onStatus: message => { statusEl.textContent = message; },
       expectedAmount: splitPayment.remaining,
       manualRef: splitPayment.secondRef,
       expectedAccount: selectedMethodAccount,
@@ -936,7 +938,7 @@ function attachCheckoutEvents(canUseWallet) {
     statusEl.textContent = 'جارِ تثبيت فحص الدفعة الأولى بالمبلغ الظاهر فيها...';
     let first;
     try {
-      first = await serverVerify(activeSplit.firstFile, {expectedAmount:activeSplit.paid,manualRef:savedTxRef,expectedMethodId:selectedMethodId}, null);
+      first = await serverVerify(activeSplit.firstFile, {onStatus:message=>{statusEl.textContent=message;},expectedAmount:activeSplit.paid,manualRef:savedTxRef,expectedMethodId:selectedMethodId}, null);
     } catch (_) { first = null; }
     if (revision !== checkoutScanRevision || context !== checkoutReceiptContext() || splitPayment !== activeSplit) return;
     if (!first?.submissionAllowed || !first.automaticCheckComplete || !first.scanId) {
