@@ -484,6 +484,18 @@ async function postGeminiGenerate(
   budget?: GeminiBudget,
 ): Promise<any> {
   const url = `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:generateContent`;
+  // Gemini 3+ does not support thinking-off, and 2.5 Pro has a nonzero minimum.
+  // Sending the legacy zero budget caused a 400 + retry in both receipt stages.
+  // Omitting that incompatible setting preserves the existing successful retry
+  // payload (Flash-Lite defaults to minimal), without changing our prompts.
+  const version = model.replace(/^models\//, "").match(/^gemini-(\d+)(?:\.(\d+))?/i);
+  const zeroBudgetUnsupported = (version && Number(version[1]) >= 3) || /^gemini-2\.5-pro(?:-|$)/i.test(model);
+  let requestBody = body;
+  if (zeroBudgetUnsupported && body?.generationConfig?.thinkingConfig?.thinkingBudget === 0) {
+    const generationConfig = { ...body.generationConfig };
+    delete generationConfig.thinkingConfig;
+    requestBody = { ...body, generationConfig };
+  }
   const attempt = async (payload: Record<string, any>) => {
     if (budget) await budget();
     const response = await fetchWithTimeout(url, {
@@ -501,14 +513,14 @@ async function postGeminiGenerate(
     return await response.json();
   };
   try {
-    return await attempt(body);
+    return await attempt(requestBody);
   } catch (error) {
     const status = (error as any)?.status;
     const detail = String((error as any)?.detail || "");
     // بعض النماذج لا تدعم thinkingConfig فتُرجع 400 INVALID_ARGUMENT.
     // نعيد المحاولة مرة واحدة بعد حذفه بدل إسقاط النموذج بالكامل.
-    if (status === 400 && body?.generationConfig?.thinkingConfig && /thinking|INVALID_ARGUMENT/i.test(detail)) {
-      const retryBody = JSON.parse(JSON.stringify(body));
+    if (status === 400 && requestBody?.generationConfig?.thinkingConfig && /thinking|INVALID_ARGUMENT/i.test(detail)) {
+      const retryBody = JSON.parse(JSON.stringify(requestBody));
       delete retryBody.generationConfig.thinkingConfig;
       return await attempt(retryBody);
     }

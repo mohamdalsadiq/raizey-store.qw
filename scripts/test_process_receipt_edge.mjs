@@ -404,6 +404,20 @@ console.log("\n── 400 INVALID_ARGUMENT يُعاد بلا thinkingConfig ─�
   check("decision accept after retry", result.json.decision, "accept");
 }
 
+console.log("\n── تجنب إعادة المحاولة لإعداد تفكير غير مدعوم ──");
+for (const model of ['gemini-3.5-flash-lite','gemini-3.1-pro','gemini-2.5-pro','gemini-2.5-flash']) {
+  const bodies=[];
+  const result=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:model},fetchHandler:async(url,init)=>{
+    const payload=JSON.parse(init.body);bodies.push(payload);
+    if(model!=='gemini-2.5-flash' && payload.generationConfig?.thinkingConfig?.thinkingBudget===0) return httpResponse(400,{error:{status:'INVALID_ARGUMENT',message:'thinking budget zero unsupported'}});
+    return httpResponse(200,geminiTextResponse(validBankakText()));
+  }});
+  check(model+' uses only two generation attempts',bodies.length,2);
+  check(model+' metering matches actual attempts',result.state.rpcs.filter(r=>r.name==='meter_receipt_scan_usage').length,2);
+  check(model+' keeps required validation',result.json.submissionAllowed,true);
+  check(model+' budget configuration',bodies.every(b=>model==='gemini-2.5-flash'?b.generationConfig.thinkingConfig?.thinkingBudget===0:b.generationConfig.thinkingConfig===undefined),true);
+}
+
 console.log("\n── انتهاء المهلة عبر AbortController حقيقي ──");
 {
   let capturedSignal = null;
