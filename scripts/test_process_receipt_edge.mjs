@@ -64,7 +64,7 @@ function buildModule() {
     // Edge function, so its own `../_shared/cors.ts` specifier would resolve to
     // scripts/_shared/cors.ts and the import would fail before any test runs.
     .replace(
-      /from\s+"\.\.\/_shared\/(cors|request-body)\.ts"/g,
+      /from\s+"\.\.\/_shared\/(cors|request-body|receipt-image)\.ts"/g,
       'from "../../supabase/functions/_shared/$1.ts"',
     );
 }
@@ -82,7 +82,25 @@ globalThis.Deno = {
   env: { get: (name) => envState[name] },
   serve: (handler) => { globalThis.__servedHandler = handler; },
 };
-globalThis.fetch = (...args) => { fetchedUrls.push(String(args[0])); return fetchImpl(...args); };
+let structuredOverride = null;
+globalThis.fetch = async (...args) => {
+  fetchedUrls.push(String(args[0]));
+  const response = await fetchImpl(...args);
+  let requestBody; try { requestBody = JSON.parse(args[1]?.body || '{}'); } catch (_) {}
+  if (requestBody?.generationConfig?.responseMimeType === 'application/json' && response.ok) {
+    if (structuredOverride !== null) return httpResponse(200,geminiTextResponse(JSON.stringify(structuredOverride)));
+    const copy = await response.clone().json();
+    const text = copy.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let parsed; try { parsed=JSON.parse(text); } catch (_) {}
+    if (parsed) return response;
+    const rtl=text.includes('121004123456789');
+    return httpResponse(200,geminiTextResponse(JSON.stringify({
+      is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,
+      amount:rtl?'48500':'125000',currency:'SDG',receiver_account:rtl?'1234567890':'2050123456789012',transaction_id:rtl?'121004123456789':'FT250719123456',date:'2026-11-04',status:'successful'
+    })));
+  }
+  return response;
+};
 
 // ── بديل Supabase مراقِب ──
 function createAdminMock(state) {
@@ -114,7 +132,8 @@ function createAdminMock(state) {
       single: async () => selectResult,
       then: (resolve, reject) => Promise.resolve(selectResult).then(resolve, reject),
       insert: (payload) => {
-        state.inserted.push({ table, payload });
+        if (table === 'receipt_attachments') state.attachments.push(payload);
+        else state.inserted.push({ table, payload });
         const inserted = { data: { id: "scan-uuid-1", receipt_hash: payload.receipt_hash, decision: payload.decision, ocr_status: payload.ocr_status, submission_allowed: payload.submission_allowed, expires_at: payload.expires_at }, error: null };
         const iq = {
           select: () => iq,
@@ -129,6 +148,7 @@ function createAdminMock(state) {
     return q;
   }
   return {
+    storage: { from: () => ({ upload: async (path, bytes, options) => { state.uploads.push({path,bytes,options}); return {data:{path},error:null}; }, remove: async () => ({error:null}) }) },
     auth: { getUser: async (token) => (token === GOOD_TOKEN ? { data: { user: { id: "user-1" } }, error: null } : { data: { user: null }, error: { message: "invalid_jwt" } }) },
     from,
     rpc: async (name) => ({ data: name === 'get_session_security_context' ? { allowed: true } : [{ allowed: state.scanCount < 12 }], error: null }),
@@ -138,13 +158,13 @@ function createAdminMock(state) {
 function makeRequest(body, token) {
   const headers = { "Content-Type": "application/json", Origin: "https://raizey-store-qw.vercel.app" };
   if (token !== null && token !== undefined) headers.Authorization = `Bearer ${token}`;
-  return new Request("https://rglbfizqolrenwfsndyv.supabase.co/functions/v1/process-receipt", {
+  return new Request("https://dvcsdbsnnbdpzaiccjej.supabase.co/functions/v1/process-receipt", {
     method: "POST", headers, body: JSON.stringify(body),
   });
 }
 
 // PNG/TIFF magic bytes ناقصة لكن كافية لاجتياز التحقق (base64 لمحتوى ثنائي)
-const IMAGE_BASE64 = Buffer.from("meem-receipt-image-bytes").toString("base64");
+const IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPg1JoIAAEEAMXKFmZxAAAAAElFTkSuQmCC";
 
 function validBankakText() {
   const now = new Date();
@@ -198,13 +218,14 @@ const MODEL_LIST_BODY = {
 };
 
 /** ينفّذ فحصاً واحداً ببديل Supabase/Gemini مخصّص ويعيد النتيجة والحالة. */
-async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = {id: "a6180000-0000-4000-8000-000000000020", name: null, account_number: null}, reusableScan = null, fetchHandler, expectStatus }) {
-  const state = { inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
+async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paymentMethod = {id: "a6180000-0000-4000-8000-000000000020", name: null, account_number: "2050123456789012"}, reusableScan = null, fetchHandler, expectStatus, visual = null }) {
+  structuredOverride = visual;
+  const state = { attachments: [], uploads: [], inserted: [], filters: [], scanCount, paymentMethod, reusableScan };
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
     GEMINI_API_KEY: API_KEY,
     GEMINI_MODEL_ORDER: "",
-    SUPABASE_URL: "https://rglbfizqolrenwfsndyv.supabase.co",
+    SUPABASE_URL: "https://dvcsdbsnnbdpzaiccjej.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
     ...env,
   });
@@ -265,8 +286,8 @@ console.log("\n── اكتشاف النماذج والترتيب ──");
   check("rawExcerpt within client cap", result.json.rawExcerpt.length <= 300, true);
   check("rawExcerpt carries OCR text", result.json.rawExcerpt.includes("FT250719123456"), true);
   // استهلاك الإيصال يُسجَّل فعلياً كي يمكن إثبات خفض التوكنات في الإنتاج.
-  check("token usage recorded per receipt", ocrData.tokens && ocrData.tokens.total, 1299);
-  check("image tokens recorded (main cost driver)", ocrData.tokens.image, 1089);
+  check("token usage recorded per receipt", ocrData.tokens && ocrData.tokens.total, 2598);
+  check("image tokens recorded (main cost driver)", ocrData.tokens.image, 2178);
 }
 
 console.log("\n── rawExcerpt: بلا نص ⇒ null (لا كسر للعقد) ──");
@@ -307,7 +328,7 @@ console.log("\n── التهدئة: النموذج الميت/المزدحم �
   const first = await runScan({ body: baseBody, fetchHandler: handler });
   check(
     "cooldown: first request retries 503 once, skips 404, then succeeds",
-    callOrder.join(","),
+    callOrder.slice(0,4).join(","),
     "gemini-3.1-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash,gemini-2.5-flash",
   );
   check("cooldown: first request still succeeds on the fallback", first.json.decision, "accept");
@@ -340,8 +361,8 @@ console.log("\n── التبديل بين النماذج (404 → 503 → نج
     },
   });
   // 503 يُعاد مرة واحدة على نفس النموذج، و404 لا يُعاد (عطل دائم).
-  check("503 retried once on the same model", seen.join(","), "gemini-dead-1,gemini-dead-2,gemini-dead-2,gemini-alive");
-  check("404 is not retried", seen.filter((m) => m === "gemini-dead-1").length, 1);
+  check("503 retried once on the same model", seen.slice(0,4).join(","), "gemini-dead-1,gemini-dead-2,gemini-dead-2,gemini-alive");
+  check("404 is not retried", seen.filter((m) => m === "gemini-dead-1").length, 2);
   check("decision accept after failover", result.json.decision, "accept");
   const attempts = result.state.inserted[0].payload.ocr_data.models_tried;
   check("attempt diagnostics recorded", attempts.length, 4);
@@ -422,7 +443,7 @@ console.log("\n── 429 حصة: إعادة محاولة بدل الفشل ال
     },
   });
   // قبل هذا التغيير كان 429 يُعامَل كخطأ قاتل فيسقط الإيصال إلى «مراجعة» فوراً.
-  check("429 retried once then succeeded", calls, 2);
+  check("429 retried once plus mandatory visual pass", calls, 3);
   check("429 retry produced accept", result.json.decision, "accept");
 }
 
@@ -440,7 +461,7 @@ console.log("\n── منع إعادة الفحص (نفس البصمة والم
     receipt_hash: "a".repeat(64),
     expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
     risk_flags: [],
-    ocr_data: { expected_method_id: "a6180000-0000-4000-8000-000000000020", result_snapshot: snapshot },
+    ocr_data: { receipt_path: "user-1/verified/test.png", receipt_policy:"mandatory-visual-v1", automatic_check_complete:true, attachment_id: "attachment-test", expected_method_id: "a6180000-0000-4000-8000-000000000020", result_snapshot: snapshot },
     ...overrides,
   });
 
@@ -493,12 +514,8 @@ console.log("\n── فلاتر منع التكرار: IS NULL بدل eq.null �
     body: Object.assign({}, baseBody, { expectedAmount: 0, manualRef: "" }),
     fetchHandler: async () => httpResponse(200, geminiTextResponse(validBankakText())),
   });
-  const amountNull = anonymous.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "expected_amount");
-  const refNull = anonymous.state.filters.find((f) => f.table === "receipt_scan_results" && f.column === "manual_ref");
-  check("dedup filter: empty amount uses is.null", amountNull && amountNull.op, "is");
-  check("dedup filter: empty amount value is null", amountNull && amountNull.value, null);
-  check("dedup filter: empty ref uses is.null", refNull && refNull.op, "is");
-  check("dedup filter: empty ref value is null", refNull && refNull.value, null);
+  check("missing expected context denied before AI",anonymous.json.submissionAllowed,false);
+  check("missing expected context makes no AI calls",fetchedUrls.length,0);
 }
 
 console.log("\n── تخزين رقم العملية الذي وثّقه القرار (إشعار RTL: القيمة قبل التسمية) ──");
@@ -531,13 +548,14 @@ console.log("\n── تخزين رقم العملية الذي وثّقه ال�
 
   const verified = await runScan({
     body: Object.assign({}, baseBody, { expectedAmount: 48500, manualRef: "121004123456789" }),
+    paymentMethod: {id:baseBody.expectedMethodId,account_number:"1234567890"},
     env: { GEMINI_MODEL_ORDER: "gemini-ok" },
     fetchHandler: async () => httpResponse(200, geminiTextResponse(ocashRtlText)),
   });
   check("RTL ref: decision stays accept", verified.json.decision, "accept");
   check("RTL ref: refVerified true", verified.json.refVerified, true);
   // الواجهة لا تتغيّر: نفس القيمة المعروضة قبل الإصلاح (لا نلمس الرد).
-  check("RTL ref: display value untouched", verified.json.extracted.txRef, day);
+  check("RTL ref: display value untouched", verified.json.extracted.txRef, "121004123456789");
   // المخزَّن للربط = الرقم الذي وثّقه القرار، لا التاريخ.
   check("RTL ref: stored tx_ref_ocr is the verified ref", verified.state.inserted[0].payload.tx_ref_ocr, "121004123456789");
 
@@ -601,6 +619,21 @@ console.log("\n── مدخلات غير صالحة ──");
   check("missing image has no scanId", missing.json.scanId, undefined);
 }
 
+console.log("\n── لا مسار يدوي، والمرفق مطابق للبايتات المفحوصة ──");
+{
+  const manual = await runScan({ body: {...baseBody, manualOnly: true}, fetchHandler: async () => { throw new Error('AI must not run'); } });
+  check('manual bypass denied', manual.json.submissionAllowed, false);
+  check('manual bypass stores nothing', manual.state.attachments.length, 0);
+  const good = await runScan({body:baseBody,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText()))});
+  check('accepted scan stores exact bytes',good.state.attachments[0].receipt_hash,await crypto.subtle.digest('SHA-256',good.state.uploads[0].bytes).then(b=>Buffer.from(b).toString('hex')));
+  const fake = await runScan({body:{...baseBody,imageBase64:Buffer.from('<svg onload="alert(1)">').toString('base64')},fetchHandler:async()=>{throw new Error('unexpected AI');}});
+  check('invalid image never stored',fake.state.uploads.length,0);
+  check('invalid image cannot be submitted',fake.json.submissionAllowed,false);
+  const badCrc=Buffer.from(IMAGE_BASE64,'base64'); badCrc[45]^=1;
+  const corrupt=await runScan({body:{...baseBody,imageBase64:badCrc.toString('base64')},fetchHandler:async()=>{throw new Error('unexpected AI');}});
+  check('corrupt PNG never stored',corrupt.state.uploads.length,0);
+}
+
 console.log("\n── تمرير بيانات وسيلة الدفع (مهمة 35) ──");
 {
   const result = await runScan({
@@ -647,7 +680,7 @@ console.log("\n── الاستخراج المهيكل يُدمج عند عدم
   check("structured pass ran", calls, 2);
   check("structured fields stored", ocrData.extracted_fields && ocrData.extracted_fields.transaction_id, "FT250719123456");
   check("second pass recorded", ocrData.passes, 2);
-  check("decision improved to accept", result.json.decision, "accept");
+  check("incomplete OCR cannot be promoted by model fields", result.json.decision, "reject");
 }
 
 console.log("\n── المهمة 37: تحكيم إضافي على رفض عدم تطابق المبلغ ──");
@@ -674,9 +707,39 @@ console.log("\n── المهمة 37: تحكيم إضافي على رفض عد�
     },
   });
   check("arbitration ran on amount_mismatch reject", calls, 2);
-  check("arbitration_on_reject flag recorded", result.json.riskFlags.includes("arbitration_on_reject"), true);
-  check("decision no longer a plain reject", result.json.decision === "reject", false);
-  check("second pass improved to accept", result.json.decision, "accept");
+  check("unverified OCR fields not promoted", result.json.submissionAllowed, false);
+  check("contradictory passes reject", result.json.decision === "reject", true);
+  check("second pass cannot override contradictory amount", result.json.decision, "reject");
+}
+
+console.log("\n── حالات عدائية وفشل مغلق ──");
+{
+ const validVisual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:'2050123456789012',transaction_id:'FT250719123456',date:'2026-11-04',status:'successful'};
+ const mutations={
+  'chat image':{is_receipt:false,document_type:'other'}, 'uncertain layout':{document_type:'uncertain'},
+  'incomplete receipt':{is_complete:false}, 'collage':{receipt_count:2}, 'edited image':{has_tampering:true},
+  'image prompt injection':{contains_instructions:true}, 'failed transfer':{status:'failed'}, 'pending transfer':{status:'pending'},
+  'unknown status':{status:'unknown'}, 'foreign currency':{currency:'USD'}, 'wrong destination':{receiver_account:'1234567890'},
+  'substring account':{receiver_account:'12345678'}, 'wrong reference':{transaction_id:'FT999999999999'},
+  'fabricated amount':{amount:'99999'}, 'non-numeric amount':{amount:'125000xyz'}, 'string truthiness':{is_receipt:'true'}, 'missing mandatory field':{receipt_count:undefined}
+ };
+ for(const [name,change] of Object.entries(mutations)) {
+  const res=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},visual:{...validVisual,...change},fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText()))});
+  check(name+' rejected',res.json.submissionAllowed,false);
+  check(name+' not stored as evidence',res.state.uploads.length,0);
+ }
+ const senderOnly=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},visual:validVisual,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText().replace('من حساب: 1234567890','من حساب: 2050123456789012').replace('الى حساب: 2050123456789012','الى حساب: 9999999999999999')))});
+ check('sender account cannot impersonate destination',senderOnly.json.submissionAllowed,false);
+ const unconfigured=await runScan({body:baseBody,paymentMethod:{id:baseBody.expectedMethodId,account_number:null},fetchHandler:async()=>{throw Error('must not call AI')}});
+ check('destination configuration required',unconfigured.json.riskFlags.includes('payment_destination_not_configured'),true);
+ const noKey=await runScan({body:baseBody,env:{GEMINI_API_KEY:''},fetchHandler:async()=>{throw Error('must not call AI')}});
+ check('missing API key denies submission',noKey.json.submissionAllowed,false);
+ const partial=await runScan({body:{...baseBody,expectedAmount:150000},visual:validVisual,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText()))});
+ check('partial transfer offered only after successful visual check',partial.json.shortfall?.remaining,25000);
+ check('partial transfer alone is not submittable',partial.json.submissionAllowed,false);
+ check('partial transfer not registered as accepted evidence',partial.state.uploads.length,0);
+ const noVisual=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},fetchHandler:async(_u,init)=>JSON.parse(init.body).generationConfig.responseMimeType ? httpResponse(200,geminiTextResponse('{}')) : httpResponse(200,geminiTextResponse(validBankakText()))});
+ check('matching OCR alone never authorizes',noVisual.json.submissionAllowed,false);
 }
 
 // ── عقد الميزانية الزمنية (regression) ────────────────────────────────

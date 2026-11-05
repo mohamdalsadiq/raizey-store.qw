@@ -33,13 +33,16 @@ function generateCode() {
 
 async function generateCard() {
   const amount = parseFloat(document.getElementById('amountInput').value);
-  if (!amount || amount <= 0) {
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 10000000) {
     alert('أدخل قيمة صحيحة');
     return;
   }
 
+  const expiry = document.getElementById('giftExpiresInput').value;
+  const expiresAt = expiry ? new Date(expiry) : null;
+  if (expiresAt && (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date())) { alert('اختر تاريخ انتهاء في المستقبل.'); return; }
   const code = generateCode();
-  const { error } = await supabaseClient.from('gift_cards').insert({ code, amount });
+  const { error } = await supabaseClient.from('gift_cards').insert({ code, amount, expires_at: expiresAt?.toISOString() || null });
 
   if (error) {
     alert('حصل خطأ، حاول تاني');
@@ -70,7 +73,7 @@ async function loadCards() {
           ${c.is_redeemed ? '<span class="inactive-badge" style="color: var(--danger); background: rgba(255,77,79,0.15);">مستخدم</span>' : '<span class="inactive-badge" style="color: var(--mm-accent-text); background: rgba(43,237,51,0.15);">متاح</span>'}
         </div>
         <div class="manage-item-sub">
-          ${formatSDG(c.amount)} ج.س
+          ${formatSDG(c.amount)} ج.س ${c.expires_at ? ' — ينتهي: ' + escapeHtml(new Date(c.expires_at).toLocaleString('ar-SD')) : ''}
           ${c.is_redeemed ? ' — بواسطة: ' + escapeHtml(c.profiles?.full_name || 'مستخدم') : ''}
         </div>
       </div>

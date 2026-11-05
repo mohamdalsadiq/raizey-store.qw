@@ -10,7 +10,8 @@
     "test:security": "node scripts/test_security_db.mjs",
     "lint": "node scripts/verify-build.mjs --syntax-only",
     "build": "node scripts/verify-build.mjs",
-    "typecheck": "deno check --node-modules-dir=manual supabase/functions/process-receipt/index.ts supabase/functions/chat-assistant/index.ts"
+    "typecheck": "deno check --node-modules-dir=manual supabase/functions/process-receipt/index.ts supabase/functions/chat-assistant/index.ts",
+    "test:maintenance": "node scripts/test_maintenance_client.mjs && node scripts/test_maintenance_db.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",

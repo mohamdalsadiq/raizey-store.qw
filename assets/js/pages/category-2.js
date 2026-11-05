@@ -29,7 +29,7 @@ function updatePrice() {
     else { summary.hidden = true; summary.innerHTML = ''; }
   }
 }
-function changeQuantity(delta) { let next = (quantity > 0 ? quantity : 1) + delta; if (next < 1) next = 1; if (next > 99) next = 99; quantity = next; updatePrice(); }
+function changeQuantity(delta) { let next = (quantity > 0 ? quantity : 1) + delta; if (next < 1) next = 1; if (next > MeemStoreRules.MAX_QUANTITY) next = MeemStoreRules.MAX_QUANTITY; quantity = next; updatePrice(); }
 function normalizedOptions(product) { return Array.isArray(product?.options) ? product.options.filter(Boolean).map((option, index) => ({ id: safeText(option?.id, `option_${index}`), label: safeText(option?.label, 'خيار'), price_usd: usd(option?.price_usd ?? option?.price) })) : []; }
 function readFields(product) { return Array.isArray(product?.required_fields) ? product.required_fields : []; }
 function renderOptions() {
@@ -82,7 +82,19 @@ function renderSelectedProduct() {
   updatePrice();
 }
 function selectProduct(id) { selectedProduct = products.find(product => String(product.id) === String(id)) || products[0] || null; selectedInternalOption = null; renderOptions(); renderSelectedProduct(); document.getElementById('selectedPanel')?.scrollIntoView({ behavior:'smooth', block:'start' }); }
-function collectFields() { const values = {}, labels = {}; for (const input of document.querySelectorAll('#selectedPanel [data-field-key]')) { const value = input.value.trim(); if (!value) return null; values[input.dataset.fieldKey] = value; labels[input.dataset.fieldKey] = input.dataset.fieldLabel || input.dataset.fieldKey; } return { values, labels }; }
+function collectFields() {
+  const values = {}, labels = {};
+  for (const input of document.querySelectorAll('[data-field-key]')) {
+    const field = (selectedProduct.required_fields || []).find(f => f.key === input.dataset.fieldKey) || { label: input.dataset.fieldLabel };
+    const result = MeemStoreRules.validateField(field, input.value);
+    input.setCustomValidity(result.error);
+    if (result.error) { input.reportValidity(); return null; }
+    input.value = result.value;
+    values[input.dataset.fieldKey] = result.value;
+    labels[input.dataset.fieldKey] = field.label || 'بيانات الطلب';
+  }
+  return { values, labels };
+}
 function buildCartItem() { if (!selectedProduct) return null; const fields = collectFields(); if (!fields) return null; const priceUsd = selectedInternalOption ? usd(selectedInternalOption.price_usd ?? selectedInternalOption.price) : usd(selectedProduct.price_usd); return { cart_item_id:`${Date.now()}_${Math.random().toString(36).slice(2,8)}`, product_id:selectedProduct.id, name:selectedProduct.name, price_sdg:priceUsd * exchangeRate, quantity:(quantity > 0 ? quantity : 1), image_url:selectedProduct.image_url, selected_option:selectedInternalOption ? { id:selectedInternalOption.id, label:selectedInternalOption.label, price_usd:priceUsd, price_sdg:priceUsd * exchangeRate } : null, field_values:fields.values, field_labels:fields.labels }; }
 function setError(message, success = false) { const box = document.getElementById('formError'); if (!box) return; box.textContent = message; box.style.color = success ? 'var(--cat-primary)' : ''; box.focus?.(); }
 function addToCart() { const item = buildCartItem(); if (!item) { setError('اختر الباقة وأكمل بيانات الطلب المطلوبة أولاً.'); return; } let cart = []; try { cart = JSON.parse(localStorage.getItem('meem_store_cart') || '[]') || []; } catch { cart = []; } cart.push(item); localStorage.setItem('meem_store_cart', JSON.stringify(cart)); updateCartBadge(); setError('تمت إضافة الخيار إلى السلة.', true); }

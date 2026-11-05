@@ -22,7 +22,7 @@ const getFunction=(text,name)=>text.match(new RegExp('(?:async )?function '+name
 const settings=fs.readFileSync(new URL('../assets/js/pages/admin-settings-2.js',import.meta.url),'utf8');
 let writes=0;let rpcError=null;
 const nodes={formError:{textContent:''},formSuccess:{textContent:''},rateInput:{value:'200'},marginInput:{value:'10'},whatsappInput:{value:'123'}};
-const settingsContext={document:{getElementById:id=>nodes[id]},supabaseClient:{rpc:async()=>{writes++;return{error:rpcError}}},getFriendlyError:()=> 'تعذر الحفظ'};
+const settingsContext={savedRate:null,document:{getElementById:id=>nodes[id]},supabaseClient:{rpc:async()=>{writes++;return{error:rpcError}}},getFriendlyError:()=> 'تعذر الحفظ'};
 vm.createContext(settingsContext);vm.runInContext(getFunction(settings,'saveRate'),settingsContext);
 await settingsContext.saveRate();assert.equal(writes,0,'invalid contact data cannot partially change prices');
 nodes.whatsappInput.value='249123456789';rpcError={message:'denied'};await settingsContext.saveRate();assert.equal(nodes.formSuccess.textContent,'','failed mutations never display success');

@@ -95,7 +95,7 @@ console.log("\n── عقد الصور (validation) ──");
 console.log("\n── شكل الطلب المرسل للسيرفر ──");
 {
   const { pipeline, requests } = loadPipeline({
-    fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "scan-1", receiptHash: "a".repeat(64), decision: "accept" }),
+    fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "scan-1", receiptHash: "a".repeat(64), receiptPath: "owner/verified/test.png", attachmentId: "attachment-1", decision: "accept", submissionAllowed:true, receiptPolicy:"mandatory-visual-v1", automaticCheckComplete:true }),
   });
   const result = await pipeline.serverVerify(pngFile(), {
     expectedAmount: 125000,
@@ -155,7 +155,7 @@ async function analyzeWith(fetchImpl, extraOptions = {}) {
 
 console.log("\n── عدم تسريب الأسرار إلى الواجهة ──");
 {
-  const { pipeline } = loadPipeline({ fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "s", receiptHash: "b".repeat(64) }) });
+  const { pipeline } = loadPipeline({ fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "s", receiptHash: "b".repeat(64), receiptPath: "owner/verified/test.png", attachmentId: "attachment-1" }) });
   const soft = pipeline.softReview("server_ocr_failed");
   const serialized = JSON.stringify(soft);
   check("soft review has no jwt", serialized.includes(JWT), false);

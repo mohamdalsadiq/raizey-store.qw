@@ -1,3 +1,8 @@
+let savedRate = null;
+function showRatePreview() {
+  const rate = Number(document.getElementById("rateInput").value), margin = Number(document.getElementById("marginInput").value);
+  document.getElementById("ratePreview").textContent = Number.isFinite(rate) && rate > 0 && Number.isFinite(margin) ? `معاينة منتج بسعر 1 دولار: ${formatSDG(rate * (1 + margin / 100))} ج.س بعد الهامش.` : "أدخل سعراً صحيحاً لعرض المعاينة.";
+}
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
@@ -30,6 +35,9 @@ async function init() {
   document.getElementById('marginInput').value = map.profit_margin_percent || '0';
   document.getElementById('whatsappInput').value = map.whatsapp_number || '';
 
+  savedRate = Number(map.usd_to_sdg_rate) || null;
+  ['rateInput','marginInput'].forEach(id => document.getElementById(id).addEventListener('input',showRatePreview));
+  showRatePreview();
   document.getElementById('saveBtn').addEventListener('click', saveRate);
 }
 
@@ -54,9 +62,11 @@ async function saveRate() {
     errorBox.textContent = 'راجع سعر الصرف والهامش ورقم واتساب قبل الحفظ.';
     return;
   }
+  if (savedRate && Math.abs(rate / savedRate - 1) >= 0.25 && !confirm(`سعر التحويل سيتغير من ${formatSDG(savedRate)} إلى ${formatSDG(rate)} ج.س للدولار. هل هذه القيمة معتمدة؟`)) return;
   try {
     const { error } = await supabaseClient.rpc('save_store_settings', { p_rate: rate, p_margin: margin, p_whatsapp: whatsapp || null });
     if (error) throw error;
+    savedRate = rate;
     successBox.textContent = 'تم حفظ الإعدادات بنجاح';
   } catch (error) {
     errorBox.textContent = getFriendlyError(error?.message);

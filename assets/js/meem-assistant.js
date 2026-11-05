@@ -191,7 +191,7 @@
   function addMessage(role, text) {
     const element = document.createElement('div');
     element.className = `meem-assistant-msg ${role}`;
-    element.textContent = text;
+    element.textContent = role === 'assistant' ? String(text).replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/`([^`\n]+)`/g, '$1') : text;
     messages.appendChild(element);
     messages.scrollTop = messages.scrollHeight;
     history.push({ role, content: text });

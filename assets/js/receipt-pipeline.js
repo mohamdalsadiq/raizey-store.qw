@@ -102,16 +102,10 @@
   async function serverVerify(file, options, extraFile) {
     const opts = options || {};
     validateImageFile(file);
-    if (extraFile) validateImageFile(extraFile);
+    if (opts.manualOnly === true) throw new Error('automatic_check_required');
+    if (extraFile) throw new Error('use_one_complete_receipt');
     const compressed = await compressForServer(file);
     const imageBase64 = compressed.base64 || await fileToBase64(file);
-    let imageBase64Extra = null;
-    let mimeTypeExtra = null;
-    if (extraFile) {
-      const compressedExtra = await compressForServer(extraFile);
-      imageBase64Extra = compressedExtra.base64 || await fileToBase64(extraFile);
-      mimeTypeExtra = compressedExtra.mimeType || extraFile.type || 'image/jpeg';
-    }
     const token = await getAccessToken();
     const endpoint = `${String(root.SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1/process-receipt`;
     if (!endpoint.startsWith('https://')) throw new Error('supabase_endpoint_missing');
@@ -129,8 +123,6 @@
         body: JSON.stringify({
           imageBase64,
           mimeType: compressed.mimeType || file.type || 'image/jpeg',
-          imageBase64Extra,
-          mimeTypeExtra,
           expectedAmount: opts.expectedAmount,
           manualRef: opts.manualRef,
           expectedAccount: opts.expectedAccount,
@@ -147,7 +139,8 @@
         error.serverMessage = data && data.message;
         throw error;
       }
-      if (!data.scanId || !data.receiptHash) throw new Error('server_scan_contract_invalid');
+      if ((data.decision === 'accept' || data.decision === 'review_admin') && data.submissionAllowed !== true) throw new Error('server_scan_contract_invalid');
+      if (data.submissionAllowed === true && (!data.receiptHash || !data.receiptPath || !data.attachmentId || !data.scanId || data.receiptPolicy !== 'mandatory-visual-v1' || data.automaticCheckComplete !== true)) throw new Error('server_scan_contract_invalid');
       return data;
     } finally {
       clearTimeout(timer);
@@ -157,6 +150,7 @@
   function softReview(flag, message) {
     return {
       decision: 'review',
+      submissionAllowed: false,
       ocrStatus: 'needs_review',
       message: message || 'تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.',
       riskFlags: [flag], confidence: null, provider: null, providerName: null,

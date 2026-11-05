@@ -126,9 +126,10 @@
       <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
       <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
         <input type="checkbox" id="geminiConsentWallet" style="margin-top: 4px; flex-shrink: 0;">
-        <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي. بدون الموافقة سيُراجع إيصالك يدوياً. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
+        <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي. الفحص الآلي إلزامي لكل صورة؛ بدونه لا يمكن إرسال الطلب. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
       </label>
       <div id="fileError" style="font-size: 12px; color: var(--danger); margin-top: 6px;"></div>
+      <button type="button" id="retryWalletReceiptBtn" class="auth-btn">إعادة تجهيز الإيصال</button>
       <div id="receiptScanStatus" class="receipt-scan-status"></div>
       <div id="receiptScanReport" class="receipt-scan-report"></div>
     </div>

@@ -3,6 +3,7 @@ let paymentMethods = [];
 let receiptFile = null;
 let receiptAnalysis = null;
 let receiptScanContext = null;
+let walletScanRevision = 0;
 let savedWalletTxRef = null; // رقم العملية بعد التحقق المبكر (قبل رفع الإيصال)
 
 const statusLabels = { pending: 'قيد المراجعة', confirmed: 'مؤكد', rejected: 'مرفوض' };
@@ -112,21 +113,26 @@ async function init() {
 
   // تعديل المبلغ يبطل الفحص فقط (لا يبطل التحقق من رقم العملية)
   document.getElementById('amountInput').addEventListener('input', () => {
-    if (receiptAnalysis) resetReceiptScan('غيّرت المبلغ؛ ارفع الإيصال من جديد للفحص.');
+    resetReceiptScan('غيّرت المبلغ؛ ارفع الإيصال من جديد للفحص.');
   });
   // تعديل رقم العملية يبطل التحقق المبكر ويخفي خطوة رفع الإيصال
   document.getElementById('transactionRefInput').addEventListener('input', () => {
     if (savedWalletTxRef) resetWalletTxRef('عدّلت رقم العملية؛ اضغط "تحقق" من جديد قبل رفع الإيصال.');
   });
   document.getElementById('methodSelect').addEventListener('change', () => {
-    if (receiptAnalysis) resetReceiptScan('غيّرت وسيلة التحويل؛ ارفع الإيصال من جديد للفحص.');
+    resetReceiptScan('غيّرت وسيلة التحويل؛ ارفع الإيصال من جديد للفحص.');
   });
 
+  document.getElementById('geminiConsentWallet').addEventListener('change', () => {
+    resetReceiptScan('تغير اختيار الفحص. اضغط إعادة تجهيز الإيصال.');
+  });
+  document.getElementById('retryWalletReceiptBtn').addEventListener('click', runWalletReceiptScan);
   document.getElementById('submitTopupBtn').addEventListener('click', submitTopup);
   document.getElementById('redeemGiftBtn').addEventListener('click', redeemGiftCard);
 }
 
 function resetReceiptScan(message) {
+  walletScanRevision++;
   receiptAnalysis = null;
   receiptScanContext = null;
   const status = document.getElementById('receiptScanStatus');
@@ -249,23 +255,11 @@ function walletTxRefCheckError(error) {
   return 'تعذّر التحقق من رقم العملية (اتصال ضعيف). حاول مرة أخرى قبل رفع الإيصال.';
 }
 
-function isTechnicalReceiptReview(analysis) {
-  const technicalFlags = [
-    'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
-    'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
-    'ui_scan_timeout', 'engine_missing', 'server_ocr_failed', 'server_ocr_timeout',
-    'gemini_not_configured', 'judge_error', 'missing_image', 'image_too_large'
-  ];
-  return !!analysis && !!analysis.scanId && !!analysis.receiptHash &&
-    analysis.decision === 'review' &&
-    (analysis.riskFlags || []).some((flag) => technicalFlags.includes(flag));
-}
-
 function receiptAnalysisAllowed(analysis) {
-  if (!analysis || analysis.decision === 'reject') return false;
-  const verified = (analysis.decision === 'accept' || analysis.decision === 'review_admin') &&
+  return !!analysis && analysis.submissionAllowed === true && analysis.receiptPolicy === 'mandatory-visual-v1' &&
+    analysis.automaticCheckComplete === true && analysis.decision === 'accept' && !!analysis.scanId &&
+    !!analysis.receiptPath && !!analysis.attachmentId && !!analysis.receiptHash &&
     analysis.refVerified === true && analysis.amountVerified === true;
-  return verified || isTechnicalReceiptReview(analysis);
 }
 
 function renderWalletScanReport(analysis, amount, manualRef) {
@@ -280,73 +274,44 @@ function renderWalletScanReport(analysis, amount, manualRef) {
     `مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`,
     `مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`
   ];
-  const technicalReview = isTechnicalReceiptReview(analysis);
+  const technicalReview = !receiptAnalysisAllowed(analysis) && analysis.decision === 'review';
   report.className = 'receipt-scan-report ' + (technicalReview ? 'is-review' : receiptAnalysisAllowed(analysis) ? 'is-success' : 'is-error');
   report.style.display = 'block';
   report.hidden = false;
   report.innerHTML = `<strong>${window.rzIconMarkup(technicalReview ? 'clock' : receiptAnalysisAllowed(analysis) ? 'circle-check' : 'circle-x')} ${escapeHtml(analysis.message || 'تم فحص الإيصال')}</strong><div style="margin-top: 7px;">${rows.map(escapeHtml).join('<br>')}</div>`;
 }
 
+function walletReceiptContext() {
+  return JSON.stringify({ amount: Number(document.getElementById('amountInput').value),
+    manualRef: savedWalletTxRef, methodId: document.getElementById('methodSelect').value,
+    consent: document.getElementById('geminiConsentWallet').checked });
+}
 async function runWalletReceiptScan() {
-  const status = document.getElementById('receiptScanStatus');
-  const errorBox = document.getElementById('formError');
-  const amount = parseFloat(document.getElementById('amountInput').value);
-  const manualRef = savedWalletTxRef || document.getElementById('transactionRefInput').value.trim();
-  const method = paymentMethods.find((item) => item.id === document.getElementById('methodSelect').value);
+  const status = document.getElementById('receiptScanStatus'), errorBox = document.getElementById('formError');
+  resetReceiptScan();
+  const revision = walletScanRevision, context = walletReceiptContext(), file = receiptFile;
+  const amount = Number(document.getElementById('amountInput').value), manualRef = savedWalletTxRef;
+  const methodId = document.getElementById('methodSelect').value;
   errorBox.textContent = '';
-  if (!savedWalletTxRef) { errorBox.textContent = 'تحقّق من رقم العملية أولاً قبل فحص الإيصال.'; return; }
-  if (!Number.isFinite(amount) || amount <= 0) { errorBox.textContent = 'أدخل المبلغ قبل فحص الإيصال.'; return; }
-  if (!manualRef || manualRef.length < 6) { errorBox.textContent = 'اكتب رقم العملية (6 خانات على الأقل) قبل فحص الإيصال.'; return; }
-  status.textContent = 'جارِ بدء الفحص الذكي...';
-  // P2-SEC-001: بدون موافقة لا يُرسل أي شيء إلى الذكاء الاصطناعي — مراجعة يدوية
-  const consentW = document.getElementById('geminiConsentWallet');
-  if (!consentW || !consentW.checked) {
-    const manualAnalysis = {
-      decision: 'review', ocrStatus: 'needs_review',
-      message: 'اخترت عدم الفحص الآلي — لن تُرسل صورتك إلى أي خدمة خارجية. سيُراجع إيصالك يدوياً من الإدارة.',
-      riskFlags: ['consent_declined'], confidence: null, provider: null, providerName: null,
-      refVerified: false, amountVerified: false,
-      extracted: { txRef: manualRef, amount: amount, dateTime: null }
-    };
-    receiptAnalysis = manualAnalysis;
-    receiptScanContext = { amount, manualRef };
-    renderWalletScanReport(manualAnalysis, amount, manualRef);
-    status.textContent = 'تم استلام الإيصال؛ سيُراجع يدويًا من الإدارة قبل اعتماد الشحن.';
+  if (!file || !manualRef || !methodId || !Number.isFinite(amount) || amount <= 0 || amount > 10000000) {
+    errorBox.textContent = 'اختر صورة ووسيلة تحويل ومبلغاً صحيحاً، وتحقق من رقم العملية أولاً.'; return;
+  }
+  if (!document.getElementById('geminiConsentWallet').checked) { status.textContent = 'وافق على الفحص الآلي ثم أعد فحص الصورة؛ لا يمكن الإرسال دون فحص.'; return; }
+  status.textContent = 'جارِ الفحص الآلي...';
+  const analysis = await MeemReceiptPipeline.analyze(file, { expectedAmount: amount, manualRef,
+    expectedMethodId: methodId });
+  if (revision !== walletScanRevision || context !== walletReceiptContext() || file !== receiptFile) return;
+  renderWalletScanReport(analysis, amount, manualRef);
+  if (!receiptAnalysisAllowed(analysis)) {
+    status.textContent = 'لم يكتمل الفحص الآلي؛ لا يمكن إرسال الطلب. أعد المحاولة بصورة واضحة عند عودة الخدمة.';
     return;
   }
-  try {
-    const analysis = await MeemReceiptPipeline.analyze(receiptFile, {
-      expectedAmount: amount,
-      manualRef,
-      expectedAccount: method ? method.account_number : null,
-      // مثل checkout-v2: تُمرَّر هوية الوسيلة للسيرفر حتى يُتحقق من BIN واسم
-      // صاحب الحساب على الخادم (المهمة 35)؛ القيم نفسها تُقرأ من قاعدة
-      // البيانات هناك لا من المتصفح.
-      expectedMethodId: method ? method.id : null,
-      onStatus: (text) => { status.textContent = text; },
-      onServerError: (error) => { status.textContent = 'تعذّر الفحص الخادمي؛ لم يُنشأ أي طلب. أعد المحاولة.'; console.warn('[MEEM] wallet edge scan failed:', error?.message || error); }
-    });
-    receiptAnalysis = analysis;
-    receiptScanContext = { amount, manualRef };
-    renderWalletScanReport(analysis, amount, manualRef);
-    if (!receiptAnalysisAllowed(analysis)) {
-      status.textContent = 'لم يتم اعتماد الإيصال. راجع التقرير وارفع صورة أوضح.';
-      receiptAnalysis = null;
-      return;
-    }
-    status.textContent = isTechnicalReceiptReview(analysis)
-      ? 'تم استلام الإيصال؛ سيُراجع يدويًا من الإدارة قبل اعتماد الشحن.'
-      : 'تمت مطابقة الإيصال. يمكنك إرسال طلب الشحن الآن.';
-  } catch (error) {
-    receiptAnalysis = null;
-    status.textContent = 'تعذر تشغيل الفحص الذكي؛ أعد اختيار الصورة.';
-    errorBox.textContent = 'تعذر فحص الإيصال الآن. لم يُرسل أي طلب؛ حاول مرة أخرى.';
-    console.warn('[MEEM] wallet receipt pipeline error:', error?.message || error);
-  }
+  receiptAnalysis = analysis; receiptScanContext = context;
+  status.textContent = 'اجتاز الإشعار الفحص الآلي. اعتماد التحويل يتطلب مراجعة سجل الحساب من الإدارة.';
 }
 
 async function checkUnifiedTransactionRef(transactionRef) {
-  const normalized = String(transactionRef || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  const normalized = MeemReceiptPipeline.normalizeRef(transactionRef);
   if (normalized.length < 6) return { available: false, reason: 'invalid_tx_ref' };
   const { data, error } = await supabaseClient.rpc('check_tx_ref_available', { p_tx_ref: transactionRef });
   if (error) throw error;
@@ -601,82 +566,11 @@ async function submitTopup() {
   submitBtn.disabled = true;
   submitBtn.textContent = 'جارِ التحقق...';
 
-  // البصمة ومعرّف الفحص يصدران من Edge Function فقط؛ لا نثق بقيمة من المتصفح.
-  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة الذكاء الاصطناعي) — بصمة محلية + scanId فارغ
-  let receiptHash = receiptAnalysis && receiptAnalysis.receiptHash;
-  const receiptScanId = receiptAnalysis && receiptAnalysis.scanId;
-  const isManualW = receiptAnalysis && (receiptAnalysis.riskFlags || []).includes('consent_declined');
-  if (isManualW && !receiptHash && receiptFile) {
-    try {
-      const buf = await receiptFile.arrayBuffer();
-      const digest = await crypto.subtle.digest('SHA-256', buf);
-      receiptHash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) { /* handled below */ }
-  }
-  if (!receiptHash || (!receiptScanId && !isManualW)) {
-    errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. ارفع الإيصال وانتظر النتيجة ثم أعد المحاولة.';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
-  }
-
-  let refCheck = null;
-  try {
-    refCheck = await checkUnifiedTransactionRef(transactionRef);
-  } catch (error) {
-    errorBox.textContent = 'تعذر التحقق من رقم العملية عبر قاعدة البيانات. حاول مرة أخرى قبل إرسال الطلب.';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
-  }
-  const isDuplicateRef = refCheck.available === false && refCheck.reason === 'duplicate_transaction_ref';
-  const isInvalidRef = refCheck.available === false && refCheck.reason === 'invalid_tx_ref';
-  const isDuplicateHash = await checkDuplicateReceipt('wallet_topups', receiptHash);
-
-  if (isDuplicateHash || isDuplicateRef || isInvalidRef) {
-    try {
-      // P0-SEC-001: fraud alerts go through the narrow server-side RPC
-      // (direct audit_logs INSERT by customers is no longer allowed).
-      await supabaseClient.rpc('report_fraud_alert', {
-        p_details: { receipt_hash: receiptHash, transaction_ref: transactionRef }
-      });
-    } catch (e) {}
-    errorBox.style.color = 'var(--danger)';
-    errorBox.textContent = isInvalidRef
-      ? 'رقم العملية غير صحيح. اكتب الرقم كما ظهر في إشعار التحويل (6 خانات على الأقل).'
-      : isDuplicateRef
-        ? 'رقم العملية هذا مستخدم من قبل في شحن المحفظة أو دفع طلب. تم رفضه فورًا.'
-        : 'هذا الإيصال مستخدم من قبل في طلب سابق. تم رفض طلب الشحن تلقائياً.';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
-  }
-
-  // ── رفع الإيصال إلى Storage ──
-  submitBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt = receiptFile.name.split('.').pop().toLowerCase();
-  const filePath = `${currentUser.id}/topup_${Date.now()}.${fileExt}`;
-
-  const { error: uploadError } = await supabaseClient.storage
-    .from('receipts')
-    .upload(filePath, receiptFile, { contentType: receiptFile.type, upsert: false });
-
-  if (uploadError) {
-    errorBox.textContent = 'فشل رفع الإيصال — ' + (uploadError.message || 'حاول مرة أخرى');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
-  }
-
-  // ── رابط الإيصال الآمن (Signed URL — 30 يوم، غير مكشوف للعموم) ──
-  const { data: signedData, error: signedErr } = await supabaseClient.storage
-    .from('receipts')
-    .createSignedUrl(filePath, 60 * 60 * 24 * 30);
-  if (signedErr || !signedData) {
-    errorBox.textContent = 'فشل إنشاء رابط الإيصال، حاول مجدداً.';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'إرسال طلب الشحن';
-    return;
+  const receiptHash = receiptAnalysis.receiptHash;
+  const filePath = receiptAnalysis.receiptPath;
+  if (!filePath || receiptScanContext !== walletReceiptContext()) {
+    errorBox.textContent = 'تغيرت بيانات التحويل. أعد تجهيز الإيصال قبل الإرسال.';
+    submitBtn.disabled = false; submitBtn.textContent = 'إرسال طلب الشحن'; return;
   }
 
   // ── حجز الإيصال وإنشاء طلب الشحن في RPC موحّد ──
@@ -686,7 +580,7 @@ async function submitTopup() {
     const { error } = await supabaseClient.rpc('create_wallet_topup_from_receipt', {
       p_amount: amount,
       p_payment_method_id: methodId,
-      p_receipt_url: signedData.signedUrl,
+      p_receipt_url: 'receipts/' + filePath,
       p_tx_ref: transactionRef,
       p_receipt_hash: receiptHash,
       p_receipt_path: filePath,
@@ -713,7 +607,6 @@ async function submitTopup() {
     });
     if (error) throw error;
   } catch (e) {
-    try { await supabaseClient.storage.from('receipts').remove([filePath]); } catch (_) {}
     const errMsg = e.message || String(e);
     devWarn('[MEEM] create_wallet_topup_from_receipt error:', errMsg);
     errorBox.textContent = walletReceiptErrorMessage(e);

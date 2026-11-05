@@ -245,7 +245,7 @@ function renderOrderCard(o) {
   const customerWhatsapp = escapeHtml(o.profiles?.whatsapp_number || '—');
   const safeOrderId = safeDataAttr(o.id || '');
   const safeStatus = safeDataAttr(o.status || '');
-  const receiptUrl = sanitizeUrl(o.receipt_url);
+  const receiptUrl = MeemReceiptLinks.objectPath(o.receipt_url) ? o.receipt_url : '';
   const safeWhatsappCopy = safeDataAttr(o.profiles?.whatsapp_number || '');
 
   let actions = '';
@@ -342,7 +342,8 @@ function renderOrderCard(o) {
         ${optionHtml}
         ${fieldsHtml}
         ${refHtml}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="#" data-receipt-reference="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${rec?.ocr_data?.split_payment?.second_receipt_path ? `<div><a href="#" data-receipt-reference="${escapeAttribute('receipts/'+rec.ocr_data.split_payment.second_receipt_path)}" target="_blank" rel="noopener">عرض إشعار الدفعة الثانية</a></div>` : ''}
       </div>
 
       ${reviewHtml}
@@ -372,7 +373,12 @@ async function handleAction(action, orderId) {
   if (button) { button.disabled = true; button.dataset.originalLabel = button.innerHTML; button.innerHTML = '<svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارٍ التنفيذ'; }
 
   let overrideReason = null;
-  let { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus });
+  if (order.payment_type === 'bank' && ['in_progress','completed'].includes(nextStatus)) {
+    const note = window.prompt('قبل تنفيذ الطلب: راجع التحويل في سجل الحساب البنكي وسجّل مرجع المراجعة (6 إلى 500 حرف). نتيجة فحص الصورة لا تثبت وصول المال.');
+    overrideReason = (note || '').trim();
+    if (note === null || overrideReason.length < 6 || overrideReason.length > 500) { if (button) { button.disabled = false; button.innerHTML = button.dataset.originalLabel; } return; }
+  }
+  let { error } = await supabaseClient.rpc('admin_update_order_status', { p_order_id: orderId, p_status: nextStatus, p_override_reason: overrideReason });
   if (error && /unverified_payment_evidence/i.test(error.message || '')) {
     const input = window.prompt(
       'تنبيه: لا يوجد دليل دفع موثّق خادمياً لهذا الطلب\n(لا إيصال مُتحقق، ولا خصم محفظة مطابق، ولا رمز دفع مستخدم).\n\nلا يكفي تأكيد الطلب بدون تجاوز موثّق. اكتب سبب التجاوز (سيُسجَّل في سجل التدقيق)، أو اضغط إلغاء للرجوع.'

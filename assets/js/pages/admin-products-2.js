@@ -190,7 +190,7 @@ function render() {
   });
 }
 
-function addFieldRow(key, label, placeholder = '') {
+function addFieldRow(key, label, placeholder = '', rules = {}) {
   const row = document.createElement('div');
   row.className = 'field-row';
   row.style.display = 'flex';
@@ -203,10 +203,17 @@ function addFieldRow(key, label, placeholder = '') {
   row.innerHTML = `
     <input type="text" placeholder="العنوان فوق (مثال: ايدي اللاعب)" class="field-label" value="${escapeAttribute(label)}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: var(--mm-font-display); font-size: 13px;">
     <input type="text" placeholder="الداخل الصندوق (مثال: ID)" class="field-placeholder" value="${escapeAttribute(placeholder)}" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: var(--mm-font-display); font-size: 13px;">
+    <select class="field-type" aria-label="نوع بيانات الحقل"><option value="text">نص</option><option value="numeric_id">معرّف رقمي</option><option value="email">بريد إلكتروني</option></select>
+    <input type="number" class="field-min" aria-label="أقل عدد خانات" min="1" max="500" value="1" style="width:75px">
+    <input type="number" class="field-max" aria-label="أقصى عدد خانات" min="1" max="500" value="500" style="width:75px">
     <input type="hidden" class="field-key" value="${escapeAttribute(safeKey)}">
     <button type="button" style="background: var(--mm-danger-fill); color: var(--white); border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-x"></use></svg></button>
   `;
   row.querySelector('button').addEventListener('click', () => row.remove());
+  row.style.flexWrap = 'wrap';
+  row.querySelector('.field-type').value = rules.type || 'text';
+  row.querySelector('.field-min').value = rules.min_length ?? 1;
+  row.querySelector('.field-max').value = rules.max_length ?? 500;
   fieldsBuilder.appendChild(row);
 }
 
@@ -242,7 +249,7 @@ function openForm(id) {
       p.options.forEach(opt => addOptionRow(opt.label, opt.price_usd ?? opt.price ?? '', opt.id));
     }
 
-    (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || ''));
+    (p.required_fields || []).forEach(f => addFieldRow(f.key, f.label, f.placeholder || '', f));
   } else {
     document.getElementById('formModalTitle').textContent = 'منتج جديد';
     nameInput.value = '';
@@ -276,7 +283,7 @@ function collectFields() {
     const label = row.querySelector('.field-label').value.trim();
     const placeholder = row.querySelector('.field-placeholder').value.trim();
     if (label) {
-      fields.push({ key, label, placeholder });
+      fields.push({ key, label, placeholder, type: row.querySelector('.field-type').value, min_length: Number(row.querySelector('.field-min').value), max_length: Number(row.querySelector('.field-max').value) });
     }
   }
   return fields;
@@ -297,6 +304,11 @@ async function saveProduct() {
     return;
   }
 
+  if (new Set(options.map(o => o.label.trim().toLocaleLowerCase())).size !== options.length) { formError.textContent = 'استخدم اسماً مميزاً لكل خيار داخل المنتج.'; return; }
+  const fields = collectFields();
+  if (fields.some(f => !Number.isInteger(f.min_length) || !Number.isInteger(f.max_length) || f.min_length < 1 || f.max_length > 500 || f.min_length > f.max_length)) {
+    formError.textContent = 'راجع حدود الحقول: من 1 إلى 500 خانة.'; return;
+  }
   const payload = {
     name,
     description: descInput.value.trim() || null,
@@ -307,7 +319,7 @@ async function saveProduct() {
     category_id: categoryId,
     display_order: parseInt(orderInput.value, 10) || 0,
     is_active: activeInput.value === 'true',
-    required_fields: collectFields(),
+    required_fields: fields,
     options,
     has_options: hasOptionsToggle.checked
   };
