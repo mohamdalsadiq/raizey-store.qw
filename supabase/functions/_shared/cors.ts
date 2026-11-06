@@ -16,11 +16,14 @@ export type OriginConfig = {
   productionOrigin: string;
 };
 
-// النمط الافتراضي: روابط معاينة مشروعنا فقط، https، بلا مسارات، ولقطة واحدة.
-//   https://raizey-store-qw.vercel.app            (الإنتاج)
-//   https://raizey-store-qw-git-branch-team.vercel.app  (معاينة)
+// Vercel's immutable deployment URLs use a shortened project name, not the
+// full production alias. Keep the verified owner namespace in both deployment
+// and branch patterns; a similar project name under another tenant is not ours.
+// Production: raizey-store-qw.vercel.app
+// Deployment: raizey-store-q3pgdu588-pooortlen.vercel.app
+// Branch:     raizey-store-qw-git-main-pooortlen.vercel.app
 export const DEFAULT_PREVIEW_ORIGIN_REGEX =
-  "^https:\\/\\/raizey-store-qw(?:-[a-z0-9-]+)?\\.vercel\\.app$";
+  "^https:\\/\\/(?:raizey-store-qw|raizey-store-qw-(?:git-[a-z0-9-]+-)?pooortlen|raizey-store-[a-z0-9]{9}-pooortlen)\\.vercel\\.app$";
 
 export function isPreviewOrigin(origin: string, pattern: string): boolean {
   if (!origin || !pattern) return false;

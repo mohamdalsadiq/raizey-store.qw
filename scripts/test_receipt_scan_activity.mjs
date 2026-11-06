@@ -107,4 +107,26 @@ const accepted={decision:'accept',submissionAllowed:true,receiptPolicy:'mandator
   pendingSplit.shift()(accepted);await split;
   check('split completion unlocks controls once and retains both proofs',!get('placeOrderBtn').disabled&&exec('checkoutScanBusy===false && !!splitPayment.firstScan && !!splitPayment.secondScan'));
 }
+{
+  const {context,get}=load('wallet-2.js');
+  context.renderWalletScanReport({decision:'review',message:'تعذّر الاتصال بخدمة الفحص',extracted:{}},33000,'REF123456');
+  const report=get('receiptScanReport').innerHTML;
+  check('wallet technical failure shows an incomplete check',report.includes('لم تكتمل عملية الفحص'));
+  check('wallet technical failure does not invent a mismatch',!report.includes('غير مطابق'));
+}
+{
+  const {context,get,exec}=load('checkout-v2-2.js');
+  exec("savedTxRef='REF123456';selectedMethodId='method';cart=[{quantity:1,price_sdg:33000}];");
+  get('geminiConsent').checked=true;get('receiptInput').files=[context.testFile];
+  let fraudEvents=0;
+  context.logFraudAttempt=()=>{fraudEvents++;};
+  context.MeemReceiptPipeline.serverVerify=async()=>{throw new TypeError('Failed to fetch');};
+  context.attachCheckoutEvents(false);
+  await get('receiptInput').onchange();
+  const report=get('scanReport').innerHTML;
+  check('checkout network failure shows an incomplete check',report.includes('لم تكتمل عملية الفحص'));
+  check('checkout network failure does not accuse the image',!report.includes('غير مطابق')&&!report.includes('ارفع لقطة شاشة كاملة'));
+  check('checkout network failure is not recorded as fraud',fraudEvents===0);
+  check('checkout network failure retains no payment proof and unlocks retry',exec('scanResult===null && checkoutScanBusy===false')&&!get('retryCheckoutReceiptBtn').disabled);
+}
 console.log(`${checks} scan activity checks passed; no live API calls.`);

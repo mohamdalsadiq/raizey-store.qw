@@ -24,7 +24,13 @@ function resolve(requestOrigin, configured = "", previewRegex = DEFAULT_PREVIEW_
 // 1) production origin is echoed back
 ok("production echoed", resolve(PROD) === PROD, resolve(PROD));
 // 2) project preview (single subdomain label) allowed
-ok("preview subdomain allowed", resolve("https://raizey-store-qw-git-meem-team.vercel.app") === "https://raizey-store-qw-git-meem-team.vercel.app");
+for (const origin of [
+  "https://raizey-store-qw-git-main-pooortlen.vercel.app",
+  "https://raizey-store-qw-git-fix-receipt-deployment-origin-pooortlen.vercel.app",
+  "https://raizey-store-qw-pooortlen.vercel.app",
+  "https://raizey-store-q3pgdu588-pooortlen.vercel.app",
+  "https://raizey-store-51du4drc9-pooortlen.vercel.app",
+]) ok(`owned deployment ${origin}`, resolve(origin) === origin);
 // 3) explicit configured origin allowed, and MEEM_PUBLIC_ORIGIN list wins
 ok("configured custom origin allowed", resolve(PROD_TEXT, PROD_TEXT) === PROD_TEXT);
 ok("configured list", configuredOrigins("a, b ,c").join("|") === "a|b|c");
@@ -37,6 +43,13 @@ for (const bad of [
   "https://raizey-store-qw-x.vercel.app/evil",
   "https://raizey-store-qw-x.vercel.app:8443",
   "https://notraizey-store-qw-x.vercel.app",
+  "https://raizey-store-qw-git-main-attacker.vercel.app",
+  "https://raizey-store-q3pgdu588-attacker.vercel.app",
+  "https://other-store-q3pgdu588-pooortlen.vercel.app",
+  "https://raizey-store-q3pgdu588-pooortlen.vercel.app.evil.com",
+  "https://raizey-store-q3pgdu588-pooortlen.vercel.app/checkout-v2.html",
+  "https://raizey-store-q3pgdu588-pooortlen.vercel.app:8443",
+  "http://raizey-store-q3pgdu588-pooortlen.vercel.app",
   "null",
   "",
 ]) {
