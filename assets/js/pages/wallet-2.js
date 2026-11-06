@@ -274,15 +274,15 @@ function renderWalletScanReport(analysis, amount, manualRef) {
   const report = document.getElementById('receiptScanReport');
   if (!report) return;
   const extracted = analysis.extracted || {};
+  const technicalReview = !receiptAnalysisAllowed(analysis) && analysis.decision === 'review';
   const rows = [
     `المبلغ المطلوب: ${formatSDG(amount)} ج.س`,
     `رقم العملية المدخل: ${manualRef}`,
     `رقم العملية المقروء: ${extracted.txRef || 'لم يُقرأ'}`,
     `المبلغ المقروء: ${extracted.amount ? formatSDG(extracted.amount) + ' ج.س' : 'لم يُقرأ'}`,
-    `مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`,
-    `مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`
+    `مطابقة رقم العملية: ${technicalReview ? 'لم تكتمل عملية الفحص' : analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`,
+    `مطابقة المبلغ: ${technicalReview ? 'لم تكتمل عملية الفحص' : analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`
   ];
-  const technicalReview = !receiptAnalysisAllowed(analysis) && analysis.decision === 'review';
   report.className = 'receipt-scan-report ' + (technicalReview ? 'is-review' : receiptAnalysisAllowed(analysis) ? 'is-success' : 'is-error');
   report.style.display = 'block';
   report.hidden = false;

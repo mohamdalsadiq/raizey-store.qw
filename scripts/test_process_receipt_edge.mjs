@@ -266,6 +266,29 @@ const baseBody = {
 
 await import(pathToFileURL(tmpFile).href);
 
+console.log("\n── روابط Vercel الفعلية وطلبات ما قبل الفحص ──");
+for (const origin of [
+  'https://raizey-store-qw.vercel.app',
+  'https://raizey-store-q3pgdu588-pooortlen.vercel.app',
+  'https://raizey-store-qw-git-main-pooortlen.vercel.app',
+]) {
+  const preflight = await globalThis.__servedHandler(new Request('https://example.invalid/functions/v1/process-receipt', {
+    method:'OPTIONS', headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'authorization,apikey,content-type'},
+  }));
+  check('owned origin preflight succeeds',preflight.status,200);
+  check('owned origin is echoed exactly',preflight.headers.get('Access-Control-Allow-Origin'),origin);
+  const unauthorized = await globalThis.__servedHandler(new Request('https://example.invalid/functions/v1/process-receipt', {
+    method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}',
+  }));
+  check('origin allowance does not bypass authentication',unauthorized.status,401);
+  check('auth response retains the correct CORS origin',unauthorized.headers.get('Access-Control-Allow-Origin'),origin);
+}
+const stranger = await globalThis.__servedHandler(new Request('https://example.invalid/functions/v1/process-receipt', {
+  method:'OPTIONS',headers:{Origin:'https://raizey-store-qw-git-main-attacker.vercel.app'},
+}));
+check('lookalike tenant does not get its origin echoed',stranger.headers.get('Access-Control-Allow-Origin'),'https://raizey-store-qw.vercel.app');
+check('preflight and unauthorized calls do not invoke Gemini',fetchedUrls.length,0);
+
 console.log("\n── اكتشاف النماذج والترتيب ──");
 {
   const generatedModels = [];

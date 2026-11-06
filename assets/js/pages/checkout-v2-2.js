@@ -634,7 +634,7 @@ function attachCheckoutEvents(canUseWallet) {
       document.getElementById('fileUploadBox3'), document.getElementById('remainderRefBtn')]);
     try {
 
-    // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
+    // A technical failure cannot be presented as an image mismatch.
     const softReview = (flag) => ({
       decision: 'review', ocrStatus: 'needs_review',
       message: 'تعذّر الفحص الآلي؛ لم يُنشأ طلب. أعد المحاولة عند عودة الخدمة.',
@@ -740,8 +740,9 @@ function attachCheckoutEvents(canUseWallet) {
     if (analysis.extracted.amount)   rows.push(`المبلغ المقروء: ${safeFormatSDG(analysis.extracted.amount)} ج.س`);
     if (analysis.extracted.dateTime) rows.push(`التاريخ والوقت: ${analysis.extracted.dateTime}`);
     rows.push(`المبلغ المطلوب: ${safeFormatSDG(currentTotal())} ج.س`);
-    rows.push(`مطابقة رقم العملية: ${analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
-    rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
+    const incomplete = analysis.decision === 'review';
+    rows.push(`مطابقة رقم العملية: ${incomplete ? 'لم تكتمل عملية الفحص' : analysis.refVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
+    rows.push(`مطابقة المبلغ: ${incomplete ? 'لم تكتمل عملية الفحص' : analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
 
     // review_admin = مقبول للعميل، مع تدقيق إداري لاحق (لا يُحجب الطلب)
     const ok = analysis.submissionAllowed === true && analysis.receiptPolicy === 'mandatory-visual-v1' && analysis.automaticCheckComplete === true && analysis.scanId && (analysis.decision === 'accept') &&
@@ -764,9 +765,9 @@ function attachCheckoutEvents(canUseWallet) {
       scanResult = null;
       receiptFile = null;
 
-      if (!analysis.refVerified) {
+      if (!incomplete && !analysis.refVerified) {
         logFraudAttempt('ref_mismatch_blocked', { risk_flags: analysis.riskFlags, read_ref: analysis.extracted.txRef });
-      } else if (!analysis.amountVerified) {
+      } else if (!incomplete && !analysis.amountVerified) {
         logFraudAttempt('amount_mismatch_blocked', { risk_flags: analysis.riskFlags, read_amount: analysis.extracted.amount });
       }
     } else {
@@ -779,6 +780,8 @@ function attachCheckoutEvents(canUseWallet) {
 
   // رسالة إرشادية دقيقة حسب سبب المنع
   function blockHint(a) {
+    if (a.decision === 'review')
+      return 'تعذّر إكمال الفحص بسبب مشكلة تقنية. أعد المحاولة بنفس الإشعار.';
     if (!a.extracted.txRef && !a.extracted.amount)
       return 'لم نتمكن من قراءة رقم العملية ولا المبلغ من الصورة. ارفع لقطة شاشة كاملة للإشعار (أو الإشعار الأبيض من تطبيق بنكك) يظهر فيها رقم العملية والمبلغ معاً.';
     if (!a.refVerified && a.extracted.txRef)
