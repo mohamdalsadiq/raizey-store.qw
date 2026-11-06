@@ -28,7 +28,8 @@ async function scan(user,lease,n,{unrelated=false,completed=true,accepted=false}
   await query(`INSERT INTO storage.objects(bucket_id,name,metadata) VALUES('receipts',$1,'{"size":69,"mimetype":"image/png"}')`,[path]);
   attachment=(await query(`INSERT INTO receipt_attachments(user_id,object_path,receipt_hash,image_bytes,mime_type) VALUES($1,$2,$3,69,'image/png') RETURNING id`,[user,path,hash(n)]))[0].id;
  }
- const meta={usage_lease_id:lease,completed_machine_check:completed,non_receipt_confirmed:unrelated,usage_context_key:hash(n+100000),receipt_policy:'mandatory-visual-v1',automatic_check_complete:accepted,amount_verified:accepted,ref_verified:accepted,expected_method_id:method,receipt_path:accepted?path:null,attachment_id:attachment};
+ const snapshot=accepted?await value('SELECT private.receipt_method_snapshot($1) AS v',[method]):null;
+ const meta={expected_method_snapshot:snapshot,usage_lease_id:lease,completed_machine_check:completed,non_receipt_confirmed:unrelated,usage_context_key:hash(n+100000),receipt_policy:'mandatory-visual-v1',automatic_check_complete:accepted,amount_verified:accepted,ref_verified:accepted,expected_method_id:method,receipt_path:accepted?path:null,attachment_id:attachment};
  await query(`INSERT INTO receipt_scan_results(id,user_id,receipt_hash,image_bytes,mime_type,expected_amount,manual_ref,expected_account,decision,ocr_status,amount_detected,tx_ref_ocr,submission_allowed,expires_at,ocr_data) VALUES($1,$2,$3,69,'image/png',1,$4,'1234567',$5,$6,1,$4,$7,clock_timestamp()+interval '30 minutes',$8)`,[sid,user,hash(n),ref,accepted?'accept':'reject',accepted?'passed':'rejected',accepted,meta]);
  return {sid,p_amount:1,p_payment_method_id:method,p_tx_ref:ref,p_receipt_hash:hash(n),p_receipt_path:path,p_ocr_data:{edge_scan_id:sid}};
 }
@@ -45,6 +46,8 @@ try{
  const policy=fs.readFileSync('supabase/migrations/20261105191648_receipt_scan_usage_policy.sql','utf8');
  await run(policy);await run(policy);
 await run(fs.readFileSync('supabase/migrations/20261105192028_receipt_scan_usage_indexes.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261106094035_receipt_method_snapshot.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261106094035_receipt_method_snapshot.sql','utf8'));
  await run(fs.readFileSync('db/tests/receipt_scan_usage_staging.sql','utf8'));
  check('policy defaults to 50 simultaneous admissions',(await value('SELECT concurrency_limit AS v FROM private.receipt_scan_policy'))===50);
  await run(`INSERT INTO auth.users(id,email,raw_user_meta_data) SELECT ('aabb0000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'usage'||n||'@example.invalid','{}' FROM generate_series(1,205) n;

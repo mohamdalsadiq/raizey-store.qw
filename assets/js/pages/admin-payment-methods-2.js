@@ -230,13 +230,14 @@ async function saveMethod() {
   if (!accountName) { formError.textContent = 'أدخل اسم صاحب الحساب'; return; }
   if (!accountNumber) { formError.textContent = 'أدخل رقم الحساب'; return; }
 
-  // P2-RCP-001: تحقق من صيغة BIN — كل قيمة 17 خانة رقمية (فواصل مسموحة)
+  // Exact, owner-configured full recipient account numbers; no prefix matching.
   const binRaw = binInput.value.trim();
+  let fullAccounts = [];
   if (binRaw) {
-    const parts = binRaw.split(/[,;\s]+/).filter(Boolean);
-    const invalid = parts.find(p => !/^\d{17}$/.test(p));
-    if (invalid) {
-      formError.textContent = 'رقم BIN غير صالح: "' + invalid.slice(0, 20) + '" — يجب أن يكون 17 خانة رقمية (مثال: 57040290563000001). افصل عدة قيم بفاصلة.';
+    const parts = binRaw.split(/[,;\r\n]+/).map(p => p.trim()).filter(Boolean);
+    fullAccounts = parts.map(p => p.replace(/[٠-٩]/g, d => String(d.charCodeAt(0)-0x660)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0)-0x6f0)).replace(/[ -]/g, ''));
+    if (parts.length > 5 || fullAccounts.some(p => !/^\d{8,34}$/.test(p))) {
+      formError.textContent = 'أدخل حتى خمسة أرقام حساب كاملة من 8 إلى 34 خانة رقمية، وافصل بينها بفاصلة.';
       return;
     }
   }
@@ -245,7 +246,7 @@ async function saveMethod() {
     name,
     account_name: accountName,
     account_number: accountNumber,
-    bin_prefixes: binInput.value.trim() || null,
+    bin_prefixes: [...new Set(fullAccounts)].join(',') || null,
     bank_key: bankKeyInput.value || null,
     instructions: instructionsInput.value.trim() || null,
     icon_url: iconUrlInput.value.trim() || null,

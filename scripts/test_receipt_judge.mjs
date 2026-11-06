@@ -226,10 +226,10 @@ const withWrongName = run(bankakText, {
 check("Beneficiary name mismatch → review_admin", withWrongName.decision, "review_admin");
 check("Beneficiary name flag", (withWrongName.riskFlags || []).includes("beneficiary_name_unverified"), true);
 
-// P2-RCP-001: BIN matching modes (exact / embedded / reverse-embedded / mismatch)
+// Full configured identifiers require exact matching in both directions.
 console.log("\n── مطابقة BIN (تامة/مضمّنة/عكسية/غير متطابقة) ──");
 function binTest(binPrefixes, label) {
-  const m = Object.assign({}, methodMatching, { bin_prefixes: binPrefixes });
+  const m = Object.assign({}, methodMatching, { account_number: "7654321", bin_prefixes: binPrefixes });
   const r = run(bankakText, {
     expectedAmount: AMOUNT, manualRef: "FT250719123456",
     expectedAccount: MERCHANT_ACCOUNT, expectedMethod: m,
@@ -239,13 +239,13 @@ function binTest(binPrefixes, label) {
 let r1 = binTest("2050123456789012", "exact");
 check("BIN exact match", r1.extracted.binMatched, true);
 let r2 = binTest("99205012345678901234", "embedded");
-check("BIN embedded (toAcct inside BIN)", r2.extracted.binMatched, true);
+check("embedded account is rejected", r2.extracted.binMatched, false);
 let r3 = binTest("12345678", "reverse");
-check("BIN reverse-embedded (BIN inside toAcct)", r3.extracted.binMatched, true);
+check("account prefix is rejected", r3.extracted.binMatched, false);
 let r4 = binTest("99999999999999999", "mismatch");
 check("BIN mismatch flag", (r4.riskFlags || []).includes("bin_mismatch"), true);
 check("BIN mismatch → binMatched false", r4.extracted.binMatched, false);
-let r5 = binTest("57040290563000001, 2050123456789012", "multi");
+let r5 = binTest("57040123456700001, 2050123456789012", "multi");
 check("BIN multi-value (one matches)", r5.extracted.binMatched, true);
 
 console.log("\n── التطبيع (normalization) ──");
@@ -256,6 +256,12 @@ check("parseAmountToken arabic separators", Core.parseAmountToken(Core.normalize
 check("parseAmountToken plain", Core.parseAmountToken("125,000.00"), 125000);
 check("parseAmountToken spaces", Core.parseAmountToken("125 000"), 125000);
 check("parseAmountToken european", Core.parseAmountToken("125.000,00"), 125000);
+check("invalid February date rejected", Core.parseReceiptDate("31-Feb-2026"), null);
+check("numeric date cannot roll over", Core.parseReceiptDate("2026-13-05"), null);
+check("non-leap February 29 rejected", Core.parseReceiptDate("29/02/2026"), null);
+check("leap year February 29 accepted", Core.parseReceiptDate("29/02/2024")?.toISOString(), "2024-02-29T00:00:00.000Z");
+check("Arabic month and digits parsed", Core.parseReceiptDate("٥ نوفمبر ٢٠٢٦")?.toISOString(), "2026-11-05T00:00:00.000Z");
+check("English receipt date parsed", Core.parseReceiptDate("05-Nov-2026 23:10:01")?.toISOString(), "2026-11-05T00:00:00.000Z");
 
 console.log("\n── حتمية القرار (نفس المدخل = نفس القرار) ──");
 const repeatA = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });

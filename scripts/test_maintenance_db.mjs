@@ -13,6 +13,8 @@ await run(fs.readFileSync('supabase/migrations/20261105090230_mandatory_receipt_
 await run(fs.readFileSync('supabase/migrations/20261105090230_mandatory_receipt_validation.sql','utf8'));
 await run(fs.readFileSync('supabase/migrations/20261105191648_receipt_scan_usage_policy.sql','utf8'));
 await run(fs.readFileSync('supabase/migrations/20261105192028_receipt_scan_usage_indexes.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261106094035_receipt_method_snapshot.sql','utf8'));
+await run(fs.readFileSync('supabase/migrations/20261106094035_receipt_method_snapshot.sql','utf8'));
 const a='d6040000-0000-4000-8000-000000000001',b='d6040000-0000-4000-8000-000000000002',staff='d6040000-0000-4000-8000-000000000003',method='d6040000-0000-4000-8000-000000000010',path=a+'/verified/d6040000-0000-4000-8000-000000000020.png';
 await run(`BEGIN; INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES('${a}','maintenance-a@example.invalid','{}'),('${b}','maintenance-b@example.invalid','{}'),('${staff}','maintenance-staff@example.invalid','{}');
 SET LOCAL session_replication_role=replica; UPDATE profiles SET role='admin' WHERE id='${staff}'; SET LOCAL session_replication_role=origin;
@@ -32,7 +34,7 @@ let response=await db.query('SELECT execute_store_action($1,$2,gen_random_uuid()
 await run('RESET ROLE');
 const scanId='d6040000-0000-4000-8000-000000000030';
 await run(`INSERT INTO receipt_scan_results(id,user_id,receipt_hash,image_bytes,mime_type,expected_amount,manual_ref,expected_account,decision,ocr_status,amount_detected,tx_ref_ocr,submission_allowed,expires_at,ocr_data)
-VALUES('${scanId}','${a}',repeat('a',64),69,'image/png',1,'MAINTAIN0001','1234567','accept','passed',1,'MAINTAIN0001',true,now()+interval '30 minutes',jsonb_build_object('receipt_path','${path}','attachment_id',(SELECT id FROM receipt_attachments WHERE object_path='${path}'),'expected_method_id','${method}','receipt_policy','mandatory-visual-v1','automatic_check_complete',true,'ref_verified',true,'amount_verified',true));
+VALUES('${scanId}','${a}',repeat('a',64),69,'image/png',1,'MAINTAIN0001','1234567','accept','passed',1,'MAINTAIN0001',true,now()+interval '30 minutes',jsonb_build_object('receipt_path','${path}','attachment_id',(SELECT id FROM receipt_attachments WHERE object_path='${path}'),'expected_method_id','${method}','receipt_policy','mandatory-visual-v1','automatic_check_complete',true,'ref_verified',true,'amount_verified',true,'expected_method_snapshot',private.receipt_method_snapshot('${method}')));
 `);
 await run(`WITH j AS (INSERT INTO private.receipt_scan_jobs(user_id,context_key,receipt_hash,quota_day,status,expires_at,started_at,finished_at,scan_id) VALUES('${a}',repeat('a',64),repeat('a',64),(clock_timestamp() AT TIME ZONE 'Africa/Khartoum')::date,'completed',clock_timestamp()+interval '5 minutes',clock_timestamp(),clock_timestamp(),'${scanId}') RETURNING id) UPDATE receipt_scan_results SET ocr_data=ocr_data||jsonb_build_object('usage_lease_id',j.id,'completed_machine_check',true) FROM j WHERE receipt_scan_results.id='${scanId}'; SET LOCAL ROLE authenticated;`);
 payload.p_ocr_data={edge_scan_id:scanId};
@@ -62,7 +64,8 @@ async function proof(amount,overrides={}) {
  const imagePath=a+'/verified/'+sid+'.png',hash=fixture.toString(16).padStart(64,'0'),ref='PROOF'+fixture;
  await db.query(`INSERT INTO storage.objects(bucket_id,name,metadata) VALUES('receipts',$1,'{"size":69,"mimetype":"image/png"}')`,[imagePath]);
  const attachment=(await db.query(`INSERT INTO receipt_attachments(user_id,object_path,receipt_hash,image_bytes,mime_type) VALUES($1,$2,$3,69,'image/png') RETURNING id`,[a,imagePath,hash])).rows[0].id;
- const metadata={receipt_path:imagePath,attachment_id:attachment,expected_method_id:method,receipt_policy:'mandatory-visual-v1',automatic_check_complete:true,ref_verified:true,amount_verified:true,...overrides.metadata};
+ const snapshot=(await db.query('SELECT private.receipt_method_snapshot($1) AS snapshot',[method])).rows[0].snapshot;
+ const metadata={expected_method_snapshot:snapshot,receipt_path:imagePath,attachment_id:attachment,expected_method_id:method,receipt_policy:'mandatory-visual-v1',automatic_check_complete:true,ref_verified:true,amount_verified:true,...overrides.metadata};
  await db.query(`INSERT INTO receipt_scan_results(id,user_id,receipt_hash,image_bytes,mime_type,expected_amount,manual_ref,expected_account,decision,ocr_status,amount_detected,tx_ref_ocr,submission_allowed,expires_at,ocr_data) VALUES($1,$2,$3,69,'image/png',$4,$5,'1234567',$6,'passed',$4,$5,$7,now()+interval '30 minutes',$8)`,[sid,overrides.user||a,hash,amount,ref,overrides.decision||'accept',overrides.allowed??true,metadata]);
  await db.query(`WITH j AS (INSERT INTO private.receipt_scan_jobs(user_id,context_key,receipt_hash,quota_day,status,expires_at,started_at,finished_at,scan_id) VALUES($1,$2,$2,(clock_timestamp() AT TIME ZONE 'Africa/Khartoum')::date,'completed',clock_timestamp()+interval '5 minutes',clock_timestamp(),clock_timestamp(),$3) RETURNING id) UPDATE receipt_scan_results SET ocr_data=ocr_data||jsonb_build_object('usage_lease_id',j.id,'completed_machine_check',true) FROM j WHERE receipt_scan_results.id=$3`,[a,hash,sid]);
  if(overrides.expired) await db.query(`UPDATE receipt_scan_results SET expires_at=now()-interval '1 minute' WHERE id=$1`,[sid]);
@@ -79,6 +82,10 @@ for(const [name,overrides] of Object.entries({legacy:{metadata:{receipt_policy:n
 }
 const wrongAmount=await proof(100);wrongAmount.p_amount=100.02;assert.equal((await action('create_wallet_topup_from_receipt',wrongAmount)).ok,false);n++;console.log('PASS amount difference of 0.02 rejected');
 const wrongRef=await proof(100);wrongRef.p_tx_ref='FORGED99999';assert.equal((await action('create_wallet_topup_from_receipt',wrongRef)).ok,false);n++;console.log('PASS forged reference rejected');
+const changedMethod=await proof(10);
+await db.query("UPDATE payment_methods SET bin_prefixes='8877123456700001' WHERE id=$1",[method]);
+assert.equal((await action('create_wallet_topup_from_receipt',changedMethod)).ok,false);n++;console.log('PASS changed recipient configuration invalidates saved proof');
+await db.query("UPDATE payment_methods SET bin_prefixes='' WHERE id=$1",[method]);
 const replay=await proof(10);assert.equal((await action('create_wallet_topup_from_receipt',replay)).ok,true);assert.equal((await action('create_wallet_topup_from_receipt',replay)).ok,false);n++;console.log('PASS replay rejected');
 // Server prices total 150. Neither client amounts nor partial commits can alter it.
 const product='d6040000-0000-4000-8000-000000000080';

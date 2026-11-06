@@ -3,20 +3,10 @@
  * =========================================================================
  * مسار الملف: assets/js/receipt-judge-core.js
  *
- * هذا الملف يحتوي على المنطق النصي الصرف لتحليل إشعارات التحويل (تطبيع،
- * استخراج رقم العملية والمبلغ، المطابقة، وقرار القبول/الرفض/المراجعة).
- * لا يعتمد على أي واجهة متصفح (لا Canvas، لا Tesseract، لا window) —
- * لذلك يعمل بلا أي تعديل في المتصفح (عبر <script>) وفي Node.js على
- * السيرفر (عبر require()) بنفس الدقة تماماً.
- *
- * لماذا هذا الملف موجود:
- *   الفحص الذكي كان بالكامل client-side (OCR في متصفح العميل عبر
- *   Tesseract.js)، وهذا هو مصدر تعليق التحميل وفشل القراءة عند ضعف
- *   جهاز/اتصال العميل. الآن أصبح الفحص يعمل أولاً من السيرفر عبر
- *   Google Gemini Vision (انظر api/verify-receipt.js)، ثم يُمرَّر النص
- *   المستخرَج إلى نفس محرك القرار الحتمي (buildContext + judge) الموجود
- *   هنا — بحيث يكون القرار مطابقاً تماماً لمنطق receipt-intel.js الأصلي،
- *   بغض النظر عن مصدر النص (سيرفر أو متصفح).
+ * تحليل نصي حتمي: التطبيع واستخراج الحقول والمطابقة وإشارات الخطر.
+ * هذا ليس نموذجاً مدرّباً ولا إثباتاً لصحة الصورة أو وصول التحويل.
+ * دالة process-receipt تفرض فحص الصورة والحقول الإضافي قبل حفظ دليل
+ * صالح للتقديم؛ لا يجوز استخدام قرار هذه النواة وحده لاعتماد دفعة.
  * ========================================================================= */
 
 const ReceiptJudgeCore = (() => {
@@ -40,15 +30,13 @@ const ReceiptJudgeCore = (() => {
     // قراءة موثوقة (Gemini على السيرفر): الحد الأدنى للنص لا معنى له هنا.
     // Tesseract في المتصفح قد يقرأ نصاً قصيراً من إيصال حقيقي ضبابي، لذلك
     // كان شرط 60 حرفاً ضرورياً حينها. أما القراءة من السيرفر فدقيقة جداً:
-    // إذا لم تُرجِع أي مفردة من مفردات الإشعارات ولا اسم مزوّد فالصورة
-    // فعلاً ليست إشعار تحويل ⇒ رفض فوري بلا حد أدنى للطول.
+    // غياب المفردات إشارة تصنيف فقط؛ يلزم فحص الصورة أيضاً قبل عدّ إساءة الاستخدام.
     minTextForTrustedReject: 1,
-    freshReceiptDays:  2,      // حتى يومين: قبول كامل تلقائي
-    staleReceiptDays:  10      // 2–10 أيام: يُقبل مع تدقيق إداري / أكثر: تدقيق مشدّد
-                               // التاريخ لا يمنع الطلب إطلاقاً
+    freshReceiptDays:  2,      // نافذة الحداثة للتحليل النصي، مع بقية شروط الخادم
+    staleReceiptDays:  10      // إشارات تقادم؛ يمنع المسار الخادمي اعتمادها آلياً
   };
 
-  // بصمات برامج التعديل — وجودها في بايتات الملف دليل قوي على التزييف
+  // بصمات برامج التعديل مؤشرات خطر، لا تثبت التزييف أو أصالة التحويل.
   const EDITOR_SIGNATURES = [
     'photoshop', 'adobe photoshop', 'adobe illustrator', 'gimp', 'snapseed',
     'picsart', 'lightroom', 'pixlr', 'inkscape', 'canva', 'facetune',
@@ -604,24 +592,33 @@ const ReceiptJudgeCore = (() => {
     return null;
   }
 
-  // محاولة تحويل التاريخ المقروء إلى Date (لكشف الإشعارات القديمة)
+  // Calendar dates are interpreted consistently in UTC; reject rollovers such
+  // as 31-Feb rather than letting JavaScript silently turn them into March.
   function parseReceiptDate(str: unknown) {
     if (!str) return null;
-    const s = latinizeDigits(str).toLowerCase();
+    const s = normalizeText(str);
+    const calendar = (year: number, month: number, day: number) => {
+      if (year < 2000 || year > 2099 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+      const d = new Date(Date.UTC(year, month - 1, day));
+      return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day ? d : null;
+    };
     let m = s.match(/(\d{1,2})[-/\s]([a-z]{3})[a-z]*[-/\s](\d{2,4})/);
     if (m) {
       const mi = MONTHS_EN.indexOf(m[2]);
       if (mi >= 0) {
         let y = parseInt(m[3], 10);
         if (y < 100) y += 2000;
-        const d = new Date(y, mi, parseInt(m[1], 10));
-        return isNaN(d.getTime()) ? null : d;
+        return calendar(y, mi + 1, parseInt(m[1], 10));
       }
+    }
+    const arabic = s.match(new RegExp('(\\d{1,2})\\s*(' + MONTHS_AR.join('|') + ')\\s*(\\d{2,4})'));
+    if (arabic) {
+      let y = Number(arabic[3]); if (y < 100) y += 2000;
+      return calendar(y, MONTHS_AR.indexOf(arabic[2]) + 1, Number(arabic[1]));
     }
     m = s.match(/(?:^|[^\d])(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})(?![\d])/);
     if (m) {
-      const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-      if (!isNaN(d.getTime())) return d;
+      return calendar(Number(m[1]), Number(m[2]), Number(m[3]));
     }
     m = s.match(/(?:^|[^\d])(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})(?![\d])/);
     if (m) {
@@ -631,22 +628,25 @@ const ReceiptJudgeCore = (() => {
       // نفترض dd/mm إن كان الأول > 12
       const day = a > 12 ? a : (b > 12 ? b : a);
       const mon = a > 12 ? b : (b > 12 ? a : b);
-      const d = new Date(y, mon - 1, day);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    m = s.match(/(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})/);
-    if (m) {
-      const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-      return isNaN(d.getTime()) ? null : d;
+      return calendar(y, mon, day);
     }
     return null;
+  }
+
+  // Exact configured recipient identifiers, never a prefix/substring inference.
+  // bin_prefixes is the legacy column for additional full account numbers.
+  function allowedReceiptAccounts(method: any) {
+    const primary = digitsOnly(method?.account_number || '');
+    const aliases = String(method?.bin_prefixes || '').split(/[,;\r\n]+/)
+      .map(digitsOnly).filter(v => v.length >= 8 && v.length <= 34);
+    return Array.from(new Set([...(primary.length >= 6 ? [primary] : []), ...aliases]));
   }
 
   function extractAccounts(text: string) {
     // ملاحظة: النص المدخل هنا مُطبَّع مسبقاً (normalizeText): "إلى/الى" ← "الي"،
     // و"ة" ← "ه". الأنماط أدناه مكتوبة بالصيغة المُطبَّعة عمداً.
     const from = text.match(/(?:من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
-    const to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|to\s*account|beneficiary\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
+    const to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|الحساب\s*المحلي|to\s*account|beneficiary\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
     const phone = text.match(/\b(249\d{9}|0\d{9})\b/);
     return {
       from: from ? digitsOnly(from[1]) : null,
@@ -896,21 +896,16 @@ const ReceiptJudgeCore = (() => {
     result.extracted.phone = accounts.phone;
 
     // ── الطبقة الأولى (المهمة 35): هوية البنك المستلم ──
-    // قبل المبلغ ورقم العملية: بادئة BIN لحساب المستلم + اسم صاحب الحساب
+    // قبل المبلغ ورقم العملية: أرقام الاستلام الكاملة + اسم صاحب الحساب
     // يجب أن يطابقا البنك الذي اختاره العميل (بيانات الوسيلة تُجلب من
     // السيرفر — لا تُؤخذ من العميل أبداً). أي عدم تطابق يمنع القبول
     // التلقائي ويحوّل إلى تدقيق إداري مشدّد.
     const expectedMethod = options.expectedMethod || null;
     if (expectedMethod) {
       const toAcct = digitsOnly(result.extracted.toAccount || '');
-      // المهمة 35 (محدّثة): رقم BIN الكامل للبنك (17 خانة مثلاً) — رقم الحساب
-      // (7 خانات) مضمّن في وسطه، والأول/الأخير ثابت لكل بنك.
-      // التحقق: رقم "الى حساب" في الإيصال يجب أن يطابق الـ BIN — إما تطابقاً
-      // تاماً، أو أن يكون مضمّناً داخل الـ BIN المُسجّل، أو العكس.
-      const bankBins = String(expectedMethod.bin_prefixes || '')
-        .split(/[,;\s]+/).map(digitsOnly).filter(b => b.length >= 8);
+      const bankBins = allowedReceiptAccounts(expectedMethod);
       if (bankBins.length > 0 && toAcct) {
-        const binOk = bankBins.some(b => toAcct === b || b.includes(toAcct) || toAcct.includes(b));
+        const binOk = bankBins.includes(toAcct);
         if (!binOk) result.riskFlags.push('bin_mismatch');
         result.extracted.binChecked = true;
         result.extracted.binMatched = binOk;
@@ -1018,8 +1013,8 @@ const ReceiptJudgeCore = (() => {
     if (!provider) result.riskFlags.push('provider_unknown');
 
     if (expectedAccount && expectedAccount.length >= 6) {
-      const acctSeen = flatDigits.includes(expectedAccount) ||
-                       (accounts.to && (accounts.to.includes(expectedAccount) || expectedAccount.includes(accounts.to)));
+      const allowed = expectedMethod ? allowedReceiptAccounts(expectedMethod) : [expectedAccount];
+      const acctSeen = !!accounts.to && allowed.includes(accounts.to);
       if (!acctSeen) result.riskFlags.push('destination_account_unverified');
     }
 
@@ -1035,8 +1030,7 @@ const ReceiptJudgeCore = (() => {
       }
     }
 
-    // ── سياسة التاريخ: لا رفض بسبب التاريخ أبداً ──
-    // التاريخ يُنتج تدقيقاً إدارياً فقط، بشرط مطابقة الرقم والمبلغ.
+    // هذه نواة تصنيف نصية؛ المسار الخادمي يمنع تقديم التاريخ المتقادم.
     const dateNeedsAdmin = result.riskFlags.includes('stale_receipt') ||
                            result.riskFlags.includes('very_stale_receipt');
     const severeDate = result.riskFlags.includes('very_stale_receipt');
@@ -1139,7 +1133,7 @@ const ReceiptJudgeCore = (() => {
     latinizeDigits, normalizeText, normalizeRef, digitsOnly, fixOcrDigits,
     countKeywordHits, hasAny, levenshtein, detectLanguage,
     detectProvider, toLines, parseAmountToken, labelHitAt,
-    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts,
+    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts, allowedReceiptAccounts,
     amountVariants, matchAmount, matchRef, buildContext, judge, blankResult
   };
 })();

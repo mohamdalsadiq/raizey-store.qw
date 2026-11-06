@@ -28,7 +28,7 @@ BEGIN
   IF response->>'ok' IS DISTINCT FROM 'false' THEN RAISE EXCEPTION 'FAIL missing scan accepted'; END IF; checks:=checks+1;
   RESET ROLE;
   INSERT INTO public.receipt_scan_results(id,user_id,receipt_hash,image_bytes,mime_type,expected_amount,manual_ref,expected_account,decision,ocr_status,amount_detected,tx_ref_ocr,submission_allowed,expires_at,ocr_data)
-  VALUES(sid,u,repeat('c',64),69,'image/png',1,'LIVEFIXTURE123456','1234567','accept','passed',1,'LIVEFIXTURE123456',true,now()+interval '30 minutes',jsonb_build_object('receipt_path',image_path,'attachment_id',attachment,'expected_method_id',method,'receipt_policy','legacy','automatic_check_complete',true,'ref_verified',true,'amount_verified',true));
+  VALUES(sid,u,repeat('c',64),69,'image/png',1,'LIVEFIXTURE123456','1234567','accept','passed',1,'LIVEFIXTURE123456',true,now()+interval '30 minutes',jsonb_build_object('receipt_path',image_path,'attachment_id',attachment,'expected_method_id',method,'receipt_policy','legacy','automatic_check_complete',true,'ref_verified',true,'amount_verified',true,'expected_method_snapshot',private.receipt_method_snapshot(method)));
   payload := jsonb_set(payload,'{p_ocr_data}',jsonb_build_object('edge_scan_id',sid));
   SET LOCAL ROLE authenticated;
   SELECT public.execute_store_action('create_wallet_topup_from_receipt',payload,gen_random_uuid()) INTO response;

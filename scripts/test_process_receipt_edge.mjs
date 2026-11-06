@@ -96,7 +96,7 @@ globalThis.fetch = async (...args) => {
     const rtl=text.includes('121004123456789');
     return httpResponse(200,geminiTextResponse(JSON.stringify({
       is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,
-      amount:rtl?'48500':'125000',currency:'SDG',receiver_account:rtl?'1234567890':'2050123456789012',transaction_id:rtl?'121004123456789':'FT250719123456',date:'2026-11-04',status:'successful'
+      amount:rtl?'48500':'125000',currency:'SDG',receiver_account:rtl?'1234567890':'2050123456789012',transaction_id:rtl?'121004123456789':'FT250719123456',date:new Date().toISOString().slice(0,10),status:'successful'
     })));
   }
   return response;
@@ -233,7 +233,7 @@ async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paym
   if(reusableScan?.ocr_data){
     const method=paymentMethod?{id:String(paymentMethod.id),name:paymentMethod.name??null,account_name:paymentMethod.account_name??null,account_number:paymentMethod.account_number??null,bin_prefixes:paymentMethod.bin_prefixes??null,bank_key:paymentMethod.bank_key??null}:null;
     const hash=await crypto.subtle.digest('SHA-256',Buffer.from(body.imageBase64,'base64')).then(b=>Buffer.from(b).toString('hex'));
-    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1'}))).then(b=>Buffer.from(b).toString('hex'))}};
+    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-exact-calendar-v2'}))).then(b=>Buffer.from(b).toString('hex'))}};
   }
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
@@ -281,9 +281,9 @@ console.log("\n── اكتشاف النماذج والترتيب ──");
   });
   check("result ok", result.json.ok, true);
   check("decision accept", result.json.decision, "accept");
-  // القياس يحكم: flash-lite يقرأ نفس الإيصال بنفس الدقة بـ~55% استهلاكاً أقل
-  // (بلا توكنات تفكير)، فهو الخيار الأول — وflash العادي احتياط.
-  check("chosen model is the cheapest accurate class (flash-lite)", generatedModels[0], "gemini-3.1-flash-lite");
+  // Routing preference is not an accuracy benchmark. Real receipt evaluation
+  // is recorded separately, with its sample size and bank coverage.
+  check("chosen model follows configured Lite preference", generatedModels[0], "gemini-3.1-flash-lite");
   const ocrData = result.state.inserted[0].payload.ocr_data;
   check("model order source", ocrData.model_order_source, "discovery");
   check(
@@ -740,16 +740,40 @@ console.log("\n── المهمة 37: تحكيم إضافي على رفض عد�
   check("second pass cannot override contradictory amount", result.json.decision, "reject");
 }
 
+console.log("\n── الحساب الكامل وعلامة نجاح الإشعار ──");
+{
+ const full='0873012345670001';
+ const method={id:baseBody.expectedMethodId,name:'بنكك',account_number:'1234567',account_name:'محمد الصادق',bin_prefixes:full,bank_key:'bankak'};
+ const text=validBankakText().replace('تمت العملية بنجاح\n','').replace('2050123456789012',full);
+ const visual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:full,transaction_id:baseBody.manualRef,date:new Date().toISOString().slice(0,10),status:'successful'};
+ const scan=(changes={})=>runScan({body:baseBody,paymentMethod:method,visual,env:{GEMINI_MODEL_ORDER:'gemini-ok'},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text)),...changes});
+ const accepted=await scan();
+ check('configured full account and visible success symbol accepted',accepted.json.submissionAllowed,true);
+ check('full account match is recorded',accepted.json.visualCheck?.destinationMatched,true);
+ check('server stores exact method snapshot',accepted.state.inserted[0].payload.ocr_data.expected_method_snapshot.bin_prefixes,full);
+ const unknown=await scan({visual:{...visual,status:'unknown'}});
+ check('absence of failure alone is insufficient',unknown.json.submissionAllowed,false);
+ const failed=await scan({fetchHandler:async()=>httpResponse(200,geminiTextResponse(text+'\nفشلت العملية'))});
+ check('visual success cannot override an explicit OCR failure',failed.json.submissionAllowed,false);
+ const unregistered=await scan({paymentMethod:{...method,bin_prefixes:'9999999999999999'}});
+ check('unregistered full account containing the short account is denied',unregistered.json.submissionAllowed,false);
+ const padded=await scan({visual:{...visual,receiver_account:'99'+full},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text.replace(full,'99'+full)))});
+ check('prefix-padded registered account is denied',padded.json.submissionAllowed,false);
+ const short=await scan({visual:{...visual,receiver_account:'1234567'},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text.replace(full,'1234567')))});
+ check('exact primary account remains accepted',short.json.submissionAllowed,true);
+}
+
 console.log("\n── حالات عدائية وفشل مغلق ──");
 {
- const validVisual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:'2050123456789012',transaction_id:'FT250719123456',date:'2026-11-04',status:'successful'};
+ const validVisual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:'2050123456789012',transaction_id:'FT250719123456',date:new Date().toISOString().slice(0,10),status:'successful'};
  const mutations={
   'chat image':{is_receipt:false,document_type:'other'}, 'uncertain layout':{document_type:'uncertain'},
   'incomplete receipt':{is_complete:false}, 'collage':{receipt_count:2}, 'edited image':{has_tampering:true},
   'image prompt injection':{contains_instructions:true}, 'failed transfer':{status:'failed'}, 'pending transfer':{status:'pending'},
   'unknown status':{status:'unknown'}, 'foreign currency':{currency:'USD'}, 'wrong destination':{receiver_account:'1234567890'},
   'substring account':{receiver_account:'12345678'}, 'wrong reference':{transaction_id:'FT999999999999'},
-  'fabricated amount':{amount:'99999'}, 'non-numeric amount':{amount:'125000xyz'}, 'string truthiness':{is_receipt:'true'}, 'missing mandatory field':{receipt_count:undefined}
+  'fabricated amount':{amount:'99999'}, 'non-numeric amount':{amount:'125000xyz'}, 'string truthiness':{is_receipt:'true'}, 'missing mandatory field':{receipt_count:undefined},
+  'date contradicts OCR':{date:'2026-11-03'}, 'impossible date':{date:'31-Feb-2026'}, 'unparseable date':{date:'yesterday'}
  };
  for(const [name,change] of Object.entries(mutations)) {
   const res=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},visual:{...validVisual,...change},fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText()))});
