@@ -296,6 +296,10 @@ check('pending cannot be treated as completed',pending.extracted.statusOk,false)
 const family=run(fawryText,{expectedAmount:AMOUNT,manualRef:'554433221100',expectedMethod:{account_number:MERCHANT_ACCOUNT,bank_key:'faisal'}});
 check('Faisal and Fawry are one bank family',family.riskFlags.includes('bank_provider_mismatch'),false);
 
+console.log("\n── المبلغ المهيكل: تنسيقات صريحة دون تخمين ──");
+for(const value of ['150000.00','150,000.00','١٥٠٬٠٠٠٫٠٠','150 000.00','150\u00a0000.00'])check('structured grouping '+value,Core.strictReceiptAmount(value),150000);
+for(const value of ['150,00.00','15 00','150000xyz','1.5e5','150,000.005','-150000','150000 SDG',150000,null])check('ambiguous structured amount rejected '+value,Number.isNaN(Core.strictReceiptAmount(value)),true);
+
 console.log("\n── حتمية القرار (نفس المدخل = نفس القرار) ──");
 const repeatA = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });
 const repeatB = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });

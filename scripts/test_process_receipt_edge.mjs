@@ -233,7 +233,7 @@ async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paym
   if(reusableScan?.ocr_data){
     const method=paymentMethod?{id:String(paymentMethod.id),name:paymentMethod.name??null,account_name:paymentMethod.account_name??null,account_number:paymentMethod.account_number??null,bin_prefixes:paymentMethod.bin_prefixes??null,bank_key:paymentMethod.bank_key??null}:null;
     const hash=await crypto.subtle.digest('SHA-256',Buffer.from(body.imageBase64,'base64')).then(b=>Buffer.from(b).toString('hex'));
-    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-banks-capacity-v3'}))).then(b=>Buffer.from(b).toString('hex'))}};
+    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-banks-capacity-v4'}))).then(b=>Buffer.from(b).toString('hex'))}};
   }
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
@@ -594,7 +594,7 @@ console.log("\n── تخزين رقم العملية الذي وثّقه ال�
     env: { GEMINI_MODEL_ORDER: "gemini-ok" },
     fetchHandler: async () => httpResponse(200, geminiTextResponse(ocashRtlText)),
   });
-  check("RTL ref: unverified ref is not promoted", unverified.state.inserted[0].payload.tx_ref_ocr, day);
+  check("RTL ref: unverified manual ref preserves the actual OCR reference", unverified.state.inserted[0].payload.tx_ref_ocr, "121004123456789");
   check("RTL ref: manual ref never written without verification", unverified.state.inserted[0].payload.tx_ref_ocr === "555555555555", false);
 }
 
@@ -750,6 +750,9 @@ console.log("\n── الحساب الكامل وعلامة نجاح الإشع
  const accepted=await scan();
  check('configured full account and visible success symbol accepted',accepted.json.submissionAllowed,true);
  check('full account match is recorded',accepted.json.visualCheck?.destinationMatched,true);
+ for(const amount of ['125,000.00','١٢٥٬٠٠٠٫٠٠','125 000.00']){const grouped=await scan({visual:{...visual,amount}});check('valid grouped structured amount accepted '+amount,grouped.json.submissionAllowed,true);}
+ for(const amount of ['125,00.00','125,000.005','125000 SDG','125000xyz']){const invalid=await scan({visual:{...visual,amount}});check('malformed structured amount rejected '+amount,invalid.json.submissionAllowed,false);}
+
  check('server stores exact method snapshot',accepted.state.inserted[0].payload.ocr_data.expected_method_snapshot.bin_prefixes,full);
  const unknown=await scan({visual:{...visual,status:'unknown'}});
  check('absence of failure alone is insufficient',unknown.json.submissionAllowed,false);
@@ -805,6 +808,12 @@ console.log("\n── حالات عدائية وفشل مغلق ──");
  }
  const senderOnly=await runScan({body:baseBody,env:{GEMINI_MODEL_ORDER:'gemini-ok'},visual:validVisual,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText().replace('من حساب: 1234567890','من حساب: 2050123456789012').replace('الى حساب: 2050123456789012','الى حساب: 9999999999999999')))});
  check('sender account cannot impersonate destination',senderOnly.json.submissionAllowed,false);
+ const balanceTrap=await runScan({body:baseBody,visual:validVisual,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText().replace('المبلغ: 125,000.00','المبلغ: 99,500.00').replace('الرصيد المتاح: 500,000.00','الرصيد المتاح: 125,000.00')))});
+ check('expected amount in balance cannot corroborate a smaller transfer',balanceTrap.json.submissionAllowed,false);
+ check('balance trap records failed transfer-amount corroboration',balanceTrap.json.visualCheck?.amountCorroborated,false);
+ const unlabeledRef=await runScan({body:baseBody,visual:validVisual,fetchHandler:async()=>httpResponse(200,geminiTextResponse(validBankakText().replace('رقم العملية: FT250719123456','التعليق: FT250719123456')))});
+ check('reference in comment alone cannot impersonate transaction id',unlabeledRef.json.submissionAllowed,false);
+
  const unconfigured=await runScan({body:baseBody,paymentMethod:{id:baseBody.expectedMethodId,account_number:null},fetchHandler:async()=>{throw Error('must not call AI')}});
  check('destination configuration required',unconfigured.json.riskFlags.includes('payment_destination_not_configured'),true);
  const noKey=await runScan({body:baseBody,env:{GEMINI_API_KEY:''},fetchHandler:async()=>{throw Error('must not call AI')}});

@@ -529,14 +529,16 @@ const ReceiptJudgeCore = (() => {
       if (!hit) continue;
 
       const after = line.slice(hit.index + hit.label.length);
-      const inline = after.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || [];
+      const before = line.slice(0, hit.index);
+      const inline = [...(after.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || []), ...(before.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || [])]
+        .filter(tok => !/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(tok));
       for (const tok of inline) {
         const value = refCandidateValue(tok);
         if (digitsOnly(value).length >= 6) candidates.push({ value, weight: 10, labelled: true });
       }
       if (!inline.length) {
         const next = lines[i + 1] || '';
-        const nx = next.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || [];
+        const nx = (next.match(/[a-z0-9][a-z0-9\-/]{4,28}/g) || []).filter(tok => !/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$/.test(tok));
         for (const tok of nx) {
           const value = refCandidateValue(tok);
           if (digitsOnly(value).length >= 6) candidates.push({ value, weight: 9, labelled: true });
@@ -643,6 +645,19 @@ const ReceiptJudgeCore = (() => {
     const aliases = String(method?.bin_prefixes || '').split(/[,;\r\n]+/)
       .map(digitsOnly).filter(v => v.length >= 8 && v.length <= 34);
     return Array.from(new Set([...(primary.length >= 6 ? [primary] : []), ...aliases]));
+  }
+
+  // Structured model outputs can retain valid grouping despite the prompt.
+  // Accept explicit decimal/thousands formats only; never guess OCR digits,
+  // round extra decimal places, or parse numeric prefixes of arbitrary text.
+  function strictReceiptAmount(value: unknown): number {
+    if (typeof value !== 'string') return NaN;
+    const s = latinizeDigits(value).replace(/\u066c/g, ',').replace(/\u066b/g, '.').trim();
+    const plain = /^\d{1,10}(?:\.\d{1,2})?$/.test(s);
+    const grouped = /^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/.test(s) || /^\d{1,3}(?:[ \u00a0]\d{3})+(?:\.\d{1,2})?$/.test(s);
+    if (!plain && !grouped) return NaN;
+    const amount = Number(s.replace(/[, \u00a0]/g, ''));
+    return Number.isFinite(amount) && amount > 0 && amount <= 10000000 ? amount : NaN;
   }
 
   function extractAccounts(text: string) {
@@ -1146,7 +1161,7 @@ const ReceiptJudgeCore = (() => {
     latinizeDigits, normalizeText, normalizeRef, digitsOnly, fixOcrDigits,
     countKeywordHits, hasAny, levenshtein, detectLanguage,
     detectProvider, toLines, parseAmountToken, labelHitAt,
-    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts, allowedReceiptAccounts, beneficiaryNameMatches,
+    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts, allowedReceiptAccounts, strictReceiptAmount, beneficiaryNameMatches,
     amountVariants, matchAmount, matchRef, buildContext, judge, blankResult
   };
 })();

@@ -70,7 +70,7 @@ const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
 const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RECEIPT_POLICY = "mandatory-visual-v1";
-const RECEIPT_RULESET = "recipient-banks-capacity-v3";
+const RECEIPT_RULESET = "recipient-banks-capacity-v4";
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
 // Kept for backward compatibility: the deployed production origin is still the
@@ -1095,8 +1095,9 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
     ocrSource: "server",
     trustedOcr: true,
   };
+  const judgeContext = ReceiptJudgeCore.buildContext([rawText], judgeOptions);
   let result = ReceiptJudgeCore.judge(
-    ReceiptJudgeCore.buildContext([rawText], judgeOptions),
+    judgeContext,
     judgeOptions,
     ReceiptJudgeCore.blankResult(),
   ) as ScanResult;
@@ -1114,18 +1115,19 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
   const account = (v: unknown) => digits(v).replace(/[\s-]/g, "");
   const normalizedText = digits(rawText).toUpperCase();
   const visualRef = normalizeRefForStorage(visual.transaction_id || visual.reference);
-  const visualAmount = typeof visual.amount === 'string' && /^\d+(?:\.\d{1,2})?$/.test(digits(visual.amount)) ? Number(digits(visual.amount)) : NaN;
+  const visualAmount = ReceiptJudgeCore.strictReceiptAmount(visual.amount);
   const to = account(visual.receiver_account);
   const destinationMatched = ReceiptJudgeCore.allowedReceiptAccounts(expectedMethod).includes(to);
   const referenceInText = (normalizedText.match(/[A-Z0-9]+/g) || []).some((v: string) => v === visualRef);
+  const referenceLabelMatched = (judgeContext.refInfo.labelledAll || []).some((v: string) => normalizeRefForStorage(v) === visualRef);
   const ocrDestination = account(result.extracted?.toAccount);
   const destinationLabel = /(?:الى|إلى|الي|إلي)\s*(?:حساب|الحساب)|حساب\s*(?:المستفيد|المستلم)|receiver\s*account|beneficiary\s*account|to\s*account/i;
   const labelledDestination = normalizedText.split(/\r?\n/).some((line: string) =>
     destinationLabel.test(line) && (line.match(/[0-9]+/g) || []).some((v: string) => v === to));
   // An expected account appearing only in a sender/balance field is insufficient.
   const accountInText = ocrDestination ? ocrDestination === to : labelledDestination;
-  const amountsInText = (normalizedText.match(/\d[\d,٬]*(?:[.٫]\d{1,2})?/g) || []).map(v => Number(v.replace(/[,٬]/g,'').replace('٫','.')));
-  const amountInText = Number.isFinite(visualAmount) && amountsInText.some(v => Math.abs(v-visualAmount)<0.01);
+  const labelledAmounts = [...new Set(judgeContext.amountList.filter((v: any) => !v.excluded && v.weight >= 9 && /^label/.test(v.source)).map((v: any) => v.value))];
+  const amountInText = Number.isFinite(visualAmount) && labelledAmounts.length === 1 && labelledAmounts[0] === visualAmount;
   const originalNotReceipt = (result.riskFlags || []).includes("not_a_receipt");
   const ocrDate = ReceiptJudgeCore.parseReceiptDate(result.extracted?.dateTime);
   const visualDate = ReceiptJudgeCore.parseReceiptDate(visual.date);
@@ -1134,7 +1136,7 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
   const documentOk = visual?.is_receipt === true && visual.document_type === 'transfer_receipt' &&
     visual.is_complete === true && visual.receipt_count === 1 && visual.has_tampering === false && visual.contains_instructions === false;
   const fieldsOk = visual.status === 'successful' && /^(SDG|ج[.]?\s?س[.]?|جنيه سوداني)$/i.test(String(visual.currency).trim()) &&
-    visualRef === normalizeRefForStorage(options.manualRef) && referenceInText && destinationMatched && accountInText && amountInText &&
+    visualRef === normalizeRefForStorage(options.manualRef) && referenceInText && referenceLabelMatched && destinationMatched && accountInText && amountInText &&
     dateCorroborated && receiverNameMatched;
   const unsafeFlags = (result.riskFlags || []).some((f: string) => /failed_transaction|ref_conflict|account_mismatch|bin_mismatch|bank_provider_mismatch|beneficiary_name_unverified|future|stale|old_receipt/.test(f));
   const amountOk = Number.isFinite(visualAmount) && Math.abs(visualAmount-options.expectedAmount) < 0.01;
@@ -1142,7 +1144,7 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
   result.passes = 2;
   result.completedMachineCheck = true;
   result.nonReceiptConfirmed = originalNotReceipt && rawText.trim().length>=20 && visual.is_receipt===false && visual.document_type==='other';
-  result.visualCheck = {isReceipt:documentOk, fieldsCorroborated:fieldsOk, destinationMatched, dateCorroborated, receiverNameMatched, status:visual.status === 'successful' ? 'successful' : 'unverified'};
+  result.visualCheck = {isReceipt:documentOk, fieldsCorroborated:fieldsOk, destinationMatched, accountCorroborated:accountInText, referenceCorroborated:referenceInText && referenceLabelMatched, amountCorroborated:amountInText, dateCorroborated, receiverNameMatched, status:visual.status === 'successful' ? 'successful' : 'unverified'};
   result.extractedFields = sanitizeStructuredFields(visual);
   result.receiptPolicy = RECEIPT_POLICY;
   result.automaticCheckComplete = checked;
