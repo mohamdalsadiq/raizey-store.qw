@@ -263,6 +263,39 @@ check("leap year February 29 accepted", Core.parseReceiptDate("29/02/2024")?.toI
 check("Arabic month and digits parsed", Core.parseReceiptDate("٥ نوفمبر ٢٠٢٦")?.toISOString(), "2026-11-05T00:00:00.000Z");
 check("English receipt date parsed", Core.parseReceiptDate("05-Nov-2026 23:10:01")?.toISOString(), "2026-11-05T00:00:00.000Z");
 
+console.log("\n── صيغ البنوك والتحويل بين البنوك — نصوص مصطنعة ──");
+const localBban='04012345670001';
+const crossText=`اووكاش
+بنك ام درمان الوطني
+تفاصيل الحركة
+حركة ناجحة
+رقم الحركة: 20261106123456
+التحويل إلى بنك داخل السودان
+رقم السجل: ${localBban}
+اسم المشترك: محمد الصادق
+قيمة الحركة: 125,000.00 SDG
+التاريخ: ${todayStamp()}`;
+const crossMethod={account_number:'1234567',bin_prefixes:localBban,account_name:'محمد الصادق',bank_key:'bankak'};
+const cross=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedAccount:'1234567',expectedMethod:crossMethod});
+check('new O-Cash spelling detected',cross.provider,'ocash');
+check('interbank record mapped only in explicit transfer context',cross.extracted.toAccount,localBban);
+check('registered interbank destination verified',cross.extracted.crossBankRecipientVerified,true);
+check('cross-bank transfer can pass deterministic checks',cross.decision,'accept');
+const unregisteredCross=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:{...crossMethod,bin_prefixes:'04099999990001'}});
+check('unregistered BBAN cannot impersonate a destination',unregisteredCross.extracted.crossBankRecipientVerified,false);
+const missingInterbank=run(crossText.replace('التحويل إلى بنك داخل السودان','خدمة دفع الفواتير'),{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:crossMethod});
+check('record number without explicit interbank context is not destination',missingInterbank.extracted.toAccount,null);
+const noName=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:{...crossMethod,account_name:''}});
+check('cross-bank inference requires a configured beneficiary',noName.extracted.crossBankRecipientVerified,false);
+const receiverLabel=run(bankakText.replace('الى حساب:','حساب المستفيد:'),{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('beneficiary account label read',receiverLabel.extracted.toAccount,MERCHANT_ACCOUNT);
+const englishLabel=run(bankakText.replace('الى حساب:','Recipient Account:'),{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('English recipient account label read',englishLabel.extracted.toAccount,MERCHANT_ACCOUNT);
+const pending=run(bankakText+'\npending',{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('pending cannot be treated as completed',pending.extracted.statusOk,false);
+const family=run(fawryText,{expectedAmount:AMOUNT,manualRef:'554433221100',expectedMethod:{account_number:MERCHANT_ACCOUNT,bank_key:'faisal'}});
+check('Faisal and Fawry are one bank family',family.riskFlags.includes('bank_provider_mismatch'),false);
+
 console.log("\n── حتمية القرار (نفس المدخل = نفس القرار) ──");
 const repeatA = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });
 const repeatB = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });

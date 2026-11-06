@@ -1,12 +1,17 @@
 -- Isolated staging only. No AI calls; every fixture is rolled back.
--- Single-session admission assertions are not a multi-connection load test.
+-- Synthetic high-capacity policy only, rolled back with every fixture.
+-- Single-session admission assertions are not provider or multi-connection load tests.
 DO $test$
 DECLARE
  fixture_users uuid[]:=ARRAY[]::uuid[]; leases uuid[]:=ARRAY[]::uuid[];
  u uuid; sid uuid; lease uuid; ticket uuid; r jsonb; s jsonb;
- h text; context text; blocked boolean; checks integer:=0; i integer;
+ h text; context text; blocked boolean; checks integer:=0; i integer; provider_calls_before integer;
 BEGIN
  BEGIN
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='private' AND table_name='receipt_scan_policy' AND column_name='provider_rpm_limit') THEN
+   EXECUTE 'UPDATE private.receipt_scan_policy SET provider_rpm_limit=100000,provider_tpm_limit=2000000000,provider_daily_limit=50000,global_daily_limit=20000';
+  END IF;
+  SELECT coalesce((SELECT calls FROM private.receipt_scan_provider_days WHERE quota_day=(clock_timestamp() AT TIME ZONE CASE WHEN EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='private' AND table_name='receipt_scan_jobs' AND column_name='provider_reserved') THEN 'America/Los_Angeles' ELSE 'Africa/Khartoum' END)::date),0) INTO provider_calls_before;
   IF (SELECT concurrency_limit FROM private.receipt_scan_policy WHERE id)<>50 THEN RAISE EXCEPTION 'FAIL concurrency configuration'; END IF; checks:=checks+1;
   FOR i IN 1..51 LOOP
    u:=gen_random_uuid(); fixture_users:=array_append(fixture_users,u);
@@ -42,7 +47,7 @@ BEGIN
   END LOOP;
   IF public.meter_receipt_scan_usage(fixture_users[51],lease) IS DISTINCT FROM false THEN RAISE EXCEPTION 'FAIL retry cap'; END IF; checks:=checks+1;
   PERFORM public.finish_receipt_scan_usage(fixture_users[51],lease,NULL);
-  IF (SELECT calls FROM private.receipt_scan_provider_days WHERE quota_day=(clock_timestamp() AT TIME ZONE 'Africa/Khartoum')::date)<>12 THEN RAISE EXCEPTION 'FAIL provider refund incorrectly erased actual calls'; END IF; checks:=checks+1;
+  IF (SELECT calls FROM private.receipt_scan_provider_days WHERE quota_day=(clock_timestamp() AT TIME ZONE CASE WHEN EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='private' AND table_name='receipt_scan_jobs' AND column_name='provider_reserved') THEN 'America/Los_Angeles' ELSE 'Africa/Khartoum' END)::date)<>provider_calls_before+12 THEN RAISE EXCEPTION 'FAIL provider refund incorrectly erased actual calls'; END IF; checks:=checks+1;
   FOR i IN 2..50 LOOP PERFORM public.finish_receipt_scan_usage(fixture_users[i],leases[i],NULL); END LOOP;
 
   -- Three distinct, server-confirmed unrelated images freeze only scanning.

@@ -70,7 +70,7 @@ const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
 const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RECEIPT_POLICY = "mandatory-visual-v1";
-const RECEIPT_RULESET = "recipient-exact-calendar-v2";
+const RECEIPT_RULESET = "recipient-banks-capacity-v3";
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
 // Kept for backward compatibility: the deployed production origin is still the
@@ -106,6 +106,9 @@ const JSON_PROMPT =
   "receiver_account هو الرقم الكامل الظاهر في حقل المستلم؛ لا تختصره إلى CIF ولا تحوله إلى IBAN/BBAN ولا تخمّن أجزاءه. " +
   "في بنكك قد تظهر حقول رقم العملية، التاريخ والزمن، من حساب، إلى حساب، اسم المرسل إليه، المبلغ. " +
   "في أوكاش قد تظهر تفاصيل الحركة ورقم الحركة والحساب المحلي؛ في فوري قد يظهر الرقم المرجعي واسم المستفيد. اختلاف الكلمات أو التصميم وحده ليس تزويراً. " +
+  "اووكاش/اوو-كاش/O-Cash أسماء لتطبيق أم درمان، وفوري/Fawry SD/فوري+ أسماء لتطبيقات فيصل؛ لا تخلط بينها وبين محافظ أجنبية تحمل أسماء مشابهة. " +
+  "الصفحة الرئيسية أو كشف الحساب أو شاشة تأكيد قبل التنفيذ ليست إشعار تحويل مكتمل، ولو ظهر اسم البنك ورقم الحساب والرصيد وأزرار التحويل. " +
+  "قد يختلف بنك التطبيق المرسل عن بنك المستلم في التحويل بين البنوك. رقم السجل في مسار تحويل أوكاش إلى بنك داخل السودان قد يحدد الحساب المحلي؛ لا تخلطه برقم الحركة. " +
   "1) انسخ رقم العملية/المرجع كما هو رقماً رقماً بلا تخمين ولا تصحيح ولا حذف أصفار. " +
   "2) amount = مبلغ التحويل فقط (وليس الرصيد ولا الرسوم ولا الضريبة) بأرقام لاتينية بلا فواصل آلاف. " +
   "3) حوّل الأرقام العربية (٠١٢٣٤٥٦٧٨٩) إلى لاتينية داخل الحقول المهيكلة. " +
@@ -122,7 +125,7 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
 ];
 
-type GeminiBudget = () => Promise<void>;
+type GeminiBudget = (stage: 'ocr' | 'visual') => Promise<void>;
 
 type ScanOptions = {
   usageLeaseId?: string;
@@ -504,7 +507,7 @@ async function postGeminiGenerate(
     requestBody = { ...body, generationConfig };
   }
   const attempt = async (payload: Record<string, any>) => {
-    if (budget) await budget();
+    if (budget) await budget(payload?.generationConfig?.responseMimeType === 'application/json' ? 'visual' : 'ocr');
     const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
@@ -622,7 +625,7 @@ async function extractTextWithGemini(
       attempts.push({ model, error: message.slice(0, 200), status: (error as any)?.status ?? null });
       noteGeminiModelFailure(model, (error as any)?.status);
       // أخطاء قاتلة لا يفيد معها تجربة نموذج آخر
-      if ((error as any)?.code === "no_visible_text") {
+      if ((error as any)?.code === "no_visible_text" || /^(receipt_provider_budget_exhausted|receipt_policy_unavailable)$/.test(message)) {
         (error as any).attempts = attempts;
         throw error;
       }
@@ -699,6 +702,7 @@ async function structuredPass(
     } catch (error) {
       lastError = error;
       attempts.push({ model, error: String((error as any)?.message || "").slice(0, 160), status: (error as any)?.status ?? null });
+      if (/^(receipt_provider_budget_exhausted|receipt_policy_unavailable)$/.test(String((error as any)?.message || ''))) throw error;
       noteGeminiModelFailure(model, (error as any)?.status);
     }
   }
@@ -1021,7 +1025,7 @@ async function processScan(request: Request, admin: any, userId: string, body: a
   }
   if(admission.allowed!==true) return usageDenied(admission);
   options.usageLeaseId=admission.leaseId;
-  const budget=async()=>{if((await usageRpc(admin,'meter_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId}))!==true) throw new Error('receipt_provider_budget_exhausted');};
+  const budget: GeminiBudget=async(stage)=>{if((await usageRpc(admin,'meter_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId,p_stage:stage}))!==true) throw new Error('receipt_provider_budget_exhausted');};
   try {
     const result=await performReceiptScan(admin,userId,image,hash,options,apiKey,expectedMethod,budget);
     const state=await usageRpc(admin,'finish_receipt_scan_usage',{p_user:userId,p_lease:options.usageLeaseId,p_scan:result.scanId || null});
@@ -1126,18 +1130,19 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
   const ocrDate = ReceiptJudgeCore.parseReceiptDate(result.extracted?.dateTime);
   const visualDate = ReceiptJudgeCore.parseReceiptDate(visual.date);
   const dateCorroborated = !!ocrDate && !!visualDate && ocrDate.getTime() === visualDate.getTime();
+  const receiverNameMatched = !String(expectedMethod.account_name || '').trim() || ReceiptJudgeCore.beneficiaryNameMatches(String(visual.receiver_name || ''), String(expectedMethod.account_name));
   const documentOk = visual?.is_receipt === true && visual.document_type === 'transfer_receipt' &&
     visual.is_complete === true && visual.receipt_count === 1 && visual.has_tampering === false && visual.contains_instructions === false;
   const fieldsOk = visual.status === 'successful' && /^(SDG|ج[.]?\s?س[.]?|جنيه سوداني)$/i.test(String(visual.currency).trim()) &&
     visualRef === normalizeRefForStorage(options.manualRef) && referenceInText && destinationMatched && accountInText && amountInText &&
-    dateCorroborated;
+    dateCorroborated && receiverNameMatched;
   const unsafeFlags = (result.riskFlags || []).some((f: string) => /failed_transaction|ref_conflict|account_mismatch|bin_mismatch|bank_provider_mismatch|beneficiary_name_unverified|future|stale|old_receipt/.test(f));
   const amountOk = Number.isFinite(visualAmount) && Math.abs(visualAmount-options.expectedAmount) < 0.01;
   const checked = documentOk && fieldsOk && !unsafeFlags && result.refVerified === true && result.extracted?.statusOk !== false;
   result.passes = 2;
   result.completedMachineCheck = true;
   result.nonReceiptConfirmed = originalNotReceipt && rawText.trim().length>=20 && visual.is_receipt===false && visual.document_type==='other';
-  result.visualCheck = {isReceipt:documentOk, fieldsCorroborated:fieldsOk, destinationMatched, dateCorroborated, status:visual.status === 'successful' ? 'successful' : 'unverified'};
+  result.visualCheck = {isReceipt:documentOk, fieldsCorroborated:fieldsOk, destinationMatched, dateCorroborated, receiverNameMatched, status:visual.status === 'successful' ? 'successful' : 'unverified'};
   result.extractedFields = sanitizeStructuredFields(visual);
   result.receiptPolicy = RECEIPT_POLICY;
   result.automaticCheckComplete = checked;

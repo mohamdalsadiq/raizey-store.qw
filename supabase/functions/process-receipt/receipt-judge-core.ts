@@ -64,7 +64,7 @@ const ReceiptJudgeCore = (() => {
     {
       key: 'ocash',
       name: 'أوكاش (بنك أم درمان الوطني)',
-      brand: ['اوكاش', 'او كاش', 'o cash', 'o-cash', 'ocash', 'لكل الناس',
+      brand: ['اوكاش', 'او كاش', 'اووكاش', 'اوو كاش', 'اوو-كاش', 'o cash', 'o-cash', 'ocash', 'لكل الناس',
               'بنك ام درمان', 'بنك ام درمان الوطني', 'omdurman national bank', 'onb'],
       labels: [
         'تفاصيل الحركه', 'رقم الحركه', 'تاريخ الحركه', 'نوع الحركه', 'قيمه الحركه',
@@ -82,7 +82,7 @@ const ReceiptJudgeCore = (() => {
     {
       key: 'fawry',
       name: 'فوري',
-      brand: ['فوري', 'fawry', 'fawri'],
+      brand: ['فوري', 'فوري+', 'fawry', 'fawry sd', 'fawry+', 'fawri'],
       labels: [
         'الرقم المرجعي', 'اسم المستفيد', 'الى البطاقه رقم', 'من الحساب',
         'اسم البنك', 'المبلغ', 'رقم العمليه', 'رقم الهاتف', 'التاريخ', 'التعليق',
@@ -173,7 +173,8 @@ const ReceiptJudgeCore = (() => {
     'failed', 'failure', 'declined', 'rejected', 'unsuccessful', 'not successful',
     'cancelled', 'canceled', 'reversed', 'refunded', 'insufficient balance',
     'insufficient funds', 'error occurred', 'not completed', 'incomplete',
-    'timed out', 'expired'
+    'timed out', 'expired', 'pending', 'in progress', 'processing',
+    'قيد المعالجه', 'بانتظار', 'لم يتم التحويل'
   ];
 
   // تسميات "مبلغ العملية" — الأقوى في المطابقة
@@ -202,7 +203,8 @@ const ReceiptJudgeCore = (() => {
     'transaction no', 'transaction number', 'transaction id', 'transaction ref',
     'reference number', 'reference no', 'reference id', 'reference',
     'trans no', 'trx no', 'txn no', 'txn id', 'receipt no', 'voucher no',
-    'operation no', 'op no', 'ref no', 'ref'
+    'operation no', 'op no', 'ref no', 'ref', 'معرف العمليه', 'معرف المعامله',
+    'transaction reference number', 'transaction reference', 'رقم المرجع المصرفي'
   ];
 
   // ═══════════════════════════════════════════════════════════════════
@@ -226,6 +228,7 @@ const ReceiptJudgeCore = (() => {
       .replace(/ؤ/g, 'و')
       .replace(/\u066C/g, ',')                   // فاصلة الآلاف العربية
       .replace(/\u066B/g, '.')                   // الفاصلة العشرية العربية
+      .replace(/[\u2010-\u2015]/g, '-')
       .replace(/[\u060C;؛]/g, ' ')
       .replace(/[|_\u200f\u200e\u202a-\u202e]/g, ' ')
       .replace(/[ \t\u00a0]+/g, ' ')
@@ -646,7 +649,12 @@ const ReceiptJudgeCore = (() => {
     // ملاحظة: النص المدخل هنا مُطبَّع مسبقاً (normalizeText): "إلى/الى" ← "الي"،
     // و"ة" ← "ه". الأنماط أدناه مكتوبة بالصيغة المُطبَّعة عمداً.
     const from = text.match(/(?:من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
-    const to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|الحساب\s*المحلي|to\s*account|beneficiary\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
+    let to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|الحساب\s*المحلي|حساب\s*المستفيد|حساب\s*المستلم|to\s*account|beneficiary\s*account|receiver\s*account|recipient\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,42})/);
+    // In O-Cash interbank bill-payment flows, a service record can be a BBAN.
+    // The generic record label alone is never treated as the destination.
+    if (!to && /التحويل\s*الي\s*بنك\s*داخل\s*السودان/.test(text)) {
+      to = text.match(/رقم\s*السجل[^0-9]{0,18}([0-9 -]{14,24})/);
+    }
     const phone = text.match(/\b(249\d{9}|0\d{9})\b/);
     return {
       from: from ? digitsOnly(from[1]) : null,
@@ -918,8 +926,13 @@ const ReceiptJudgeCore = (() => {
         result.extracted.beneficiaryNameMatched = nameOk;
       }
       const bankKey = String(expectedMethod.bank_key || '').trim().toLowerCase();
-      if (bankKey && provider && provider.key !== bankKey) {
-        result.riskFlags.push('bank_provider_mismatch');
+      const bankFamily = (key: string) => key === 'faisal' ? 'fawry' : key;
+      if (bankKey && provider && bankFamily(provider.key) !== bankFamily(bankKey)) {
+        const interbank = /التحويل\s*الي\s*بنك\s*داخل\s*السودان|(?:التحويل|تحويل)\s*(?:الي|ل)\s*بنك\s*اخر|interbank|other\s*bank\s*transfer|transfer\s*to\s*(?:an?\s*)?other\s*bank/.test(joined);
+        const fullAlias = toAcct.length === 14 && (bankFamily(bankKey) !== 'bankak' || toAcct.startsWith('04')) && String(expectedMethod.bin_prefixes || '').split(/[,;\r\n]+/).map(digitsOnly).includes(toAcct);
+        const confirmedDestination = interbank && fullAlias && holderName.length >= 3 && result.extracted.beneficiaryNameMatched === true;
+        if (!confirmedDestination) result.riskFlags.push('bank_provider_mismatch');
+        result.extracted.crossBankRecipientVerified = confirmedDestination;
       }
     }
 
@@ -1133,7 +1146,7 @@ const ReceiptJudgeCore = (() => {
     latinizeDigits, normalizeText, normalizeRef, digitsOnly, fixOcrDigits,
     countKeywordHits, hasAny, levenshtein, detectLanguage,
     detectProvider, toLines, parseAmountToken, labelHitAt,
-    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts, allowedReceiptAccounts,
+    extractAmounts, extractTxRef, extractDateTime, parseReceiptDate, extractAccounts, allowedReceiptAccounts, beneficiaryNameMatches,
     amountVariants, matchAmount, matchRef, buildContext, judge, blankResult
   };
 })();

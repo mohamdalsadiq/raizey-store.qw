@@ -18,6 +18,7 @@
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
   const EDGE_TIMEOUT_MS = 160000;
+  const QUEUE_WAIT_MS = 14 * 60 * 1000;
 
   // Shared, indeterminate feedback. No invented percentage or completion time.
   // Caller guards own the scan; this helper only locks controls and renders UI.
@@ -154,12 +155,19 @@
     if (!endpoint.startsWith('https://')) throw new Error('supabase_endpoint_missing');
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS));
+    const processingMs = Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS);
+    const queueMs = opts.serverTimeoutMs ? processingMs : QUEUE_WAIT_MS;
+    let timer;
+    const arm = ms => { clearTimeout(timer); timer = setTimeout(() => controller.abort(), Math.max(1,ms)); };
+    arm(processingMs);
     const headers = {'Content-Type':'application/json','Authorization':`Bearer ${token}`,
       ...(root.SUPABASE_ANON_KEY ? {apikey:root.SUPABASE_ANON_KEY} : {})};
     const body={imageBase64,mimeType:compressed.mimeType || file.type || 'image/jpeg',
       expectedAmount:opts.expectedAmount,manualRef:opts.manualRef,expectedAccount:opts.expectedAccount,expectedMethodId:opts.expectedMethodId || null};
     const send=async(url,payload)=>{
+      // A queued page can outlive its original access token; use the SDK's
+      // current session on every request without exposing it to the UI.
+      headers.Authorization=`Bearer ${await getAccessToken()}`;
       const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload),signal:controller.signal});
       let data=null;try{data=await response.json();}catch(_){}
       if(response.status===401 || response.status===403) throw new Error('auth_required');
@@ -175,13 +183,14 @@
     try {
       let data=await send(endpoint,body);
       const queuedAt=Date.now();
-      while(data.queue && Date.now()-queuedAt<45000){
+      while(data.queue && Date.now()-queuedAt<queueMs){
+        arm(queueMs-(Date.now()-queuedAt));
         const queue=data.queue;
         if(!/^[0-9a-f-]{36}$/i.test(String(queue.ticketId || ''))) throw new Error('invalid_queue_ticket');
         if(typeof opts.onStatus==='function')opts.onStatus(`الإيصال في انتظار الدور — موضعك: ${Number(queue.position)||1}.`);
         await pause(Math.min(5000,Math.max(1000,Number(queue.retryAfter||3)*1000)));
         const polled=await send(endpoint+'?operation=poll',{ticketId:queue.ticketId});
-        data=polled.queue?.canRetry ? await send(endpoint,body) : polled;
+        if(polled.queue?.canRetry){arm(processingMs);data=await send(endpoint,body);}else data=polled;
       }
       if(data.queue) data.message='الفحص ما زال في انتظار الدور. أعد تجهيز نفس الإيصال بعد قليل؛ لم تُستهلك حصة فحص مكتمل ولم يُنشأ طلب.';
       if ((data.decision === 'accept' || data.decision === 'review_admin') && data.submissionAllowed !== true) throw new Error('server_scan_contract_invalid');

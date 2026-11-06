@@ -42,10 +42,11 @@ class FileReaderStub {
 }
 
 /** ينشئ سياق vm جديداً مع fetch مراقَب وسياق جلسة قابل للتحكم. */
-function loadPipeline({ fetchImpl, session = { access_token: JWT } } = {}) {
+function loadPipeline({ fetchImpl, session = { access_token: JWT }, clock } = {}) {
   const requests = [];
   const context = {
     Blob,
+    ...(clock ? {Date:class extends Date {static now(){return clock.value;}}} : {}),
     FileReader: FileReaderStub,
     Image: class ImageStub {},
     URL: { createObjectURL: () => "blob:stub", revokeObjectURL: () => {} },
@@ -54,10 +55,10 @@ function loadPipeline({ fetchImpl, session = { access_token: JWT } } = {}) {
     clearTimeout,
     console,
     fetch: async (url, init) => {
-      requests.push({ url: String(url), init });
+      requests.push({ url: String(url), init:{...init,headers:{...init.headers}} });
       return fetchImpl(String(url), init);
     },
-    supabaseClient: { auth: { getSession: async () => ({ data: { session }, error: null }) } },
+    supabaseClient: { auth: { getSession: async () => ({ data: { session:typeof session==='function'?session():session }, error: null }) } },
     SUPABASE_URL,
     SUPABASE_ANON_KEY: ANON_KEY,
   };
@@ -187,6 +188,20 @@ console.log("\n── انتظار الضغط والحصة ──");
   check('suspension never authorizes payment',frozen.submissionAllowed,false);
   const aborted=await analyzeWith(async()=>jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,retryAfter:1}}),{serverTimeoutMs:40});
   check('cancel during queue wait is safe',aborted.riskFlags[0],'server_ocr_timeout');
+}
+
+console.log("\n── استمرار الصف بعد نافذة المعدل وتجدد الجلسة ──");
+{
+ const clock={value:0},ticket='ae550000-0000-4000-8000-000000000003';let polls=0;
+ const {pipeline,requests}=loadPipeline({clock,session:()=>({access_token:clock.value>60000?'rotated-test-jwt':JWT}),fetchImpl:async(url)=>{
+  if(url.includes('operation=poll')){polls++;clock.value+=61000;return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1,canRetry:polls===2}});}
+  if(polls<2)return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1}});
+  return jsonResponse(200,{ok:true,decision:'accept',submissionAllowed:true,scanId:'after-window',receiptHash:'a'.repeat(64),receiptPath:'owner/verified/test.png',attachmentId:'a',receiptPolicy:'mandatory-visual-v1',automaticCheckComplete:true});
+ }});
+ const result=await pipeline.analyze(pngFile(),{});
+ check('queue automatically resumes beyond former 45 second cutoff',result.scanId,'after-window');
+ check('rolling-minute wait preserves the full image for resubmission',requests[0].init.body,requests.at(-1).init.body);
+ check('resumed scan uses current session token',requests.at(-1).init.headers.Authorization,'Bearer rotated-test-jwt');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

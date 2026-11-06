@@ -188,5 +188,65 @@ await run(fs.readFileSync('supabase/migrations/20261106094035_receipt_method_sna
  check('normal two-stage day meters 2000 provider calls',(await value('SELECT calls AS v FROM private.receipt_scan_provider_days'))===2000);
  check('all 200 daily quotas complete without overcharging',(await value(`SELECT count(*)::integer AS v FROM (SELECT user_id FROM private.receipt_scan_jobs WHERE status='completed' GROUP BY user_id HAVING count(*)=5) x`))===200);
  check('1001st image is denied by global budget',(await begin(uid(201),12001)).reason==='receipt_store_daily_limit');
+
+ // Observed free-project budget, distinct from the synthetic high-capacity run.
+ await run(`TRUNCATE private.receipt_scan_jobs,private.receipt_scan_violations,private.receipt_scan_provider_days,private.receipt_scan_accounts CASCADE;`);
+ const providerPolicy=fs.readFileSync('supabase/migrations/20261106111316_receipt_provider_capacity.sql','utf8');
+ await run(providerPolicy);await run(providerPolicy);
+ check('provider defaults reflect observed 15 RPM / 500 RPD',(await value(`SELECT provider_rpm_limit=15 AND provider_daily_limit=500 AND global_daily_limit=250 AS v FROM private.receipt_scan_policy`)));
+ await actor(uid(1));
+ for(const sql of ['SELECT * FROM private.receipt_scan_provider_window',`SELECT public.meter_receipt_scan_usage('${uid(1)}','${uid(2)}','visual')`])check('customer cannot bypass provider guard',(await value('SELECT pg_temp.try_sql($1) AS v',[sql])).includes('permission denied'));
+ await run('RESET ROLE');
+ const burst=await Promise.all(Array.from({length:50},(_,i)=>begin(uid(i+1),30000+i)));
+ check('free-tier burst admits only seven two-stage scans',burst.filter(x=>x.allowed).length===7);
+ check('remaining 43 scans receive queue tickets',burst.filter(x=>x.reason==='receipt_queued').length===43);
+ check('two model stages reserved per active scan',(await value(`SELECT sum(provider_reserved)::integer AS v FROM private.receipt_scan_jobs WHERE status='active'`))===14);
+ const phase=(u,l,p)=>rpc('meter_receipt_scan_usage',[u,l,p]);
+ check('first OCR call uses its reservation',await phase(uid(1),burst[0].leaseId,'ocr'));
+ check('one OCR retry fits spare request capacity',await phase(uid(1),burst[0].leaseId,'ocr'));
+ check('second retry cannot consume other customers reservations',!(await phase(uid(1),burst[0].leaseId,'ocr')));
+ check('visual call remains reserved after OCR retry',await phase(uid(1),burst[0].leaseId,'visual'));
+ for(let i=0;i<7;i++){
+  if(i>0){assert.ok(await phase(uid(i+1),burst[i].leaseId,'ocr'));assert.ok(await phase(uid(i+1),burst[i].leaseId,'visual'));}
+  const proof=await scan(uid(i+1),burst[i].leaseId,30000+i);await finish(uid(i+1),burst[i].leaseId,proof.sid);
+ }
+ check('rolling minute never exceeds fifteen actual model calls',(await value('SELECT count(*)::integer AS v FROM private.receipt_scan_provider_window'))===15);
+ check('idle concurrency alone does not release rate-limited queue',!(await rpc('poll_receipt_scan_usage',[uid(8),burst[7].ticketId])).canRetry);
+ await run(`UPDATE private.receipt_scan_provider_window SET called_at=called_at-interval '61 seconds'`);
+ check('head queue ticket becomes eligible after rolling minute',(await rpc('poll_receipt_scan_usage',[uid(8),burst[7].ticketId])).canRetry);
+ check('queue retry does not meter a model call',(await value('SELECT calls AS v FROM private.receipt_scan_provider_days'))===15);
+ const head=await begin(uid(8),30007);check('queue head gets available provider capacity',head.allowed);
+ await finish(uid(8),head.leaseId);
+ await run(`TRUNCATE private.receipt_scan_jobs,private.receipt_scan_violations,private.receipt_scan_provider_window,private.receipt_scan_provider_days,private.receipt_scan_accounts CASCADE;UPDATE private.receipt_scan_policy SET provider_tpm_limit=32000;`);
+ const one=await begin(uid(1),31001),two=await begin(uid(2),31002);
+ check('TPM reservation limits admission independently of RPM',one.allowed && two.reason==='receipt_queued');
+ check('invalid phase cannot consume provider budget',!(await phase(uid(1),one.leaseId,'invented')));
+ check('wrong owner cannot meter another lease',!(await phase(uid(2),one.leaseId,'ocr')));
+ assert.ok(await phase(uid(1),one.leaseId,'ocr'));
+ check('TPM guard preserves visual capacity instead of permitting OCR retry',!(await phase(uid(1),one.leaseId,'ocr')));
+ assert.ok(await phase(uid(1),one.leaseId,'visual'));await finish(uid(1),one.leaseId);
+ check('minute token reservations capped at configured budget',(await value('SELECT sum(token_reserve)::integer AS v FROM private.receipt_scan_provider_window'))===32000);
+ await run(`TRUNCATE private.receipt_scan_jobs,private.receipt_scan_violations,private.receipt_scan_provider_window,private.receipt_scan_provider_days,private.receipt_scan_accounts CASCADE;UPDATE private.receipt_scan_policy SET provider_tpm_limit=250000;INSERT INTO private.receipt_scan_provider_days VALUES((clock_timestamp() AT TIME ZONE 'America/Los_Angeles')::date,498);`);
+ const lastPair=await begin(uid(1),32001);assert.ok(lastPair.allowed);
+ assert.ok(await phase(uid(1),lastPair.leaseId,'ocr'));
+ check('a lone remaining daily request cannot start a two-stage image',(await begin(uid(2),32002)).reason==='receipt_provider_daily_limit');
+ check('last visual call is protected by daily reservation',await phase(uid(1),lastPair.leaseId,'visual'));
+ check('Google daily cap is not exceeded',(await value('SELECT calls AS v FROM private.receipt_scan_provider_days'))===500);
+ await finish(uid(1),lastPair.leaseId);
+ const reset=await state(uid(1));
+ check('provider reset uses Pacific including daylight saving',reset.providerTimezone==='America/Los_Angeles' && await value(`SELECT (public.get_receipt_scan_usage('${uid(1)}')->>'providerResetAt')::timestamptz=((clock_timestamp() AT TIME ZONE 'America/Los_Angeles')::date+1)::timestamp AT TIME ZONE 'America/Los_Angeles' AS v`));
+ check('provider window has RLS',(await value(`SELECT relrowsecurity AS v FROM pg_class WHERE oid='private.receipt_scan_provider_window'::regclass`)));
+ // Two hundred orders with one image each: 400 real-call reservations under
+ // 500 RPD. Aging only test timestamps simulates spacing across the day.
+ await run(`TRUNCATE private.receipt_scan_jobs,private.receipt_scan_violations,private.receipt_scan_provider_window,private.receipt_scan_provider_days,private.receipt_scan_accounts CASCADE;`);
+ let dayPassed=true;
+ for(let i=0;i<200;i++){
+  await run(`UPDATE private.receipt_scan_provider_window SET called_at=called_at-interval '61 seconds'`);
+  const customer=uid(i+1),n=33000+i,j=await begin(customer,n);
+  dayPassed&&=j.allowed===true;
+  assert.ok(await phase(customer,j.leaseId,'ocr'));assert.ok(await phase(customer,j.leaseId,'visual'));
+  const proof=await scan(customer,j.leaseId,n);await finish(customer,j.leaseId,proof.sid);
+ }
+ check('200 spaced two-stage scans fit observed daily quota',dayPassed && (await value('SELECT calls AS v FROM private.receipt_scan_provider_days'))===400);
  console.log(`${checks} receipt usage database checks passed; no external model calls.`);
 }finally{await db.close();}

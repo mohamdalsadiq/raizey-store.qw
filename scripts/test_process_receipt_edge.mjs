@@ -96,7 +96,7 @@ globalThis.fetch = async (...args) => {
     const rtl=text.includes('121004123456789');
     return httpResponse(200,geminiTextResponse(JSON.stringify({
       is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,
-      amount:rtl?'48500':'125000',currency:'SDG',receiver_account:rtl?'1234567890':'2050123456789012',transaction_id:rtl?'121004123456789':'FT250719123456',date:new Date().toISOString().slice(0,10),status:'successful'
+      receiver_name:'محمد الصادق',amount:rtl?'48500':'125000',currency:'SDG',receiver_account:rtl?'1234567890':'2050123456789012',transaction_id:rtl?'121004123456789':'FT250719123456',date:new Date().toISOString().slice(0,10),status:'successful'
     })));
   }
   return response;
@@ -233,7 +233,7 @@ async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paym
   if(reusableScan?.ocr_data){
     const method=paymentMethod?{id:String(paymentMethod.id),name:paymentMethod.name??null,account_name:paymentMethod.account_name??null,account_number:paymentMethod.account_number??null,bin_prefixes:paymentMethod.bin_prefixes??null,bank_key:paymentMethod.bank_key??null}:null;
     const hash=await crypto.subtle.digest('SHA-256',Buffer.from(body.imageBase64,'base64')).then(b=>Buffer.from(b).toString('hex'));
-    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-exact-calendar-v2'}))).then(b=>Buffer.from(b).toString('hex'))}};
+    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-banks-capacity-v3'}))).then(b=>Buffer.from(b).toString('hex'))}};
   }
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
@@ -745,7 +745,7 @@ console.log("\n── الحساب الكامل وعلامة نجاح الإشع
  const full='0873012345670001';
  const method={id:baseBody.expectedMethodId,name:'بنكك',account_number:'1234567',account_name:'محمد الصادق',bin_prefixes:full,bank_key:'bankak'};
  const text=validBankakText().replace('تمت العملية بنجاح\n','').replace('2050123456789012',full);
- const visual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:full,transaction_id:baseBody.manualRef,date:new Date().toISOString().slice(0,10),status:'successful'};
+ const visual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:full,receiver_name:'محمد الصادق',transaction_id:baseBody.manualRef,date:new Date().toISOString().slice(0,10),status:'successful'};
  const scan=(changes={})=>runScan({body:baseBody,paymentMethod:method,visual,env:{GEMINI_MODEL_ORDER:'gemini-ok'},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text)),...changes});
  const accepted=await scan();
  check('configured full account and visible success symbol accepted',accepted.json.submissionAllowed,true);
@@ -761,6 +761,29 @@ console.log("\n── الحساب الكامل وعلامة نجاح الإشع
  check('prefix-padded registered account is denied',padded.json.submissionAllowed,false);
  const short=await scan({visual:{...visual,receiver_account:'1234567'},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text.replace(full,'1234567')))});
  check('exact primary account remains accepted',short.json.submissionAllowed,true);
+}
+
+console.log("\n── قراءة أوكاش وفوري والتحويل بين البنوك — بدائل نموذج مراقبة ──");
+{
+ const full='04012345670001',ref='20261106123456',date=new Date().toISOString().slice(0,10);
+ const method={id:baseBody.expectedMethodId,name:'بنكك',account_number:'1234567',account_name:'محمد الصادق',bin_prefixes:full,bank_key:'bankak'};
+ const text=`اووكاش\nبنك أم درمان الوطني\nتفاصيل الحركة\nحركة ناجحة\nرقم الحركة: ${ref}\nالتحويل إلى بنك داخل السودان\nالحساب المحلي: ${full}\nاسم المشترك: محمد الصادق\nقيمة الحركة: 125,000.00 SDG\nتاريخ الحركة: ${date}`;
+ const visual={is_receipt:true,document_type:'transfer_receipt',is_complete:true,receipt_count:1,has_tampering:false,contains_instructions:false,amount:'125000',currency:'SDG',receiver_account:full,receiver_name:'محمد الصادق',transaction_id:ref,date,status:'successful'};
+ const run=(change={})=>runScan({body:{...baseBody,manualRef:ref},paymentMethod:method,visual,env:{GEMINI_MODEL_ORDER:'gemini-ok'},fetchHandler:async()=>httpResponse(200,geminiTextResponse(text)),...change});
+ const good=await run();check('registered O-Cash to Bankak BBAN can be submitted',good.json.submissionAllowed,true);
+ const record=await run({fetchHandler:async()=>httpResponse(200,geminiTextResponse(text.replace('الحساب المحلي:','رقم السجل:')))});
+ check('record-as-BBAN requires explicit interbank flow',record.json.submissionAllowed,true);
+ const wrongName=await run({visual:{...visual,receiver_name:'مستلم مختلف'}});
+ check('sender name elsewhere cannot replace visual recipient name',wrongName.json.submissionAllowed,false);
+ const unregistered=await run({paymentMethod:{...method,bin_prefixes:'04099999990001'}});
+ check('cross-bank BBAN must be explicitly registered',unregistered.json.submissionAllowed,false);
+ const noFlow=await run({fetchHandler:async()=>httpResponse(200,geminiTextResponse(text.replace('التحويل إلى بنك داخل السودان','خدمة دفع الفواتير')))});
+ check('other bank identity requires explicit transfer flow',noFlow.json.submissionAllowed,false);
+ const fawryText=text.replace('اووكاش','فوري+').replace('بنك أم درمان الوطني','بنك فيصل الاسلامي').replace('رقم الحركة:','الرقم المرجعي:').replace('الحساب المحلي:','حساب المستفيد:').replace('قيمة الحركة:','المبلغ:').replace('حركة ناجحة','تم التحويل بنجاح');
+ const fawry=await run({fetchHandler:async()=>httpResponse(200,geminiTextResponse(fawryText))});
+ check('Fawry interbank destination is matched independently of sender bank',fawry.json.submissionAllowed,true);
+ const start=await run({visual:{...visual,is_receipt:false,document_type:'other',is_complete:false,status:'unknown'},fetchHandler:async()=>httpResponse(200,geminiTextResponse('فوري\nرقم الحساب 1234567\nعرض الرصيد\nكشف الحساب\nتفاصيل الحساب\nإنشاء رمز QR\nالتحاويل\nإعدادات'))});
+ check('official bank home-screen labels are insufficient evidence',start.json.submissionAllowed,false);
 }
 
 console.log("\n── حالات عدائية وفشل مغلق ──");
@@ -805,6 +828,10 @@ console.log("\n── الحصة والتجميد وقياس كل استدعاء
  check('frozen user denied before AI',fetchedUrls.length,0);check('frozen reason',frozen.json.riskFlags[0],'receipt_feature_suspended');
  const result=await runScan({body:baseBody,fetchHandler:baseHandler});
  check('each actual generation is metered',result.state.rpcs.filter(r=>r.name==='meter_receipt_scan_usage').length,fetchedUrls.filter(u=>u.includes(':generateContent')).length);
+ check('provider reservation distinguishes OCR and visual phases',result.state.rpcs.filter(r=>r.name==='meter_receipt_scan_usage').map(r=>r.args.p_stage).join(','),'ocr,visual');
+ const capped=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{meter_receipt_scan_usage:{data:false,error:null}}});
+ check('exhausted shared budget makes no generation calls',fetchedUrls.filter(u=>u.includes(':generateContent')).length,0);
+ check('exhausted shared budget stops model fallback immediately',capped.state.rpcs.filter(r=>r.name==='meter_receipt_scan_usage').length,1);
  check('server scan stores its quota lease',result.state.inserted[0].payload.ocr_data.usage_lease_id,'ae550000-0000-4000-8000-000000000001');
  check('completed scan marked for quota',result.state.inserted[0].payload.ocr_data.completed_machine_check,true);
  const noLease=await runScan({body:baseBody,fetchHandler:baseHandler,rpcOverrides:{finish_receipt_scan_usage:{data:{leaseCompleted:false},error:null}}});
