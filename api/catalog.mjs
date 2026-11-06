@@ -97,4 +97,6 @@ export async function handleCatalog(request, read = readPublic) {
     return errorPage(503,'تعذر تحميل الكتالوج؛ حاول مجدداً');
   }
 }
-export default {fetch:handleCatalog};
+// The platform passes its own context as the second argument. Keep the test
+// reader injection inside handleCatalog rather than treating context as a reader.
+export default {fetch: request => handleCatalog(request)};

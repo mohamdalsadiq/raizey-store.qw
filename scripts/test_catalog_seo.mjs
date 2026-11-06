@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {handleCatalog,renderCatalog,readPublic,ORIGIN} from '../api/catalog.mjs';
+import handler from '../api/catalog.mjs';
 const id='5ed73edb-86df-4acf-afb0-fd01fb3a827e';
 const row={id,name:'منتج <آمن>',description:'وصف & تفاصيل',image_url:'javascript:alert(1)'};
 const read = async table => table==='products'?[row]:[{id,name:'قسم'}];
@@ -25,4 +26,9 @@ await readPublic('products',{select:'id'},async (url,options)=>{
   return Response.json([]);
 });
 assert.ok(!renderCatalog('product',{...row,name:'</script><img onerror=alert(1)>'}).includes('</script><img onerror'));
+const originalFetch=globalThis.fetch;
+try {
+  globalThis.fetch=async()=>Response.json([row]);
+  assert.equal((await handler.fetch(req('kind=sitemap'),{waitUntil:()=>{}})).status,200,'platform context must not replace the public reader');
+} finally {globalThis.fetch=originalFetch;}
 console.log('Catalog SEO: raw HTML, XSS, canonical, JSON-LD, 404/503, HEAD, sitemap and anonymous cache isolation passed.');
