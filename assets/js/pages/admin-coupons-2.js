@@ -61,12 +61,18 @@ function render() {
         </div>
       </div>
       <div class="manage-item-actions">
-        <button class="icon-action-btn" data-action="edit" data-id="${c.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
-        <button class="icon-action-btn" data-action="delete" data-id="${c.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
+        <button type="button" class="icon-action-btn" data-action="toggle" data-id="${c.id}" aria-label="${c.is_active ? 'تعطيل الكوبون' : 'تفعيل الكوبون'}">${c.is_active ? 'تعطيل' : 'تفعيل'}</button>
+        <button class="icon-action-btn" aria-label="تعديل الكوبون" data-action="edit" data-id="${c.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-pen"></use></svg></button>
+        <button class="icon-action-btn" aria-label="حذف الكوبون" data-action="delete" data-id="${c.id}"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-trash-2"></use></svg></button>
       </div>
     </div>
   `).join('');
 
+  container.querySelectorAll('[data-action="toggle"]').forEach(btn => btn.addEventListener('click', async () => {
+    const coupon = coupons.find(c => c.id === btn.dataset.id);
+    const {error} = await supabaseClient.from('coupons').update({is_active: !coupon.is_active}).eq('id',coupon.id);
+    if (error) { alert('تعذّر تغيير حالة الكوبون.'); return; } await loadCoupons();
+  }));
   container.querySelectorAll('[data-action="edit"]').forEach(btn => {
     btn.addEventListener('click', () => openForm(btn.dataset.id));
   });
@@ -84,6 +90,7 @@ function openForm(id) {
     document.getElementById('formModalTitle').textContent = 'تعديل الكوبون';
     codeInput.value = c.code;
     discountInput.value = c.discount_percent;
+    document.getElementById('minOrderInput').value = c.min_order_sdg || 0;
     maxUsesInput.value = c.max_uses || '';
     expiresInput.value = c.expires_at ? c.expires_at.slice(0, 10) : '';
     activeInput.value = String(c.is_active);
@@ -91,6 +98,7 @@ function openForm(id) {
     document.getElementById('formModalTitle').textContent = 'كوبون جديد';
     codeInput.value = '';
     discountInput.value = '';
+    document.getElementById('minOrderInput').value = 0;
     maxUsesInput.value = '';
     expiresInput.value = '';
     activeInput.value = 'true';
@@ -120,7 +128,7 @@ generateCodeBtn.addEventListener('click', () => {
 async function saveCoupon() {
   const code = codeInput.value.trim().toUpperCase();
   const discount = parseFloat(discountInput.value);
-  const maxUses = maxUsesInput.value ? parseInt(maxUsesInput.value) : null;
+  const maxUses = maxUsesInput.value ? Number(maxUsesInput.value) : null;
   const expiresAt = expiresInput.value ? new Date(expiresInput.value).toISOString() : null;
 
   if (!code) { formError.textContent = 'أدخل كود الكوبون'; return; }
@@ -128,9 +136,12 @@ async function saveCoupon() {
     formError.textContent = 'كود الكوبون يجب أن يكون 10 خانات أبجدية-رقمية على الأقل';
     return;
   }
-  if (!discount || discount <= 0 || discount > 100) { formError.textContent = 'أدخل نسبة خصم صحيحة (1-100)'; return; }
+  if (!Number.isFinite(discount) || discount <= 0 || discount > 95) { formError.textContent = 'أدخل نسبة خصم صحيحة (أكبر من 0 وحتى 95)'; return; }
 
+  const minOrder = Number(document.getElementById('minOrderInput').value || 0);
+  if (!Number.isFinite(minOrder) || minOrder < 0 || (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1))) { formError.textContent = 'راجع الحد الأدنى والعدد الأقصى للاستخدام.'; return; }
   const payload = {
+    min_order_sdg: minOrder,
     code,
     discount_percent: discount,
     max_uses: maxUses,
@@ -152,7 +163,7 @@ async function saveCoupon() {
 }
 
 async function deleteCoupon(id) {
-  if (!confirm('متأكد عايز تحذف الكوبون ده؟')) return;
+  if (!confirm('حذف الكوبون نهائياً؟ يمكنك تعطيله مع الاحتفاظ بسجل استخدامه بدلاً من الحذف.')) return;
   const { error } = await supabaseClient.from('coupons').delete().eq('id', id);
   if (error) { alert('تعذّر حذف الكوبون: ' + getFriendlyError(error)); return; }
   await loadCoupons();

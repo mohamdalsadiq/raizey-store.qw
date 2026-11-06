@@ -194,18 +194,7 @@ function render() {
 
   // روابط الإيصالات محفوظة كـ Signed URL بمدة محدودة — نولّد رابطاً جديداً
   // عند الفتح حتى لا يختفي الإيصال بعد انتهاء صلاحية الرابط القديم
-  container.querySelectorAll('.receipt-link').forEach(link => {
-    link.addEventListener('click', async (e) => {
-      const path = extractReceiptPath(link.dataset.receiptUrl);
-      if (!path) return; // اترك الرابط الأصلي يعمل
-      e.preventDefault();
-      const { data, error } = await supabaseClient.storage
-        .from('receipts')
-        .createSignedUrl(path, 60 * 10);
-      const fresh = (!error && data) ? sanitizeUrl(data.signedUrl) : '';
-      window.open(fresh || link.dataset.receiptUrl, '_blank', 'noopener');
-    });
-  });
+
 
   container.querySelectorAll('.mini-copy-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -229,7 +218,7 @@ function renderTopupCard(t) {
   const customerWhatsappCopy = safeDataAttr(t.profiles?.whatsapp_number || '');
   const transactionReference = escapeHtml(t.transaction_reference || '');
   const transactionReferenceCopy = safeDataAttr(t.transaction_reference || '');
-  const receiptUrl = sanitizeUrl(t.receipt_url);
+  const receiptUrl = MeemReceiptLinks.objectPath(t.receipt_url) ? t.receipt_url : '';
   const safeTopupId = safeDataAttr(t.id || '');
   const rejectionReason = escapeHtml(t.rejection_reason || '');
   const statusLabel = escapeHtml(statusLabels[t.status] || t.status || '');
@@ -273,7 +262,7 @@ function renderTopupCard(t) {
             <button type="button" class="mini-copy-btn" data-copy="${transactionReferenceCopy}">نسخ</button>
           </div>
         ` : ''}
-        ${receiptUrl ? `<div><a href="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" class="receipt-link" data-receipt-url="${escapeAttribute(receiptUrl)}" style="color: var(--mm-accent-text);">عرض الإيصال</a></div>` : ''}
+        ${receiptUrl ? `<div><a href="#" data-receipt-reference="${escapeAttribute(receiptUrl)}" target="_blank" rel="noopener" class="receipt-link" data-receipt-url="${escapeAttribute(receiptUrl)}" style="color: var(--mm-accent-text);">عرض الإيصال</a></div>` : ''}
       </div>
       ${t.status === 'rejected' && t.rejection_reason ? `<div class="order-rejection">سبب الرفض: ${rejectionReason}</div>` : ''}
       ${actions}
@@ -296,43 +285,13 @@ async function handleAction(action, topupId) {
     // RPC ذرّية وآمنة: تقفل صف الشحنة، تتأكد إنها لسه pending، تتحقق خادمياً
     // من مطابقة المبلغ مع الإيصال (P1-FIN-001)، تضيف الرصيد، وتكتب سجل
     // الحركة والإشعار — كل ذلك في السيرفر بمعاملة واحدة
-    const detectedAmt = topup.payment_receipts ? topup.payment_receipts.amount_detected : null;
-    const isMismatch = detectedAmt !== null && detectedAmt !== undefined &&
-      Math.abs(Number(detectedAmt) - Number(topup.amount)) > Math.max(Number(detectedAmt) * 0.01, 2);
-    let overrideReason = null;
-    if (isMismatch) {
-      const input = window.prompt(
-        `تنبيه: المبلغ المطلوب (${formatSDG(topup.amount)} ج.س) لا يطابق المبلغ المكتشف في الإيصال (${formatSDG(detectedAmt)} ج.س).\n\nللمتابعة اكتب سبب التجاوز (سيُسجَّل في سجل التدقيق)، أو اضغط إلغاء للرجوع.`
-      );
-      if (input === null) {
-        actionInFlight = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
-        return;
-      }
-      overrideReason = input.trim();
-      if (!overrideReason) {
-        showToast('يجب كتابة سبب التجاوز للمتابعة.');
-        actionInFlight = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
-        return;
-      }
-    }
-    if (!topup.receipt_id) {
-      const input = window.prompt(
-        'تنبيه: طلب الشحن هذا بلا إيصال مرتبط، ولا يوجد أي دليل دفع خادمي للمبلغ.\n\nلا يمكن شحن الرصيد إلا بسبب تجاوز مكتوب يُسجَّل في سجل التدقيق. اكتب السبب للمتابعة، أو اضغط إلغاء.'
-      );
-      if (input === null) {
-        actionInFlight = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
-        return;
-      }
-      overrideReason = (input || '').trim();
-      if (!overrideReason) {
-        showToast('يجب كتابة سبب التجاوز للمتابعة.', 'error');
-        actionInFlight = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
-        return;
-      }
+    const note = window.prompt('راجع وصول التحويل في سجل الحساب البنكي، والمبلغ والمرجع والمستلم. فحص الصورة وحده لا يثبت الدفع. اكتب مرجع المراجعة وملاحظتها لاعتماد الرصيد (6 إلى 500 حرف)، أو ألغِ.');
+    const overrideReason = (note || '').trim();
+    if (note === null || overrideReason.length < 6 || overrideReason.length > 500) {
+      actionInFlight = false;
+      if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+      if (note !== null) showToast('يلزم توثيق مراجعة سجل الحساب البنكي.');
+      return;
     }
     const { error } = await supabaseClient.rpc('admin_confirm_topup', { p_topup_id: topupId, p_override_reason: overrideReason });
 

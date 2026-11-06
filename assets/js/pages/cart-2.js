@@ -48,6 +48,8 @@ function loadCartData() {
     return;
   }
 
+  if (!Array.isArray(cart)) cart = [];
+  if (cart.some(item => !item || typeof item !== 'object')) cart = cart.filter(item => item && typeof item === 'object');
   renderCart();
 }
 
@@ -72,7 +74,7 @@ function renderCart() {
     grandTotal += lineSubtotal;
 
     const metaText = Object.entries(item.field_values || {})
-      .map(([key, val]) => `${escapeHtml(key)}: <span>${escapeHtml(val)}</span>`)
+      .map(([key, val]) => `${escapeHtml(MeemStoreRules.fieldLabel(item.field_labels, key))}: <span>${escapeHtml(val)}</span>`)
       .join(' | ');
 
     return `
@@ -87,7 +89,7 @@ function renderCart() {
           <div class="cart-qty-stepper">
             <button type="button" data-qty-index="${index}" data-qty-delta="-1" aria-label="إنقاص الكمية" ${qty <= 1 ? 'disabled' : ''}>&minus;</button>
             <span class="qty-value">${qty}</span>
-            <button type="button" data-qty-index="${index}" data-qty-delta="1" aria-label="زيادة الكمية">+</button>
+            <button type="button" data-qty-index="${index}" data-qty-delta="1" aria-label="زيادة الكمية" ${qty >= MeemStoreRules.MAX_QUANTITY ? 'disabled' : ''}>+</button>
           </div>
         </div>
         <button class="remove-item-btn" data-remove-index="${index}" title="حذف العنصر">
@@ -101,7 +103,10 @@ function renderCart() {
   listContainer.querySelectorAll('[data-remove-index]').forEach(button => button.addEventListener('click', () => removeItem(Number(button.dataset.removeIndex))));
   document.getElementById('cartGrandTotal').textContent = `${safeFormatSDG(grandTotal)} ج.س`;
 
+  const quantityError = MeemStoreRules.cartError(cart);
+  document.getElementById('proceedToCheckoutBtn').textContent = quantityError || 'متابعة إلى الدفع';
   document.getElementById('proceedToCheckoutBtn').onclick = () => {
+    if (MeemStoreRules.cartError(cart)) { alert(MeemStoreRules.cartError(cart)); return; }
     // الدفع من السلة: نلغي أي شراء مباشر معلّق حتى لا يختلط الطلبان
     try { sessionStorage.removeItem('meem_direct_buy'); } catch (e) {}
     window.location.href = 'checkout-v2.html';
@@ -133,9 +138,11 @@ function changeQty(index, delta) {
   let qty = (item.quantity && item.quantity > 0) ? item.quantity : 1;
   qty += delta;
   if (qty < 1) qty = 1;
-  if (qty > 99) qty = 99;
+  if (qty > MeemStoreRules.MAX_QUANTITY) qty = MeemStoreRules.MAX_QUANTITY;
   item.quantity = qty;
   localStorage.setItem('meem_store_cart', JSON.stringify(cart));
+  if (!Array.isArray(cart)) cart = [];
+  if (cart.some(item => !item || typeof item !== 'object')) cart = cart.filter(item => item && typeof item === 'object');
   renderCart();
 }
 

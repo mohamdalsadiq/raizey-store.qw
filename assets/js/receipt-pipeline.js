@@ -17,7 +17,51 @@
   const COMPRESS_ABOVE_BYTES = 900 * 1024;
   const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
-  const EDGE_TIMEOUT_MS = 100000;
+  const EDGE_TIMEOUT_MS = 160000;
+  const QUEUE_WAIT_MS = 14 * 60 * 1000;
+
+  // Shared, indeterminate feedback. No invented percentage or completion time.
+  // Caller guards own the scan; this helper only locks controls and renders UI.
+  function beginScanActivity(status, controls) {
+    const locked = [...new Set((controls || []).filter(Boolean))].map(el => {
+      const saved = {el, disabled: typeof el.disabled === 'boolean' ? el.disabled : null,
+        aria: el.getAttribute('aria-disabled'), locked: el.classList.contains('receipt-scan-locked')};
+      if (saved.disabled !== null) el.disabled = true;
+      el.setAttribute('aria-disabled', 'true');
+      el.classList.add('receipt-scan-locked');
+      return saved;
+    });
+    const doc = root.document;
+    let copy = null, message = null, finished = false;
+    if (status && doc) {
+      const orbit = doc.createElement('span');
+      orbit.className = 'receipt-scan-orbit'; orbit.setAttribute('aria-hidden', 'true');
+      copy = doc.createElement('div'); copy.className = 'receipt-scan-copy';
+      const title = doc.createElement('strong'); title.textContent = 'جارٍ فحص إشعار التحويل';
+      message = doc.createElement('p'); message.textContent = 'نقرأ الصورة ونتحقق من بيانات التحويل. ستظهر النتيجة هنا.';
+      copy.append(title, message);
+      const track = doc.createElement('span'); track.className = 'receipt-scan-track'; track.setAttribute('aria-hidden', 'true');
+      status.replaceChildren(orbit, copy, track);
+      status.classList.add('receipt-scan-busy');
+      status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite'); status.setAttribute('aria-busy', 'true');
+    }
+    return {
+      update(text) { if (!finished && message && status.contains(copy)) message.textContent = String(text || 'جارٍ فحص الصورة…'); },
+      finish() {
+        if (finished) return;
+        finished = true;
+        for (const saved of locked) {
+          if (saved.disabled !== null) saved.el.disabled = saved.disabled;
+          if (saved.aria === null) saved.el.removeAttribute('aria-disabled'); else saved.el.setAttribute('aria-disabled', saved.aria);
+          if (!saved.locked) saved.el.classList.remove('receipt-scan-locked');
+        }
+        if (status) {
+          if (copy && status.contains(copy)) status.replaceChildren();
+          status.classList.remove('receipt-scan-busy'); status.setAttribute('aria-busy', 'false');
+        }
+      }
+    };
+  }
 
   function validateImageFile(file) {
     if (!file || !(file instanceof Blob)) throw new Error('missing_image');
@@ -102,52 +146,61 @@
   async function serverVerify(file, options, extraFile) {
     const opts = options || {};
     validateImageFile(file);
-    if (extraFile) validateImageFile(extraFile);
+    if (opts.manualOnly === true) throw new Error('automatic_check_required');
+    if (extraFile) throw new Error('use_one_complete_receipt');
     const compressed = await compressForServer(file);
     const imageBase64 = compressed.base64 || await fileToBase64(file);
-    let imageBase64Extra = null;
-    let mimeTypeExtra = null;
-    if (extraFile) {
-      const compressedExtra = await compressForServer(extraFile);
-      imageBase64Extra = compressedExtra.base64 || await fileToBase64(extraFile);
-      mimeTypeExtra = compressedExtra.mimeType || extraFile.type || 'image/jpeg';
-    }
     const token = await getAccessToken();
     const endpoint = `${String(root.SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1/process-receipt`;
     if (!endpoint.startsWith('https://')) throw new Error('supabase_endpoint_missing');
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS));
+    const processingMs = Number(opts.serverTimeoutMs || EDGE_TIMEOUT_MS);
+    const queueMs = opts.serverTimeoutMs ? processingMs : QUEUE_WAIT_MS;
+    let timer;
+    const arm = ms => { clearTimeout(timer); timer = setTimeout(() => controller.abort(), Math.max(1,ms)); };
+    arm(processingMs);
+    const headers = {'Content-Type':'application/json','Authorization':`Bearer ${token}`,
+      ...(root.SUPABASE_ANON_KEY ? {apikey:root.SUPABASE_ANON_KEY} : {})};
+    const body={imageBase64,mimeType:compressed.mimeType || file.type || 'image/jpeg',
+      expectedAmount:opts.expectedAmount,manualRef:opts.manualRef,expectedAccount:opts.expectedAccount,expectedMethodId:opts.expectedMethodId || null};
+    const send=async(url,payload)=>{
+      // A queued page can outlive its original access token; use the SDK's
+      // current session on every request without exposing it to the UI.
+      headers.Authorization=`Bearer ${await getAccessToken()}`;
+      const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload),signal:controller.signal});
+      let data=null;try{data=await response.json();}catch(_){}
+      if(response.status===401 || response.status===403) throw new Error('auth_required');
+      if(response.status===429) throw new Error('server_rate_limited');
+      if(!response.ok || !data || data.ok===false){const e=new Error(data?.error || `server_http_${response.status}`);e.serverMessage=data?.message;throw e;}
+      return data;
+    };
+    const pause=(ms)=>new Promise((resolve,reject)=>{
+      const stop=()=>{clearTimeout(t);reject(Object.assign(new Error('aborted'),{name:'AbortError'}));};
+      const t=setTimeout(()=>{controller.signal.removeEventListener('abort',stop);resolve();},ms);
+      if(controller.signal.aborted) stop(); else controller.signal.addEventListener('abort',stop,{once:true});
+    });
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...(root.SUPABASE_ANON_KEY ? { apikey: root.SUPABASE_ANON_KEY } : {})
-        },
-        body: JSON.stringify({
-          imageBase64,
-          mimeType: compressed.mimeType || file.type || 'image/jpeg',
-          imageBase64Extra,
-          mimeTypeExtra,
-          expectedAmount: opts.expectedAmount,
-          manualRef: opts.manualRef,
-          expectedAccount: opts.expectedAccount,
-          expectedMethodId: opts.expectedMethodId || null
-        }),
-        signal: controller.signal
-      });
-      let data = null;
-      try { data = await response.json(); } catch (_) {}
-      if (response.status === 401 || response.status === 403) throw new Error('auth_required');
-      if (response.status === 429) throw new Error('server_rate_limited');
-      if (!response.ok || !data || data.ok === false) {
-        const error = new Error((data && data.error) || `server_http_${response.status}`);
-        error.serverMessage = data && data.message;
-        throw error;
+      let data=await send(endpoint,body);
+      const queuedAt=Date.now();
+      while(data.queue && Date.now()-queuedAt<queueMs){
+        arm(queueMs-(Date.now()-queuedAt));
+        const queue=data.queue;
+        if(!/^[0-9a-f-]{36}$/i.test(String(queue.ticketId || ''))) throw new Error('invalid_queue_ticket');
+        if(typeof opts.onStatus==='function')opts.onStatus(`الإيصال في انتظار الدور — موضعك: ${Number(queue.position)||1}.`);
+        await pause(Math.min(5000,Math.max(1000,Number(queue.retryAfter||3)*1000)));
+        const polled=await send(endpoint+'?operation=poll',{ticketId:queue.ticketId});
+        if(polled.queue?.canRetry){arm(processingMs);data=await send(endpoint,body);}else data=polled;
       }
-      if (!data.scanId || !data.receiptHash) throw new Error('server_scan_contract_invalid');
+      if(data.queue) data.message='الفحص ما زال في انتظار الدور. أعد تجهيز نفس الإيصال بعد قليل؛ لم تُستهلك حصة فحص مكتمل ولم يُنشأ طلب.';
+      if ((data.decision === 'accept' || data.decision === 'review_admin') && data.submissionAllowed !== true) throw new Error('server_scan_contract_invalid');
+      if (data.submissionAllowed === true && (!data.receiptHash || !data.receiptPath || !data.attachmentId || !data.scanId || data.receiptPolicy !== 'mandatory-visual-v1' || data.automaticCheckComplete !== true)) throw new Error('server_scan_contract_invalid');
+      const u=data.usage;
+      if(u && Number.isInteger(u.remaining) && Number.isInteger(u.dailyLimit)){
+        data.message=(data.message || '')+` المتبقي اليوم: ${u.remaining} من ${u.dailyLimit}؛ تتجدد الحصة منتصف الليل بتوقيت السودان.`;
+        if(u.suspended) data.message+=' ميزة الفحص مجمدة حتى مراجعة الإدارة.';
+        else if(Number(u.violations)>0) data.message+=` تحذير إساءة استخدام: ${u.violations} من ${u.violationLimit}. ارفع إشعار تحويل فقط.`;
+      }
       return data;
     } finally {
       clearTimeout(timer);
@@ -157,11 +210,12 @@
   function softReview(flag, message) {
     return {
       decision: 'review',
+      submissionAllowed: false,
       ocrStatus: 'needs_review',
       message: message || 'تعذّر إكمال الفحص الخادمي. لم يُنشأ أي طلب؛ أعد المحاولة بعد لحظات.',
       riskFlags: [flag], confidence: null, provider: null, providerName: null,
       language: null, passes: 0, textLength: 0, version: 4,
-      source: 'edge-client', submissionAllowed: false,
+      source: 'edge-client',
       extracted: { txRef: null, amount: null, dateTime: null },
       refVerified: false, amountVerified: false
     };
@@ -173,7 +227,7 @@
     try {
       onStatus('جارِ إرسال الإيصال للفحص الآمن على الخادم...');
       const result = await serverVerify(file, opts, opts.extraFile || null);
-      onStatus('اكتمل الفحص الخادمي.');
+      onStatus(result.queue ? 'الفحص في انتظار توفر السعة.' : 'تمت معالجة طلب الفحص.');
       return result;
     } catch (error) {
       if (typeof opts.onServerError === 'function') opts.onServerError(error);
@@ -203,6 +257,7 @@
   }
 
   root.MeemReceiptPipeline = {
+    beginScanActivity,
     fileToBase64,
     validateImageFile,
     compressForServer,

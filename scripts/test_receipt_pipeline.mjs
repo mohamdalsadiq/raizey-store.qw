@@ -42,10 +42,11 @@ class FileReaderStub {
 }
 
 /** ينشئ سياق vm جديداً مع fetch مراقَب وسياق جلسة قابل للتحكم. */
-function loadPipeline({ fetchImpl, session = { access_token: JWT } } = {}) {
+function loadPipeline({ fetchImpl, session = { access_token: JWT }, clock } = {}) {
   const requests = [];
   const context = {
     Blob,
+    ...(clock ? {Date:class extends Date {static now(){return clock.value;}}} : {}),
     FileReader: FileReaderStub,
     Image: class ImageStub {},
     URL: { createObjectURL: () => "blob:stub", revokeObjectURL: () => {} },
@@ -54,10 +55,10 @@ function loadPipeline({ fetchImpl, session = { access_token: JWT } } = {}) {
     clearTimeout,
     console,
     fetch: async (url, init) => {
-      requests.push({ url: String(url), init });
+      requests.push({ url: String(url), init:{...init,headers:{...init.headers}} });
       return fetchImpl(String(url), init);
     },
-    supabaseClient: { auth: { getSession: async () => ({ data: { session }, error: null }) } },
+    supabaseClient: { auth: { getSession: async () => ({ data: { session:typeof session==='function'?session():session }, error: null }) } },
     SUPABASE_URL,
     SUPABASE_ANON_KEY: ANON_KEY,
   };
@@ -95,7 +96,7 @@ console.log("\n── عقد الصور (validation) ──");
 console.log("\n── شكل الطلب المرسل للسيرفر ──");
 {
   const { pipeline, requests } = loadPipeline({
-    fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "scan-1", receiptHash: "a".repeat(64), decision: "accept" }),
+    fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "scan-1", receiptHash: "a".repeat(64), receiptPath: "owner/verified/test.png", attachmentId: "attachment-1", decision: "accept", submissionAllowed:true, receiptPolicy:"mandatory-visual-v1", automaticCheckComplete:true }),
   });
   const result = await pipeline.serverVerify(pngFile(), {
     expectedAmount: 125000,
@@ -155,13 +156,52 @@ async function analyzeWith(fetchImpl, extraOptions = {}) {
 
 console.log("\n── عدم تسريب الأسرار إلى الواجهة ──");
 {
-  const { pipeline } = loadPipeline({ fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "s", receiptHash: "b".repeat(64) }) });
+  const { pipeline } = loadPipeline({ fetchImpl: async () => jsonResponse(200, { ok: true, scanId: "s", receiptHash: "b".repeat(64), receiptPath: "owner/verified/test.png", attachmentId: "attachment-1" }) });
   const soft = pipeline.softReview("server_ocr_failed");
   const serialized = JSON.stringify(soft);
   check("soft review has no jwt", serialized.includes(JWT), false);
   check("soft review has no api key", serialized.includes(ANON_KEY), false);
   check("soft review has no token/key fields", /"(token|apiKey|api_key|secret)"/i.test(serialized), false);
   check("fallback flags exposed for the UI", Array.isArray(pipeline.fallbackFlags) && pipeline.fallbackFlags.length > 0, true);
+}
+
+console.log("\n── انتظار الضغط والحصة ──");
+{
+  let calls=0;
+  const ticket='ae550000-0000-4000-8000-000000000002';
+  const statuses=[];
+  const {pipeline,requests}=loadPipeline({fetchImpl:async(url)=>{
+    calls++;
+    if(calls===1)return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1}});
+    if(url.includes('operation=poll'))return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,canRetry:true}});
+    return jsonResponse(200,{ok:true,scanId:'queue-scan',receiptHash:'a'.repeat(64),receiptPath:'owner/verified/test.png',attachmentId:'a',decision:'accept',submissionAllowed:true,receiptPolicy:'mandatory-visual-v1',automaticCheckComplete:true,usage:{remaining:4,dailyLimit:5,violations:0}});
+  }});
+  const result=await pipeline.analyze(pngFile(),{onStatus:s=>statuses.push(s)});
+  check('queue resumes full scan after a lightweight poll',result.scanId,'queue-scan');
+  check('poll contains only ticket id',requests[1].init.body,JSON.stringify({ticketId:ticket}));
+  check('poll never retransmits the image',requests[1].init.body.includes('imageBase64'),false);
+  check('retry preserves exact image and context',requests[2].init.body,requests[0].init.body);
+  check('queue status shown',statuses.some(s=>s.includes('انتظار')),true);
+  check('remaining count shown',result.message.includes('4 من 5'),true);
+  const frozen=await analyzeWith(async()=>jsonResponse(200,{ok:true,submissionAllowed:false,message:'الفحص مجمد',usage:{remaining:2,dailyLimit:5,violations:3,violationLimit:3,suspended:true}}));
+  check('suspension message preserved',frozen.message.includes('مجمد'),true);
+  check('suspension never authorizes payment',frozen.submissionAllowed,false);
+  const aborted=await analyzeWith(async()=>jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,retryAfter:1}}),{serverTimeoutMs:40});
+  check('cancel during queue wait is safe',aborted.riskFlags[0],'server_ocr_timeout');
+}
+
+console.log("\n── استمرار الصف بعد نافذة المعدل وتجدد الجلسة ──");
+{
+ const clock={value:0},ticket='ae550000-0000-4000-8000-000000000003';let polls=0;
+ const {pipeline,requests}=loadPipeline({clock,session:()=>({access_token:clock.value>60000?'rotated-test-jwt':JWT}),fetchImpl:async(url)=>{
+  if(url.includes('operation=poll')){polls++;clock.value+=61000;return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1,canRetry:polls===2}});}
+  if(polls<2)return jsonResponse(200,{ok:true,submissionAllowed:false,queue:{ticketId:ticket,position:1,retryAfter:1}});
+  return jsonResponse(200,{ok:true,decision:'accept',submissionAllowed:true,scanId:'after-window',receiptHash:'a'.repeat(64),receiptPath:'owner/verified/test.png',attachmentId:'a',receiptPolicy:'mandatory-visual-v1',automaticCheckComplete:true});
+ }});
+ const result=await pipeline.analyze(pngFile(),{});
+ check('queue automatically resumes beyond former 45 second cutoff',result.scanId,'after-window');
+ check('rolling-minute wait preserves the full image for resubmission',requests[0].init.body,requests.at(-1).init.body);
+ check('resumed scan uses current session token',requests.at(-1).init.headers.Authorization,'Bearer rotated-test-jwt');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

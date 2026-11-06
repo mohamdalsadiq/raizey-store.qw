@@ -7,7 +7,9 @@ const statusLabels = {
 };
 const paymentLabels = {
   wallet: 'من المحفظة',
-  bank: 'تحويل بنكك'
+  bank: 'تحويل بنكي',
+  code: 'رمز دفع',
+  payment_code: 'رمز دفع'
 };
 
 async function init() {
@@ -84,7 +86,7 @@ function renderReceipt(o) {
         <span class="label">بيانات الطلب</span>
         <div class="receipt-fields-list">
           ${Object.entries(o.field_values).map(([k, v]) => {
-            const label = (o.field_labels && o.field_labels[k]) ? o.field_labels[k] : k;
+            const label = MeemStoreRules.fieldLabel(o.field_labels, k);
             return `<div><span class="fkey">${escapeHtml(label)}:</span> ${escapeHtml(v)}</div>`;
           }).join('')}
         </div>
@@ -106,7 +108,7 @@ function renderReceipt(o) {
   const receiptLinkHtml = o.receipt_url ? `
     <div class="receipt-row">
       <span class="label">صورة الإيصال</span>
-      <a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
+      <a href="#" data-receipt-reference="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" class="receipt-receipt-img-link">
         <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض الإيصال
       </a>
     </div>

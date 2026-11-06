@@ -180,10 +180,13 @@ function validateSelection(errorBox) {
 function collectFields() {
   const values = {}, labels = {};
   for (const input of document.querySelectorAll('[data-field-key]')) {
-    const value = input.value.trim();
-    if (!value) return null;
-    values[input.dataset.fieldKey] = value;
-    labels[input.dataset.fieldKey] = input.dataset.fieldLabel || input.dataset.fieldKey;
+    const field = (product.required_fields || []).find(f => f.key === input.dataset.fieldKey) || { label: input.dataset.fieldLabel };
+    const result = MeemStoreRules.validateField(field, input.value);
+    input.setCustomValidity(result.error);
+    if (result.error) { input.reportValidity(); return null; }
+    input.value = result.value;
+    values[input.dataset.fieldKey] = result.value;
+    labels[input.dataset.fieldKey] = field.label || 'بيانات الطلب';
   }
   return { values, labels };
 }

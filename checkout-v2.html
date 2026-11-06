@@ -254,6 +254,7 @@
 
 <!-- MEEM UI system (tokens + components + icons + behaviour) -->
 <link rel="stylesheet" href="assets/css/meem.css?v=20261020">
+<link rel="stylesheet" href="assets/css/receipt-scan.css?v=20261105-scan-feedback">
 <script src="assets/js/meem-ui.js"></script>
 <link rel="stylesheet" href="assets/css/whatsapp-onboarding.css">
 </head>
@@ -350,17 +351,8 @@
         <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
         <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
           <input type="checkbox" id="geminiConsent" style="margin-top: 4px; flex-shrink: 0;">
-          <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. بدون الموافقة سيُراجع إيصالك يدوياً من الإدارة. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
+          <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. الفحص الآلي إلزامي لكل صورة؛ بدونه لا يمكن إرسال الطلب. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
         </label>
-        <div id="extraReceiptWrap" style="display: none; margin-top: 10px;">
-          <label style="display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 6px;">
-            صورة إضافية للإشعار (اختياري — لإكمال البيانات الناقصة)
-          </label>
-          <div class="file-upload" id="fileUploadBox2">
-            <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)
-            <input type="file" id="receiptInput2" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
-          </div>
-        </div>
         <div id="shortfallBox" style="display: none; margin-top: 12px; border: 1px solid var(--danger); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.8;"></div>
 
         <div id="remainderStep" style="display: none; margin-top: 12px; border: 1px dashed var(--border); border-radius: 12px; padding: 12px;">
@@ -377,7 +369,8 @@
           <div id="remainderStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600;"></div>
         </div>
 
-        <div id="scanStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600; color: var(--text-muted);"></div>
+        <button type="button" id="retryCheckoutReceiptBtn" class="auth-btn">إعادة تجهيز الإيصال</button>
+          <div id="scanStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600; color: var(--text-muted);"></div>
         <div id="scanReport" style="display: none; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.7;"></div>
       </div>
     </div>
@@ -396,11 +389,12 @@
 
 <script src="assets/vendor/supabase-2.118.0.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/store-rules.js"></script>
 <script src="assets/js/mfa-guard.js"></script>
 <script src="assets/js/phone-country-picker.js"></script>
 <script src="assets/js/whatsapp-onboarding.js"></script>
-<script src="assets/js/receipt-pipeline.js?v=20260830-edge-secure"></script>
-<script src="assets/js/pages/checkout-v2-2.js"></script>
+<script src="assets/js/receipt-pipeline.js?v=20261106-provider-queue"></script>
+<script src="assets/js/pages/checkout-v2-2.js?v=20261105-scan-feedback"></script>
   <script src="assets/js/meem-assistant.js"></script>
 </body>
 </html>

@@ -7,11 +7,25 @@ let selectedMethodId = null;
 let receiptFile = null;
 let appliedCoupon = null;
 let savedTxRef = null;      // رقم العملية بعد الحفظ
+let checkoutScanRevision = 0;
+let checkoutScanBusy = false;
+let checkoutScanContext = null;
 let scanResult = null;      // نتيجة الفحص الذكي للصورة الحالية
 let isDirectBuy = false;    // شراء مباشر (زر "اشترِ الآن") — لا علاقة له بالسلة
 let selectedMethodAccount = null;  // رقم حساب الوسيلة المختارة (للتحقق من جهة الإيداع)
 let verifiedPaymentCode = null;    // رمز الدفع بعد التحقق منه من الإدارة
 let splitPayment = null;           // دفع مجزّأ: {firstFile, firstScan, secondFile, secondScan, secondRef, remaining}
+
+function checkoutReceiptContext() {
+  return JSON.stringify({ total: currentTotal(), method: selectedMethodId, ref: savedTxRef,
+    coupon: appliedCoupon?.code || null, consent: document.getElementById('geminiConsent')?.checked === true });
+}
+function invalidateCheckoutReceipt() {
+  checkoutScanRevision++; scanResult = null; checkoutScanContext = null; splitPayment = null;
+  const report = document.getElementById('scanReport'); if (report) report.style.display = 'none';
+  const status = document.getElementById('scanStatus');
+  if (status && receiptFile) status.textContent = 'تغيرت بيانات الدفع؛ اضغط إعادة تجهيز الإيصال.';
+}
 
 function safeFormatSDG(val) {
   if (typeof formatSDG === 'function') return formatSDG(val);
@@ -101,6 +115,10 @@ async function init() {
     }
   }
 
+  if (!Array.isArray(cart)) cart = [];
+  if (cart.length && MeemStoreRules.cartError(cart)) {
+    document.getElementById('loadingBox').textContent = MeemStoreRules.cartError(cart) + ' ارجع إلى السلة لتعديل الكمية قبل الدفع.'; return;
+  }
   if (cart.length === 0) {
     document.getElementById('loadingBox').innerHTML = `
       <div style="text-align: center; padding: 40px 0;">
@@ -148,9 +166,9 @@ function currentTotal() {
   }, 0);
 
   if (appliedCoupon) {
-    return raw - (raw * appliedCoupon.discount_percent / 100);
+    return Math.round(raw - (raw * appliedCoupon.discount_percent / 100));
   }
-  return raw;
+  return Math.round(raw);
 }
 
 function renderCheckout() {
@@ -233,6 +251,7 @@ function renderCheckout() {
       methodPickerGrid.querySelectorAll('.method-card').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-pressed', 'false'); });
       card.classList.add('active');
       card.setAttribute('aria-pressed', 'true');
+      invalidateCheckoutReceipt();
       selectedMethodId = card.dataset.methodId;
       const m = paymentMethods.find(x => x.id === selectedMethodId);
       selectedMethodAccount = m ? (m.account_number || null) : null;
@@ -275,19 +294,21 @@ function renderCheckout() {
 }
 
 async function applyCoupon() {
+  invalidateCheckoutReceipt();
+  appliedCoupon = null;
   const code = document.getElementById('couponInput').value.trim().toUpperCase();
   const msgBox = document.getElementById('couponMessage');
   msgBox.style.color = '';
   if (!code) { msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'يرجى إدخال كود الخصم أولاً'; return; }
   try {
-    const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code });
+    const { data, error } = await supabaseClient.rpc('validate_coupon', { p_code: code, p_order_total: currentTotal() });
     if (error || !data || data.length === 0) {
       appliedCoupon = null;
       msgBox.style.color = 'var(--danger)'; msgBox.textContent = 'الكود غير صالح أو منتهي الصلاحية';
       document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س';
       return;
     }
-    appliedCoupon = { coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
+    appliedCoupon = { code, coupon_id: data[0].coupon_id, discount_percent: data[0].discount_percent };
     msgBox.style.color = 'var(--primary)'; msgBox.textContent = `تم تطبيق خصم ${appliedCoupon.discount_percent}% بنجاح!`;
     document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س';
   } catch (e) {
@@ -303,6 +324,9 @@ function attachCheckoutEvents(canUseWallet) {
   const fileBox = document.getElementById('fileUploadBox');
   const fileInput = document.getElementById('receiptInput');
   const placeOrderBtn = document.getElementById('placeOrderBtn');
+  document.getElementById('couponInput').oninput = () => { appliedCoupon = null; invalidateCheckoutReceipt(); document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س'; };
+  document.getElementById('geminiConsent').onchange = invalidateCheckoutReceipt;
+  document.getElementById('retryCheckoutReceiptBtn').onclick = () => runScan(receiptFile || fileInput.files[0], null);
   const errorBox = document.getElementById('formError');
 
   if (canUseWallet) {
@@ -466,17 +490,10 @@ function attachCheckoutEvents(canUseWallet) {
   const receiptStep = document.getElementById('receiptStep');
 
   function resetReceiptSelection() {
+    invalidateCheckoutReceipt();
     receiptFile = null;
     scanResult  = null;
     fileInput.value = '';
-    try {
-      const _w = document.getElementById('extraReceiptWrap');
-      const _i2 = document.getElementById('receiptInput2');
-      const _b2 = document.getElementById('fileUploadBox2');
-      if (_i2) _i2.value = '';
-      if (_w) _w.style.display = 'none';
-      if (_b2) _b2.innerHTML = `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط لرفع صورة ثانية (الإشعار الأبيض أو بقية الشاشة)`;
-    } catch (e) {}
     fileBox.innerHTML = `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل`;
     fileBox.classList.remove('has-file');
     splitPayment = null;
@@ -578,73 +595,31 @@ function attachCheckoutEvents(canUseWallet) {
     return window.MeemReceiptPipeline.serverVerify(file, opts, extraFile);
   }
 
-  let extraFile = null;
-  const extraWrap  = document.getElementById('extraReceiptWrap');
-  const fileBox2   = document.getElementById('fileUploadBox2');
-  const fileInput2 = document.getElementById('receiptInput2');
-
-  fileBox2.onclick = () => { if (savedTxRef && fileInput.files.length) fileInput2.click(); };
-  fileInput2.onchange = () => {
-    if (!fileInput2.files.length) return;
-    extraFile = fileInput2.files[0];
-    fileBox2.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> صورة إضافية: ${escapeHtml(extraFile.name)}`;
-    runScan(fileInput.files[0], extraFile);
-  };
-
-  fileBox.onclick = () => { if (savedTxRef) fileInput.click(); };
+  fileBox.onclick = () => { if (!checkoutScanBusy && savedTxRef) fileInput.click(); };
   fileInput.onchange = async () => {
-    if (!fileInput.files.length) return;
+    if (checkoutScanBusy || !fileInput.files.length) return;
     if (!savedTxRef) {
       document.getElementById('formError').textContent = 'تحقّق من رقم العملية أولاً قبل رفع الصورة.';
       fileInput.value = '';
       return;
     }
-    extraFile = null;
     await runScan(fileInput.files[0], null);
   };
 
   async function runScan(file, secondFile) {
-    if (!file) return;
+    if (checkoutScanBusy || !file) return;
+    invalidateCheckoutReceipt();
+    receiptFile = file;
+    const revision = checkoutScanRevision, context = checkoutReceiptContext();
     const statusEl = document.getElementById('scanStatus');
     const reportEl = document.getElementById('scanReport');
 
     document.getElementById('formError').textContent = '';
 
-    // P2-SEC-001: بدون موافقة صريحة لا يُرسل أي شيء إلى الذكاء الاصطناعي —
-    // مسار المراجعة اليدوية: بصمة محلية فقط، والقرار للإدارة
     const consentBox = document.getElementById('geminiConsent');
-    if (!consentBox || !consentBox.checked) {
-      const fileBoxEl = document.getElementById('fileUploadBox');
-      statusEl.textContent = 'جارِ تجهيز الإيصال للمراجعة اليدوية...';
-      let localHash = null;
-      try {
-        const buf = await file.arrayBuffer();
-        const digest = await crypto.subtle.digest('SHA-256', buf);
-        localHash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (e) { /* fallback below */ }
-      if (!localHash) {
-        statusEl.textContent = '';
-        document.getElementById('formError').textContent = 'تعذّر تجهيز الصورة. وافق على الفحص الآلي أو أعد المحاولة.';
-        return;
-      }
-      reportEl.style.display = 'block';
-      reportEl.style.borderColor = 'var(--border)';
-      reportEl.innerHTML =
-        `<strong style="color: var(--ink);"><svg class="mm-i" style="color: var(--mm-warning);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> مراجعة يدوية</strong><br>` +
-        `اخترت عدم الفحص الآلي — لن تُرسل صورتك إلى أي خدمة خارجية. سيُراجع إيصالك يدوياً من الإدارة قبل تنفيذ الطلب. يمكنك إكمال الطلب الآن.`;
-      if (fileBoxEl) {
-        fileBoxEl.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم اختيار: ${escapeHtml(file.name)}`;
-        fileBoxEl.classList.add('has-file');
-      }
-      statusEl.textContent = '';
-      receiptFile = file;
-      scanResult = {
-        decision: 'review', ocrStatus: 'needs_review', scanId: null, receiptHash: localHash,
-        riskFlags: ['consent_declined'], refVerified: false, amountVerified: false,
-        provider: null, providerName: null, confidence: null, version: null, source: 'manual_consent_declined',
-        message: 'مراجعة يدوية — بدون فحص آلي (رفض الموافقة)',
-        extracted: { txRef: null, amount: null, dateTime: null }
-      };
+    if (!consentBox?.checked) {
+      receiptFile = null;
+      statusEl.textContent = 'الموافقة على فحص الصورة آلياً مطلوبة للدفع البنكي. وافق ثم اختر الصورة مجدداً.';
       return;
     }
     reportEl.style.display = 'none';
@@ -653,11 +628,16 @@ function attachCheckoutEvents(canUseWallet) {
     hideShortfall();
     fileBox.innerHTML = `<svg class="mm-i mm-spin" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-loader"></use></svg> جارِ فحص الصورة...`;
     fileBox.classList.remove('has-file');
+    checkoutScanBusy = true;
+    const activity = window.MeemReceiptPipeline.beginScanActivity(statusEl, [fileInput, fileBox, placeOrderBtn,
+      document.getElementById('retryCheckoutReceiptBtn'), document.getElementById('receiptInput3'),
+      document.getElementById('fileUploadBox3'), document.getElementById('remainderRefBtn')]);
+    try {
 
     // نتيجة احتياطية: تُستخدم لو تعذّر الفحص أو تجاوز المهلة — العميل لا يتوقف أبداً
     const softReview = (flag) => ({
       decision: 'review', ocrStatus: 'needs_review',
-      message: 'تعذّر إكمال الفحص الآلي للصورة. تم استلام إيصالك وسيُراجع يدوياً من الإدارة — يمكنك إكمال الطلب الآن.',
+      message: 'تعذّر الفحص الآلي؛ لم يُنشأ طلب. أعد المحاولة عند عودة الخدمة.',
       riskFlags: [flag], confidence: null, provider: null, providerName: null, language: null,
       passes: 0, textLength: 0, version: 3,
       extracted: { txRef: null, amount: null, dateTime: null },
@@ -665,8 +645,8 @@ function attachCheckoutEvents(canUseWallet) {
     });
 
     // حرس زمني على مستوى الواجهة (حزام أمان ثانٍ فوق حرس المحرك نفسه):
-    // بعد 100 ثانية تنتهي حالة التحميل حتماً بنتيجة واضحة.
-    const UI_SCAN_DEADLINE_MS = 100000;
+    // مهلة تشمل انتظار الدور والفحص، مع نتيجة واضحة عند تعذر الإكمال.
+    const UI_SCAN_DEADLINE_MS = 180000;
     let uiWatchdog = null;
     const uiGuard = new Promise(resolve => {
       uiWatchdog = setTimeout(() => resolve(softReview('ui_scan_timeout')), UI_SCAN_DEADLINE_MS);
@@ -675,6 +655,7 @@ function attachCheckoutEvents(canUseWallet) {
     let analysis;
     try {
       const scanOpts = {
+        onStatus: message => activity.update(message),
         expectedAmount: currentTotal(),
         manualRef: savedTxRef,
         expectedAccount: selectedMethodAccount,
@@ -684,7 +665,7 @@ function attachCheckoutEvents(canUseWallet) {
       // الفحص الوحيد هو Edge Function الموثّق؛ لا يوجد OCR أو قرار مالي داخل المتصفح.
       const scan = (async () => {
         statusEl.style.color = 'var(--text-muted)';
-        statusEl.textContent = 'جارِ فحص الصورة بأمان على الخادم...';
+        activity.update('جارٍ إرسال الصورة للفحص الآمن…');
         try {
           return await serverVerify(file, scanOpts, secondFile);
         } catch (serverErr) {
@@ -701,6 +682,8 @@ function attachCheckoutEvents(canUseWallet) {
       })();
 
       analysis = await Promise.race([scan, uiGuard]);
+      if (revision !== checkoutScanRevision || context !== checkoutReceiptContext()) return;
+      checkoutScanContext = context;
       if (!analysis || typeof analysis !== 'object') analysis = softReview('scan_error');
     } catch (err) {
       // خطأ غير متوقع في محرك الفحص لا يجوز أن يوقف عميلاً حقيقياً
@@ -713,11 +696,11 @@ function attachCheckoutEvents(canUseWallet) {
     // ضمان إضافي: أي حقل ناقص في النتيجة لا يكسر عرض التقرير
     analysis.extracted = analysis.extracted || { txRef: null, amount: null, dateTime: null };
     analysis.riskFlags = analysis.riskFlags || [];
-    if (!analysis.message) analysis.message = 'تم استلام الإيصال وسيُراجع يدوياً من الإدارة.';
+    if (!analysis.message) analysis.message = 'لم يكتمل الفحص الآلي؛ أعد المحاولة.';
 
     statusEl.textContent = '';
 
-    // ── مسار «المبلغ ناقص»: المال وصل فعلاً لكنه أقل من الإجمالي ──
+    // المبلغ المقروء أقل من الإجمالي؛ إثبات الوصول يتم من سجل الحساب.
     if (analysis.decision === 'reject' && analysis.shortfall &&
         analysis.shortfall.remaining > 0 && analysis.shortfall.refMatched) {
       showShortfallCard(file, analysis);
@@ -761,45 +744,10 @@ function attachCheckoutEvents(canUseWallet) {
     rows.push(`مطابقة المبلغ: ${analysis.amountVerified ? 'مطابق ✓' : 'غير مطابق ✗'}`);
 
     // review_admin = مقبول للعميل، مع تدقيق إداري لاحق (لا يُحجب الطلب)
-    const ok = (analysis.decision === 'accept' || analysis.decision === 'review_admin') &&
+    const ok = analysis.submissionAllowed === true && analysis.receiptPolicy === 'mandatory-visual-v1' && analysis.automaticCheckComplete === true && analysis.scanId && (analysis.decision === 'accept') &&
                analysis.refVerified === true && analysis.amountVerified === true;
     const needsAdmin = ok && analysis.decision === 'review_admin';
     if (needsAdmin && analysis.reviewReason) rows.push(`سبب التدقيق: ${analysis.reviewReason}`);
-
-    // ── فشل تقني بحت في محرك الفحص (الذكاء الاصطناعي واقع/مهلة/شبكة) — هذا عطل في
-    // أداتنا نحن، وليس مشكلة في إيصال العميل. لا يجوز أن يوقفه تماماً ولا
-    // أن نطرده لخدمة العملاء يدوياً في كل مرة. الطلب يُسجَّل كـ"قيد
-    // المراجعة اليدوية" (بدون ✓ تلقائي)، ويبقى الحاجز الذري لمنع تكرار
-    // رقم العملية/الصورة فعّالاً كالمعتاد، والأدمن يراجع يدوياً قبل أي
-    // تسليم فعلي — يعني سلاسة للعميل الحقيقي، وصرامة كاملة ضد الاحتيال. ──
-    const TECH_FLAGS = [
-      'ocr_engine_failed', 'ocr_engine_timeout', 'ocr_timeout', 'ocr_empty',
-      'ocr_unavailable', 'ocr_pass_timeout', 'scan_error', 'scan_watchdog_timeout',
-      'ui_scan_timeout', 'engine_missing',
-      'file_decode_decode_error', 'file_decode_decode_timeout',
-      'file_decode_dimensions_too_small', 'file_decode_unknown', 'file_check_timeout',
-      'server_ocr_failed', 'server_ocr_timeout', 'gemini_not_configured',
-      'judge_error', 'missing_image', 'image_too_large'
-    ];
-    const isTechReview = !!analysis.scanId && !!analysis.receiptHash &&
-      !ok && analysis.decision === 'review' &&
-      (analysis.riskFlags || []).some(f => TECH_FLAGS.includes(f));
-
-    if (isTechReview) {
-      // نُبقي receiptFile و scanResult كما هما ليكمل العميل طلبه بسلاسة —
-      // القرار الفعلي (ocr_status: needs_review) يُحفظ مع الطلب فيراه
-      // الأدمن بوضوح ويتحقق يدوياً قبل التسليم.
-      extraWrap.style.display = 'none';
-      reportEl.style.display = 'block';
-      reportEl.style.borderColor = 'var(--border)';
-      reportEl.innerHTML =
-        `<strong style="color: var(--ink);"><svg class="mm-i" style="color: var(--mm-warning);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-clock"></use></svg> تعذّر إكمال الفحص الآلي مؤقتاً</strong><br>` +
-        `تم استلام إيصالك بنجاح وسيُراجع يدوياً من الإدارة قبل تنفيذ الطلب (عادة خلال دقائق). يمكنك إتمام الطلب الآن بدون انتظار.` +
-        `<div style="margin-top: 8px; color: var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>`;
-      showSupportButton('تعذّر إكمال الفحص الآلي — الطلب قيد المراجعة اليدوية');
-      logFraudAttempt('technical_review', { risk_flags: analysis.riskFlags });
-      return;
-    }
 
     hideSupportButton();
 
@@ -811,19 +759,21 @@ function attachCheckoutEvents(canUseWallet) {
       `<div style="margin-top: 8px; color: var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
       (ok ? '' : `<div style="margin-top: 8px; color: var(--danger); font-size: 12px; font-weight: 600;">${escapeHtml(blockHint(analysis))}</div>`);
 
-    // ── صارم: لا يُسمح بإنشاء الطلب إلا بمطابقة رقم العملية والمبلغ معاً،
-    // أو بمسار المراجعة التقنية السلسة أعلاه فقط ──
+    // لا إرسال دون اجتياز الفحص الآلي بكل شروطه.
     if (!ok) {
       scanResult = null;
       receiptFile = null;
-      extraWrap.style.display = 'block';
+
       if (!analysis.refVerified) {
         logFraudAttempt('ref_mismatch_blocked', { risk_flags: analysis.riskFlags, read_ref: analysis.extracted.txRef });
       } else if (!analysis.amountVerified) {
         logFraudAttempt('amount_mismatch_blocked', { risk_flags: analysis.riskFlags, read_amount: analysis.extracted.amount });
       }
     } else {
-      extraWrap.style.display = 'none';
+
+    }
+    } finally {
+      activity.finish(); checkoutScanBusy = false;
     }
   }
 
@@ -834,14 +784,14 @@ function attachCheckoutEvents(canUseWallet) {
     if (!a.refVerified && a.extracted.txRef)
       return `رقم العملية في الصورة (${a.extracted.txRef}) لا يطابق الرقم الذي أدخلته (${savedTxRef}). اضغط "تعديل" وأدخل الرقم الصحيح تماماً كما في الإشعار.`;
     if (!a.refVerified)
-      return 'لم يظهر رقم العملية في الصورة. ارفع صورة كاملة للإشعار يظهر فيها رقم العملية بوضوح، أو أضف صورة ثانية بالأسفل.';
+      return 'لم يظهر رقم العملية في الصورة. ارفع صورة كاملة للإشعار يظهر فيها رقم العملية بوضوح.';
     if (!a.amountVerified && a.extracted.amount)
       return `المبلغ في الإشعار (${safeFormatSDG(a.extracted.amount)} ج.س) لا يطابق المبلغ المطلوب (${safeFormatSDG(currentTotal())} ج.س). حوّل المبلغ الصحيح ثم ارفع الإشعار الجديد.`;
     if (!a.amountVerified)
-      return 'لم يظهر المبلغ في الصورة. أضف صورة ثانية بالأسفل (الإشعار الأبيض أو لقطة كاملة) يظهر فيها المبلغ بوضوح.';
+      return 'لم يظهر المبلغ في الصورة. ارفع لقطة شاشة كاملة يظهر فيها المبلغ بوضوح.';
     if (!a.refVerified && !a.extracted.txRef)
-      return 'لم يظهر رقم العملية في الصورة. أضف صورة ثانية بالأسفل يظهر فيها رقم العملية كاملاً.';
-    return 'الإشعار غير مكتمل: يلزم ظهور رقم العملية والمبلغ معاً. أضف صورة ثانية أوضح للإشعار، أو تواصل مع الدعم.';
+      return 'لم يظهر رقم العملية في الصورة. ارفع صورة كاملة يظهر فيها رقم العملية كاملاً.';
+    return 'الإشعار غير مكتمل: يلزم ظهور رقم العملية والمبلغ معاً. ارفع صورة كاملة أوضح للإشعار، أو تواصل مع الدعم.';
   }
 
   // ═══════ مسار المبلغ الناقص: بطاقة واضحة + واتساب جاهز + إشعار ثانٍ ═══════
@@ -863,6 +813,7 @@ function attachCheckoutEvents(canUseWallet) {
   }
 
   function showShortfallCard(file, analysis) {
+    invalidateCheckoutReceipt();
     splitPayment = {
       firstFile: file,
       firstScan: analysis,
@@ -889,7 +840,7 @@ function attachCheckoutEvents(canUseWallet) {
     shortfallBox.style.display = 'block';
     shortfallBox.innerHTML =
       `<strong style="color: var(--danger);"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-alert"></use></svg> المبلغ المحوَّل أقل من المطلوب</strong><br>` +
-      `وصل <strong>${safeFormatSDG(analysis.shortfall.paid)} ج.س</strong>، ` +
+      `المبلغ الظاهر <strong>${safeFormatSDG(analysis.shortfall.paid)} ج.س</strong>، ` +
       `والمتبقي <strong>${safeFormatSDG(analysis.shortfall.remaining)} ج.س</strong> ` +
       `من إجمالي ${safeFormatSDG(analysis.shortfall.target)} ج.س.` +
       `<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">` +
@@ -917,6 +868,7 @@ function attachCheckoutEvents(canUseWallet) {
   }
 
   remainderBtn.onclick = async () => {
+    if (checkoutScanBusy || remainderBtn.disabled) return;
     const raw = remainderInput.value.trim();
     const norm = window.MeemReceiptPipeline
       ? MeemReceiptPipeline.normalizeRef(raw)
@@ -933,6 +885,7 @@ function attachCheckoutEvents(canUseWallet) {
       remainderMsg.textContent = 'رقم العملية الثاني لا يصح أن يطابق الأول.';
       return;
     }
+    scanResult = null; checkoutScanContext = null; splitPayment.secondScan = null; splitPayment.secondFile = null;
     remainderBtn.disabled = true;
     remainderMsg.style.color = 'var(--text-muted)';
     remainderMsg.textContent = 'جارِ التحقق...';
@@ -959,15 +912,21 @@ function attachCheckoutEvents(canUseWallet) {
     }
   };
 
-  fileBox3.onclick = () => { if (splitPayment && splitPayment.secondRef) fileInput3.click(); };
+  fileBox3.onclick = () => { if (!checkoutScanBusy && splitPayment && splitPayment.secondRef) fileInput3.click(); };
   fileInput3.onchange = async () => {
-    if (!fileInput3.files.length || !splitPayment || !splitPayment.secondRef) return;
+    if (checkoutScanBusy || !fileInput3.files.length || !splitPayment || !splitPayment.secondRef) return;
     const f = fileInput3.files[0];
+    scanResult = null; checkoutScanContext = null; splitPayment.secondScan = null;
+    const splitAtStart = splitPayment, revisionAtStart = ++checkoutScanRevision, contextAtStart = checkoutReceiptContext(), refAtStart = splitPayment.secondRef;
     const statusEl = document.getElementById('remainderStatus');
     statusEl.style.color = 'var(--text-muted)';
-    statusEl.textContent = 'جارِ فحص إشعار المبلغ المتبقي...';
+    checkoutScanBusy = true;
+    const activity = window.MeemReceiptPipeline.beginScanActivity(statusEl, [fileInput, fileInput3, fileBox, fileBox3,
+      remainderBtn, placeOrderBtn, document.getElementById('retryCheckoutReceiptBtn')]);
+    try {
     let res = null;
     const opts = {
+      onStatus: message => activity.update(message),
       expectedAmount: splitPayment.remaining,
       manualRef: splitPayment.secondRef,
       expectedAccount: selectedMethodAccount,
@@ -978,7 +937,8 @@ function attachCheckoutEvents(canUseWallet) {
     } catch (e) {
       res = null;
     }
-    if (!res || res.refVerified !== true || res.amountVerified !== true) {
+    if (splitPayment !== splitAtStart || checkoutScanRevision !== revisionAtStart || contextAtStart !== checkoutReceiptContext() || splitPayment.secondRef !== refAtStart) return;
+    if (!res || res.submissionAllowed !== true || res.automaticCheckComplete !== true || res.refVerified !== true || res.amountVerified !== true) {
       statusEl.style.color = 'var(--danger)';
       statusEl.textContent = (res && res.message)
         ? res.message
@@ -986,28 +946,33 @@ function attachCheckoutEvents(canUseWallet) {
       return;
     }
 
-    splitPayment.secondFile = f;
-    splitPayment.secondScan = res;
-
-    // القبول عبر جمع إشعارين يمر دائماً بتدقيق إداري
-    const merged = Object.assign({}, splitPayment.firstScan);
-    merged.decision   = 'review_admin';
-    merged.ocrStatus  = 'needs_admin_check';
-    merged.refVerified = true;
-    merged.amountVerified = true;
-    merged.reviewSeverity = 'normal';
-    merged.reviewReason = `دفع مجزّأ عبر إشعارين: ${splitPayment.paid} + ${splitPayment.remaining} ج.س ` +
-                          `(رقم ثانٍ: ${splitPayment.secondRef}) — يحتاج تدقيقاً إدارياً`;
-    merged.riskFlags = (splitPayment.firstScan.riskFlags || []).concat(['split_payment']);
-    merged.message = 'تم قبول الإيصالين ✓ — مجموع المبلغين يساوي إجمالي الطلب. طلبك يحتاج تدقيقاً إدارياً سريعاً قبل التنفيذ.';
-    receiptFile = splitPayment.firstFile;
-    scanResult  = merged;
+    const activeSplit = splitPayment;
+    const revision = checkoutScanRevision, context = checkoutReceiptContext();
+    activity.update('جارٍ إكمال التحقق من الإشعارين…');
+    let first;
+    try {
+      first = await serverVerify(activeSplit.firstFile, {onStatus:message=>activity.update(message),expectedAmount:activeSplit.paid,manualRef:savedTxRef,expectedMethodId:selectedMethodId}, null);
+    } catch (_) { first = null; }
+    if (revision !== checkoutScanRevision || context !== checkoutReceiptContext() || splitPayment !== activeSplit) return;
+    if (!first?.submissionAllowed || !first.automaticCheckComplete || !first.scanId) {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'لم يكتمل فحص الدفعة الأولى؛ أعد رفع الإشعارين. لم يُنشأ طلب.';
+      return;
+    }
+    activeSplit.firstScan = first;
+    activeSplit.secondFile = f; activeSplit.secondScan = res;
+    receiptFile = activeSplit.firstFile;
+    scanResult = first;
+    checkoutScanContext = context;
 
     statusEl.style.color = 'var(--primary)';
     statusEl.textContent = 'تم تأكيد الإشعار الثاني ✓ — اضغط "تأكيد الدفع وإرسال الطلبات".';
     shortfallBox.style.borderColor = 'var(--primary)';
     fileBox.innerHTML = `<svg class="mm-i" style="color: var(--mm-accent-text);" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-check"></use></svg> تم قبول الإشعارين (دفع مجزّأ)`;
     fileBox.classList.add('has-file');
+    } finally {
+      activity.finish(); checkoutScanBusy = false;
+    }
   };
 
   placeOrderBtn.onclick = () => handlePlaceOrder(errorBox, placeOrderBtn);
@@ -1023,6 +988,8 @@ function clearActiveBasket() {
 }
 
 window.removeItemFromCheckout = function(cartItemId) {
+  invalidateCheckoutReceipt();
+  appliedCoupon = null;
   cart = cart.filter(item => (item.cart_item_id || item.product_id) !== cartItemId);
   if (isDirectBuy) {
     sessionStorage.setItem('meem_direct_buy', JSON.stringify({ created_at: Date.now(), items: cart }));
@@ -1038,6 +1005,8 @@ window.removeItemFromCheckout = function(cartItemId) {
 
 async function handlePlaceOrder(errorBox, placeOrderBtn) {
   errorBox.textContent = '';
+  if (placeOrderBtn.disabled) return;
+  if (MeemStoreRules.cartError(cart)) { errorBox.textContent = MeemStoreRules.cartError(cart); return; }
   if (!selectedPayment) { errorBox.textContent = 'من فضلك اختر طريقة الدفع أولاً!'; return; }
 
   // ── تحقق اكتمال بيانات وسيلة الدفع المختارة أولاً (قبل حساب أي محاولة) ──
@@ -1083,7 +1052,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       const { data: rpcData, error } = await supabaseClient.rpc('create_wallet_orders_bulk', {
         p_items: items,
         p_coupon_code: appliedCoupon
-          ? document.getElementById('couponInput').value.trim().toUpperCase()
+          ? appliedCoupon.code
           : null
       });
       if (error) throw error;
@@ -1119,7 +1088,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
           p_code:        verifiedPaymentCode,
           p_items:       items,
           p_coupon_code: appliedCoupon
-            ? document.getElementById('couponInput').value.trim().toUpperCase()
+            ? appliedCoupon.code
             : null
         }),
         NET_TIMEOUT_MS.rpc, 'redeem_payment_code'
@@ -1151,10 +1120,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   placeOrderBtn.textContent = 'جارِ التحقق من نتيجة الفحص الخادمي...';
   const receiptHash = scanResult && scanResult.receiptHash;
   const receiptScanId = scanResult && scanResult.scanId;
-  // P2-SEC-001: مسار المراجعة اليدوية (رفض موافقة الذكاء الاصطناعي) يسمح بـ scanId فارغ —
-  // البصمة المحلية موجودة والقرار للإدارة
-  const isManualReview = scanResult && (scanResult.riskFlags || []).includes('consent_declined');
-  if (!receiptHash || (!receiptScanId && !isManualReview)) {
+  if (!receiptHash || !scanResult.receiptPath || !scanResult.attachmentId || checkoutScanContext !== checkoutReceiptContext() || !receiptScanId || scanResult.submissionAllowed !== true || scanResult.receiptPolicy !== 'mandatory-visual-v1') {
     errorBox.textContent = 'لم تكتمل نتيجة الفحص الآمن. أعد رفع الإيصال وانتظر النتيجة قبل الإرسال.';
     placeOrderBtn.disabled = false;
     placeOrderBtn.textContent = 'تأكيد الدفع وإرسال الطلبات';
@@ -1231,39 +1197,9 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
       { support: 'خطأ تقني أثناء تسجيل الطلب', fraud: 'technical_failure', fraudExtra: { raw_error: msg } });
   };
 
-  // ── (1) رفع صورة الإيصال — بمهلة صريحة وداخل try/catch ──
-  placeOrderBtn.textContent = 'جارِ رفع الإيصال...';
-  const fileExt  = (receiptFile.name.split('.').pop() || 'jpg').toLowerCase();
-  const filePath = `${currentUser.id}/${Date.now()}_receipt.${fileExt}`;
-
-  try {
-    const { error: uploadError } = await withNetTimeout(
-      supabaseClient.storage.from('receipts').upload(filePath, receiptFile, {
-        contentType: receiptFile.type,
-        upsert: false
-      }),
-      NET_TIMEOUT_MS.upload, 'receipt_upload'
-    );
-    if (uploadError) throw uploadError;
-  } catch (err) {
-    devWarn('[MEEM] Storage upload error:', (err && err.message) || err);
-    failOrder(err && err.isTimeout
-      ? 'تعذّر رفع صورة الإيصال — الاتصال بطيء أو متوقف. تحقق من الشبكة ثم اضغط "تأكيد الدفع" مجدداً (رقم عمليتك ما زال متاحاً).'
-      : 'فشل رفع صورة الإيصال، تأكد من الاتصال وحجم الصورة ثم أعد المحاولة.');
-    return;
-  }
-
-  // ── (2) رابط موقّع للإيصال (ليظهر للإدارة) — غير حرج، فشله لا يوقف الطلب ──
-  let receiptUrl = null;
-  try {
-    const { data: signed } = await withNetTimeout(
-      supabaseClient.storage.from('receipts').createSignedUrl(filePath, 60 * 60 * 24 * 30),
-      NET_TIMEOUT_MS.signUrl, 'receipt_signed_url'
-    );
-    receiptUrl = signed ? signed.signedUrl : null;
-  } catch (e) {
-    devWarn('[MEEM] signed url skipped:', (e && e.message) || e);
-  }
+  // The Edge Function saved exactly the bytes it checked. No client re-upload.
+  const filePath = scanResult.receiptPath;
+  const receiptUrl = 'receipts/' + filePath;
 
   // ── (3) الطلب كامل في معاملة واحدة ذرّية ──
   // حجز رقم العملية + استهلاك الكوبون + إدخال صفوف الطلب تحدث كلها معاً
@@ -1280,7 +1216,7 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
   }));
 
   const couponCode = appliedCoupon
-    ? document.getElementById('couponInput').value.trim().toUpperCase()
+    ? appliedCoupon.code
     : null;
 
   const receiptPayload = {
@@ -1319,56 +1255,17 @@ async function handlePlaceOrder(errorBox, placeOrderBtn) {
     })
   };
 
+  if (splitPayment) {
+    const second = splitPayment.secondScan;
+    if (!second?.submissionAllowed || !second.scanId || second.receiptPolicy !== 'mandatory-visual-v1') { failOrder('أكمل فحص الإشعار الثاني أولاً.'); return; }
+    receiptPayload.secondary_receipt = {
+      tx_ref: splitPayment.secondRef, receipt_hash: second.receiptHash, receipt_path: second.receiptPath,
+      payment_method_id: selectedMethodId, ocr_data: {edge_scan_id:second.scanId}
+    };
+  }
   const finishSuccess = async (rows) => {
     const list = Array.isArray(rows) ? rows : [];
     const lastId = list.length ? list[list.length - 1].id : null;
-
-    // ── دفع مجزّأ: نسجّل الإشعار الثاني ونحجز رقم عمليته لمنع تكراره ──
-    if (splitPayment && splitPayment.secondFile && splitPayment.secondRef) {
-      try {
-        const ext2  = (splitPayment.secondFile.name.split('.').pop() || 'jpg').toLowerCase();
-        const path2 = `${currentUser.id}/${Date.now()}_receipt_2.${ext2}`;
-        await supabaseClient.storage.from('receipts').upload(path2, splitPayment.secondFile, {
-          contentType: splitPayment.secondFile.type, upsert: false
-        });
-        let url2 = null;
-        try {
-          const { data: signed2 } = await supabaseClient.storage.from('receipts')
-            .createSignedUrl(path2, 60 * 60 * 24 * 30);
-          url2 = signed2 ? signed2.signedUrl : null;
-        } catch (e) {}
-        await supabaseClient.rpc('attach_secondary_receipt', {
-          p_parent_tx_ref: savedTxRef,
-          p_order_id:      lastId,
-          p_receipt: {
-            tx_ref:          splitPayment.secondRef,
-            receipt_hash:    splitPayment.secondScan && splitPayment.secondScan.receiptHash,
-            receipt_path:    path2,
-            receipt_url:     url2,
-            provider:        splitPayment.secondScan.provider || null,
-            payment_method_id: selectedMethodId,
-            expected_amount: splitPayment.remaining,
-            amount_detected: splitPayment.secondScan.extracted
-              ? splitPayment.secondScan.extracted.amount : null,
-            tx_ref_ocr:      splitPayment.secondScan.extracted
-              ? splitPayment.secondScan.extracted.txRef : null,
-            ocr_status:      'needs_admin_check',
-            ocr_confidence: splitPayment.secondScan.confidence ?? null,
-            risk_flags:      (splitPayment.secondScan.riskFlags || []).concat(['split_payment_part2']),
-            ocr_data:        Object.assign({}, splitPayment.secondScan.extracted || {}, {
-              edge_scan_id: splitPayment.secondScan.scanId || null,
-              engine_source: splitPayment.secondScan.source || 'supabase_edge',
-              decision: splitPayment.secondScan.decision || null,
-              ref_verified: !!splitPayment.secondScan.refVerified,
-              amount_verified: !!splitPayment.secondScan.amountVerified
-            })
-          }
-        });
-      } catch (e) {
-        devWarn('[MEEM] secondary receipt attach failed:', (e && e.message) || e);
-      }
-    }
-
     clearActiveBasket();
     window.location.href = lastId
       ? `receipt.html?order_id=${lastId}`

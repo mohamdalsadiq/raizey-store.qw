@@ -111,7 +111,7 @@ async function search(query) {
     if (productResults.length > 0) {
       resultsTitle.textContent = `باقات الشحن المباشرة المطابقة (${productResults.length})`;
       productsGrid.innerHTML = productResults.map(p => `
-        <a href="category.html?id=${encodeURIComponent(p.category_id)}" class="voucher-card">
+        <a href="product.html?id=${encodeURIComponent(p.id)}" class="voucher-card">
           <div class="voucher-top">
             <div class="voucher-thumb">
               ${p.image_url ? `<img src="${escapeAttribute(sanitizeUrl(p.image_url))}" alt="${escapeAttribute(p.name)}" loading="lazy">` : '<div style="color: var(--mm-text-muted); font-size: 24px;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-package"></use></svg></div>'}

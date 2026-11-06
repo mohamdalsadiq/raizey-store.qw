@@ -8,7 +8,9 @@ const statusLabels = {
 
 const paymentLabels = {
   wallet: 'من المحفظة',
-  bank: 'تحويل بنكك'
+  bank: 'تحويل بنكي',
+  code: 'رمز دفع',
+  payment_code: 'رمز دفع'
 };
 
 let currentUser = null;
@@ -61,7 +63,7 @@ function renderOrderCard(o) {
     fieldsHtml = `
       <div class="order-fields-list">
         ${Object.entries(o.field_values).map(([k, v]) => {
-          const label = (o.field_labels && o.field_labels[k]) ? o.field_labels[k] : k;
+          const label = MeemStoreRules.fieldLabel(o.field_labels, k);
           return `<div><strong style="color: var(--text-muted);">${escapeHtml(label)}:</strong> ${escapeHtml(v)}</div>`;
         }).join('')}
       </div>
@@ -94,7 +96,7 @@ function renderOrderCard(o) {
         <div><strong>طريقة الدفع:</strong> ${paymentLabels[o.payment_type] || escapeHtml(o.payment_type)}</div>
         ${optionHtml} <!-- عرض الخيار المختار هنا -->
         ${fieldsHtml}
-        ${o.receipt_url ? `<div><a href="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color: var(--mm-accent-text); font-weight: 700; text-decoration: none;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض صورة الإيصال</a></div>` : ''}
+        ${o.receipt_url ? `<div><a href="#" data-receipt-reference="${escapeHtml(o.receipt_url)}" target="_blank" rel="noopener" style="color: var(--mm-accent-text); font-weight: 700; text-decoration: none;"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-image"></use></svg> عرض صورة الإيصال</a></div>` : ''}
       </div>
 
       <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">

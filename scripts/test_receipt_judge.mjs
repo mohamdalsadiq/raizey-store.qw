@@ -226,10 +226,10 @@ const withWrongName = run(bankakText, {
 check("Beneficiary name mismatch → review_admin", withWrongName.decision, "review_admin");
 check("Beneficiary name flag", (withWrongName.riskFlags || []).includes("beneficiary_name_unverified"), true);
 
-// P2-RCP-001: BIN matching modes (exact / embedded / reverse-embedded / mismatch)
+// Full configured identifiers require exact matching in both directions.
 console.log("\n── مطابقة BIN (تامة/مضمّنة/عكسية/غير متطابقة) ──");
 function binTest(binPrefixes, label) {
-  const m = Object.assign({}, methodMatching, { bin_prefixes: binPrefixes });
+  const m = Object.assign({}, methodMatching, { account_number: "7654321", bin_prefixes: binPrefixes });
   const r = run(bankakText, {
     expectedAmount: AMOUNT, manualRef: "FT250719123456",
     expectedAccount: MERCHANT_ACCOUNT, expectedMethod: m,
@@ -239,13 +239,13 @@ function binTest(binPrefixes, label) {
 let r1 = binTest("2050123456789012", "exact");
 check("BIN exact match", r1.extracted.binMatched, true);
 let r2 = binTest("99205012345678901234", "embedded");
-check("BIN embedded (toAcct inside BIN)", r2.extracted.binMatched, true);
+check("embedded account is rejected", r2.extracted.binMatched, false);
 let r3 = binTest("12345678", "reverse");
-check("BIN reverse-embedded (BIN inside toAcct)", r3.extracted.binMatched, true);
+check("account prefix is rejected", r3.extracted.binMatched, false);
 let r4 = binTest("99999999999999999", "mismatch");
 check("BIN mismatch flag", (r4.riskFlags || []).includes("bin_mismatch"), true);
 check("BIN mismatch → binMatched false", r4.extracted.binMatched, false);
-let r5 = binTest("57040290563000001, 2050123456789012", "multi");
+let r5 = binTest("57040123456700001, 2050123456789012", "multi");
 check("BIN multi-value (one matches)", r5.extracted.binMatched, true);
 
 console.log("\n── التطبيع (normalization) ──");
@@ -256,6 +256,49 @@ check("parseAmountToken arabic separators", Core.parseAmountToken(Core.normalize
 check("parseAmountToken plain", Core.parseAmountToken("125,000.00"), 125000);
 check("parseAmountToken spaces", Core.parseAmountToken("125 000"), 125000);
 check("parseAmountToken european", Core.parseAmountToken("125.000,00"), 125000);
+check("invalid February date rejected", Core.parseReceiptDate("31-Feb-2026"), null);
+check("numeric date cannot roll over", Core.parseReceiptDate("2026-13-05"), null);
+check("non-leap February 29 rejected", Core.parseReceiptDate("29/02/2026"), null);
+check("leap year February 29 accepted", Core.parseReceiptDate("29/02/2024")?.toISOString(), "2024-02-29T00:00:00.000Z");
+check("Arabic month and digits parsed", Core.parseReceiptDate("٥ نوفمبر ٢٠٢٦")?.toISOString(), "2026-11-05T00:00:00.000Z");
+check("English receipt date parsed", Core.parseReceiptDate("05-Nov-2026 23:10:01")?.toISOString(), "2026-11-05T00:00:00.000Z");
+
+console.log("\n── صيغ البنوك والتحويل بين البنوك — نصوص مصطنعة ──");
+const localBban='04012345670001';
+const crossText=`اووكاش
+بنك ام درمان الوطني
+تفاصيل الحركة
+حركة ناجحة
+رقم الحركة: 20261106123456
+التحويل إلى بنك داخل السودان
+رقم السجل: ${localBban}
+اسم المشترك: محمد الصادق
+قيمة الحركة: 125,000.00 SDG
+التاريخ: ${todayStamp()}`;
+const crossMethod={account_number:'1234567',bin_prefixes:localBban,account_name:'محمد الصادق',bank_key:'bankak'};
+const cross=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedAccount:'1234567',expectedMethod:crossMethod});
+check('new O-Cash spelling detected',cross.provider,'ocash');
+check('interbank record mapped only in explicit transfer context',cross.extracted.toAccount,localBban);
+check('registered interbank destination verified',cross.extracted.crossBankRecipientVerified,true);
+check('cross-bank transfer can pass deterministic checks',cross.decision,'accept');
+const unregisteredCross=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:{...crossMethod,bin_prefixes:'04099999990001'}});
+check('unregistered BBAN cannot impersonate a destination',unregisteredCross.extracted.crossBankRecipientVerified,false);
+const missingInterbank=run(crossText.replace('التحويل إلى بنك داخل السودان','خدمة دفع الفواتير'),{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:crossMethod});
+check('record number without explicit interbank context is not destination',missingInterbank.extracted.toAccount,null);
+const noName=run(crossText,{expectedAmount:AMOUNT,manualRef:'20261106123456',expectedMethod:{...crossMethod,account_name:''}});
+check('cross-bank inference requires a configured beneficiary',noName.extracted.crossBankRecipientVerified,false);
+const receiverLabel=run(bankakText.replace('الى حساب:','حساب المستفيد:'),{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('beneficiary account label read',receiverLabel.extracted.toAccount,MERCHANT_ACCOUNT);
+const englishLabel=run(bankakText.replace('الى حساب:','Recipient Account:'),{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('English recipient account label read',englishLabel.extracted.toAccount,MERCHANT_ACCOUNT);
+const pending=run(bankakText+'\npending',{expectedAmount:AMOUNT,manualRef:'FT250719123456',expectedAccount:MERCHANT_ACCOUNT});
+check('pending cannot be treated as completed',pending.extracted.statusOk,false);
+const family=run(fawryText,{expectedAmount:AMOUNT,manualRef:'554433221100',expectedMethod:{account_number:MERCHANT_ACCOUNT,bank_key:'faisal'}});
+check('Faisal and Fawry are one bank family',family.riskFlags.includes('bank_provider_mismatch'),false);
+
+console.log("\n── المبلغ المهيكل: تنسيقات صريحة دون تخمين ──");
+for(const value of ['150000.00','150,000.00','١٥٠٬٠٠٠٫٠٠','150 000.00','150\u00a0000.00'])check('structured grouping '+value,Core.strictReceiptAmount(value),150000);
+for(const value of ['150,00.00','15 00','150000xyz','1.5e5','150,000.005','-150000','150000 SDG',150000,null])check('ambiguous structured amount rejected '+value,Number.isNaN(Core.strictReceiptAmount(value)),true);
 
 console.log("\n── حتمية القرار (نفس المدخل = نفس القرار) ──");
 const repeatA = run(bankakText, { expectedAmount: AMOUNT, manualRef: "FT250719123456", expectedAccount: MERCHANT_ACCOUNT });

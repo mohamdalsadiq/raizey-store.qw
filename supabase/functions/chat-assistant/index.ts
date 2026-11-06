@@ -258,7 +258,7 @@ Deno.serve(async (request) => {
   const orderRows = Array.isArray(ordersResult?.data) ? ordersResult.data : [];
   const orderContext = formatOrders(orderRows);
 
-  const prompt = `أنت مساعد خدمة العملاء الرسمي لمتجر MEEM STORE الرقمي. أجب بالعربية الواضحة وباختصار مفيد.
+  const prompt = `أنت مساعد خدمة العملاء الرسمي لمتجر MEEM STORE الرقمي. أجب بالعربية الواضحة وباختصار مفيد. استخدم نصاً عادياً بلا Markdown أو HTML أو نجوم للتنسيق.
 
 قواعد مهمة:
 1) استخدم بيانات المنتجات والطلبات الموجودة في السياق فقط. لا تخترع سعراً أو توفرًا أو حالة طلب.

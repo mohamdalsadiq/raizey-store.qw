@@ -24,63 +24,59 @@ document.getElementById('drawerLogoutBtn').addEventListener('click', async (even
   }
 });
 
+let drawerLoadRevision = 0;
 async function loadDrawer() {
-  const guestBox = document.getElementById('drawerGuestBox');
-  const userBox = document.getElementById('drawerUserBox');
-  const adminLinkBox = document.getElementById('adminLinkBox');
-  const adminDividerBox = document.getElementById('adminDividerBox');
-
-  adminLinkBox.style.display = 'none';
-  adminDividerBox.style.display = 'none';
-
+  const revision = ++drawerLoadRevision;
+  const guestBox = document.getElementById('drawerGuestBox'), userBox = document.getElementById('drawerUserBox');
+  const adminLinkBox = document.getElementById('adminLinkBox'), adminDividerBox = document.getElementById('adminDividerBox');
+  const greeting = document.getElementById('drawerGreeting'), balance = document.getElementById('drawerBalance');
+  const bounded = promise => {
+    let timer;
+    return Promise.race([Promise.resolve(promise), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), 8000); })]).finally(() => clearTimeout(timer));
+  };
+  adminLinkBox.style.display = adminDividerBox.style.display = 'none';
+  let retry = document.getElementById('drawerRetryBtn');
+  if (!retry) {
+    retry = document.createElement('button'); retry.id = 'drawerRetryBtn'; retry.type = 'button';
+    retry.textContent = 'إعادة تحميل بيانات الحساب'; retry.addEventListener('click', loadDrawer); userBox.appendChild(retry);
+  }
+  retry.hidden = true;
+  greeting.textContent = 'جارِ تحميل الاسم...'; balance.textContent = 'جارِ تحميل الرصيد...';
   try {
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError) throw sessionError;
-
-    if (!session) {
-      guestBox.style.display = 'block';
-      userBox.style.display = 'none';
-      return;
-    }
-
-    guestBox.style.display = 'none';
-    userBox.style.display = 'block';
+    const { data, error } = await bounded(supabaseClient.auth.getSession());
+    if (revision !== drawerLoadRevision) return;
+    if (error) throw error;
+    const session = data.session;
+    if (!session) { guestBox.style.display = 'block'; userBox.style.display = 'none'; return; }
+    guestBox.style.display = 'none'; userBox.style.display = 'block';
     document.getElementById('drawerEmail').textContent = session.user.email || '';
-
-    const [{ data: profile, error: profileError }, { data: wallet, error: walletError }] = await Promise.all([
-      supabaseClient.from('profiles').select('full_name, role, avatar_url').eq('id', session.user.id).maybeSingle(),
-      supabaseClient.from('wallets').select('balance').eq('user_id', session.user.id).maybeSingle()
-    ]);
-
-    if (profileError || walletError) throw profileError || walletError;
-
-    document.getElementById('drawerGreeting').textContent = profile?.full_name
-      ? `مرحباً، ${profile.full_name}`
-      : 'مرحباً بك يا لاعب';
-
-    const drawerAvatarImg = document.getElementById('drawerAvatarImg');
-    const drawerAvatarIcon = document.querySelector('#drawerAvatar > svg');
-    if (drawerAvatarImg && profile?.avatar_url) {
-      drawerAvatarImg.src = profile.avatar_url;
-      drawerAvatarImg.hidden = false;
-      if (drawerAvatarIcon) drawerAvatarIcon.style.display = 'none';
-    } else if (drawerAvatarImg) {
-      drawerAvatarImg.hidden = true;
-      if (drawerAvatarIcon) drawerAvatarIcon.style.display = '';
-    }
-
-    if (profile?.role === 'admin') {
-      adminLinkBox.style.display = 'block';
-      adminDividerBox.style.display = 'block';
-    }
-
-    document.getElementById('drawerBalance').textContent =
-      `${formatSDG(wallet?.balance ?? 0)} ج.س`;
-  } catch (error) {
-    guestBox.style.display = 'block';
-    userBox.style.display = 'none';
+    const tasks = [
+      bounded(supabaseClient.from('profiles').select('full_name,avatar_url').eq('id', session.user.id).maybeSingle()).then(({data: profile,error}) => {
+        if (revision !== drawerLoadRevision) return;
+        if (error) throw error;
+        greeting.textContent = profile?.full_name ? `مرحباً، ${profile.full_name}` : 'مرحباً بك';
+        const avatar = document.getElementById('drawerAvatarImg'), icon = document.querySelector('#drawerAvatar > svg');
+        if (avatar) { const url = getSafeImageUrl(profile?.avatar_url); avatar.hidden = !url; if (url) avatar.src = url; if (icon) icon.style.display = url ? 'none' : ''; }
+      }).catch(() => { if (revision === drawerLoadRevision) { greeting.textContent = 'تعذّر تحميل الاسم'; retry.hidden = false; } }),
+      bounded(supabaseClient.from('wallets').select('balance').eq('user_id', session.user.id).maybeSingle()).then(({data: wallet,error}) => {
+        if (revision !== drawerLoadRevision) return;
+        if (error) throw error;
+        balance.textContent = `${formatSDG(wallet?.balance ?? 0)} ج.س`;
+      }).catch(() => { if (revision === drawerLoadRevision) { balance.textContent = 'تعذّر تحميل الرصيد'; retry.hidden = false; } }),
+      bounded(supabaseClient.rpc('is_admin')).then(({data: isAdmin,error}) => {
+        if (revision !== drawerLoadRevision) return;
+        if (error) throw error;
+        adminLinkBox.style.display = adminDividerBox.style.display = isAdmin === true ? 'block' : 'none';
+      }).catch(() => { if (revision === drawerLoadRevision) retry.hidden = false; })
+    ];
+    await Promise.allSettled(tasks);
+  } catch {
+    if (revision !== drawerLoadRevision) return;
+    guestBox.style.display = 'none'; userBox.style.display = 'block';
+    greeting.textContent = 'تعذّر تحميل الجلسة'; balance.textContent = 'غير متاح'; retry.hidden = false;
   }
 }
+supabaseClient.auth.onAuthStateChange(() => { if (drawerOverlay.classList.contains('show')) setTimeout(loadDrawer, 0); });
 
 // ---------- جلب وعرض كروت الألعاب الموحدة ----------
 async function init() {
@@ -338,7 +334,7 @@ function renderCatalog(sections, categories, products) {
     return;
   }
   container.replaceChildren(fragment);
-  renderSectionRow(sections);
+  renderSectionRow(sections.filter(section => categories.some(category => category.section_id === section.id)));
 
 }
 
