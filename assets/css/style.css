@@ -28,7 +28,7 @@ body {
   direction: rtl;
   min-height: 100vh;
   line-height: 1.68;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 h1, h2, h3, h4, .section-title, .slide h2, .catalog-section-title {
@@ -83,8 +83,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -760,8 +760,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 /* ---------- Hamburger + Drawer ---------- */
 .hamburger-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--bg-card);
   border: 1px solid var(--border);

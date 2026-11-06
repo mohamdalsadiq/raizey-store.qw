@@ -17,6 +17,10 @@ if (!process.argv.includes('--syntax-only')) {
   for(const name of fs.readdirSync(root).filter(p=>p.endsWith('.html'))) {
     const html=fs.readFileSync(path.join(root,name),'utf8');
     for(const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+      if (/type="application\/ld\+json"/i.test(m[1])) {
+        try { JSON.parse(m[2]); } catch { failures.push(name+': invalid JSON-LD'); }
+        continue;
+      }
       if(m[2].trim()) failures.push(name+': inline JavaScript');
       const src=m[1].match(/\bsrc="([^"]+)"/i)?.[1];
       if(!src || /^https?:/.test(src) || !fs.existsSync(path.join(root,src.split(/[?#]/)[0]))) failures.push(name+': invalid script '+src);

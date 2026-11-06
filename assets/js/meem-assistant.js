@@ -12,6 +12,7 @@
   const EDGE = 12;
   const BOTTOM_NAV = 76;
   const GAP = 12;
+  const INLINE_CHECKOUT = !!document.querySelector('.checkout-page');
 
   const style = document.createElement('style');
   style.textContent = `
@@ -111,10 +112,12 @@
     return null;
   }
   function restorePosition() {
+    if (INLINE_CHECKOUT) return;
     const p = loadPosition();
     if (p) place(p.x, p.y);
   }
   function reflowPosition() {
+    if (INLINE_CHECKOUT) return;
     if (isFloating()) savePosition(place(root.offsetLeft, root.offsetTop));
   }
   window.addEventListener('resize', reflowPosition);
@@ -148,6 +151,7 @@
     dragging = null;
   }
   toggle.addEventListener('pointerdown', (event) => {
+    if (INLINE_CHECKOUT) return;
     if (event.button && event.button !== 0) return;
     const rect = root.getBoundingClientRect();
     dragging = {

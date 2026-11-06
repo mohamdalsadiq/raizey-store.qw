@@ -203,13 +203,21 @@
       var mobile = document.createElement('source');
       mobile.media = '(max-width: ' + MOBILE_MAX + 'px)';
       mobile.srcset = m;
+      if (/^\/assets\/banners\/banner-[123]-mobile\.webp$/.test(m)) {
+        mobile.srcset = m.replace('.webp','-480.webp') + ' 480w, ' + m.replace('.webp','-768.webp') + ' 768w, ' + m + ' 1086w';
+        mobile.sizes = '100vw'; mobile.setAttribute('width','1086'); mobile.setAttribute('height','1448');
+      }
       pic.appendChild(mobile);
     }
     var img = el('img');
     img.setAttribute('src', options.preview && options.view === 'mobile' ? (m || d) : d);
+    if (/^\/assets\/banners\/banner-[123]-desktop\.webp$/.test(d)) {
+      img.srcset = d.replace('.webp','-960.webp') + ' 960w, ' + d + ' 1920w';
+      img.sizes = '(max-width: 1200px) 100vw, 1200px';
+    }
     img.setAttribute('alt', typeof b.alt_text === 'string' ? b.alt_text : '');
     img.setAttribute('width', '1920');
-    img.setAttribute('height', '640');
+    img.setAttribute('height', '720');
     img.setAttribute('decoding', 'async');
     img.setAttribute('loading', eager ? 'eager' : 'lazy');
     if (eager) img.setAttribute('fetchpriority', 'high');

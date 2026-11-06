@@ -235,6 +235,7 @@ async function buyNow() {
 
 function renderProduct() {
   const imageUrl = safeUrl(product.image_url);
+  document.getElementById('catalogPublic')?.remove();
   $('loadingBox').hidden = true; $('content').hidden = false;
   $('content').innerHTML = `
     <div class="product-hero">
@@ -256,9 +257,15 @@ async function init() {
   updateCartBadge();
   if (!productId) { window.location.href = 'index.html'; return; }
   // التصفح عام، ويُطلب تسجيل الدخول فقط عند الضغط على الشراء.
-  exchangeRate = Number(await getExchangeRate()) || 1;
-  const { data, error } = await supabaseClient.from('products').select('*').eq('id', productId).eq('is_active', true).single();
-  if (error || !data) { $('loadingBox').textContent = 'المنتج غير موجود أو غير متاح حالياً.'; return; }
+  let rows;
+  try {
+    [exchangeRate, rows] = await Promise.all([
+      MeemPublicCatalog.rate(),
+      MeemPublicCatalog.get('products', {select:'id,category_id,name,description,image_url,price_usd,has_options,options,required_fields,instructions,delivery_badge_text',id:'eq.'+productId,is_active:'eq.true',limit:'1'})
+    ]);
+  } catch (_) { $('loadingBox').textContent = 'تعذر تحميل السعر أو بيانات المنتج. حدّث الصفحة لإعادة المحاولة.'; return; }
+  const data = rows[0];
+  if (!data) { $('loadingBox').textContent = 'المنتج غير موجود أو غير متاح حالياً.'; return; }
   product = data; optionGroups = normalizeOptionTree(product);
   document.title = `${text(product.name, 'تفاصيل المنتج')} — MEEM STORE`;
   renderProduct();

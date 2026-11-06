@@ -239,7 +239,7 @@ function renderCheckout() {
   methodPickerGrid.innerHTML = paymentMethods.map(m => {
     const iconUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
     const icon = iconUrl
-      ? `<img src="${escapeAttribute(iconUrl)}" alt="" loading="lazy">`
+      ? `<img src="${escapeAttribute(iconUrl)}" alt="" width="48" height="48" decoding="async" loading="lazy" data-payment-icon>`
       : `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
     return `<button type="button" class="method-card" data-method-id="${escapeAttribute(m.id || '')}" aria-pressed="false">
       <span class="method-card-icon" aria-hidden="true">${icon}</span>
@@ -258,7 +258,7 @@ function renderCheckout() {
       const box = document.getElementById('selectedMethodDetails');
       const selIconUrl = m && typeof sanitizeUrl === 'function' ? sanitizeUrl(m.icon_url) : '';
       const selIcon = selIconUrl
-        ? `<img src="${escapeAttribute(selIconUrl)}" alt="" loading="lazy">`
+        ? `<img src="${escapeAttribute(selIconUrl)}" alt="" width="48" height="48" decoding="async" loading="lazy" data-payment-icon>`
         : `<svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-landmark"></use></svg>`;
       box.innerHTML = `
         <div class="selected-method-box">
@@ -271,10 +271,10 @@ function renderCheckout() {
             <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_name || '')}">نسخ</button>
           </div>
           <div class="bank-account-row" style="margin-bottom: 0;">
-            <span>رقم الحساب: ${escapeHtml(m.account_number || '')}</span>
+            <span>رقم الحساب: <bdi class="mm-number" dir="ltr">${escapeHtml(m.account_number || '')}</bdi></span>
             <button type="button" class="copy-account-btn" data-copy="${safeDataAttr(m.account_number || '')}">نسخ</button>
           </div>
-          ${m.instructions ? `<div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">${escapeHtml(m.instructions)}</div>` : ''}
+          ${m.instructions ? `<div style="color: var(--text-muted); font-size: 14px; margin-top: 8px;">${escapeHtml(m.instructions)}</div>` : ''}
         </div>
       `;
       box.querySelectorAll('.copy-account-btn').forEach(btn => {
@@ -714,7 +714,7 @@ function attachCheckoutEvents(canUseWallet) {
       reportEl.innerHTML =
         `<strong style="color: var(--danger);"><svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-circle-x"></use></svg> تم رفض الصورة</strong><br>` +
         `${escapeHtml(analysis.message)}` +
-        `<div style="margin-top: 8px; color: var(--text-muted); font-size: 12px;">` +
+        `<div style="margin-top: 8px; color: var(--text-muted); font-size: 14px;">` +
         `المبلغ المطلوب تحويله: <strong>${safeFormatSDG(currentTotal())} ج.س</strong> — ` +
         `ارفع لقطة شاشة لإشعار التحويل كما هي من التطبيق (بالعربية أو الإنجليزية، كلاهما مدعوم).` +
         `</div>`;
@@ -758,7 +758,7 @@ function attachCheckoutEvents(canUseWallet) {
       `<strong style="color:${needsAdmin ? 'var(--mm-warning)' : (ok ? 'var(--primary)' : 'var(--ink)')};">` +
       `${window.rzIconMarkup(needsAdmin ? 'shield-user' : (ok ? 'circle-check' : 'info'))} ${escapeHtml(analysis.message)}</strong>` +
       `<div style="margin-top: 8px; color: var(--text-muted);">${rows.map(escapeHtml).join('<br>')}</div>` +
-      (ok ? '' : `<div style="margin-top: 8px; color: var(--danger); font-size: 12px; font-weight: 600;">${escapeHtml(blockHint(analysis))}</div>`);
+      (ok ? '' : `<div style="margin-top: 8px; color: var(--danger); font-size: 14px; font-weight: 600;">${escapeHtml(blockHint(analysis))}</div>`);
 
     // لا إرسال دون اجتياز الفحص الآلي بكل شروطه.
     if (!ok) {
@@ -852,7 +852,7 @@ function attachCheckoutEvents(canUseWallet) {
                style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: var(--mm-silver); padding: 10px 16px; border-radius: 12px; font-weight: 800; text-decoration: none;">
                <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-whatsapp"></use></svg> تواصل مع الدعم</a>` : '') +
         `<button type="button" id="paidRestBtn"
-           style="background: var(--primary); color: var(--mm-silver); border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; cursor: pointer;">
+           style="background: var(--primary); color: var(--mm-on-primary); border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; cursor: pointer;">
            حوّلت الباقي</button>` +
       `</div>`;
 

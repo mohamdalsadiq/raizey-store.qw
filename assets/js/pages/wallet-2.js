@@ -55,7 +55,7 @@ async function init() {
         <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_name || '')}">نسخ</button>
       </div>
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-        <span>رقم الحساب: ${escapeHtml(method.account_number || '')}</span>
+        <span>رقم الحساب: <bdi class="mm-number" dir="ltr">${escapeHtml(method.account_number || '')}</bdi></span>
         <button type="button" class="copy-account-btn" data-copy="${escapeHtml(method.account_number || '')}">نسخ</button>
       </div>
       ${method.instructions ? `<div style="margin-top: 6px;">${escapeHtml(method.instructions)}</div>` : ''}
