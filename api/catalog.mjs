@@ -15,15 +15,17 @@ function imageURL(value) {
 // This is the already published anon configuration. Never use a service-role key
 // or visitor headers for shared-cache HTML. The Data API still enforces RLS.
 function publicConfig() {
-  const source = fs.readFileSync(path.join(process.cwd(), 'assets/js/supabase-client.js'), 'utf8');
-  return {url: source.match(/const SUPABASE_URL = .*?\|\| "([^"]+)"/)[1], key: source.match(/const SUPABASE_ANON_KEY = .*?\|\| "([^"]+)"/)[1]};
+  try {
+    const source = fs.readFileSync(path.join(process.cwd(), 'assets/js/supabase-client.js'), 'utf8');
+    return {url: source.match(/const SUPABASE_URL = .*?\|\| "([^"]+)"/)[1], key: source.match(/const SUPABASE_ANON_KEY = .*?\|\| "([^"]+)"/)[1]};
+  } catch { throw new Error('catalog_config_unavailable'); }
 }
 export async function readPublic(table, params, fetcher = fetch) {
   const {url, key} = publicConfig();
   const endpoint = new URL('/rest/v1/' + table, url);
   endpoint.search = new URLSearchParams(params);
   const result = await fetcher(endpoint, {headers: {apikey: key, Authorization: 'Bearer ' + key}, credentials: 'omit', signal: AbortSignal.timeout(8000)});
-  if (!result.ok) throw new Error('catalog_source_unavailable');
+  if (!result.ok) throw new Error('catalog_source_http_' + result.status);
   return result.json();
 }
 function headers(type, status = 200) {
@@ -87,8 +89,9 @@ export async function handleCatalog(request, read = readPublic) {
     if (!rows.length) return errorPage(404,'المنتج أو القسم غير متاح');
     const body = renderCatalog(kind, rows[0],children);
     return new Response(request.method==='HEAD'?null:body,{headers:headers('text/html; charset=utf-8')});
-  } catch {
-    console.error('[MEEM catalog] public source unavailable'); // No sessions or payloads.
+  } catch (error) {
+    const code = /^catalog_(?:config_unavailable|source_http_\d{3})$/.test(error?.message) ? error.message : 'catalog_source_unavailable';
+    console.error('[MEEM catalog]', code); // Enum only, no sessions, URLs or payloads.
     return errorPage(503,'تعذر تحميل الكتالوج؛ حاول مجدداً');
   }
 }

@@ -36,8 +36,8 @@ const rewrite = html => html.replace(/((?:src|href)="|\bsrcset=")([^"\n]+)"/g, (
 fs.mkdirSync(path.join(root,'api/templates'),{recursive:true});
 for (const name of fs.readdirSync(root).filter(x=>x.endsWith('.html'))) {
   const html=rewrite(fs.readFileSync(path.join(root,name),'utf8'));
-  fs.writeFileSync(path.join(out,name),html);
   if (['product.html','category.html'].includes(name)) fs.writeFileSync(path.join(root,'api/templates',name),html);
+  else fs.writeFileSync(path.join(out,name),html);
 }
 fs.copyFileSync(path.join(root,'robots.txt'),path.join(out,'robots.txt'));
 fs.writeFileSync(path.join(out,'asset-manifest.json'),JSON.stringify(manifest));
