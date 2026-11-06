@@ -65,7 +65,7 @@ function loadPipeline({ fetchImpl, session = { access_token: JWT }, clock } = {}
   context.globalThis = context;
   context.window = context;
   vm.runInNewContext(source, context, { filename: "receipt-pipeline.js" });
-  return { pipeline: context.MeemReceiptPipeline, requests };
+  return { pipeline: context.MeemReceiptPipeline, requests, context };
 }
 
 function jsonResponse(status, body) {
@@ -202,6 +202,16 @@ console.log("\n── استمرار الصف بعد نافذة المعدل و�
  check('queue automatically resumes beyond former 45 second cutoff',result.scanId,'after-window');
  check('rolling-minute wait preserves the full image for resubmission',requests[0].init.body,requests.at(-1).init.body);
  check('resumed scan uses current session token',requests.at(-1).init.headers.Authorization,'Bearer rotated-test-jwt');
+}
+
+for (const [code,http] of [['receipt_consent_required',403],['receipt_provider_review_pending',503]]) {
+ const {pipeline,context}=loadPipeline({fetchImpl:async()=>jsonResponse(http,{ok:false,error:code,message:'المعالجة لم تبدأ'})});
+ let invalidated=false;context.MeemReceiptConsent={invalidate(){invalidated=true;}};
+ const result=await pipeline.analyze(pngFile(),{});
+ check('policy error keeps precise technical code: '+code,result.riskFlags[0],code);
+ check('policy error never authorizes payment: '+code,result.submissionAllowed===true,false);
+ check('policy error preserves explanatory message: '+code,result.message,'المعالجة لم تبدأ');
+ check('only changed policy invalidates display cache: '+code,invalidated,code==='receipt_consent_required');
 }
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

@@ -330,7 +330,7 @@
           الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
         </div>
         <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
-        <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
+        <label data-receipt-consent style="display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
           <input type="checkbox" id="geminiConsent" style="margin-top: 4px; flex-shrink: 0;">
           <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. الفحص الآلي إلزامي لكل صورة؛ بدونه لا يمكن إرسال الطلب. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
         </label>
@@ -375,6 +375,7 @@
 <script src="assets/js/phone-country-picker.js"></script>
 <script src="assets/js/whatsapp-onboarding.js"></script>
 <script src="assets/js/receipt-pipeline.js?v=20261106-provider-queue"></script>
+<script src="assets/js/receipt-consent-legacy.js"></script>
 <script src="assets/js/pages/checkout-v2-2.js?v=20261106-origin-feedback"></script>
   <script src="assets/js/meem-assistant.js"></script>
 <script src="assets/js/payment-icons.js"></script>

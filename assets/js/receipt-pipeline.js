@@ -10,7 +10,8 @@
   const FALLBACK_FLAGS = [
     'server_ocr_failed', 'server_ocr_timeout', 'server_rate_limited',
     'auth_required', 'judge_error', 'missing_image', 'image_too_large',
-    'invalid_image_type', 'receipt_processing_failed'
+    'invalid_image_type', 'receipt_processing_failed',
+    'receipt_consent_required', 'receipt_provider_review_pending'
   ];
   const MAX_DIMENSION = 1600;
   const JPEG_QUALITY = 0.85;
@@ -170,6 +171,10 @@
       headers.Authorization=`Bearer ${await getAccessToken()}`;
       const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(payload),signal:controller.signal});
       let data=null;try{data=await response.json();}catch(_){}
+      if(['receipt_consent_required','receipt_provider_review_pending'].includes(data?.error)) {
+        if(data.error==='receipt_consent_required') root.MeemReceiptConsent?.invalidate?.();
+        const failure=new Error(data.error);failure.serverMessage=data.message;throw failure;
+      }
       if(response.status===401 || response.status===403) throw new Error('auth_required');
       if(response.status===429) throw new Error('server_rate_limited');
       if(!response.ok || !data || data.ok===false){const e=new Error(data?.error || `server_http_${response.status}`);e.serverMessage=data?.message;throw e;}
@@ -232,7 +237,7 @@
     } catch (error) {
       if (typeof opts.onServerError === 'function') opts.onServerError(error);
       const errorCode = String(error && error.message || '');
-      const flag = error && error.name === 'AbortError'
+      const flag = ['receipt_consent_required','receipt_provider_review_pending'].includes(errorCode) ? errorCode : error && error.name === 'AbortError'
         ? 'server_ocr_timeout'
         : errorCode.includes('auth_required')
           ? 'auth_required'

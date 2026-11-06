@@ -1205,8 +1205,18 @@ Deno.serve(async (request: Request) => {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data: context, error: contextError } = await userClient.rpc('get_session_security_context');
+    const [security,consent] = await Promise.all([
+      userClient.rpc('get_session_security_context'),
+      userClient.rpc('get_receipt_policy_status'),
+    ]);
+    const {data:context,error:contextError}=security;
     if (contextError || !context?.allowed) return json(request, { ok: false, error: context?.requires_mfa ? 'mfa_required' : 'access_denied' }, 403);
+    // This release stays on staging until the provider review is documented.
+    // Never parse/store an image, charge a quota or call the provider first.
+    if(consent.error || consent.data?.configured!==true || !/^[a-f0-9]{64}$/.test(consent.data?.content_sha256 || '')) {
+      return json(request,{ok:false,error:'receipt_provider_review_pending',message:'معالجة الإيصالات معلقة إلى حين اكتمال مراجعة شروط المزود. لم تُرسل الصورة للفحص.'},503);
+    }
+    if(consent.data.accepted!==true) return json(request,{ok:false,error:'receipt_consent_required',message:'يلزم قبول إصدار السياسة الحالي لحسابك قبل معالجة الإيصال.'},403);
     const polling=new URL(request.url).searchParams.get('operation')==='poll';
     if(polling){
       const {data:pollRate,error:pollRateError}=await admin.rpc('consume_chat_rate_limit',{p_rate_key:'receipt-poll:'+userId,p_limit:90,p_window_seconds:600});

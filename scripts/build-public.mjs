@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 const root = path.resolve(new URL('..',import.meta.url).pathname);
+const accountConsent=process.env.MEEM_ACCOUNT_CONSENT_PREVIEW==='1';
+if(accountConsent && process.env.VERCEL_ENV==='production') throw new Error('Account consent production release is blocked pending documented provider review.');
 const out = path.join(root,'dist');
 fs.rmSync(out,{recursive:true,force:true}); fs.mkdirSync(out,{recursive:true});
 fs.cpSync(path.join(root,'assets'),path.join(out,'assets'),{recursive:true});
@@ -40,7 +42,13 @@ fs.writeFileSync(path.join(root,'api/templates/public-config.json'),JSON.stringi
   key:clientSource.match(/const SUPABASE_ANON_KEY = .*?\|\| "([^"]+)"/)[1]
 }));
 for (const name of fs.readdirSync(root).filter(x=>x.endsWith('.html'))) {
-  const html=rewrite(fs.readFileSync(path.join(root,name),'utf8'));
+  let source=fs.readFileSync(path.join(root,name),'utf8');
+  if(accountConsent && !name.startsWith('admin')) {
+    source=source.replace(/<script src="assets\/js\/receipt-consent-legacy\.js"><\/script>\s*/g,'');
+    source=source.replace(/<label data-receipt-consent\b[^>]*>[\s\S]*?<\/label>/g,'<p class="mm-hint">يُفحص الإيصال آلياً وفق سياسة المعالجة المقبولة لحسابك. <a href="privacy.html">تفاصيل السياسة</a></p>');
+    source=source.replace(/(<script src="assets\/js\/mfa-guard\.js"><\/script>)/,'$1\n<script src="assets/js/receipt-consent.js"></script>');
+  }
+  const html=rewrite(source);
   if (['product.html','category.html'].includes(name)) fs.writeFileSync(path.join(root,'api/templates',name),html);
   else fs.writeFileSync(path.join(out,name),html);
 }

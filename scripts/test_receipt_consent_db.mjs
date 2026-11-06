@@ -6,11 +6,12 @@ const a='a6180000-0000-4000-8000-0000000000a1',b='a6180000-0000-4000-8000-000000
 try {
   await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema auth to authenticated,anon; grant execute on function auth.uid() to authenticated,anon; insert into auth.users values('${a}'),('${b}');`);
   await db.exec(fs.readFileSync(new URL('../supabase/migrations/20261106220553_receipt_account_consent.sql',import.meta.url),'utf8'));
+  await db.exec(fs.readFileSync(new URL('../supabase/migrations/20261106225243_receipt_consent_guard_readiness.sql',import.meta.url),'utf8'));
   const asUser=async(id,sql)=>{ await db.exec(`reset role; set request.jwt.claim.sub='${id}'; set role authenticated;`); return db.query(sql); };
   const status=await asUser(a,'select public.get_receipt_policy_status() as state');
   assert.equal(status.rows[0].state.configured,false);
   await assert.rejects(()=>asUser(a,"select public.accept_receipt_policy('2026-11-06','account_prompt')"),/policy_not_current/);
-  await db.exec("reset role; update private.receipt_policy_versions set published_at=clock_timestamp(),provider_review_reference='SYNTHETIC TEST ONLY';");
+  await db.exec("reset role; update private.receipt_policy_versions set published_at=clock_timestamp(),content_sha256=repeat('a',64),provider_review_reference='SYNTHETIC TEST ONLY';");
   await asUser(a,"select public.accept_receipt_policy('2026-11-06','account_prompt')");
   let rows=(await asUser(a,'select * from private.receipt_policy_acceptances')).rows;
   assert.equal(rows.length,1); assert.equal(rows[0].user_id,a); const first=rows[0].accepted_at;
@@ -22,9 +23,13 @@ try {
   await assert.rejects(()=>asUser(a,"update private.receipt_policy_acceptances set accepted_at='2000-01-01'"),/permission denied/);
   await assert.rejects(()=>asUser(a,"select public.accept_receipt_policy('old','account_prompt')"),/policy_not_current/);
   await assert.rejects(()=>asUser(a,"select public.accept_receipt_policy('2026-11-06','invented')"),/invalid_acknowledgement/);
-  await db.exec("reset role; update private.receipt_policy_versions set published_at=null; insert into private.receipt_policy_versions values('next','/privacy.html',clock_timestamp(),'SYNTHETIC TEST ONLY');");
+  await db.exec("reset role; update private.receipt_policy_versions set retired_at=clock_timestamp(); insert into private.receipt_policy_versions(version,policy_path,published_at,provider_review_reference,content_sha256) values('next','/privacy.html',clock_timestamp(),'SYNTHETIC TEST ONLY',repeat('b',64));");
   assert.equal((await asUser(a,'select public.get_receipt_policy_status() as state')).rows[0].state.accepted,false);
-  await db.exec('reset role; set role anon;');
+  await assert.rejects(()=>asUser(a,"select public.accept_receipt_policy('2026-11-06','account_prompt')"),/policy_not_current/);
+  await db.exec('reset role;');
+  await assert.rejects(()=>db.exec("update private.receipt_policy_versions set content_sha256=repeat('c',64) where version='2026-11-06'"),/published_policy_immutable/);
+  await assert.rejects(()=>db.exec("update private.receipt_policy_versions set published_at=null where version='2026-11-06'"),/published_policy_immutable/);
+  await db.exec('set role anon;');
   await assert.rejects(()=>db.query('select public.get_receipt_policy_status()'),/permission denied/);
   console.log('Consent DB: draft gate, current version, own user, RLS isolation, no direct writes/backdating, idempotency, version change and anon denial passed. Local synthetic data only.');
 } finally {await db.close();}
