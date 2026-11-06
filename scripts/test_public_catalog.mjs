@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+let requests=[];
+const context={window:{SUPABASE_URL:'https://example.supabase.co',SUPABASE_ANON_KEY:'public-fixture'},URL,URLSearchParams,AbortSignal,fetch:async(url,options)=>{
+  requests.push({url:String(url),options});
+  return Response.json(String(url).includes('/settings')?[{key:'usd_to_sdg_rate',value:'1500'},{key:'profit_margin_percent',value:'10'}]:[]);
+}};
+vm.runInNewContext(fs.readFileSync(new URL('../assets/js/public-catalog.js',import.meta.url),'utf8'),context);
+const catalog=context.window.MeemPublicCatalog;
+await catalog.get('categories',{select:'id,name',is_active:'eq.true'});
+assert.equal(requests.length,1); assert.equal(requests[0].options.credentials,'omit');
+assert.equal(requests[0].options.headers.Authorization,'Bearer public-fixture');
+assert.ok(requests[0].url.includes('is_active=eq.true'));
+assert.ok(Math.abs(await catalog.rate()-1650)<0.01);
+await assert.rejects(()=>catalog.get('wallets',{}),/invalid_public_table/);
+context.fetch=async()=>Response.json([]);
+await assert.rejects(()=>catalog.rate(),/exchange_rate_unavailable/);
+context.fetch=async()=>new Response(null,{status:503});
+await assert.rejects(()=>catalog.get('products',{}),/public_catalog_unavailable/);
+console.log('Public catalog: no auth dependency, anon credentials only, private-table denylist, rate validation and technical failure passed.');

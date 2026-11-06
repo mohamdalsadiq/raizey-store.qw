@@ -16,3 +16,7 @@ node_modules/
 ui-shots/
 # generated module written by scripts/test_process_receipt_edge.mjs
 scripts/.tmp/
+dist/
+api/templates/
+delivery/meem-ux/evidence/
+scripts/.meem-serve.mjs

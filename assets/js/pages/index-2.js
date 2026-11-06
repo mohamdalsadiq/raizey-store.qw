@@ -78,56 +78,23 @@ async function loadDrawer() {
 }
 supabaseClient.auth.onAuthStateChange(() => { if (drawerOverlay.classList.contains('show')) setTimeout(loadDrawer, 0); });
 
+async function refreshNotificationBadge() {
+  const {data:{session}} = await supabaseClient.auth.getSession();
+  if (!session) return;
+  const {count,error} = await supabaseClient.from('notifications').select('id',{count:'exact',head:true}).eq('user_id',session.user.id).eq('is_read',false);
+  if (!error && count > 0) document.getElementById('notifDot').style.display = 'block';
+}
 // ---------- جلب وعرض كروت الألعاب الموحدة ----------
 async function init() {
   renderHighlights().catch(() => {});
+  refreshNotificationBadge().catch(() => {});
   try {
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError) throw sessionError;
-
-    if (session) {
-      const { count, error: notificationError } = await supabaseClient
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', session.user.id)
-        .eq('is_read', false);
-
-      if (!notificationError && count > 0) {
-        document.getElementById('notifDot').style.display = 'block';
-      }
-    }
-
-    // Ask the capability marker first so we never request a column that is not
-    // there yet (an unknown column makes PostgREST answer 400).
-    let withIcons = false;
-    try {
-      const { data: marker } = await supabaseClient
-        .from('settings').select('value').eq('key', 'catalog_icons_flag').maybeSingle();
-      withIcons = !!(marker && String(marker.value).toLowerCase() === 'true');
-    } catch (e) { withIcons = false; }
-
-    const SECTIONS_FULL = 'id,name,display_order,description';
-    const SECTIONS_BASE = 'id,name,display_order';
-    const CATS_FULL = 'id,section_id,name,description,image_url,display_order,icon_mode,icon_key,icon_image_url';
-    const CATS_BASE = 'id,section_id,name,description,image_url,display_order';
-
-    const [ sectionsRes, categoriesRes, productsRes ] = await Promise.all([
-      supabaseClient.from('store_sections').select(withIcons ? SECTIONS_FULL : SECTIONS_BASE)
-        .eq('is_active', true).order('display_order').order('name'),
-      supabaseClient.from('categories').select(withIcons ? CATS_FULL : CATS_BASE)
-        .eq('is_active', true).not('section_id', 'is', null).order('display_order').order('name'),
-      supabaseClient.from('products').select('category_id').eq('is_active', true)
+    const [sections, categories, products] = await Promise.all([
+      MeemPublicCatalog.get('store_sections', {select:'id,name,display_order,description',is_active:'eq.true',order:'display_order,name'}),
+      MeemPublicCatalog.get('categories', {select:'id,section_id,name,description,image_url,display_order,icon_mode,icon_key,icon_image_url',is_active:'eq.true',section_id:'not.is.null',order:'display_order,name'}),
+      MeemPublicCatalog.get('products', {select:'category_id',is_active:'eq.true'}).catch(() => [])
     ]);
-
-    const sections = sectionsRes.data, sectionsError = sectionsRes.error;
-    const categories = categoriesRes.data, categoriesError = categoriesRes.error;
-    const products = productsRes.data, productsError = productsRes.error;
-
-    if (sectionsError) throw sectionsError;
-    if (categoriesError) throw categoriesError;
-    // عدّاد المنتجات داخل كل قسم تحسين عرض فقط — لا نُفشل الصفحة إن تعذّر جلبه
-    if (productsError && typeof devWarn === 'function') devWarn('[MEEM] products count unavailable:', productsError.message);
-    renderCatalog(sections || [], categories || [], products || []);
+    renderCatalog(sections, categories, products);
   } catch (error) {
     renderMessage('تعذر تحميل الألعاب حالياً', 'تحقق من اتصالك ثم أعد المحاولة.');
   }
@@ -152,6 +119,7 @@ function renderMessage(title, description) {
   text.textContent = description;
   text.style.color = 'var(--text-muted)';
   state.append(mark, heading, text);
+  const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'mm-btn'; retry.textContent = 'إعادة المحاولة'; retry.addEventListener('click', init); state.appendChild(retry);
   container.replaceChildren(state);
 }
 
@@ -411,8 +379,8 @@ async function renderHighlights() {
   } catch (e) { flag = false; }
   if (!flag) return;
 
-  let rate = 1;
-  try { rate = Number(await getExchangeRate()) || 1; } catch (e) { rate = 1; }
+  let rate;
+  try { rate = await MeemPublicCatalog.rate(); } catch (e) { return; }
 
   const [newestRes, topRes] = await Promise.all([
     supabaseClient.from('products').select('id,name,image_url,price_usd,created_at')

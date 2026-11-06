@@ -108,10 +108,10 @@
   /* typography */
   --mm-font: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mm-font-display: 'Cairo', system-ui, sans-serif;
-  --mm-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
-  --mm-fs-xs: .75rem;
-  --mm-fs-sm: .8125rem;
-  --mm-fs-base: .9375rem;
+  --mm-font-mono: var(--mm-font);
+  --mm-fs-xs: .875rem;
+  --mm-fs-sm: .875rem;
+  --mm-fs-base: 1rem;
   --mm-fs-md: 1rem;
   --mm-fs-lg: 1.125rem;
   --mm-fs-xl: clamp(1.25rem, 1.1rem + .7vw, 1.5rem);
@@ -190,7 +190,7 @@
   --mm-border-strong: #A9BCEC;
   --mm-link: #0B4FCC;
   --mm-accent-text: #7A5E00;
-  --mm-on-primary: var(--mm-surface);
+  --mm-on-primary: var(--mm-royal-950);
   --mm-ring: rgba(9, 42, 145, .28);
   --mm-shadow-sm: 0 1px 2px rgba(9, 42, 145, .08);
   --mm-shadow-md: 0 8px 24px -12px rgba(9, 42, 145, .22);
@@ -355,16 +355,17 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 }
 .mm-btn:hover { color: var(--mm-btn-fg); filter: brightness(1.03); }
 .mm-btn:active { transform: translateY(1px) scale(.99); }
-.mm-btn[disabled], .mm-btn.is-disabled, .mm-btn[aria-busy="true"] { opacity: .6; pointer-events: none; }
+.mm-btn[disabled], .mm-btn.is-disabled, .mm-btn[aria-busy="true"] { opacity: 1; cursor: not-allowed; }
 
 .mm-btn--primary {
-  --mm-btn-bg: linear-gradient(180deg, var(--mm-gold-400), var(--mm-primary) 62%, var(--mm-orange-hover));
+  --mm-btn-bg: var(--mm-primary);
   --mm-btn-fg: var(--mm-on-primary);
   --mm-btn-bd: transparent;
   box-shadow: var(--mm-shadow-md), 0 0 0 1px rgba(255, 212, 0, .18) inset;
   font-weight: 800;
 }
-.mm-btn--primary:hover { box-shadow: var(--mm-shadow-glow); }
+.mm-btn--primary:hover { --mm-btn-bg: var(--mm-gold-500); }
+.mm-btn--primary:active { --mm-btn-bg: var(--mm-gold-600); }
 .mm-btn--ember { --mm-btn-bg: var(--mm-orange-deep); --mm-btn-fg: var(--mm-paper-50); --mm-btn-bd: transparent; }
 .mm-btn--outline { --mm-btn-bg: transparent; --mm-btn-bd: var(--mm-border-strong); }
 .mm-btn--outline:hover { --mm-btn-bd: var(--mm-primary); --mm-btn-fg: var(--mm-link); }
@@ -513,7 +514,7 @@ input.mm-input, select.mm-select, textarea.mm-textarea {
   border-radius: var(--mm-radius-pill); border: 1px solid var(--mm-border);
   background: var(--mm-surface); color: var(--mm-text-soft);
   font-size: var(--mm-fs-sm); font-weight: 700;
-  transition: all var(--mm-t) var(--mm-ease);
+  transition: background-color var(--mm-t) var(--mm-ease);
 }
 .mm-chip:hover { border-color: var(--mm-primary); color: var(--mm-link); }
 .mm-chip[aria-pressed="true"], .mm-chip.is-active { background: var(--mm-text); color: var(--mm-bg); border-color: var(--mm-text); }
@@ -526,7 +527,7 @@ input.mm-input, select.mm-select, textarea.mm-textarea {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: 0; border-radius: var(--mm-radius-pill); background: transparent;
   color: var(--mm-text-muted); font-size: var(--mm-fs-sm); font-weight: 800;
-  transition: all var(--mm-t) var(--mm-ease); white-space: nowrap;
+  transition: background-color var(--mm-t) var(--mm-ease); white-space: nowrap;
 }
 .mm-tab[aria-selected="true"], .mm-tab.is-active { background: var(--mm-surface); color: var(--mm-text); box-shadow: var(--mm-shadow-sm); }
 .mm-tabs--underline .mm-tab { border-radius: 0; padding: 10px 2px; }
@@ -816,7 +817,7 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
   min-height: var(--mm-tap); padding: 0 var(--mm-s5) !important;
   font-weight: 800 !important; font-size: var(--mm-fs-base) !important;
   color: var(--mm-on-primary) !important;
-  background: linear-gradient(180deg, var(--mm-gold-400), var(--mm-primary) 62%, var(--mm-orange-hover)) !important;
+  background: var(--mm-primary) !important;
   border: 1px solid transparent !important; border-radius: var(--mm-radius) !important;
   box-shadow: var(--mm-shadow-md) !important;
   transition: transform var(--mm-t-fast) var(--mm-ease), box-shadow var(--mm-t) var(--mm-ease), filter var(--mm-t) var(--mm-ease) !important;
@@ -835,7 +836,7 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
   font-weight: 700 !important; border-radius: var(--mm-radius-sm) !important;
   background: var(--mm-surface-2) !important; color: var(--mm-text) !important;
   border: 1px solid var(--mm-border) !important;
-  transition: all var(--mm-t) var(--mm-ease) !important;
+  transition: background-color var(--mm-t) var(--mm-ease) !important;
 }
 .modal-cancel-btn:hover, .admin-btn:hover, .back-link:hover, .resend-btn:hover, .otp-mode-btn:hover { border-color: var(--mm-primary) !important; color: var(--mm-link) !important; }
 .admin-btn.btn-complete { background: var(--mm-success-fill) !important; color: var(--mm-silver) !important; border-color: transparent !important; }
@@ -885,7 +886,7 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
 .file-upload, .mm-file {
   border: 1.5px dashed var(--mm-border-strong) !important; border-radius: var(--mm-radius-lg) !important;
   background: var(--mm-surface-3) !important; color: var(--mm-text-muted) !important; font-weight: 700;
-  transition: all var(--mm-t) var(--mm-ease) !important;
+  transition: background-color var(--mm-t) var(--mm-ease) !important;
 }
 .file-upload:hover { border-color: var(--mm-primary) !important; background: var(--mm-orange-tint) !important; color: var(--mm-text) !important; }
 
@@ -915,7 +916,7 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
   box-shadow: 0 0 0 3px var(--mm-ring), var(--mm-shadow-sm) !important;
   background: linear-gradient(180deg, var(--mm-surface), var(--mm-surface-3)) !important;
 }
-.payment-option, .variant-btn { border-radius: var(--mm-radius) !important; border: 1px solid var(--mm-border) !important; background: var(--mm-surface) !important; padding: var(--mm-s3) !important; transition: all var(--mm-t) var(--mm-ease) !important; }
+.payment-option, .variant-btn { border-radius: var(--mm-radius) !important; border: 1px solid var(--mm-border) !important; background: var(--mm-surface) !important; padding: var(--mm-s3) !important; transition: background-color var(--mm-t) var(--mm-ease) !important; }
 .payment-option:hover, .variant-btn:hover { border-color: var(--mm-primary) !important; transform: translateY(-1px); }
 
 /* ── Payment typography: clearer bank / method names (بنكك، أوكاش…) ───────── */
@@ -1000,12 +1001,12 @@ body.mm-has-bottom-nav .whatsapp-fab { bottom: calc(76px + env(safe-area-inset-b
 .icon-action-btn {
   width: 38px; height: 38px; display: inline-grid; place-items: center;
   border-radius: var(--mm-radius-sm); border: 1px solid var(--mm-border); background: var(--mm-surface);
-  color: var(--mm-text-soft); transition: all var(--mm-t) var(--mm-ease);
+  color: var(--mm-text-soft); transition: background-color var(--mm-t) var(--mm-ease);
 }
 .icon-action-btn:hover { border-color: var(--mm-primary); color: var(--mm-link); transform: translateY(-1px); }
 .icon-action-btn.danger:hover { border-color: var(--mm-danger); color: var(--mm-danger); }
 .copyable-row, .bank-details { font-family: var(--mm-font-mono); }
-.mini-copy-btn, .copy-account-btn { min-height: 34px !important; border-radius: var(--mm-radius-sm) !important; }
+.mini-copy-btn, .copy-account-btn { min-height: 44px !important; border-radius: var(--mm-radius-sm) !important; }
 
 /* tables inside admin pages */
 table { border-color: var(--mm-border) !important; }
@@ -1021,7 +1022,7 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 /* ── 20. Responsive & print ──────────────────────────────────────────────── */
 @media (max-width: 767px) {
   :root { --mm-tap: 48px; }
-  body { font-size: 15px; }
+  body { font-size: 16px; }
   h1 { font-size: clamp(1.6rem, 1.2rem + 3vw, 2.1rem); }
   .container { padding: 0 var(--mm-s4); }
   .header-inner { padding: 10px var(--mm-s4) !important; }
@@ -1330,3 +1331,32 @@ table tbody tr:hover { background: var(--mm-surface-3) !important; }
 
 /* Catalog artwork is filled SVG, separate from stroked interface controls. */
 .mm-category-icon { width: 1.5em; height: 1.5em; display: inline-block; flex-shrink: 0; fill: currentColor; stroke: none; vertical-align: middle; }
+
+/* Shared customer primitives; layout rules stay in their original components. */
+.storefront-intro { margin-block: 24px 16px; }
+.storefront-intro h1 { font-size: var(--mm-fs-xl); }
+.storefront-intro p { color: var(--mm-text-soft); margin-block-start: 8px; }
+.mm-number, .mm-num { font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
+bdi.mm-number { direction: ltr; display: inline-block; overflow-wrap: anywhere; }
+.mm-btn:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--mm-link); outline-offset: 3px; }
+.mm-btn { white-space: normal; line-height: 1.6; padding-block: 10px; flex-shrink: 0; }
+.mm-btn[disabled], .mm-btn[aria-busy="true"] { background: var(--mm-surface-3); color: var(--mm-text-soft); border-color: var(--mm-border-strong); }
+.bank-details, .copyable-row { font-family: var(--mm-font); overflow-wrap: anywhere; }
+.copy-account-btn { min-height: 44px; min-width: 44px; flex-shrink: 0; }
+.method-card-icon { flex-shrink: 0; overflow: hidden; }
+.method-card-icon img { object-fit: contain; padding: 0; }
+.policy-dialog { margin: auto; max-width: min(32rem, calc(100% - 32px)); max-height: 85dvh; overflow: auto; padding: 24px; border: 1px solid var(--mm-border); border-radius: var(--mm-radius); background: var(--mm-bg); color: var(--mm-text); font: inherit; }
+.policy-dialog::backdrop { background: var(--mm-overlay); }
+.policy-dialog p { margin-block: 16px; }
+.catalog-public { max-width: 1100px; margin: 24px auto; padding: 20px; }
+.catalog-public h1 { font-size: var(--mm-fs-2xl); }
+.catalog-public img { width: 240px; height: 240px; object-fit: contain; margin-block: 16px; }
+.catalog-public ul { padding-inline-start: 24px; }
+.catalog-public a { color: var(--mm-link); text-decoration: underline; }
+@media (max-width: 767px) {
+  .bank-account-row { align-items: start; flex-wrap: wrap; }
+  body:has(.checkout-page) .whatsapp-fab { display: none; }
+  body:has(.checkout-page) #meemAssistantRoot { position: static; margin: 12px 16px 80px; width: max-content; }
+  body:has(input:focus, textarea:focus, select:focus) .mm-bottom-nav,
+  body:has(input:focus, textarea:focus, select:focus) #meemAssistantRoot { visibility: hidden; }
+}

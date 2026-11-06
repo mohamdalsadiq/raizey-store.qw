@@ -6,3 +6,8 @@
 !vercel.json
 !*.html
 !favicon.svg
+!robots.txt
+!package.json
+!package-lock.json
+!scripts
+!api

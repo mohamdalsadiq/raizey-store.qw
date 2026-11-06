@@ -4,6 +4,11 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
       "source": "/checkout.html",
       "destination": "/checkout-v2.html",
       "permanent": false
@@ -63,6 +68,15 @@
       ]
     },
     {
+      "source": "/assets/:path*.:hash([a-f0-9]{12}).:ext",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
       "source": "/(.*).html",
       "headers": [
         {
@@ -70,6 +84,40 @@
           "value": "no-cache, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/catalog.mjs": {
+      "includeFiles": [
+        "api/templates/**",
+        "assets/js/supabase-client.js"
+      ],
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/product.html",
+      "destination": "/api/catalog?kind=product"
+    },
+    {
+      "source": "/category.html",
+      "destination": "/api/catalog?kind=category"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/catalog?kind=sitemap"
     }
   ]
 }

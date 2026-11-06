@@ -14,7 +14,7 @@
 }
 .receipt-scan-copy { min-width: 0; line-height: 1.7; }
 .receipt-scan-copy strong { display: block; font-size: 14px; color: var(--mm-text); }
-.receipt-scan-copy p { margin: 4px 0 0; font-size: 12px; font-weight: 500; color: var(--mm-text-soft); overflow-wrap: anywhere; }
+.receipt-scan-copy p { margin: 4px 0 0; font-size: 14px; font-weight: 500; color: var(--mm-text-soft); overflow-wrap: anywhere; }
 .receipt-scan-track { position: absolute; inset-inline: 0; bottom: 0; height: 3px; background: var(--mm-electric-tint); }
 .receipt-scan-track::after {
   content: ''; display: block; width: 35%; height: 100%; border-radius: 3px;

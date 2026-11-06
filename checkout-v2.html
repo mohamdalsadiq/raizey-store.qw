@@ -1,14 +1,8 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<link rel="stylesheet" href="assets/css/fonts.css">
 <script src="assets/js/pages/checkout-v2.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-
-
-
-
 <meta name="theme-color" content="#092A91" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#061A5C" media="(prefers-color-scheme: dark)">
 
@@ -76,7 +70,7 @@
     margin-bottom: 4px;
   }
   .checkout-item-price {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--mm-accent-text);
     font-weight: 700;
   }
@@ -84,7 +78,7 @@
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px dashed var(--border);
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text-muted);
   }
   .checkout-item-fields div {
@@ -178,7 +172,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 5px 10px;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--mm-accent-text);
     cursor: pointer;
@@ -209,7 +203,7 @@
     color: var(--mm-accent-text); overflow: hidden;
     transition: transform .18s ease;
   }
-  .method-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+  .method-card-icon img { width: 100%; height: 100%; object-fit: contain; padding: 0; }
   .method-card-icon svg { width: 22px; height: 22px; }
   .method-card:hover .method-card-icon { transform: scale(1.06); }
   .method-card-name { font-weight: 800; font-size: 14.5px; letter-spacing: .1px; line-height: 1.5; }
@@ -217,23 +211,9 @@
   .selected-method-head .method-card-icon { width: 38px; height: 38px; }
   .selected-method-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 6px; }
   .bank-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
-  #saveTxRefBtn {
-    flex-shrink: 0;
-    min-width: 84px;
-    padding: 0 20px;
-    border-radius: 12px;
-    border: none;
-    background: var(--primary);
-    color: var(--ink);
-    font-weight: 800;
+#saveTxRefBtn:hover { opacity: 0.9; }
+.field-hint {
     font-size: 14px;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-  }
-  #saveTxRefBtn:hover { opacity: 0.9; }
-  #saveTxRefBtn:active { opacity: 0.8; }
-  .field-hint {
-    font-size: 12px;
     color: var(--text-muted);
     margin-top: 6px;
     line-height: 1.6;
@@ -257,6 +237,7 @@
 <link rel="stylesheet" href="assets/css/receipt-scan.css?v=20261105-scan-feedback">
 <script src="assets/js/meem-ui.js"></script>
 <link rel="stylesheet" href="assets/css/whatsapp-onboarding.css">
+<meta name="robots" content="noindex, follow">
 </head>
 <body>
 
@@ -282,7 +263,7 @@
       <input type="text" id="couponInput" placeholder="اكتب الكود هنا">
       <button id="applyCouponBtn" type="button">تطبيق</button>
     </div>
-    <div id="couponMessage" style="font-size: 12px; margin-bottom: 16px; font-weight: 600;"></div>
+    <div id="couponMessage" style="font-size: 14px; margin-bottom: 16px; font-weight: 600;"></div>
 
     <div class="section-label">اختر طريقة الدفع للمجموعة كاملة</div>
 
@@ -315,7 +296,7 @@
           <button type="button" id="verifyCodeBtn">تحقق</button>
         </div>
         <div class="field-hint">الرمز يُستخدم مرة واحدة فقط، ويجب أن يغطي إجمالي الطلب.</div>
-        <div id="paymentCodeMessage" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
+        <div id="paymentCodeMessage" style="font-size: 14px; margin-top: 6px; font-weight: 600;"></div>
       </div>
     </div>
 
@@ -329,18 +310,18 @@
         <label>الخطوة 1 — رقم العملية (من إشعار التحويل) *</label>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="transactionRefInput" placeholder="مثلاً: 20193889733" inputmode="latin" autocomplete="off">
-          <button type="button" id="saveTxRefBtn">تحقق</button>
+          <button type="button" id="saveTxRefBtn" class="mm-btn mm-btn--primary">تحقق</button>
         </div>
         <div class="field-hint">اكتب رقم العملية كما ورد في إشعار التحويل، ثم اضغط "تحقق" — لن تظهر خطوة رفع الصورة إلا بعد نجاح التحقق.</div>
-        <div id="txRefMessage" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
+        <div id="txRefMessage" style="font-size: 14px; margin-top: 6px; font-weight: 600;"></div>
       </div>
 
       <!-- الخطوة 2: رفع صورة الإشعار (تظهر بعد حفظ رقم العملية) -->
       <div id="receiptStep" style="display: none; margin-top: 14px;">
-        <label style="display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+        <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px;">
           الخطوة 2 — صورة إشعار التحويل *
         </label>
-        <div class="file-upload" id="fileUploadBox">
+        <div class="file-upload" role="button" tabindex="0" aria-label="اختيار صورة الإيصال" id="fileUploadBox">
           <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> اضغط هنا لرفع صورة إيصال التحويل
           <input type="file" id="receiptInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
         </div>
@@ -349,29 +330,29 @@
           الأفضل: لقطة شاشة كاملة للإشعار يظهر فيها رقم العملية والمبلغ.
         </div>
         <!-- P2-SEC-001: موافقة صريحة قبل معالجة الصورة عبر الذكاء الاصطناعي -->
-        <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
+        <label style="display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 10px 0; cursor: pointer; line-height: 1.7;">
           <input type="checkbox" id="geminiConsent" style="margin-top: 4px; flex-shrink: 0;">
           <span>أوافق على معالجة صورة الإيصال عبر الذكاء الاصطناعي للتحقق الآلي من التحويل. الفحص الآلي إلزامي لكل صورة؛ بدونه لا يمكن إرسال الطلب. <a href="privacy.html" target="_blank" rel="noopener" style="color: var(--mm-accent-text);">سياسة الخصوصية</a></span>
         </label>
-        <div id="shortfallBox" style="display: none; margin-top: 12px; border: 1px solid var(--danger); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.8;"></div>
+        <div id="shortfallBox" style="display: none; margin-top: 12px; border: 1px solid var(--danger); border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.8;"></div>
 
         <div id="remainderStep" style="display: none; margin-top: 12px; border: 1px dashed var(--border); border-radius: 12px; padding: 12px;">
-          <label style="display: block; font-size: 13px; font-weight: 800; margin-bottom: 6px;">إشعار المبلغ المتبقي</label>
+          <label style="display: block; font-size: 14px; font-weight: 800; margin-bottom: 6px;">إشعار المبلغ المتبقي</label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="remainderRefInput" placeholder="رقم عملية التحويل الثاني" inputmode="latin" autocomplete="off">
-            <button type="button" id="remainderRefBtn">تحقق</button>
+            <button type="button" id="remainderRefBtn" class="mm-btn mm-btn--primary">تحقق</button>
           </div>
-          <div id="remainderRefMsg" style="font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
-          <div class="file-upload" id="fileUploadBox3" style="display: none; margin-top: 10px;">
+          <div id="remainderRefMsg" style="font-size: 14px; margin-top: 6px; font-weight: 600;"></div>
+          <div class="file-upload" role="button" tabindex="0" aria-label="اختيار صورة الإيصال الثاني" id="fileUploadBox3" style="display: none; margin-top: 10px;">
             <svg class="mm-i" aria-hidden="true"><use href="assets/icons/lucide-sprite.svg#i-paperclip"></use></svg> ارفع صورة إشعار المبلغ المتبقي
             <input type="file" id="receiptInput3" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
           </div>
-          <div id="remainderStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600;"></div>
+          <div id="remainderStatus" style="font-size: 14px; margin-top: 8px; font-weight: 600;"></div>
         </div>
 
         <button type="button" id="retryCheckoutReceiptBtn" class="auth-btn">إعادة تجهيز الإيصال</button>
-          <div id="scanStatus" style="font-size: 12px; margin-top: 8px; font-weight: 600; color: var(--text-muted);"></div>
-        <div id="scanReport" style="display: none; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.7;"></div>
+          <div id="scanStatus" style="font-size: 14px; margin-top: 8px; font-weight: 600; color: var(--text-muted);"></div>
+        <div id="scanReport" style="display: none; margin-top: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.7;"></div>
       </div>
     </div>
 
@@ -396,5 +377,6 @@
 <script src="assets/js/receipt-pipeline.js?v=20261106-provider-queue"></script>
 <script src="assets/js/pages/checkout-v2-2.js?v=20261106-origin-feedback"></script>
   <script src="assets/js/meem-assistant.js"></script>
+<script src="assets/js/payment-icons.js"></script>
 </body>
 </html>

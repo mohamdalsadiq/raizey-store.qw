@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://raizey-store-qw.vercel.app/sitemap.xml
