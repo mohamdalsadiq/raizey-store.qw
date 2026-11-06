@@ -34,6 +34,11 @@ const rewrite = html => html.replace(/((?:src|href)="|\bsrcset=")([^"\n]+)"/g, (
   return prefix+changed+'"';
 });
 fs.mkdirSync(path.join(root,'api/templates'),{recursive:true});
+const clientSource=fs.readFileSync(path.join(root,'assets/js/supabase-client.js'),'utf8');
+fs.writeFileSync(path.join(root,'api/templates/public-config.json'),JSON.stringify({
+  url:clientSource.match(/const SUPABASE_URL = .*?\|\| "([^"]+)"/)[1],
+  key:clientSource.match(/const SUPABASE_ANON_KEY = .*?\|\| "([^"]+)"/)[1]
+}));
 for (const name of fs.readdirSync(root).filter(x=>x.endsWith('.html'))) {
   const html=rewrite(fs.readFileSync(path.join(root,name),'utf8'));
   if (['product.html','category.html'].includes(name)) fs.writeFileSync(path.join(root,'api/templates',name),html);

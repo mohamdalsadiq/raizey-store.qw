@@ -16,6 +16,8 @@ function imageURL(value) {
 // or visitor headers for shared-cache HTML. The Data API still enforces RLS.
 function publicConfig() {
   try {
+    const built = new URL('./templates/public-config.json',import.meta.url);
+    if (fs.existsSync(built)) return JSON.parse(fs.readFileSync(built,'utf8'));
     const source = fs.readFileSync(path.join(process.cwd(), 'assets/js/supabase-client.js'), 'utf8');
     return {url: source.match(/const SUPABASE_URL = .*?\|\| "([^"]+)"/)[1], key: source.match(/const SUPABASE_ANON_KEY = .*?\|\| "([^"]+)"/)[1]};
   } catch { throw new Error('catalog_config_unavailable'); }
@@ -47,7 +49,7 @@ function errorPage(status, message) {
 }
 function template(kind) {
   // Build writes the fingerprinted template into the function bundle.
-  const built = path.join(process.cwd(), 'api/templates', kind + '.html');
+  const built = new URL('./templates/' + kind + '.html',import.meta.url);
   return fs.readFileSync(fs.existsSync(built) ? built : path.join(process.cwd(), kind + '.html'), 'utf8');
 }
 export function renderCatalog(kind, row, children = []) {
