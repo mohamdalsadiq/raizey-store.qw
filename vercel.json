@@ -99,10 +99,7 @@
   "outputDirectory": "dist",
   "functions": {
     "api/catalog.mjs": {
-      "includeFiles": [
-        "api/templates/**",
-        "assets/js/supabase-client.js"
-      ],
+      "includeFiles": "{api/templates/**,assets/js/supabase-client.js}",
       "maxDuration": 30
     }
   },
