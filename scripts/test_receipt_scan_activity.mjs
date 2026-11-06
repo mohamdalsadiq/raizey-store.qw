@@ -29,16 +29,18 @@ function load(page){
     if(!elements.has(id))elements.set(id,new Element(buttonIds.has(id)?'button':inputIds.has(id)?'input':id==='methodSelect'?'select':'div'));
     return elements.get(id);
   };
-  const document={getElementById:get,createElement:tag=>new Element(tag),querySelectorAll:()=>[],addEventListener(){}};
+  const document={getElementById:get,createElement:tag=>new Element(tag),querySelectorAll:()=>[],querySelector:()=>get(page.startsWith('wallet')?'geminiConsentWallet':'geminiConsent'),addEventListener(){}};
   const context={document,Blob,AbortController,setTimeout,clearTimeout,console,URL,encodeURIComponent,
     formatSDG:String,escapeHtml:v=>String(v).replaceAll('<','&lt;'),rzIconMarkup:()=>'',
     supabaseClient:{rpc:async()=>({data:[],error:null})}};
   context.window=context;context.globalThis=context;vm.createContext(context);
   vm.runInContext(fs.readFileSync('assets/js/receipt-pipeline.js','utf8'),context);
+  vm.runInContext(fs.readFileSync('assets/js/receipt-consent-legacy.js','utf8'),context);
   vm.runInContext(fs.readFileSync('assets/js/pages/'+page,'utf8').replace(/\ninit\(\);\s*$/,''),context);
   context.testFile=new Blob(['fixture'],{type:'image/png'});
   return {context,get,exec:s=>vm.runInContext(s,context)};
 }
+const turn=()=>new Promise(resolve=>setImmediate(resolve));
 const rejected={decision:'reject',submissionAllowed:false,extracted:{},riskFlags:[],message:'الصورة غير مناسبة'};
 const accepted={decision:'accept',submissionAllowed:true,receiptPolicy:'mandatory-visual-v1',automaticCheckComplete:true,scanId:'s',receiptPath:'owner/x.png',attachmentId:'a',receiptHash:'hash',refVerified:true,amountVerified:true,extracted:{amount:125000,txRef:'REF123456'},riskFlags:[],message:'اجتاز الإشعار الفحص'};
 {
@@ -62,18 +64,18 @@ const accepted={decision:'accept',submissionAllowed:true,receiptPolicy:'mandator
   check('wallet cannot retry an older image during new-file validation',calls===0);
   get('receiptInput').disabled=false;
   get('submitTopupBtn').disabled=true; // must preserve an earlier disabled state
-  const first=context.runWalletReceiptScan();await context.runWalletReceiptScan();
+  const first=context.runWalletReceiptScan();await context.runWalletReceiptScan();await turn();
   check('wallet double start produces one scan',calls===1);
   check('wallet scan locks retry, upload and submit',get('retryWalletReceiptBtn').disabled&&get('receiptInput').disabled&&get('submitTopupBtn').disabled);
   pending.resolve(rejected);await first;
   check('wallet rejection unlocks retry',!get('retryWalletReceiptBtn').disabled&&!get('receiptInput').disabled);
   check('wallet keeps previously disabled submit disabled',get('submitTopupBtn').disabled);
   check('wallet rejection cannot become payment evidence',exec('receiptAnalysis===null && walletScanBusy===false'));
-  const failed=context.runWalletReceiptScan();pending.reject(new Error('network failed'));await failed;
+  const failed=context.runWalletReceiptScan();await turn();pending.reject(new Error('network failed'));await failed;
   check('wallet unexpected network failure unlocks retry',!get('retryWalletReceiptBtn').disabled&&exec('walletScanBusy===false'));
-  const stale=context.runWalletReceiptScan();context.resetReceiptScan('تغير المبلغ');pending.resolve(accepted);await stale;
+  const stale=context.runWalletReceiptScan();await turn();context.resetReceiptScan('تغير المبلغ');pending.resolve(accepted);await stale;
   check('wallet stale result is ignored and scan unlocks',exec('receiptAnalysis===null && walletScanBusy===false')&&get('receiptScanStatus').textContent==='تغير المبلغ');
-  const success=context.runWalletReceiptScan();pending.resolve(accepted);await success;
+  const success=context.runWalletReceiptScan();await turn();pending.resolve(accepted);await success;
   check('wallet accepts completed result and unlocks controls',exec('receiptAnalysis?.scanId==="s" && walletScanBusy===false')&&!get('retryWalletReceiptBtn').disabled);
 }
 {
@@ -83,23 +85,23 @@ const accepted={decision:'accept',submissionAllowed:true,receiptPolicy:'mandator
   let calls=0,pending;
   context.MeemReceiptPipeline.serverVerify=()=>{calls++;return new Promise(resolve=>{pending=resolve;});};
   context.attachCheckoutEvents(false);
-  const first=get('receiptInput').onchange();await get('retryCheckoutReceiptBtn').onclick();
+  const first=get('receiptInput').onchange();await get('retryCheckoutReceiptBtn').onclick();await turn();
   check('checkout repeated click produces one scan',calls===1);
   check('checkout locks upload, retry and payment',get('receiptInput').disabled&&get('retryCheckoutReceiptBtn').disabled&&get('placeOrderBtn').disabled);
   pending(rejected);await first;
   check('checkout rejection unlocks controls',!get('retryCheckoutReceiptBtn').disabled&&!get('placeOrderBtn').disabled&&exec('checkoutScanBusy===false'));
   check('checkout rejection cannot authorize payment',exec('scanResult===null'));
   get('receiptInput').files=[context.testFile];
-  const stale=get('receiptInput').onchange();context.invalidateCheckoutReceipt();pending(accepted);await stale;
+  const stale=get('receiptInput').onchange();await turn();context.invalidateCheckoutReceipt();pending(accepted);await stale;
   check('checkout stale result cannot authorize payment',exec('scanResult===null && checkoutScanBusy===false'));
   get('receiptInput').files=[context.testFile];
-  const success=get('receiptInput').onchange();pending(accepted);await success;
+  const success=get('receiptInput').onchange();await turn();pending(accepted);await success;
   check('checkout success releases lock and retains proof',exec('scanResult?.scanId==="s" && checkoutScanBusy===false')&&!get('placeOrderBtn').disabled);
   exec("splitPayment={firstFile:testFile,paid:75000,remaining:50000,secondRef:'SECOND123456'};");
   get('receiptInput3').files=[context.testFile];
   const pendingSplit=[],splitAmounts=[];
   context.MeemReceiptPipeline.serverVerify=(file,options)=>{splitAmounts.push(options.expectedAmount);return new Promise(resolve=>pendingSplit.push(resolve));};
-  const split=get('receiptInput3').onchange();await get('receiptInput3').onchange();
+  const split=get('receiptInput3').onchange();await get('receiptInput3').onchange();await turn();
   check('split repeated click does not start another scan',splitAmounts.length===1&&get('receiptInput3').disabled);
   pendingSplit.shift()(accepted);await new Promise(resolve=>setImmediate(resolve));
   check('split keeps controls locked across both receipt checks',splitAmounts.length===2&&get('placeOrderBtn').disabled&&exec('checkoutScanBusy===true'));

@@ -131,7 +131,7 @@ async function init() {
     resetReceiptScan('غيّرت وسيلة التحويل؛ ارفع الإيصال من جديد للفحص.');
   });
 
-  document.getElementById('geminiConsentWallet').addEventListener('change', () => {
+  window.MeemReceiptConsent.bindChange(() => {
     resetReceiptScan('تغير اختيار الفحص. اضغط إعادة تجهيز الإيصال.');
   });
   document.getElementById('retryWalletReceiptBtn').addEventListener('click', runWalletReceiptScan);
@@ -292,20 +292,25 @@ function renderWalletScanReport(analysis, amount, manualRef) {
 function walletReceiptContext() {
   return JSON.stringify({ amount: Number(document.getElementById('amountInput').value),
     manualRef: savedWalletTxRef, methodId: document.getElementById('methodSelect').value,
-    consent: document.getElementById('geminiConsentWallet').checked });
+    consent: window.MeemReceiptConsent.context() });
 }
 async function runWalletReceiptScan() {
   if (walletScanBusy || document.getElementById('receiptInput')?.disabled) return;
   const status = document.getElementById('receiptScanStatus'), errorBox = document.getElementById('formError');
   resetReceiptScan();
-  const revision = walletScanRevision, context = walletReceiptContext(), file = receiptFile;
+  const revision = walletScanRevision, file = receiptFile;
   const amount = Number(document.getElementById('amountInput').value), manualRef = savedWalletTxRef;
   const methodId = document.getElementById('methodSelect').value;
   errorBox.textContent = '';
   if (!file || !manualRef || !methodId || !Number.isFinite(amount) || amount <= 0 || amount > 10000000) {
     errorBox.textContent = 'اختر صورة ووسيلة تحويل ومبلغاً صحيحاً، وتحقق من رقم العملية أولاً.'; return;
   }
-  if (!document.getElementById('geminiConsentWallet').checked) { status.textContent = 'وافق على الفحص الآلي ثم أعد فحص الصورة؛ لا يمكن الإرسال دون فحص.'; return; }
+  walletScanBusy=true;
+  let consentAllowed=false;
+  try {consentAllowed=await window.MeemReceiptConsent.require();} finally {walletScanBusy=false;}
+  if(!consentAllowed) {status.textContent=window.MeemReceiptConsent.message();return;}
+  if(revision!==walletScanRevision || file!==receiptFile || amount!==Number(document.getElementById('amountInput').value) || methodId!==document.getElementById('methodSelect').value || manualRef!==savedWalletTxRef || (MeemReceiptConsent.userId() && MeemReceiptConsent.userId()!==currentUser?.id)) return;
+  const context=walletReceiptContext();
   walletScanBusy = true;
   const activity = MeemReceiptPipeline.beginScanActivity(status, ['receiptInput', 'fileUploadBox',
     'retryWalletReceiptBtn', 'submitTopupBtn'].map(id => document.getElementById(id)));

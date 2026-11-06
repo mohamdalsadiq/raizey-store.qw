@@ -30,6 +30,7 @@
   async function finishSignIn() {
     const target = returnTarget();
     if (!(await ensureMfa(target))) return;
+    if (window.MeemReceiptConsent?.mode === 'account') await window.MeemReceiptConsent.require();
     try {
       sessionStorage.removeItem('meem_mfa_return');
       sessionStorage.removeItem('redirect_after_login');

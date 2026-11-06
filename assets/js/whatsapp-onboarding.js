@@ -73,6 +73,7 @@
     document.body.appendChild(dialog);
   }
   async function show(failed) {
+    const revision=generation;
     build();
     if (!picker) {
       try {
@@ -82,6 +83,13 @@
     }
     save.disabled = !!failed; input.disabled = !!failed; retry.hidden = !failed;
     errorBox.textContent = failed ? 'تعذر التأكد من بيانات حسابك. أعد المحاولة للمتابعة.' : '';
+    // Share the modal surface with the optional account-consent onboarding.
+    let other;
+    while((other=document.querySelector('dialog[open]')) && other!==dialog) {
+      await new Promise(resolve=>other.addEventListener('close',resolve,{once:true}));
+      if(revision!==generation) return;
+    }
+    if(revision!==generation) return;
     if (!dialog.open) dialog.showModal();
     (failed ? retry : input).focus();
   }

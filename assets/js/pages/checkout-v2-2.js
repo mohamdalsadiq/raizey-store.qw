@@ -18,7 +18,7 @@ let splitPayment = null;           // دفع مجزّأ: {firstFile, firstScan, 
 
 function checkoutReceiptContext() {
   return JSON.stringify({ total: currentTotal(), method: selectedMethodId, ref: savedTxRef,
-    coupon: appliedCoupon?.code || null, consent: document.getElementById('geminiConsent')?.checked === true });
+    coupon: appliedCoupon?.code || null, consent: window.MeemReceiptConsent.context() });
 }
 function invalidateCheckoutReceipt() {
   checkoutScanRevision++; scanResult = null; checkoutScanContext = null; splitPayment = null;
@@ -325,7 +325,7 @@ function attachCheckoutEvents(canUseWallet) {
   const fileInput = document.getElementById('receiptInput');
   const placeOrderBtn = document.getElementById('placeOrderBtn');
   document.getElementById('couponInput').oninput = () => { appliedCoupon = null; invalidateCheckoutReceipt(); document.getElementById('checkoutTotal').textContent = safeFormatSDG(currentTotal()) + ' ج.س'; };
-  document.getElementById('geminiConsent').onchange = invalidateCheckoutReceipt;
+  window.MeemReceiptConsent.bindChange(invalidateCheckoutReceipt);
   document.getElementById('retryCheckoutReceiptBtn').onclick = () => runScan(receiptFile || fileInput.files[0], null);
   const errorBox = document.getElementById('formError');
 
@@ -592,6 +592,9 @@ function attachCheckoutEvents(canUseWallet) {
   // مسار الفحص الموحد المشترك مع wallet.html.
   async function serverVerify(file, opts, extraFile) {
     if (!window.MeemReceiptPipeline) throw new Error('receipt_pipeline_missing');
+    const revision=checkoutScanRevision, context=checkoutReceiptContext();
+    if(!(await window.MeemReceiptConsent.require()) || (MeemReceiptConsent.userId() && MeemReceiptConsent.userId()!==currentUser?.id)) throw new Error('receipt_consent_required');
+    if(revision!==checkoutScanRevision || context!==checkoutReceiptContext()) throw new Error('receipt_context_changed');
     return window.MeemReceiptPipeline.serverVerify(file, opts, extraFile);
   }
 
@@ -610,18 +613,23 @@ function attachCheckoutEvents(canUseWallet) {
     if (checkoutScanBusy || !file) return;
     invalidateCheckoutReceipt();
     receiptFile = file;
-    const revision = checkoutScanRevision, context = checkoutReceiptContext();
+    const revision = checkoutScanRevision;
+    const before = JSON.stringify({total:currentTotal(),method:selectedMethodId,ref:savedTxRef});
     const statusEl = document.getElementById('scanStatus');
     const reportEl = document.getElementById('scanReport');
 
     document.getElementById('formError').textContent = '';
 
-    const consentBox = document.getElementById('geminiConsent');
-    if (!consentBox?.checked) {
+    checkoutScanBusy=true;
+    let consentAllowed=false;
+    try {consentAllowed=await window.MeemReceiptConsent.require();} finally {checkoutScanBusy=false;}
+    if (!consentAllowed) {
       receiptFile = null;
-      statusEl.textContent = 'الموافقة على فحص الصورة آلياً مطلوبة للدفع البنكي. وافق ثم اختر الصورة مجدداً.';
+      statusEl.textContent = window.MeemReceiptConsent.message();
       return;
     }
+    if(revision!==checkoutScanRevision || before!==JSON.stringify({total:currentTotal(),method:selectedMethodId,ref:savedTxRef}) || (MeemReceiptConsent.userId() && MeemReceiptConsent.userId()!==currentUser?.id)) return;
+    const context=checkoutReceiptContext();
     reportEl.style.display = 'none';
     reportEl.innerHTML = '';
     splitPayment = null;
@@ -676,6 +684,9 @@ function attachCheckoutEvents(canUseWallet) {
             const r = softReview('auth_required');
             r.message = 'انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم أعد رفع الإيصال.';
             return r;
+          }
+          if (['receipt_consent_required','receipt_provider_review_pending'].includes(errMsg)) {
+            const result=softReview(errMsg);result.message=serverErr.serverMessage || window.MeemReceiptConsent.message();return result;
           }
           return softReview('server_ocr_failed');
         }

@@ -20,3 +20,6 @@ dist/
 api/templates/
 delivery/meem-ux/evidence/
 scripts/.meem-serve.mjs
+
+__pycache__/
+*.pyc

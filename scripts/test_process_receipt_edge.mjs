@@ -154,6 +154,7 @@ function createAdminMock(state) {
     rpc: async (name,args) => {
       state.rpcs.push({name,args});
       if(state.rpcOverrides[name]) return state.rpcOverrides[name];
+      if(name==='get_receipt_policy_status') return {data:{configured:true,accepted:true,version:'test',content_sha256:'a'.repeat(64)},error:null};
       if(name==='get_session_security_context') return {data:{allowed:true},error:null};
       if(name==='get_receipt_scan_usage') return {data:{dailyLimit:5,remaining:5,usedToday:0,violations:0,violationLimit:3,suspended:false},error:null};
       if(name==='begin_receipt_scan_usage') return {data:{allowed:true,leaseId:'ae550000-0000-4000-8000-000000000001'},error:null};
@@ -265,6 +266,16 @@ const baseBody = {
 };
 
 await import(pathToFileURL(tmpFile).href);
+
+console.log('Consent and provider review guards execute before any model or quota');
+for (const [state,expected] of [[{configured:false,accepted:false},503],[{configured:true,accepted:false,content_sha256:'a'.repeat(64)},403]]) {
+  const result=await runScan({body:baseBody,rpcOverrides:{get_receipt_policy_status:{data:state,error:null}},expectStatus:expected,fetchHandler:async()=>{throw Error('provider_must_not_be_called')}});
+  check('no model requests before consent/review',fetchedUrls.length,0);
+  check('no image writes before consent/review',result.state.uploads.length,0);
+  check('no quota consumed before consent/review',result.state.rpcs.some(r=>r.name==='begin_receipt_scan_usage'),false);
+}
+const consentFailure=await runScan({body:baseBody,rpcOverrides:{get_receipt_policy_status:{data:null,error:{message:'network'}}},expectStatus:503,fetchHandler:async()=>{throw Error('provider_must_not_be_called')}});
+check('technical consent lookup failure does not call provider',fetchedUrls.length,0);
 
 console.log("\n── روابط Vercel الفعلية وطلبات ما قبل الفحص ──");
 for (const origin of [
