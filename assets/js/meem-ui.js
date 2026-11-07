@@ -459,12 +459,15 @@
     else document.documentElement.setAttribute('data-theme', value);
     document.documentElement.setAttribute('data-theme-mode', value);
     document.querySelectorAll('[data-mm-theme-toggle]').forEach(function (btn) {
-      var next = value === 'dark' ? 'light' : 'dark';
-      btn.setAttribute('aria-label', next === 'dark' ? 'تفعيل الوضع الليلي' : 'تفعيل الوضع النهاري');
-      btn.title = btn.getAttribute('aria-label');
+      var next = value === 'light' ? 'dark' : 'light';
+      var label = next === 'dark' ? 'تفعيل الوضع الليلي' : 'تفعيل الوضع النهاري';
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
       btn.setAttribute('data-next', next);
+      var text = btn.querySelector('[data-mm-theme-label]');
+      if (text) text.textContent = label;
       var use = btn.querySelector('use');
-      if (use) use.setAttribute('href', SPRITE + (value === 'dark' ? '#i-sun' : '#i-moon'));
+      if (use) use.setAttribute('href', SPRITE + (next === 'light' ? '#i-sun' : '#i-moon'));
     });
     return value;
   }

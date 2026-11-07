@@ -663,17 +663,44 @@ const ReceiptJudgeCore = (() => {
   function extractAccounts(text: string) {
     // ملاحظة: النص المدخل هنا مُطبَّع مسبقاً (normalizeText): "إلى/الى" ← "الي"،
     // و"ة" ← "ه". الأنماط أدناه مكتوبة بالصيغة المُطبَّعة عمداً.
-    const from = text.match(/(?:من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account)[^0-9]{0,18}([0-9\s-]{6,32})/);
-    let to = text.match(/(?:الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|الحساب\s*المحلي|حساب\s*المستفيد|حساب\s*المستلم|to\s*account|beneficiary\s*account|receiver\s*account|recipient\s*account|credit\s*account|destination\s*account)[^0-9]{0,18}([0-9\s-]{6,42})/);
+    const senderLabel = /من\s*حساب|من\s*الحساب|from\s*account|source\s*account|debit\s*account/;
+    const recipientLabel = /الي\s*حساب|الي\s*الحساب|الحساب\s*المحول\s*اليه|الي\s*البطاقه\s*رقم|الحساب\s*المحلي|حساب\s*المستفيد|حساب\s*المستلم|to\s*account|beneficiary\s*account|receiver\s*account|recipient\s*account|credit\s*account|destination\s*account/;
+    const reverseRow = (label: RegExp) =>
+      new RegExp('^(\\d(?:[ -]?\\d){5,33})[ :]+(?:' + label.source + ')$');
+    const forwardField = (label: RegExp, width: number) =>
+      new RegExp(`(?:${label.source})[^0-9]{0,18}([0-9\\s-]{6,${width}})`, 'g');
+    const reverseSender = reverseRow(senderLabel);
+    const reverseRecipient = reverseRow(recipientLabel);
+    const destinations = new Set<string>();
+    // OCR can put the value before the label in an RTL row. Remove these rows
+    // before parsing label-first fields so a trailing label cannot read the next row.
+    let reversedFrom: string | null = null;
+    const forwardText = text.split(/\r?\n/).filter(line => {
+      const trimmed = line.trim();
+      const sender = trimmed.match(reverseSender);
+      if (sender) {
+        reversedFrom ??= digitsOnly(sender[1]);
+        return false;
+      }
+      const recipient = trimmed.match(reverseRecipient);
+      if (recipient) {
+        destinations.add(digitsOnly(recipient[1]));
+        return false;
+      }
+      return true;
+    }).join('\n');
+    const forwardFrom = forwardField(senderLabel, 32).exec(forwardText);
+    for (const match of forwardText.matchAll(forwardField(recipientLabel, 42))) destinations.add(digitsOnly(match[1]));
     // In O-Cash interbank bill-payment flows, a service record can be a BBAN.
     // The generic record label alone is never treated as the destination.
-    if (!to && /التحويل\s*الي\s*بنك\s*داخل\s*السودان/.test(text)) {
-      to = text.match(/رقم\s*السجل[^0-9]{0,18}([0-9 -]{14,24})/);
+    if (destinations.size === 0 && /التحويل\s*الي\s*بنك\s*داخل\s*السودان/.test(text)) {
+      const record = text.match(/رقم\s*السجل[^0-9]{0,18}([0-9 -]{14,24})/);
+      if (record) destinations.add(digitsOnly(record[1]));
     }
     const phone = text.match(/\b(249\d{9}|0\d{9})\b/);
     return {
-      from: from ? digitsOnly(from[1]) : null,
-      to: to ? digitsOnly(to[1]) : null,
+      from: forwardFrom ? digitsOnly(forwardFrom[1]) : reversedFrom || null,
+      to: destinations.size === 1 ? destinations.values().next().value : null,
       phone: phone ? phone[1] : null
     };
   }
