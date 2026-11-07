@@ -70,7 +70,7 @@ const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES * 1.36);
 const MAX_REQUEST_CHARS = MAX_BASE64_CHARS * 2 + 160_000;
 const SCAN_TTL_MINUTES = 30;
 const RECEIPT_POLICY = "mandatory-visual-v1";
-const RECEIPT_RULESET = "recipient-banks-capacity-v4";
+const RECEIPT_RULESET = "recipient-banks-capacity-v5";
 const RATE_WINDOW_MINUTES = 10;
 const MAX_SCANS_PER_WINDOW = 12;
 // Kept for backward compatibility: the deployed production origin is still the
@@ -1120,12 +1120,9 @@ async function performReceiptScan(admin:any,userId:string,image:ParsedImage,hash
   const destinationMatched = ReceiptJudgeCore.allowedReceiptAccounts(expectedMethod).includes(to);
   const referenceInText = (normalizedText.match(/[A-Z0-9]+/g) || []).some((v: string) => v === visualRef);
   const referenceLabelMatched = (judgeContext.refInfo.labelledAll || []).some((v: string) => normalizeRefForStorage(v) === visualRef);
+  // Require a single labeled recipient, independently read in the text pass.
   const ocrDestination = account(result.extracted?.toAccount);
-  const destinationLabel = /(?:الى|إلى|الي|إلي)\s*(?:حساب|الحساب)|حساب\s*(?:المستفيد|المستلم)|receiver\s*account|beneficiary\s*account|to\s*account/i;
-  const labelledDestination = normalizedText.split(/\r?\n/).some((line: string) =>
-    destinationLabel.test(line) && (line.match(/[0-9]+/g) || []).some((v: string) => v === to));
-  // An expected account appearing only in a sender/balance field is insufficient.
-  const accountInText = ocrDestination ? ocrDestination === to : labelledDestination;
+  const accountInText = ocrDestination !== "" && ocrDestination === to;
   const labelledAmounts = [...new Set(judgeContext.amountList.filter((v: any) => !v.excluded && v.weight >= 9 && /^label/.test(v.source)).map((v: any) => v.value))];
   const amountInText = Number.isFinite(visualAmount) && labelledAmounts.length === 1 && labelledAmounts[0] === visualAmount;
   const originalNotReceipt = (result.riskFlags || []).includes("not_a_receipt");

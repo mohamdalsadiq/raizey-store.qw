@@ -58,7 +58,7 @@ function buildModule() {
     )
     .replace(
       /^import\s+\{\s*ReceiptJudgeCore\s*\}\s+from\s+"\.\/receipt-judge-core\.ts";\s*$/m,
-      judgeSrc,
+      () => judgeSrc,
     )
     // The generated copy lives in scripts/.tmp/, two levels deeper than the
     // Edge function, so its own `../_shared/cors.ts` specifier would resolve to
@@ -234,7 +234,7 @@ async function runScan({ body, token = GOOD_TOKEN, env = {}, scanCount = 0, paym
   if(reusableScan?.ocr_data){
     const method=paymentMethod?{id:String(paymentMethod.id),name:paymentMethod.name??null,account_name:paymentMethod.account_name??null,account_number:paymentMethod.account_number??null,bin_prefixes:paymentMethod.bin_prefixes??null,bank_key:paymentMethod.bank_key??null}:null;
     const hash=await crypto.subtle.digest('SHA-256',Buffer.from(body.imageBase64,'base64')).then(b=>Buffer.from(b).toString('hex'));
-    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-banks-capacity-v4'}))).then(b=>Buffer.from(b).toString('hex'))}};
+    state.reusableScan={...reusableScan,ocr_data:{...reusableScan.ocr_data,completed_machine_check:true,usage_lease_id:'ae550000-0000-4000-8000-000000000001',usage_context_key:await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({hash,amount:Number(body.expectedAmount),ref:String(body.manualRef).toUpperCase().replace(/[^A-Z0-9]/g,''),method,policy:'mandatory-visual-v1',ruleset:'recipient-banks-capacity-v5'}))).then(b=>Buffer.from(b).toString('hex'))}};
   }
   globalThis.__meemCreateClient = () => createAdminMock(state);
   Object.assign(envState, {
@@ -784,6 +784,22 @@ console.log("\n── الحساب الكامل وعلامة نجاح الإشع
  const accepted=await scan();
  check('configured full account and visible success symbol accepted',accepted.json.submissionAllowed,true);
  check('full account match is recorded',accepted.json.visualCheck?.destinationMatched,true);
+ const rtlText=text
+   .replace('من حساب: 1234567890','٠٠٣٣ ٠٢٥٤ ٤٢٢٠ ٠٠٠١ من حساب')
+   .replace('الى حساب: '+full,'٠٨٧٣ ٠١٢٣ ٤٥٦٧ ٠٠٠١ إلى حساب');
+ const rtlScan=(ocr)=>scan({
+   visual:{...visual,receiver_account:'0873 0123 4567 0001'},
+   fetchHandler:async()=>httpResponse(200,geminiTextResponse(ocr)),
+ });
+ const rtl=await rtlScan(rtlText);
+ check('grouped RTL destination before label is corroborated',rtl.json.visualCheck?.accountCorroborated,true);
+ check('Bankak receipt with grouped RTL destination is accepted',rtl.json.submissionAllowed,true);
+ const rtlWrong=await rtlScan(rtlText
+   .replace('٠٠٣٣ ٠٢٥٤ ٤٢٢٠ ٠٠٠١ من حساب','٠٨٧٣ ٠١٢٣ ٤٥٦٧ ٠٠٠١ من حساب')
+   .replace('٠٨٧٣ ٠١٢٣ ٤٥٦٧ ٠٠٠١ إلى حساب','٠٠٣٣ ٠٢٥٤ ٤٢٢٠ ٠٠٠١ إلى حساب'));
+ check('registered RTL sender does not corroborate a different recipient',rtlWrong.json.submissionAllowed,false);
+ const rtlConflict=await rtlScan(rtlText+'\nالى حساب: 9999999999999999');
+ check('conflicting labeled destination numbers are denied',rtlConflict.json.submissionAllowed,false);
  for(const amount of ['125,000.00','١٢٥٬٠٠٠٫٠٠','125 000.00']){const grouped=await scan({visual:{...visual,amount}});check('valid grouped structured amount accepted '+amount,grouped.json.submissionAllowed,true);}
  for(const amount of ['125,00.00','125,000.005','125000 SDG','125000xyz']){const invalid=await scan({visual:{...visual,amount}});check('malformed structured amount rejected '+amount,invalid.json.submissionAllowed,false);}
 
